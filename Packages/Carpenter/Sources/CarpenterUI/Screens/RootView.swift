@@ -27,6 +27,12 @@ public struct RootView: View {
     @State var destination: Destination? = .allOutposts
     @State var outpostsExpanded = true
     @State var showsAudienceRail = true
+    @State var area: WideArea?
+    @State var wideColumns: NavigationSplitViewVisibility = .all
+    @State var isUpright = false
+    #if os(iOS)
+        @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    #endif
     @State var namingRoom = false
     @State var pickingSolo = false
     @State var soloInvite: PresentedInvite?
@@ -51,6 +57,13 @@ public struct RootView: View {
         func startingOn(_ tab: PhoneTab) -> Self {
             var copy = self
             copy._tab = State(initialValue: tab)
+            return copy
+        }
+
+        func startingIn(_ area: WideArea, showing place: Destination? = nil) -> Self {
+            var copy = self
+            copy._area = State(initialValue: area)
+            if let place { copy._destination = State(initialValue: place) }
             return copy
         }
     #endif
@@ -599,10 +612,14 @@ public struct RootView: View {
             if isSettingsWindow {
                 settingsWindow
             } else {
-                desktop
+                wide
             }
         #else
-            phone
+            if UIDevice.current.userInterfaceIdiom == .pad, horizontalSizeClass == .regular {
+                wide
+            } else {
+                phone
+            }
         #endif
     }
 }

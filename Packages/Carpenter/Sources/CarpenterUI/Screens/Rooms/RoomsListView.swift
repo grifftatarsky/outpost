@@ -1,8 +1,13 @@
 import CarpenterKit
 import SwiftUI
 
+extension EnvironmentValues {
+    @Entry var selectedRoom: RoomID?
+}
+
 public struct RoomsListView: View {
     @Environment(\.palette) var palette
+    @Environment(\.selectedRoom) var selectedRoom
     @Environment(\.clock) var clock
     @Environment(\.stampDevice) var stampDevice
 

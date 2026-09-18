@@ -52,9 +52,10 @@ extension RoomsListView {
                                 bottom: CarpenterMetrics.conversationRowPadding,
                                 trailing: CarpenterMetrics.screenMargin)
                         )
-                        .listRowBackground(Color.clear)
+                        .listRowBackground(selectionGround(room.id))
                         .listRowSeparator(
                             room.id == searched.first?.id ? .hidden : .automatic, edges: .top)
+                        .accessibilityAddTraits(selectedRoom == room.id ? .isSelected : [])
                         .accessibilityLabel(
                             scope.marksGroups && !room.isDirect
                                 ? Text("\(room.name), group", bundle: .module)
@@ -155,6 +156,17 @@ extension RoomsListView {
                 }
             }
             .padding(.vertical, 6)
+        }
+    }
+
+    @ViewBuilder
+    private func selectionGround(_ room: RoomID) -> some View {
+        if selectedRoom == room {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(palette.accentColor.opacity(0.16))
+                .padding(.horizontal, 6)
+        } else {
+            Color.clear
         }
     }
 

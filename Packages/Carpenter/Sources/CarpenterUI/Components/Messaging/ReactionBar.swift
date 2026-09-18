@@ -118,7 +118,7 @@ public struct ReactionBar: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
-        .accessibilityHint(Text("Double-tap to see every reaction", bundle: .module))
+        .accessibilityHint(Text("Shows every reaction", bundle: .module))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { isListingReactions = true }
         .accessibilityActions {
@@ -169,6 +169,7 @@ public struct ReactionBar: View {
                     .foregroundStyle(commentCount == 0 ? palette.accentColor : palette.tertiaryText)
                 }
                 .buttonStyle(.plain)
+                .tappable()
             }
         }
     }

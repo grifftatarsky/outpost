@@ -118,31 +118,16 @@ public struct OutpostListView: View {
             }
         }
         .swipeActions(edge: .trailing) {
-            Button {
-                Task { await onSetNotified(person.id, !notified.contains(person.id)) }
-            } label: {
-                Label {
-                    notified.contains(person.id)
-                        ? Text("Stop telling me", bundle: .module)
-                        : Text("Tell me", bundle: .module)
-                } icon: {
-                    Image(systemName: notified.contains(person.id) ? "bell.slash" : "bell")
-                }
-            }
-            .tint(palette.accentColor)
+            OutpostPersonActions.notify(person.id, isNotified: notified.contains(person.id), onSetNotified)
+                .tint(palette.accentColor)
         }
         .swipeActions(edge: .leading) {
-            Button {
-                Task { await onMarkSeen(person.id) }
-            } label: {
-                Label {
-                    Text("Mark read", bundle: .module)
-                } icon: {
-                    Image(systemName: "checkmark.circle")
-                }
-            }
-            .tint(palette.accentColor)
-            .disabled(!unseen.contains(person.id))
+            OutpostPersonActions.markRead(person.id, isUnseen: unseen.contains(person.id), onMarkSeen)
+                .tint(palette.accentColor)
+        }
+        .contextMenu {
+            OutpostPersonActions.markRead(person.id, isUnseen: unseen.contains(person.id), onMarkSeen)
+            OutpostPersonActions.notify(person.id, isNotified: notified.contains(person.id), onSetNotified)
         }
     }
 
@@ -150,6 +135,39 @@ public struct OutpostListView: View {
         unseen.contains(person.id)
             ? Text("Something new", bundle: .module)
             : Text("Up to date", bundle: .module)
+    }
+}
+
+@MainActor
+enum OutpostPersonActions {
+    static func notify(
+        _ person: ParticipantID, isNotified: Bool,
+        _ onSetNotified: @escaping (ParticipantID, Bool) async -> Void
+    ) -> some View {
+        Button {
+            Task { await onSetNotified(person, !isNotified) }
+        } label: {
+            Label {
+                isNotified ? Text("Stop telling me", bundle: .module) : Text("Tell me", bundle: .module)
+            } icon: {
+                Image(systemName: isNotified ? "bell.slash" : "bell")
+            }
+        }
+    }
+
+    static func markRead(
+        _ person: ParticipantID, isUnseen: Bool, _ onMarkSeen: @escaping (ParticipantID) async -> Void
+    ) -> some View {
+        Button {
+            Task { await onMarkSeen(person) }
+        } label: {
+            Label {
+                Text("Mark read", bundle: .module)
+            } icon: {
+                Image(systemName: "checkmark.circle")
+            }
+        }
+        .disabled(!isUnseen)
     }
 }
 

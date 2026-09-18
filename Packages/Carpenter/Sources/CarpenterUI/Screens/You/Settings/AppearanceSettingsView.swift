@@ -46,7 +46,15 @@ struct AppearanceSettingsView: View {
                             detail: Text(appIcon.displayName))
                     }
                 }
-                #if !os(macOS)
+                #if os(macOS)
+                    Picker(selection: $inbox) {
+                        ForEach(InboxArrangement.allCases, id: \.self) { option in
+                            Text(option.title).tag(option)
+                        }
+                    } label: {
+                        Text("Inbox", bundle: .module)
+                    }
+                #else
                     NavigationLink {
                         InboxArrangementView(arrangement: $inbox)
                     } label: {

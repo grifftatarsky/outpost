@@ -3659,9 +3659,9 @@ the panes. *Erase everything…* is a push button. A row that performs an action
 color, as it is on the iPhone.
 
 **What the Mac no longer offers.** *Haptics*: the app's cues are impact, warning and error, and
-`sensoryFeedback` plays none of them on a Mac, so the switch changed nothing. *Inbox*: the Mac's
-sidebar does not split Solos from Rooms, so the choice changed nothing there either. A setting that
-does nothing is a claim the app cannot keep.
+`sensoryFeedback` plays none of them on a Mac, so the switch changed nothing. A setting that does
+nothing is a claim the app cannot keep. *Inbox* was taken off the Mac for the same reason and came
+back the same day as a pop-up, once the wide layout gave Solos and Rooms their own sidebar rows.
 
 **Pane height.** Each pane takes the height of what it holds, up to 620 points, and scrolls beyond
 that — Privacy & Safety and Outpost settings are both taller than a laptop's screen.
@@ -3684,10 +3684,15 @@ which is why the audience inspector already had it.
 
 **What is there.** *File*: New Room… ⌘N, New Solo… ⇧⌘N, Join with an Invite… — replacing New Window,
 because the app is one window over one session. *View*: the system's Show/Hide Sidebar, and Show or
-Hide Who Sees Your Outpost on ⌥⌘I, enabled only beside your own Outpost. *Go*: All Outposts, Your
-Outpost, You, and the first nine rooms on ⌘1–⌘9, the way Messages numbers conversations. *Help*: How
-This Works, in a window of its own. Menu titles are title case, as the Mac's are; labels inside
-windows stay sentence case, as the app's are.
+Hide Who Sees Your Outpost on ⌥⌘I, enabled only beside your own Outpost. *Go*: the sidebar's areas on
+⌘1 onward, the way Mail numbers its favourite mailboxes, and a *Conversations* submenu. *Conversation*:
+Mark as Read ⇧⌘U (Mail's), Pin, Silence, Leave… and Delete…, for the room that is open, each disabled
+when it cannot act. *Help*: How This Works, in a window of its own, on the Mac only — an iPad has no
+such window. The same commands reach an iPad's menu bar and keyboard. Menu titles are title case, as
+the Mac's are; labels inside windows stay sentence case, as the app's are.
+
+*Go* first numbered the rooms, ⌘1–⌘9 as Messages does; it moved to the areas the same day, when the
+wide layout made the areas the sidebar and put the rooms one column in.
 
 **What it found.** The Mac had no way to start a room, start a solo or join with an invite: those
 lived in the iPhone's rooms list, which the Mac's sidebar does not use. The menu commands and a compose
@@ -3698,6 +3703,70 @@ button in the sidebar's toolbar now reach the same three sheets, which moved int
 item above, in that order, with those shortcuts, disabled with no window in front — and the frontmost
 app did not change while it ran. **Not seen:** the items enabled against a real window, the compose
 button, and the help window.
+
+### The Mac and an iPad at full width share one layout: areas, a list, and what is open
+
+`PROPOSED` — Claude, 2026-09-18. Griff: "Do literally everything for the mac… make sure it looks good
+for an iPad, horizontal and vertical."
+
+Read from the HIG before choosing. *Sidebars*: "show no more than two levels of hierarchy in a
+sidebar. When a data hierarchy is deeper than two levels, consider using a split view interface that
+includes a content list between the sidebar items and detail view." *Tab bars* and *Sidebars* for
+iPadOS: consider a tab bar first, and "to display a sidebar only, use `NavigationSplitView`". The
+app's hierarchy is three deep — an area, a conversation or an Outpost, what is in it — so the wide
+layout is a three-column split: the areas (Solos and Rooms, or Messages; Outposts; Search; You) with
+their unread counts, the list for the area, and what is open.
+
+**The list column is the iPhone's list, not a copy of it.** The Mac's old sidebar had drifted far
+behind `RoomsListView`: no unread marks, no pins or tags, no *Waiting to be let in*, no *Nothing is
+going out*, no search, no context menu, no way to start a room at all. The middle column is now
+`RoomsListView` itself, built by the one `roomsList(_:)` the iPhone's two tabs also use, inside a stack
+whose path is bound to `openRoom` — the binding a notification tap already drives — so choosing a room
+opens it in the detail column. Search is the iPhone's `SearchTabView`; You is `YouView`, whose pages
+open in the detail column. `StartingConversations` builds the three start sheets for both.
+
+**Where it applies.** The Mac, and an iPad whose width is regular. An iPhone in landscape can report a
+regular width too, and keeps its tabs: the check is the iPad idiom first. An iPad in Slide Over or a
+narrow split keeps the tabs.
+
+**Upright on an iPad** the sidebar sits behind its button and gets out of the way once an area is
+chosen, and the *Who sees your Outpost* inspector starts closed, because upright it covers the Outpost
+it describes. On its side, all three columns show.
+
+**A defect it found.** A sidebar's selection can pass through `nil` while the search keyboard closes,
+and `nil` meant "the default area": choosing You from Search opened Rooms. The binding ignores `nil`
+now, and `WideAreaTests` holds the rules for which area a room lives in and what an area becomes when
+the inbox is merged or Outposts are turned off.
+
+**How it was checked.** `WideLayoutTests` walks the fixture app on an iPad Air 11-inch in both
+orientations — rooms, a room open, the sidebar, Outposts, your own Outpost with its inspector, Search,
+You, Appearance — screenshotting each and running Apple's audit on each. Two of the audit's findings
+were real and are fixed: the *3 comments* link and the *Post to your Outpost* prompt were under 44
+points tall, on every platform. What remains is the known Dynamic Type and avatar-initial findings, the
+system's own search clear button and keyboard suggestion cells, and *Text clipped* on the Liquid Glass
+sidebar's labels, whose text draws whole — the audit measures the label's frame from the icon's edge.
+**Not seen on a Mac**: the screen was locked while this was built, and a Mac draws no list content into
+an occluded window.
+
+### Copy names the device, says click on a Mac, and a hint never names a gesture
+
+`PROPOSED` — Claude, 2026-09-18, in the Mac and iPad pass.
+
+Sentences that told a member "your phone makes a key", "this is a setting on your phone" or "it has
+not left this phone" were true only on an iPhone, and the honesty rules put a false present-tense
+sentence on the same footing as a missing feature. They say *device* now, on every platform, the way
+*Photos and clips you receive stay on this device* already did.
+
+Visible instructions follow the platform's verb: *Tap to show* is *Click to show* on a Mac, and the
+reaction sheets and lists say *click* there. Two screens whose only actions were swipes — Blocked
+People and the rooms list's *Edit list* — also have a context menu now, and on a Mac their footers
+say *Control-click* instead of *Swipe*, because a Mac has no swipe a member would discover. The Outposts
+list's *Tell me* and *Mark read* moved into `OutpostPersonActions`, used by its swipes and by a context
+menu on both lists.
+
+VoiceOver hints no longer say *Double-tap to…*: Apple's guidance for a hint is to describe the
+result and leave the gesture to VoiceOver, which knows the platform and the member's settings. A
+photo's label used to carry its instruction; the label says what it is and a hint says what happens.
 
 ## Superseded
 

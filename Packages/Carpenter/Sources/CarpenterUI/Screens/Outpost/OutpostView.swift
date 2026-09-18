@@ -264,6 +264,8 @@ public struct OutpostView: View {
                     .glassEffect(.regular.interactive(), in: Capsule())
             }
             .buttonStyle(.plain)
+            .frame(minHeight: CarpenterMetrics.hitTarget)
+            .contentShape(Capsule())
         }
     }
 }

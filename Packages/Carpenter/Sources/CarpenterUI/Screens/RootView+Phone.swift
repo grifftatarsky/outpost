@@ -37,33 +37,14 @@ extension RootView {
         TabView(selection: visibleTab) {
             Tab(value: PhoneTab.messages) {
                 NavigationStack(path: roomPath) {
-                    RoomsListView(
-                        rooms: visibleRooms,
-                        awaiting: awaitingAdmission,
-                        managedTags: managedTags,
-                        scope: isSplitInbox ? .direct : .everything,
-                        preferences: preferences,
-                        organisation: $organisation, syncedPeers: syncedPeers, cannotSend: cannotSend,
-                        lastSync: lastSync, connections: connections, onCreateRoom: onCreateRoom,
-                        onStartSolo: onStartSolo, showsPrivacyNote: showsPrivacyNote,
-                        onJoinWithInvite: onRedeemInvite,
-                        onAppearSync: onSync,
-                        isSilenced: isSilenced,
-                        onSilence: { room, silenced in Task { await onSilence(room, silenced) } },
-                        onMarkRead: { room in Task { await onMarkRoomRead(room) } },
-                        onLeave: { room in leaving = visibleRooms.first { $0.id == room } },
-                        roomDeletion: roomDeletion,
-                        onDelete: { room in deleting = visibleRooms.first { $0.id == room } },
-                        focus: focusBinding,
-                        preview: { previewMessages($0) }
-                    )
-                    .refreshable { await onSync() }
-                    .navigationDestination(for: RoomID.self) { id in
-                        roomDestination(id)
-                    }
-                    .navigationDestination(for: PersonRoute.self) { route in
-                        personDestination(route)
-                    }
+                    roomsList(isSplitInbox ? .direct : .everything)
+                        .refreshable { await onSync() }
+                        .navigationDestination(for: RoomID.self) { id in
+                            roomDestination(id)
+                        }
+                        .navigationDestination(for: PersonRoute.self) { route in
+                            personDestination(route)
+                        }
                 }
             } label: {
                 Label {
@@ -81,39 +62,14 @@ extension RootView {
             if isSplitInbox {
                 Tab(value: PhoneTab.rooms) {
                     NavigationStack(path: roomPath) {
-                        RoomsListView(
-                            rooms: visibleRooms,
-                            // A split inbox used to hand `awaiting` to the Solos tab and not this
-                            // one, so somebody waiting to be let into a room saw the invitation on
-                            // the wrong tab and never on this one. An invitation that is invisible
-                            // is worse than one shown twice, so both tabs get it until
-                            // `AwaitingAdmission` can say which kind of room it is for.
-                            awaiting: awaitingAdmission,
-                            managedTags: managedTags,
-                            scope: .groups,
-                            preferences: preferences,
-                        organisation: $organisation, syncedPeers: syncedPeers, cannotSend: cannotSend,
-                            lastSync: lastSync, connections: connections,
-                            onCreateRoom: onCreateRoom, onStartSolo: onStartSolo,
-                            showsPrivacyNote: showsPrivacyNote,
-                            onJoinWithInvite: onRedeemInvite,
-                            onAppearSync: onSync,
-                            isSilenced: isSilenced,
-                            onSilence: { room, silenced in Task { await onSilence(room, silenced) } },
-                            onMarkRead: { room in Task { await onMarkRoomRead(room) } },
-                            onLeave: { room in leaving = visibleRooms.first { $0.id == room } },
-                            roomDeletion: roomDeletion,
-                            onDelete: { room in deleting = visibleRooms.first { $0.id == room } },
-                            focus: focusBinding,
-                            preview: { previewMessages($0) }
-                        )
-                        .refreshable { await onSync() }
-                        .navigationDestination(for: RoomID.self) { id in
-                            roomDestination(id)
-                        }
-                        .navigationDestination(for: PersonRoute.self) { route in
-                            personDestination(route)
-                        }
+                        roomsList(.groups)
+                            .refreshable { await onSync() }
+                            .navigationDestination(for: RoomID.self) { id in
+                                roomDestination(id)
+                            }
+                            .navigationDestination(for: PersonRoute.self) { route in
+                                personDestination(route)
+                            }
                     }
                 } label: {
                     Label {
@@ -221,6 +177,29 @@ extension RootView {
         .onChange(of: organisation) { _, updated in
             onOrganisationChange { $0 = updated }
         }
+    }
+
+    func roomsList(_ scope: InboxScope) -> RoomsListView {
+        RoomsListView(
+            rooms: visibleRooms,
+            awaiting: awaitingAdmission,
+            managedTags: managedTags,
+            scope: scope,
+            preferences: preferences,
+            organisation: $organisation, syncedPeers: syncedPeers, cannotSend: cannotSend,
+            lastSync: lastSync, connections: connections, onCreateRoom: onCreateRoom,
+            onStartSolo: onStartSolo, showsPrivacyNote: showsPrivacyNote,
+            onJoinWithInvite: onRedeemInvite,
+            onAppearSync: onSync,
+            isSilenced: isSilenced,
+            onSilence: { room, silenced in Task { await onSilence(room, silenced) } },
+            onMarkRead: { room in Task { await onMarkRoomRead(room) } },
+            onLeave: { room in leaving = visibleRooms.first { $0.id == room } },
+            roomDeletion: roomDeletion,
+            onDelete: { room in deleting = visibleRooms.first { $0.id == room } },
+            focus: focusBinding,
+            preview: { previewMessages($0) }
+        )
     }
 
     func moveRooms(from source: IndexSet, to destination: Int) {

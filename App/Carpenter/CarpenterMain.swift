@@ -33,8 +33,8 @@ struct CarpenterMain: App {
         #if os(macOS)
             .defaultSize(width: 1_000, height: 720)
             .windowResizability(.contentMinSize)
-            .commands { DesktopCommands() }
         #endif
+        .commands { DesktopCommands() }
 
         #if os(macOS)
             Settings {

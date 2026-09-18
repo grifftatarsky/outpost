@@ -3,6 +3,7 @@ import SwiftUI
 
 public struct OutpostFeedView: View {
     @Environment(\.palette) private var palette
+    @Environment(\.showsPeopleRail) private var showsPeopleRail
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let viewer: Member
@@ -81,10 +82,12 @@ public struct OutpostFeedView: View {
                 emptyState
             } else {
                 List {
-                    PeopleRail(viewer: viewer, authors: authors, unseen: unseen)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    if showsPeopleRail {
+                        PeopleRail(viewer: viewer, authors: authors, unseen: unseen)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
 
                     ForEach(shown) { post in
                         FeedPostRow(
@@ -205,6 +208,10 @@ public struct OutpostFeedView: View {
         }
         .background(palette.background)
     }
+}
+
+extension EnvironmentValues {
+    @Entry var showsPeopleRail = true
 }
 
 private struct PeopleRail: View {

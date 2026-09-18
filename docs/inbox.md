@@ -210,6 +210,11 @@ window. Found rendering every pane on 2026-09-18; the other pages were not read 
 animated mark and the People hero off a card on the iPhone, and a grouped `Form` on the Mac draws its
 box regardless.
 
+**An invitation somebody is waiting on shows on both of a split inbox's lists.** `AwaitingAdmission`
+cannot say whether its room is a solo or a group, and an invitation that is invisible is worse than
+one shown twice — the reason used to be a comment above the second construction of the rooms list,
+which is one construction now.
+
 **The people picker has no index bar.** SwiftUI has no first-class section index; a real one needs a
 representable or a hand-drawn overlay, which native-first argues against.
 
