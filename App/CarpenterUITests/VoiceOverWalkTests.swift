@@ -62,8 +62,9 @@ final class VoiceOverWalkTests: XCTestCase {
     }
 
     private func isToolbarMenuBacking(_ element: XCUIElement) -> Bool {
-        element.elementType == .button
-            && app.navigationBars.firstMatch.frame.maxY > element.frame.midY
+        let bar = app.navigationBars.firstMatch
+        return element.elementType == .button && bar.exists
+            && bar.frame.maxY > element.frame.midY
             && app.buttons.allElementsBoundByIndex.contains { other in
                 other != element && !other.label.isEmpty
                     && other.frame.intersects(element.frame)

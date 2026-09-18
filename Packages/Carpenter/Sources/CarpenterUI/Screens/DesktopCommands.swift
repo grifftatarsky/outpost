@@ -71,6 +71,16 @@ public struct DesktopCommands: Commands {
             .disabled(actions?.joinWithInvite == nil)
         }
 
+        #if os(macOS)
+            CommandGroup(after: .textEditing) {
+                Button { actions?.show(.search) } label: {
+                    Text("Search", bundle: .module)
+                }
+                .keyboardShortcut("f")
+                .disabled(actions == nil)
+            }
+        #endif
+
         SidebarCommands()
 
         CommandGroup(after: .sidebar) {

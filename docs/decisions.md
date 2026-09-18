@@ -3789,6 +3789,11 @@ do is less than it sounds**: on the iPad, ⌘. leaves a sheet with or without it
 binding for Escape, and the Mac is where Escape is how a sheet is left; that was not measured, because
 the screen was locked.
 
+⌘F opens Search on the Mac, from the Edit menu, as *Keyboards* lists it. On the iPad it was measured
+not to reach the command — the system keeps ⌘F — so there Search is ⌘4 with the other areas. The
+window reopens on the area last used (`@SceneStorage`), as a Mac and an iPad restore where a person
+was.
+
 A photo in a conversation is a tap gesture rather than a button, so it had no pointer effect on an
 iPad; it takes the system's highlight when it can be opened, shown or retried.
 

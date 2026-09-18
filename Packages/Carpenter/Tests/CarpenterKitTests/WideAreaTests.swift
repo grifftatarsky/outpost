@@ -38,4 +38,13 @@ struct WideAreaTests {
         #expect(WideArea.search.normalised(splitInbox: false, showsOutposts: false) == .search)
         #expect(WideArea.you.normalised(splitInbox: true, showsOutposts: false) == .you)
     }
+
+    @Test func everyAreaSurvivesBeingStoredAndReadBack() {
+        let all: [WideArea] = [.messages(.direct), .messages(.groups), .messages(.everything), .outposts, .search, .you]
+        for area in all {
+            #expect(WideArea(stored: area.stored) == area)
+        }
+        #expect(WideArea(stored: "") == nil)
+        #expect(WideArea(stored: "somewhere") == nil)
+    }
 }

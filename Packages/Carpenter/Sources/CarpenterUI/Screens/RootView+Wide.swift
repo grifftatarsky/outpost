@@ -10,6 +10,29 @@ enum WideArea: Hashable {
     case search
     case you
 
+    var stored: String {
+        switch self {
+        case .messages(.direct): "solos"
+        case .messages(.groups): "rooms"
+        case .messages(.everything): "messages"
+        case .outposts: "outposts"
+        case .search: "search"
+        case .you: "you"
+        }
+    }
+
+    init?(stored: String) {
+        switch stored {
+        case "solos": self = .messages(.direct)
+        case "rooms": self = .messages(.groups)
+        case "messages": self = .messages(.everything)
+        case "outposts": self = .outposts
+        case "search": self = .search
+        case "you": self = .you
+        default: return nil
+        }
+    }
+
     static func home(splitInbox: Bool) -> WideArea {
         splitInbox ? .messages(.groups) : .messages(.everything)
     }
@@ -81,7 +104,10 @@ extension RootView {
                 }
             }
         #endif
-        .onAppear { if area == nil { area = defaultArea } }
+        .onAppear { if area == nil { area = WideArea(stored: storedArea) ?? defaultArea } }
+        .onChange(of: area) { _, picked in
+            if let picked { storedArea = picked.stored }
+        }
         #if os(iOS)
             .onGeometryChange(for: Bool.self) { $0.size.width < $0.size.height } action: { upright in
                 isUpright = upright

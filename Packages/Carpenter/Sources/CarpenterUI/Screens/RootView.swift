@@ -28,6 +28,7 @@ public struct RootView: View {
     @State var outpostsExpanded = true
     @State var showsAudienceRail = true
     @State var area: WideArea?
+    @SceneStorage("wide.area") var storedArea = ""
     @State var wideColumns: NavigationSplitViewVisibility = .all
     @State var isUpright = false
     @ScaledMetric(relativeTo: .body) var sidebarWidth: CGFloat = 210
