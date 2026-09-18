@@ -32,13 +32,15 @@ struct AppearanceSettingsView: View {
                         detail: Text(accent.displayName),
                         swatch: true)
                 }
-                NavigationLink {
-                    AppIconPickerView(choice: $appIcon, isSupported: appIconIsSupported)
-                } label: {
-                    SettingsRow(
-                        icon: "app.badge.fill",
-                        title: Text("App icon", bundle: .module),
-                        detail: Text(appIcon.displayName))
+                if appIconIsSupported {
+                    NavigationLink {
+                        AppIconPickerView(choice: $appIcon, isSupported: appIconIsSupported)
+                    } label: {
+                        SettingsRow(
+                            icon: "app.badge.fill",
+                            title: Text("App icon", bundle: .module),
+                            detail: Text(appIcon.displayName))
+                    }
                 }
                 NavigationLink {
                     InboxArrangementView(arrangement: $inbox)

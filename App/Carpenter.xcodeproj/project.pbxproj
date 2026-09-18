@@ -506,6 +506,7 @@
 			buildSettings = {
 				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]" = "AppIcon-FullCobalt AppIcon-FullVerdigris AppIcon-FullSignalAmber AppIcon-FullOxblood AppIcon-FullAubergine AppIcon-FullHangarSlate AppIcon-FullOliveDrab AppIcon-PlainDark AppIcon-AntennaCobalt AppIcon-AntennaVerdigris AppIcon-AntennaSignalAmber AppIcon-AntennaOxblood AppIcon-AntennaAubergine AppIcon-AntennaHangarSlate AppIcon-AntennaOliveDrab AppIcon-AntennaWhite AppIcon-AntennaBlack AppIcon-MailboxCobalt AppIcon-MailboxVerdigris AppIcon-MailboxSignalAmber AppIcon-MailboxOxblood AppIcon-MailboxAubergine AppIcon-MailboxHangarSlate AppIcon-MailboxOliveDrab AppIcon-MailboxWhite AppIcon-MailboxBlack";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = AppIconMac;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Carpenter/Carpenter.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -555,6 +556,7 @@
 			buildSettings = {
 				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]" = "AppIcon-FullCobalt AppIcon-FullVerdigris AppIcon-FullSignalAmber AppIcon-FullOxblood AppIcon-FullAubergine AppIcon-FullHangarSlate AppIcon-FullOliveDrab AppIcon-PlainDark AppIcon-AntennaCobalt AppIcon-AntennaVerdigris AppIcon-AntennaSignalAmber AppIcon-AntennaOxblood AppIcon-AntennaAubergine AppIcon-AntennaHangarSlate AppIcon-AntennaOliveDrab AppIcon-AntennaWhite AppIcon-AntennaBlack AppIcon-MailboxCobalt AppIcon-MailboxVerdigris AppIcon-MailboxSignalAmber AppIcon-MailboxOxblood AppIcon-MailboxAubergine AppIcon-MailboxHangarSlate AppIcon-MailboxOliveDrab AppIcon-MailboxWhite AppIcon-MailboxBlack";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = AppIconMac;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Carpenter/Carpenter.entitlements;
 				CODE_SIGN_STYLE = Automatic;
