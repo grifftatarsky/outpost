@@ -40,6 +40,9 @@
     "That is you." : {
       "comment" : "Tried to invite or grant access to oneself"
     },
+    "That you left has not been sent yet, so the room would never hear it. Once it has gone, this conversation can be deleted." : {
+      "comment" : "Tried to delete a room before the departure was sent"
+    },
     "The fifteen minutes to change these words are up. Everybody who has it already read them as they are." : {
       "comment" : "The edit window has closed"
     },
@@ -81,6 +84,9 @@
     },
     "You are signed out of iCloud, so there is nowhere to leave what you write. Sign in and it will go on its own." : {
       "comment" : "The member is not signed in to iCloud"
+    },
+    "You are still in this conversation. Deleting is for a conversation you have left or been removed from." : {
+      "comment" : "Tried to delete a room this member is still in"
     },
     "You chose to read other people's Outposts without joining in. Change that under Outpost settings on the You page." : {
       "comment" : "Tried to comment or react while set to read only"

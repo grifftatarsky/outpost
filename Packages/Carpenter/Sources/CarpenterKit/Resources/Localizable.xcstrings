@@ -26,14 +26,19 @@
         }
       }
     },
-    "%@ Dark" : {
-      "comment" : "App icon name, dark ground"
-    },
-    "%@ Light" : {
-      "comment" : "App icon name, light ground"
-    },
     "%@ set up a new device" : {
       "comment" : "Banner title when somebody restores from a recovery key and asks for history"
+    },
+    "%@, %@" : {
+      "comment" : "App icon read aloud: its color, then which drawing",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
     },
     "%@, %@ and %lld others" : {
       "comment" : "Two peer names and a count of the rest",
@@ -125,8 +130,14 @@
     "Anonymous" : {
       "comment" : "A name a member can pick for everybody they have not met"
     },
+    "Antenna" : {
+      "comment" : "App icon drawing: the mailbox with an antenna"
+    },
     "Aubergine" : {
-      "comment" : "Accent colour name"
+      "comment" : "Accent color name"
+    },
+    "Black" : {
+      "comment" : "App icon name, a white mark on black"
     },
     "Caught up with %@ %@." : {
       "comment" : "Sync footer: peers, then how long ago",
@@ -139,8 +150,11 @@
         }
       }
     },
+    "Classic" : {
+      "comment" : "App icon drawing: the mailbox on its stand"
+    },
     "Cobalt" : {
-      "comment" : "Accent colour name"
+      "comment" : "Accent color name"
     },
     "Everything" : {
       "comment" : "Outpost access: the whole wall, still growing"
@@ -149,7 +163,7 @@
       "comment" : "Outpost access: the whole wall, up to a date"
     },
     "Hangar Slate" : {
-      "comment" : "Accent colour name"
+      "comment" : "Accent color name"
     },
     "It asked for your copy of %@. Your history is on its way to them." : {
       "comment" : "Banner body naming the conversation a restored device asked for"
@@ -160,8 +174,11 @@
     "Kept by the app, only on your devices, and it goes when nothing is waiting." : {
       "comment" : "Rooms list, app-managed tag note"
     },
+    "Mailbox" : {
+      "comment" : "App icon drawing: the mailbox alone"
+    },
     "Monochrome" : {
-      "comment" : "Accent colour name"
+      "comment" : "Accent color name"
     },
     "New post" : {
       "comment" : "Title of a notification for a post on somebody's Outpost.",
@@ -186,7 +203,7 @@
       "comment" : "Outpost timestamp, under a minute old"
     },
     "Olive Drab" : {
-      "comment" : "Accent colour name"
+      "comment" : "Accent color name"
     },
     "on %@" : {
       "comment" : "Sync recency, dated"
@@ -195,19 +212,13 @@
       "comment" : "Rooms list, the app's own filter is on, one room"
     },
     "Oxblood" : {
-      "comment" : "Accent colour name"
-    },
-    "Plain Dark" : {
-      "comment" : "App icon name"
-    },
-    "Plain Light" : {
-      "comment" : "App icon name"
+      "comment" : "Accent color name"
     },
     "Posted to their Outpost" : {
       "comment" : "Banner subtitle for a post on somebody's own feed"
     },
     "Signal Amber" : {
-      "comment" : "Accent colour name"
+      "comment" : "Accent color name"
     },
     "Somebody asked to check who they are talking to." : {
       "comment" : "Text displayed in a notification when a user is being asked to check who they are talking to.",
@@ -250,13 +261,16 @@
       "comment" : "The default name for everybody this member has not met"
     },
     "Verdigris" : {
-      "comment" : "Accent colour name"
+      "comment" : "Accent color name"
     },
     "Visible to %lld people." : {
       "comment" : "Outpost audience, several readers"
     },
     "Visible to 1 person." : {
       "comment" : "Outpost audience, one reader"
+    },
+    "White" : {
+      "comment" : "App icon name, a black mark on white"
     },
     "yesterday" : {
       "comment" : "Sync recency"
