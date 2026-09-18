@@ -186,6 +186,28 @@ window, the compose button and the help window need a person at the Mac.
 
 </details>
 
+<details markdown="1" id="the-wide-layout">
+<summary><b>The wide layout, on a Mac and an iPad</b> — Built; iPad walked, Mac not seen</summary>
+
+**Story.** As somebody on a Mac or an iPad, I want the screen used like the platform uses it, so that
+the app is not an iPhone stretched wide.
+
+**Acceptance criteria**
+
+- **Built, walked on an iPad.** Three columns: areas, the iPhone's own list for the area, what is
+  open. Upright the sidebar steps aside; at an accessibility text size an iPad uses the tabs —
+  [Decisions](../decisions.md#the-mac-and-an-ipad-at-full-width-share-one-layout-areas-a-list-and-what-is-open).
+- **Built, measured on an iPad.** ⌘N, ⇧⌘N and ⌘1 onward from a keyboard; the area is restored on
+  launch.
+- **Built.** Copy names the device and says click on a Mac; swipe-only actions have context menus —
+  [Decisions](../decisions.md#copy-names-the-device-says-click-on-a-mac-and-a-hint-never-names-a-gesture).
+- **Not seen on a Mac.** The screen was locked for the whole pass.
+
+**Testing.** `WideLayoutTests` (opt-in, iPad) and `WideAreaTests` (suite). See
+[Testing](../testing.md).
+
+</details>
+
 <details markdown="1" id="draw-the-platforms-the-set-claims">
 <summary><b>Draw the platforms the set claims</b> — Not started</summary>
 
