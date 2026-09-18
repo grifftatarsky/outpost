@@ -3569,6 +3569,32 @@ second construction quietly losing an argument.
 **Not seen.** It builds for both platforms and nothing more is known: the Mac's display was asleep
 all night, and with it asleep every window counts as occluded and SwiftUI draws no scrolling content.
 
+### The Mac toolbar's mailbox carries a hand-drawn count, and only when badges are on
+
+`PROPOSED` — Claude, 2026-09-18. The mailbox itself, its count and the filled mark are what Griff
+asked for; how the count is drawn and when it shows are Claude's.
+
+Griff asked for "the little mailbox guy" in the Mac toolbar "where it has notification badges". The
+system has no badge for a toolbar item: in the macOS 27 and iOS 27 SDKs, `badge(_:)` exists on a
+`View` — drawn only in list rows and tab bars — and on `TabContent`, and not on `ToolbarContent`.
+So the count is drawn by `WaitingButton` itself, a red capsule anchored at the glyph's top-trailing
+corner that grows outward.
+
+**This departs from the HIG, and it was read first.** *Notifications ▸ Badging*: "Avoid creating a
+custom image or component that mimics the appearance or behavior of a badge. People can turn off
+notification badges if they choose, and will become frustrated if they have done so and then see what
+appears to be a badge." The request is Griff's, so it is built; the objection is honoured where it
+bites. The count shows only when the system says badges are on for this app (`badgeSetting` and
+authorization, read with the rest of the permission as `systemShowsBadges`), and it is the Dock's
+number exactly: the same `BadgeCount.of`, moved into `CarpenterKit` so the UI reads one rule rather
+than a second copy of it, under the member's own *Badges* choice. Turn badges off anywhere and the
+mailbox is plain. The popover still lists what is waiting, because a list is not a badge.
+
+**What it costs.** It is a component to keep looking like the system's badge when the system's badge
+changes, and nothing will say when that happens. Measured in an offscreen window: the count is not
+clipped by the toolbar at 3, 12 or 99+. **Not** seen against real Liquid Glass — an offscreen render
+does not draw it — nor in dark mode for the same reason.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

@@ -23,6 +23,11 @@ extension AppRootView {
         case .authorized, .provisional, .ephemeral: notificationsAllowed = true
         default: notificationsAllowed = false
         }
+        switch settings.badgeSetting {
+        case .enabled: badgesAllowed = notificationsAllowed
+        case .disabled, .notSupported: badgesAllowed = false
+        @unknown default: badgesAllowed = nil
+        }
     }
 
     func enableMessagePush() async {
@@ -51,6 +56,7 @@ extension AppRootView {
             outposts: session.outpostNotifications,
             badges: session.badgeChoices,
             systemAllows: notificationsAllowed,
+            systemShowsBadges: badgesAllowed,
             onMessaging: { await session.setMessagingNotifications($0) },
             onOutposts: { await session.setOutpostNotifications($0) },
             onBadges: { await session.setBadgeChoices($0) },

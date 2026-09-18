@@ -2,8 +2,6 @@ import CarpenterKit
 import Foundation
 import Testing
 
-@testable import CarpenterApp
-
 @Suite("What the badge should say")
 struct BadgeCountTests {
     private func room(unread: Bool) -> RoomSummary {

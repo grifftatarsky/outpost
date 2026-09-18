@@ -133,6 +133,16 @@ extension RootView {
                 }
             }
         }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                WaitingButton(
+                    rooms: visibleRooms,
+                    authors: waitingAuthors,
+                    badge: waitingBadge,
+                    onOpenRoom: { destination = .room($0) },
+                    onOpenOutpost: { destination = .outpost($0) })
+            }
+        }
         .themed(theme.accent)
         .environment(\.showsAvatars, preferences.showsAvatars)
         .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)
@@ -147,5 +157,15 @@ extension RootView {
             OutpostAudienceView(outpostAudience)
         }
         .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
+    }
+
+    var waitingAuthors: [Member] {
+        visibleOutpostAuthors.filter { unseenOutposts.contains($0.id) }
+    }
+
+    var waitingBadge: Int {
+        guard let notifications, notifications.systemShowsBadges == true else { return 0 }
+        return BadgeCount.of(
+            visibleRooms, outposts: waitingAuthors.count, choices: notifications.badges)
     }
 }

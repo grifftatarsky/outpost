@@ -74,6 +74,7 @@ public struct NotificationSettings {
     public let outposts: OutpostNotificationChoices
     public let badges: BadgeChoices
     public let systemAllows: Bool?
+    public let systemShowsBadges: Bool?
     public let onMessaging: (MessagingNotificationChoices) async -> Void
     public let onOutposts: (OutpostNotificationChoices) async -> Void
     public let onBadges: (BadgeChoices) async -> Void
@@ -84,6 +85,7 @@ public struct NotificationSettings {
         outposts: OutpostNotificationChoices,
         badges: BadgeChoices,
         systemAllows: Bool?,
+        systemShowsBadges: Bool?,
         onMessaging: @escaping (MessagingNotificationChoices) async -> Void,
         onOutposts: @escaping (OutpostNotificationChoices) async -> Void,
         onBadges: @escaping (BadgeChoices) async -> Void,
@@ -93,6 +95,7 @@ public struct NotificationSettings {
         self.outposts = outposts
         self.badges = badges
         self.systemAllows = systemAllows
+        self.systemShowsBadges = systemShowsBadges
         self.onMessaging = onMessaging
         self.onOutposts = onOutposts
         self.onBadges = onBadges

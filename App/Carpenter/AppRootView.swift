@@ -92,6 +92,7 @@ struct AppRootView: View {
     @AppStorage("explained.notifications") var notificationsExplained = false
     @State var explainingNotifications = false
     @State var notificationsAllowed: Bool?
+    @State var badgesAllowed: Bool?
     @State var askingOutpostNotifications = false
 
     var debugActions: DebugActions? {
