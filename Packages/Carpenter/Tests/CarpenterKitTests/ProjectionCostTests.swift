@@ -146,14 +146,24 @@ struct ProjectionCostTests {
 
         for (_, read) in reads { read() }
 
-        let known = ["messages(in:)": 0.005, "transcript(in:)": 0.005]
+        let refold = (0..<3).map { _ -> TimeInterval in
+            alice.foldChanged()
+            let started = Date()
+            _ = alice.messages(in: room)
+            return Date().timeIntervalSince(started)
+        }.sorted()[1]
+
+        for (_, read) in reads { read() }
+
+        let known = ["messages(in:)": refold / 50, "transcript(in:)": refold / 50]
+        let ordinary = refold / 250
 
         var expensive: [String] = []
         for (name, read) in reads {
             let started = Date()
             for _ in 0..<20 { read() }
             let each = Date().timeIntervalSince(started) / 20
-            if each > (known[name] ?? 0.001) {
+            if each > (known[name] ?? ordinary) {
                 expensive.append("\(name) — \(Int(each * 1_000_000))µs a call")
             }
         }
@@ -161,8 +171,9 @@ struct ProjectionCostTests {
         #expect(
             expensive.isEmpty,
             """
-            These are read while a screen draws and cost more than a millisecond a call, which \
-            means they are re-folding or re-decrypting rather than answering from the cache: \
+            These are read while a screen draws and cost more than \(Int(ordinary * 1_000_000))µs a \
+            call — a 250th of refolding the log, which took \(Int(refold * 1_000_000))µs on this \
+            machine — so they are re-folding or re-decrypting rather than answering from the cache: \
             \(expensive.joined(separator: "; ")). SwiftUI evaluates a body many times a second and \
             a frame is 16,700µs.
             """)
