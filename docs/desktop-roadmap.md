@@ -63,10 +63,12 @@ at instead.
 - **Return and Shift-Return.** The field already calls `.onSubmit(send)`. What a vertical `TextField`
   does with Return on macOS — submit or insert a line — has to be measured, not assumed; CLAUDE.md
   records one keyboard change made blind that had to be reverted.
-- **The new-post sheet.** It was a `NavigationStack` around a `TextEditor` with no size of its own, and
-  on macOS a sheet sizes to its content — a text editor has no natural height, so it collapses. It now
-  asks for `.presentationSizing(.form)` on the Mac only. That is the known cause and the native fix,
-  and it is **not seen**. Other sheets built the same way may do the same and were not audited.
+- **Sheets.** Every sheet goes through `sizedSheet`, which gives it a form size on the Mac: macOS
+  sizes a sheet to its content, and a `List`, a `ScrollView` or a `TextEditor` has no natural height.
+  Seen on Griff's Mac 2026-09-18 as the notifications explainer arriving as a lone *Continue* bar.
+  `Scripts/lint/sheet-sizing.py` fails a bare `.sheet(`. Fixed after that screenshot; not yet seen fixed.
+- **Titles.** Three screens printed their title twice on the Mac, once from the window and once from a
+  `.principal` item. Fixed; the conversation's member count moved to the window subtitle.
 - **The field's border while typing.** An observed behavior, so it needs observing.
 - **A full keyboard path** through sidebar, list and detail, with a visible focus ring on every stop.
 - **The icon at 16 points.** A design call: a simpler mark for the smallest sizes, or live with it.
