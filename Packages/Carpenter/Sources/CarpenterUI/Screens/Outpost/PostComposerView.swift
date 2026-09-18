@@ -155,6 +155,9 @@ public struct PostComposerView: View {
                 }
             }
         }
+        #if os(macOS)
+            .presentationSizing(.form)
+        #endif
     }
 
     private func post() {

@@ -63,8 +63,11 @@ at instead.
 - **Return and Shift-Return.** The field already calls `.onSubmit(send)`. What a vertical `TextField`
   does with Return on macOS — submit or insert a line — has to be measured, not assumed; CLAUDE.md
   records one keyboard change made blind that had to be reverted.
-- **The field's border while typing, and the new-post sheet.** Both are observed behaviors, so both
-  need observing.
+- **The new-post sheet.** It was a `NavigationStack` around a `TextEditor` with no size of its own, and
+  on macOS a sheet sizes to its content — a text editor has no natural height, so it collapses. It now
+  asks for `.presentationSizing(.form)` on the Mac only. That is the known cause and the native fix,
+  and it is **not seen**. Other sheets built the same way may do the same and were not audited.
+- **The field's border while typing.** An observed behavior, so it needs observing.
 - **A full keyboard path** through sidebar, list and detail, with a visible focus ring on every stop.
 - **The icon at 16 points.** A design call: a simpler mark for the smallest sizes, or live with it.
 
