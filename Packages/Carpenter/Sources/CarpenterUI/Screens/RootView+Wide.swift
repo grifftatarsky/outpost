@@ -167,7 +167,7 @@ extension RootView {
             }
         }
         .listStyle(.sidebar)
-        .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 260)
+        .navigationSplitViewColumnWidth(min: 180, ideal: sidebarWidth, max: max(260, sidebarWidth))
     }
 
     @ViewBuilder
@@ -182,11 +182,11 @@ extension RootView {
                     .navigationDestination(for: RoomID.self) { _ in EmptyView() }
             }
             .environment(\.selectedRoom, openRoom)
-            .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 460)
+            .navigationSplitViewColumnWidth(min: 300, ideal: listWidth, max: max(460, listWidth))
 
         case .outposts:
             outpostsColumn
-                .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 400)
+                .navigationSplitViewColumnWidth(min: 260, ideal: listWidth * 0.85, max: max(400, listWidth))
 
         case .search:
             SearchTabView(
@@ -197,7 +197,7 @@ extension RootView {
                     go(.outpost(post.author.id))
                     outpostPath.append(post)
                 })
-            .navigationSplitViewColumnWidth(min: 300, ideal: 340, max: 460)
+            .navigationSplitViewColumnWidth(min: 300, ideal: listWidth, max: max(460, listWidth))
 
         case .you:
             youScreen
@@ -207,7 +207,7 @@ extension RootView {
                 .navigationDestination(for: OutpostPost.self) { post in
                     postDestination(post)
                 }
-                .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
+                .navigationSplitViewColumnWidth(min: 320, ideal: listWidth * 1.1, max: max(480, listWidth * 1.2))
         }
     }
 

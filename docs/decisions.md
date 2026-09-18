@@ -3729,6 +3729,11 @@ open in the detail column. `StartingConversations` builds the three start sheets
 regular width too, and keeps its tabs: the check is the iPad idiom first. An iPad in Slide Over or a
 narrow split keeps the tabs.
 
+**At an accessibility text size** an iPad uses the tabs instead: at the largest size three columns
+break words mid-word — *So / los*, *Ou / tposts* — and the tabs were already walked at that size.
+Below it the sidebar and list widths grow with the text (`@ScaledMetric`), and at
+extra-extra-extra-large every label still fits.
+
 **Upright on an iPad** the sidebar sits behind its button and gets out of the way once an area is
 chosen, and the *Who sees your Outpost* inspector starts closed, because upright it covers the Outpost
 it describes. On its side, all three columns show.

@@ -133,6 +133,24 @@ final class WideLayoutTests: XCTestCase {
         shoot("search to you")
     }
 
+    func testLooks() {
+        let tag = ProcessInfo.processInfo.environment["OUTPOST_LOOK"] ?? "default"
+        for (orientation, name) in [(UIDeviceOrientation.landscapeLeft, "landscape"), (.portrait, "portrait")] {
+            let app = launch("rooms", orientation)
+            sleep(2)
+            _ = tapRow(app, "Hangar 7")
+            shoot("\(tag) \(name) room")
+            if open(app, area: "Outposts", "\(tag) \(name)") {
+                shoot("\(tag) \(name) outposts")
+            }
+            if open(app, area: "You", "\(tag) \(name)") {
+                _ = tapRow(app, "Appearance")
+                shoot("\(tag) \(name) you")
+            }
+            app.terminate()
+        }
+    }
+
     func testPortrait() { walk(.portrait, "portrait") }
 
     func testLandscape() { walk(.landscapeLeft, "landscape") }

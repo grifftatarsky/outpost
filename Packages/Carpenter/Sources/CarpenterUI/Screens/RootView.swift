@@ -30,8 +30,11 @@ public struct RootView: View {
     @State var area: WideArea?
     @State var wideColumns: NavigationSplitViewVisibility = .all
     @State var isUpright = false
+    @ScaledMetric(relativeTo: .body) var sidebarWidth: CGFloat = 210
+    @ScaledMetric(relativeTo: .body) var listWidth: CGFloat = 360
     #if os(iOS)
         @Environment(\.horizontalSizeClass) var horizontalSizeClass
+        @Environment(\.dynamicTypeSize) var layoutTypeSize
     #endif
     @State var namingRoom = false
     @State var pickingSolo = false
@@ -615,7 +618,9 @@ public struct RootView: View {
                 wide
             }
         #else
-            if UIDevice.current.userInterfaceIdiom == .pad, horizontalSizeClass == .regular {
+            if UIDevice.current.userInterfaceIdiom == .pad, horizontalSizeClass == .regular,
+                !layoutTypeSize.isAccessibilitySize
+            {
                 wide
             } else {
                 phone
