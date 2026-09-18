@@ -58,6 +58,11 @@ extension RootView {
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 220, ideal: 264, max: 320)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    composeMenu
+                }
+            }
             .onChange(of: openRoom) { _, room in
                 guard let room, destination != .room(room) else { return }
                 destination = .room(room)
@@ -87,7 +92,6 @@ extension RootView {
                                             Image(systemName: "sidebar.trailing")
                                         }
                                     }
-                                    .keyboardShortcut("i", modifiers: [.command, .option])
                                 }
                             }
                     } else {
@@ -143,6 +147,12 @@ extension RootView {
                     onOpenOutpost: { destination = .outpost($0) })
             }
         }
+        .modifier(
+            StartingConversations(
+                namingRoom: $namingRoom, pickingSolo: $pickingSolo, soloInvite: $soloInvite,
+                preferences: preferences, connections: connections,
+                onCreateRoom: onCreateRoom, onStartSolo: onStartSolo))
+        .focusedSceneValue(\.desktopActions, desktopActions)
         .themed(theme.accent)
         .environment(\.showsAvatars, preferences.showsAvatars)
         .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)
@@ -150,6 +160,54 @@ extension RootView {
         .onChange(of: organisation) { _, updated in
             onOrganisationChange { $0 = updated }
         }
+    }
+
+    var composeMenu: some View {
+        Menu {
+            Button { namingRoom = true } label: {
+                Label {
+                    Text("New room", bundle: .module)
+                } icon: {
+                    Image(systemName: "person.3")
+                }
+            }
+            Button { pickingSolo = true } label: {
+                Label {
+                    Text("New solo", bundle: .module)
+                } icon: {
+                    Image(systemName: "person")
+                }
+            }
+            if let onRedeemInvite {
+                Divider()
+                Button(action: onRedeemInvite) {
+                    Label {
+                        Text("Join with an invite", bundle: .module)
+                    } icon: {
+                        Image(systemName: "qrcode")
+                    }
+                }
+            }
+        } label: {
+            Label {
+                Text("New conversation", bundle: .module)
+            } icon: {
+                Image(systemName: "square.and.pencil")
+            }
+        }
+        .help(Text("New conversation", bundle: .module))
+    }
+
+    var desktopActions: DesktopActions {
+        DesktopActions(
+            newRoom: { namingRoom = true },
+            newSolo: { pickingSolo = true },
+            joinWithInvite: onRedeemInvite,
+            audienceShown: destination == .outpost(owner.id) ? showsAudienceRail : nil,
+            toggleAudience: { showsAudienceRail.toggle() },
+            rooms: visibleRooms.map { ($0.id, $0.name) },
+            owner: owner.id,
+            go: { destination = $0 })
     }
 
     var settingsWindow: some View {

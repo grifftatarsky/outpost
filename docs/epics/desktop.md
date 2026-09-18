@@ -166,6 +166,26 @@ window at 3, 12 and 99+ and is not clipped; Liquid Glass and dark mode were not 
 
 </details>
 
+<details markdown="1" id="the-menu-bar">
+<summary><b>The menu bar</b> — Built, structure measured</summary>
+
+**Story.** As somebody using this on a Mac, I want every command in the menu bar with a shortcut, so
+that I can find what the app does and do it from the keyboard.
+
+**Acceptance criteria**
+
+- **Built.** File: New Room… ⌘N, New Solo… ⇧⌘N, Join with an Invite…. View: sidebar, and Who Sees Your
+  Outpost on ⌥⌘I. Go: All Outposts, Your Outpost, You, rooms on ⌘1–⌘9. Help: How This Works.
+- **Built.** A command that cannot act is disabled, not hidden, and a show/hide item names what it will
+  do — [Decisions](../decisions.md#the-macs-menu-bar-carries-the-apps-commands).
+- **Built, not seen.** A compose button in the sidebar reaches the same sheets as the menu, built once
+  with the iPhone's.
+
+**Testing.** A windowless probe dumped the menu bar the package builds. Enabled items against a real
+window, the compose button and the help window need a person at the Mac.
+
+</details>
+
 <details markdown="1" id="draw-the-platforms-the-set-claims">
 <summary><b>Draw the platforms the set claims</b> — Not started</summary>
 

@@ -122,25 +122,11 @@ extension RoomsListView {
                     }
                 })
         }
-        .sizedSheet(isPresented: $isNamingRoom) {
-            NewRoomView(preferences: preferences, connections: connections) { name, access, people in
-                await onCreateRoom(name, access, people)
-            }
-        }
-        .sizedSheet(isPresented: $isStartingSolo) {
-            SoloPickerView(connections: connections) { person in
-                if let invite = await onStartSolo(person.id) {
-                    soloInvite = PresentedInvite(
-                        roomName: person.displayName, invite: invite, notAskedYet: true)
-                }
-            }
-        }
-        .sizedSheet(item: $soloInvite) { presented in
-            InviteView(
-                roomName: presented.roomName, invite: presented.invite,
-                phrase: phraseLookup(presented.invite),
-                notAskedYet: presented.notAskedYet)
-        }
+        .modifier(
+            StartingConversations(
+                namingRoom: $isNamingRoom, pickingSolo: $isStartingSolo, soloInvite: $soloInvite,
+                preferences: preferences, connections: connections,
+                onCreateRoom: onCreateRoom, onStartSolo: onStartSolo))
         .sizedSheet(isPresented: $isManagingTags) {
             ManageTagsView(organisation: $organisation, preferences: preferences)
         }

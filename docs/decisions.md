@@ -3672,6 +3672,33 @@ appearances; one window switched through all eight panes without a layout cycle 
 **Not seen:** the real Settings window's toolbar with these panes, and the main window's sheets,
 which now use the same form and were not drawn.
 
+### The Mac's menu bar carries the app's commands
+
+`PROPOSED` — Claude, 2026-09-18. Griff: "Do it", of the menu bar queued as the next feature.
+
+Read from the HIG, *The menu bar* and *Keyboards*, before choosing: support the standard menus in
+their order; put app-specific menus between View and Window; "always show the same set of menu
+items" and disable one that cannot act rather than hide it; a show/hide item's title says what it
+will do; keep the standard shortcuts. Option-Command-I is the standard "display an inspector window",
+which is why the audience inspector already had it.
+
+**What is there.** *File*: New Room… ⌘N, New Solo… ⇧⌘N, Join with an Invite… — replacing New Window,
+because the app is one window over one session. *View*: the system's Show/Hide Sidebar, and Show or
+Hide Who Sees Your Outpost on ⌥⌘I, enabled only beside your own Outpost. *Go*: All Outposts, Your
+Outpost, You, and the first nine rooms on ⌘1–⌘9, the way Messages numbers conversations. *Help*: How
+This Works, in a window of its own. Menu titles are title case, as the Mac's are; labels inside
+windows stay sentence case, as the app's are.
+
+**What it found.** The Mac had no way to start a room, start a solo or join with an invite: those
+lived in the iPhone's rooms list, which the Mac's sidebar does not use. The menu commands and a compose
+button in the sidebar's toolbar now reach the same three sheets, which moved into one modifier,
+`StartingConversations`, so the iPhone's list and the Mac's window present the same construction.
+
+**How it was checked.** A windowless probe linking the package dumped the menu bar it builds — every
+item above, in that order, with those shortcuts, disabled with no window in front — and the frontmost
+app did not change while it ran. **Not seen:** the items enabled against a real window, the compose
+button, and the help window.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

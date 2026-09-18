@@ -51,6 +51,7 @@ The iPad has never been drawn.
 | The desktop wall | Built, not seen | An inspector beside your own Outpost holding *Who sees your Outpost*, open by default, hidden with ⌥⌘I. [Decisions](decisions.md#the-desktop-wall-is-an-inspector-open-by-default-and-hideable). |
 | A Settings window | Built; panes drawn offscreen | ⌘, opens a Settings window with a toolbar of panes — Appearance, Behavior, Notifications, Privacy & Safety, Outposts, Devices, Data — holding the same pages the iPhone pushes from You. You on the Mac keeps your name, People, Supporter, your Outpost, help, and a *Settings* row. [Decisions](decisions.md#the-mac-has-a-settings-window-built-from-the-same-pages). |
 | What's waiting, in the toolbar | Built, not seen live | The filled mailbox; a popover of unread rooms and new Outposts; a count that is the Dock's number and shows only when badges are on. Rendered offscreen at 3, 12 and 99+, unclipped. [Decisions](decisions.md#the-mac-toolbars-mailbox-carries-a-hand-drawn-count-and-only-when-badges-are-on). |
+| The menu bar | Built; menu structure measured | File, View, Go and Help carry the app's commands with standard shortcuts, and a compose button in the sidebar starts a room, a solo or joins with an invite — the Mac had no way to do any of the three. [Decisions](decisions.md#the-macs-menu-bar-carries-the-apps-commands). |
 | Draw the platforms the set claims | Not started | Design work: two platforms, neither drawn. |
 
 ### What needs a person at the Mac

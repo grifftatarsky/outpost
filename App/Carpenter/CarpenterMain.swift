@@ -1,8 +1,5 @@
+import CarpenterUI
 import SwiftUI
-
-#if DEBUG
-    import CarpenterUI
-#endif
 
 @main
 struct CarpenterMain: App {
@@ -36,12 +33,20 @@ struct CarpenterMain: App {
         #if os(macOS)
             .defaultSize(width: 1_000, height: 720)
             .windowResizability(.contentMinSize)
+            .commands { DesktopCommands() }
         #endif
 
         #if os(macOS)
             Settings {
                 AppRootView(shell: shell, surface: .settings)
             }
+
+            Window(Text("How This Works"), id: DesktopCommands.howItWorksWindow) {
+                HowItWorksView()
+                    .themed(shell.theme.accent)
+                    .frame(minWidth: 480, idealWidth: 560, minHeight: 520, idealHeight: 680)
+            }
+            .windowResizability(.contentSize)
         #endif
     }
 }

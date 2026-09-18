@@ -4,7 +4,6 @@ import SwiftUI
 public struct RoomsListView: View {
     @Environment(\.palette) var palette
     @Environment(\.clock) var clock
-    @Environment(\.verificationPhrase) var phraseLookup
     @Environment(\.stampDevice) var stampDevice
 
     @Binding var organisation: RoomsListOrganisation
