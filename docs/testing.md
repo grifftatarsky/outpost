@@ -235,6 +235,25 @@ every tab and a conversation: contrast, hit regions, clipped text and missing de
 rendered app. It needs the app idle, so it launches with `--quiet-for-audit`. Issues are recorded one
 failure each, with Apple's description and the element.
 
+**The wide layout.** `WideLayoutTests` needs no member: it launches the fixture shell with
+`--site-shot rooms` on an iPad (`outpost-ipad` on the rig) and is skipped unless
+`TEST_RUNNER_OUTPOST_WIDE=1`. `testPortrait` and `testLandscape` walk rooms, a room, the sidebar,
+Outposts, your Outpost, Search, You and Appearance with a screenshot and Apple's audit at each stop;
+`testLooks` only screenshots, for running under a setting; the keyboard and Search-to-You tests
+assert. Set the setting on the device first and pass `-parallel-testing-enabled NO`, or the runner
+tests a clone and shuts the device you configured down:
+
+```bash
+xcrun simctl ui <ipad-udid> appearance dark
+```
+
+```bash
+TEST_RUNNER_OUTPOST_WIDE=1 TEST_RUNNER_OUTPOST_LOOK=dark xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=<ipad-udid>' -parallel-testing-enabled NO -only-testing:CarpenterUITests/WideLayoutTests/testLooks
+```
+
+The audit's *Text clipped* on the glass sidebar's labels is the audit, not the app: it measures a
+label's frame from the icon's edge and the words draw whole.
+
 **Contrast per accent.** `AccentContrastAuditTests` runs the contrast audit once per accent on Solos
 and You, the two screens whose colors depend on it, using `-theme.accent <name>`. Run it in light and
 dark; the appearance comes from the simulator.

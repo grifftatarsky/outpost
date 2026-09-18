@@ -3743,6 +3743,12 @@ and `nil` meant "the default area": choosing You from Search opened Rooms. The b
 now, and `WideAreaTests` holds the rules for which area a room lives in and what an area becomes when
 the inbox is merged or Outposts are turned off.
 
+**A selected row is white on `accentFill`.** A list with selection draws its chosen row in the tint,
+with white text, and the dark palette's accent is a light teal that white does not read on — the
+iPad's Outposts list, and every selection on a Mac. Those lists are tinted with `accentFill`, the fill
+the palette already computes to carry white. The iPad's glass sidebar draws tinted text on grey
+instead, and keeps the brighter accent.
+
 **How it was checked.** `WideLayoutTests` walks the fixture app on an iPad Air 11-inch in both
 orientations — rooms, a room open, the sidebar, Outposts, your own Outpost with its inspector, Search,
 You, Appearance — screenshotting each and running Apple's audit on each. Two of the audit's findings

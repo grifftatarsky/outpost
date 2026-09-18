@@ -193,6 +193,9 @@ extension RootView {
             }
         }
         .listStyle(.sidebar)
+        #if os(macOS)
+            .modifier(FilledSelection())
+        #endif
         .navigationSplitViewColumnWidth(min: 180, ideal: sidebarWidth, max: max(260, sidebarWidth))
     }
 
@@ -278,6 +281,7 @@ extension RootView {
             }
         }
         .navigationTitle(Text("Outposts", bundle: .module))
+        .modifier(FilledSelection())
     }
 
     @ViewBuilder
@@ -452,5 +456,13 @@ extension RootView {
         guard let notifications, notifications.systemShowsBadges == true else { return 0 }
         return BadgeCount.of(
             visibleRooms, outposts: waitingAuthors.count, choices: notifications.badges)
+    }
+}
+
+private struct FilledSelection: ViewModifier {
+    @Environment(\.palette) private var palette
+
+    func body(content: Content) -> some View {
+        content.tint(palette.accentFill)
     }
 }
