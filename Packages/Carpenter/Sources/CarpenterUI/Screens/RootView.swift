@@ -26,6 +26,7 @@ public struct RootView: View {
     @State var safety: SafetyPreferences
     @State var destination: Destination? = .allOutposts
     @State var outpostsExpanded = true
+    @State var showsAudienceRail = true
     @State var roomsExpanded = true
     @State var starting: RoomID?
     @State var tab: PhoneTab = .rooms

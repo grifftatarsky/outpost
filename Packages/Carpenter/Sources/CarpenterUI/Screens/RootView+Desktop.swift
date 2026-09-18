@@ -75,7 +75,24 @@ extension RootView {
                         }
 
                 case .outpost(let id):
-                    outpostDestination(id)
+                    if id == owner.id {
+                        outpostDestination(id)
+                            .inspector(isPresented: $showsAudienceRail) { audienceRail }
+                            .toolbar {
+                                ToolbarItem(placement: .primaryAction) {
+                                    Button { showsAudienceRail.toggle() } label: {
+                                        Label {
+                                            Text("Who sees it", bundle: .module)
+                                        } icon: {
+                                            Image(systemName: "sidebar.trailing")
+                                        }
+                                    }
+                                    .keyboardShortcut("i", modifiers: [.command, .option])
+                                }
+                            }
+                    } else {
+                        outpostDestination(id)
+                    }
 
                 case .you:
                     youScreen
@@ -123,5 +140,12 @@ extension RootView {
         .onChange(of: organisation) { _, updated in
             onOrganisationChange { $0 = updated }
         }
+    }
+
+    var audienceRail: some View {
+        NavigationStack {
+            OutpostAudienceView(outpostAudience)
+        }
+        .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
     }
 }

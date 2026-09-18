@@ -51,6 +51,13 @@ public struct OutpostAudienceView: View {
         self.onRevoke = onRevoke
     }
 
+    public init(_ audience: OutpostAudience) {
+        self.init(
+            people: audience.people, access: audience.access,
+            keyTurnPending: audience.keyTurnPending,
+            onAllow: audience.allow, onRevoke: audience.revoke)
+    }
+
     private var allowed: [Member] {
         people.filter { access.grant(for: $0.id)?.isAllowed == true }
             .sorted { $0.displayName < $1.displayName }

@@ -3519,6 +3519,56 @@ later, because `pg_dumpall` keeps three. And a report is passed to an authority 
 there*, not always — "all reports will be passed along" would have promised every question about a
 display name to the FBI.
 
+### The Mac icon is an Icon Composer document, and iOS keeps its own
+
+`PROPOSED` — Claude, 2026-09-18.
+
+The Mac was compiling the iOS icon set's 1024-point square: opaque, full-bleed, hard-cornered. iOS
+masks that shape itself and macOS does not, so the Dock was handed a square. `AppIconMac.icon` is an
+Icon Composer document — the same full mark, framed the way `make-app-icons.py` frames it, on white
+with the near-black glyph, and a dark appearance that inverts both. It is the format this Xcode
+compiles into a correctly shaped macOS icon, and the dark appearance is the mechanism macOS actually
+has, which the ticket asked for by name.
+
+It is scoped with `ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]`. iOS keeps `AppIcon` and its 26
+alternates untouched, because they were approved and nothing about iOS was wrong.
+
+**How it was checked.** Rendered with `ictool` for both appearances, and extracted back out of the
+built `.icns` at 16, 32, 128 and 256: transparent corners, a margin all round, no dark ring against
+a dark ground. **Not** seen in the Dock itself — the display was asleep.
+
+**What it costs.** At 16 points — Finder's list view — the full mark is grey noise. That is the
+drawing and not the build, and a simpler small-size mark is a design decision, not a code one. The
+build also still emits an unused `AppIcon.icns` on the Mac, because Xcode compiles every icon set in
+the catalog; `CFBundleIconFile` names the new one, so nothing reads it.
+
+### The desktop wall is an inspector, open by default and hideable
+
+`PROPOSED` — Claude, 2026-09-18.
+
+The ticket asked for "a permanent audience rail in the third column". It is SwiftUI's `.inspector`
+beside your own Outpost, holding the same *Who sees your Outpost* screen the iPhone pushes — the same
+sentences, the same *Change* actions, the same warning about a key that has not turned yet. No new
+copy was written for it, because that screen's copy is already reviewed and true.
+
+Read from the HIG before choosing, not remembered: a split-view pane may hold "functionality that
+supplement[s] the primary view", with Keynote's inspector as Apple's own example; "consider letting
+people hide a pane… provide a toolbar button or a menu command — including a keyboard shortcut — that
+people can use to restore a hidden pane"; and "when your app launches, show people the most pertinent
+information". So it opens by default and hides with a toolbar button or **⌥⌘I**, Keynote's shortcut.
+
+**The deviation from the ticket's word.** "Permanent" became "open unless you close it". The HIG's
+answer to a supplementary pane is that it can be hidden, and a rail nobody can dismiss is a worse
+Mac citizen than one that starts open.
+
+**What it replaced.** On the Mac the toolbar's push-to-screen button for the same view is gone, so
+there are not two ways to reach one thing. iPhone and iPad keep it. The screen is now built in two
+places, so both go through `OutpostAudienceView(_ audience:)` — the drift in CLAUDE.md's traps is a
+second construction quietly losing an argument.
+
+**Not seen.** It builds for both platforms and nothing more is known: the Mac's display was asleep
+all night, and with it asleep every window counts as occluded and SwiftUI draws no scrolling content.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

@@ -73,6 +73,14 @@ public struct OutpostView: View {
         self.audience = audience
     }
 
+    private var pushesAudience: Bool {
+        #if os(macOS)
+            false
+        #else
+            isViewer
+        #endif
+    }
+
     public var body: some View {
         List {
             Section {
@@ -177,13 +185,10 @@ public struct OutpostView: View {
                     .accessibilityLabel(Text("Outpost settings", bundle: .module))
                 }
             }
-            if isViewer {
+            if pushesAudience {
                 ToolbarItem(placement: .primaryAction) {
                     NavigationLink {
-                        OutpostAudienceView(
-                            people: audience.people, access: audience.access,
-                            keyTurnPending: audience.keyTurnPending,
-                            onAllow: audience.allow, onRevoke: audience.revoke)
+                        OutpostAudienceView(audience)
                     } label: {
                         Image(systemName: "person.2.badge.key")
                             .foregroundStyle(palette.primaryText)
@@ -191,7 +196,7 @@ public struct OutpostView: View {
                     .accessibilityLabel(Text("Who sees it", bundle: .module))
                     .barIconLargeContent(Text("Who sees it", bundle: .module), systemImage: "person.2.badge.key")
                 }
-            } else if let reciprocal, let onPerson {
+            } else if !isViewer, let reciprocal, let onPerson {
                 ToolbarItem(placement: .primaryAction) {
                     Button { onPerson(reciprocal) } label: {
                         Image(systemName: "person.2.badge.key")

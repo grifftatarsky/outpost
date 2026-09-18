@@ -46,10 +46,27 @@ The iPad has never been drawn.
 
 | Ticket | Status | Evidence |
 |---|---|---|
-| The Mac window feels like a Mac app | Incomplete | Runs in three columns; invite control restored 2026-09-01. The flicker and the keyboard path: not done. |
-| The app icon on macOS | Not started | Dark fringing at Dock sizes. |
-| The desktop wall | Not started | Unblocked 2026-09-07 when per-person Outpost access landed. |
+| The Mac window feels like a Mac app | Incomplete | Runs in three columns; invite control restored 2026-09-01. **The Mac stopped compiling the day `HardwareName` arrived** — an unconditional `import UIKit` — and builds again as of 2026-09-18. Return and Shift-Return, the flicker, the new-post sheet and the keyboard path all need measuring in a live window: see below. |
+| The app icon on macOS | Built, not seen in the Dock | An Icon Composer document with a dark appearance, scoped to the macOS SDK; checked in the compiled `.icns` at every size. The full mark does not read at 16 points. [Decisions](decisions.md#the-mac-icon-is-an-icon-composer-document-and-ios-keeps-its-own). |
+| The desktop wall | Built, not seen | An inspector beside your own Outpost holding *Who sees your Outpost*, open by default, hidden with ⌥⌘I. [Decisions](decisions.md#the-desktop-wall-is-an-inspector-open-by-default-and-hideable). |
 | Draw the platforms the set claims | Not started | Design work: two platforms, neither drawn. |
+
+### What needs a person at the Mac
+
+Everything below was left because it can only be settled by looking at a window, and on the night of
+2026-09-18 the display was asleep: every window counted as occluded, and SwiftUI draws no scrolling
+content into an occluded window, so the sidebar and every list rendered blank. None of it was guessed
+at instead.
+
+- **Look at it.** The sidebar, All Outposts, a room, and your own Outpost with the rail open and
+  closed. Nothing on the Mac was seen this pass beyond the toolbar.
+- **Return and Shift-Return.** The field already calls `.onSubmit(send)`. What a vertical `TextField`
+  does with Return on macOS — submit or insert a line — has to be measured, not assumed; CLAUDE.md
+  records one keyboard change made blind that had to be reverted.
+- **The field's border while typing, and the new-post sheet.** Both are observed behaviors, so both
+  need observing.
+- **A full keyboard path** through sidebar, list and detail, with a visible focus ring on every stop.
+- **The icon at 16 points.** A design call: a simpler mark for the smallest sizes, or live with it.
 
 ## What it would cost to offer them
 
