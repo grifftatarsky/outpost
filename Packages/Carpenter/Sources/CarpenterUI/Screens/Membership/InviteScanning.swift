@@ -85,7 +85,9 @@ enum ScanAttempt: Equatable {
         @MainActor
         static func askingIfUndecided() async -> CameraAccess {
             guard current == .undecided else { return current }
-            _ = await AVCaptureDevice.requestAccess(for: .video)
+            _ = await withCheckedContinuation { (asked: CheckedContinuation<Bool, Never>) in
+                AVCaptureDevice.requestAccess(for: .video) { granted in asked.resume(returning: granted) }
+            }
             return current
         }
     }
