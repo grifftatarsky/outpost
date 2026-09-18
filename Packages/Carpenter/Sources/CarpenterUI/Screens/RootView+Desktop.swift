@@ -152,6 +152,15 @@ extension RootView {
         }
     }
 
+    var settingsWindow: some View {
+        youScreen
+            .presentedAsSettings()
+            .themed(theme.accent)
+            .environment(\.showsAvatars, preferences.showsAvatars)
+            .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)
+            .environment(\.hapticsEnabled, theme.playsHaptics)
+    }
+
     var audienceRail: some View {
         NavigationStack {
             OutpostAudienceView(outpostAudience)

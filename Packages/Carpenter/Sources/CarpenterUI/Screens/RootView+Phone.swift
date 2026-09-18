@@ -240,7 +240,7 @@ extension RootView {
         }
     }
 
-    var youScreen: some View {
+    var youScreen: YouView {
         YouView(
             accent: $theme.accent,
             tutorialMode: $theme.tutorialMode,

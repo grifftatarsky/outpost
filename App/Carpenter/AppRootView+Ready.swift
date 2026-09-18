@@ -17,6 +17,37 @@ import SwiftUI
 
 extension AppRootView {
     var ready: some View {
+        placed(readyRoot)
+        .task {
+            guard !UITestMode.isOn else { return }
+            await ActiveSyncLoop.run(
+                interval: .seconds(Self.foregroundSyncSeconds),
+                isCancelled: { Task.isCancelled },
+                sleep: { try? await Task.sleep(for: $0) },
+                tick: { await syncNow() })
+        }
+        .task {
+            guard !UITestMode.isOn else { return }
+            await enableMessagePush()
+        }
+        .task { await readNotificationPermission() }
+    }
+
+    var readySettings: some View {
+        placed(readyRoot.presentedAsSettings())
+            .task { await readNotificationPermission() }
+    }
+
+    func placed(_ view: some View) -> some View {
+        view
+            .environment(
+                \.stampDevice, session.enrolment?.device.id ?? DeviceID(rawValue: Data()))
+            .verificationPhrase { [weak session] invite in
+                MainActor.assumeIsolated { session?.phrase(for: invite.attestation) }
+            }
+    }
+
+    var readyRoot: RootView {
         RootView(
             rooms: session.rooms,
             syncedPeers: [],
@@ -367,6 +398,9 @@ extension AppRootView {
             ),
             onAttach: { picked, caption, room in await attach(picked, caption: caption, to: room) },
             safety: safety,
+            theme: shell.theme,
+            icons: shell.icons,
+            preferences: shell.preferences,
             screening: screening,
             onOpenSystemSettings: openSystemSettings,
             blockedPeople: session.blockedPeople,
@@ -459,24 +493,6 @@ extension AppRootView {
             },
             onPostponeReview: { await session.postponeOutpostReview(in: $0) }
         )
-        .task {
-            guard !UITestMode.isOn else { return }
-            await ActiveSyncLoop.run(
-                interval: .seconds(Self.foregroundSyncSeconds),
-                isCancelled: { Task.isCancelled },
-                sleep: { try? await Task.sleep(for: $0) },
-                tick: { await syncNow() })
-        }
-        .task {
-            guard !UITestMode.isOn else { return }
-            await enableMessagePush()
-        }
-.task { await readNotificationPermission() }
-        .environment(
-            \.stampDevice, session.enrolment?.device.id ?? DeviceID(rawValue: Data()))
-        .verificationPhrase { [weak session] invite in
-            MainActor.assumeIsolated { session?.phrase(for: invite.attestation) }
-        }
     }
 }
 

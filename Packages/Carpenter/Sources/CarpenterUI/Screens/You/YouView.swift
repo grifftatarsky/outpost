@@ -55,6 +55,10 @@ public struct YouView: View {
     @Binding var focus: FocusSharing
     @Environment(\.ownAvatar) var ownAvatar
     @State var erasing = false
+    var presentsAsSettings = false
+    #if os(macOS)
+        @AppStorage("settings.pane") var settingsPane = SettingsPane.appearance
+    #endif
     @Environment(\.openURL) var openURL
 
     static let subscribeByEmail = URL(
@@ -201,7 +205,38 @@ public struct YouView: View {
         self.tagCount = tagCount
     }
 
+    public func presentedAsSettings() -> Self {
+        var copy = self
+        copy.presentsAsSettings = true
+        return copy
+    }
+
     public var body: some View {
+        presented
+            .sizedSheet(isPresented: $welcomingSupporter) {
+                SupporterWelcomeView(
+                    owner: owner, ownAvatar: ownAvatar,
+                    onShowBadge: { await supporter?.onShowBadge($0) })
+            }
+            .sizedSheet(isPresented: $erasing) {
+                EraseEverythingView(onErase: { await onEraseEverything?() })
+            }
+    }
+
+    @ViewBuilder
+    var presented: some View {
+        #if os(macOS)
+            if presentsAsSettings {
+                settingsPanes
+            } else {
+                list
+            }
+        #else
+            list
+        #endif
+    }
+
+    var list: some View {
         List {
             Section {
                 masthead
@@ -250,20 +285,26 @@ public struct YouView: View {
             }
             .groupedRowSurface()
 
-            reachingYou
-            outpost
-            howItLooks
-            thisDevice
-            gettingHelp
-            if onEraseEverything != nil { erase }
-        }
-        .sizedSheet(isPresented: $welcomingSupporter) {
-            SupporterWelcomeView(
-                owner: owner, ownAvatar: ownAvatar,
-                onShowBadge: { await supporter?.onShowBadge($0) })
-        }
-        .sizedSheet(isPresented: $erasing) {
-            EraseEverythingView(onErase: { await onEraseEverything?() })
+            #if os(macOS)
+                Section {
+                    yourOutpostRow
+                    SettingsLink {
+                        SettingsRow(
+                            icon: "gearshape.fill", tone: .device,
+                            title: Text("Settings", bundle: .module))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .groupedRowSurface()
+                gettingHelp
+            #else
+                reachingYou
+                outpost
+                howItLooks
+                thisDevice
+                gettingHelp
+                if onEraseEverything != nil { erase }
+            #endif
         }
         .scrollContentBackground(.hidden)
         .contentMargins(.top, CarpenterMetrics.mastheadTopInset, for: .scrollContent)

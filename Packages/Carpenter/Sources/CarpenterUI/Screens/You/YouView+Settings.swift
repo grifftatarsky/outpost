@@ -50,7 +50,7 @@ extension YouView {
         Section {
             if let notifications {
                 NavigationLink {
-                    NotificationsView(settings: notifications)
+                    notificationsScreen
                 } label: {
                     SettingsRow(
                         icon: "bell.badge.fill",
@@ -60,38 +60,14 @@ extension YouView {
                 }
             }
             NavigationLink {
-                PrivacyAndSafetySettingsView(
-                    owner: owner,
-                    sharing: $sharing,
-                    focus: $focus,
-                    reportsDisplaying: $reportsDisplaying,
-                    blursSensitiveMedia: $blursSensitiveMedia,
-                    screening: screening,
-                    onOpenSystemSettings: onOpenSystemSettings,
-                    blocksKnownAbusers: $blocksKnownAbusers,
-                    requiresSoloCheck: requiresSoloCheck,
-                    onRequiresSoloCheck: onRequiresSoloCheck,
-                    requiresLongPhrase: requiresLongPhrase,
-                    onRequiresLongPhrase: onRequiresLongPhrase,
-                    toldAboutRestores: toldAboutRestores,
-                    onToldAboutRestores: onToldAboutRestores,
-                    holdsHistoryForRestores: holdsHistoryForRestores,
-                    onHoldsHistoryForRestores: onHoldsHistoryForRestores,
-                    asksPeersForHistory: asksPeersForHistory,
-                    onAsksPeersForHistory: onAsksPeersForHistory,
-                    denyListUpdated: denyListUpdated,
-                    blockedPeople: blockedPeople,
-                    onUnblock: onUnblock,
-                    outposts: outpostSettings)
+                privacyScreen
             } label: {
                 SettingsRow(
                     icon: "hand.raised.fill",
                     title: Text("Privacy & Safety", bundle: .module))
             }
             NavigationLink {
-                DeviceListView(
-                    devices: devices, onRevoke: onRevokeDevice, onPair: onPairDevice,
-                    onRename: onRenameDevice)
+                devicesScreen
             } label: {
                 SettingsRow(
                     icon: "ipad.and.iphone",
@@ -102,16 +78,63 @@ extension YouView {
         .groupedRowSurface()
     }
 
+    @ViewBuilder
+    var notificationsScreen: some View {
+        if let notifications {
+            NotificationsView(settings: notifications)
+        }
+    }
+
+    var privacyScreen: some View {
+        PrivacyAndSafetySettingsView(
+            owner: owner,
+            sharing: $sharing,
+            focus: $focus,
+            reportsDisplaying: $reportsDisplaying,
+            blursSensitiveMedia: $blursSensitiveMedia,
+            screening: screening,
+            onOpenSystemSettings: onOpenSystemSettings,
+            blocksKnownAbusers: $blocksKnownAbusers,
+            requiresSoloCheck: requiresSoloCheck,
+            onRequiresSoloCheck: onRequiresSoloCheck,
+            requiresLongPhrase: requiresLongPhrase,
+            onRequiresLongPhrase: onRequiresLongPhrase,
+            toldAboutRestores: toldAboutRestores,
+            onToldAboutRestores: onToldAboutRestores,
+            holdsHistoryForRestores: holdsHistoryForRestores,
+            onHoldsHistoryForRestores: onHoldsHistoryForRestores,
+            asksPeersForHistory: asksPeersForHistory,
+            onAsksPeersForHistory: onAsksPeersForHistory,
+            denyListUpdated: denyListUpdated,
+            blockedPeople: blockedPeople,
+            onUnblock: onUnblock,
+            outposts: outpostSettings)
+    }
+
+    var devicesScreen: some View {
+        DeviceListView(
+            devices: devices, onRevoke: onRevokeDevice, onPair: onPairDevice,
+            onRename: onRenameDevice)
+    }
+
+    var yourOutpostRow: some View {
+        NavigationLink(value: owner.id) {
+            SettingsRow(
+                icon: "rectangle.stack.fill",
+                title: Text("Your Outpost", bundle: .module),
+                detail: Text("^[\(postCount) post](inflect: true)", bundle: .module))
+        }
+    }
+
+    var outpostSettingsScreen: some View {
+        OutpostSettingsView(outpostSettings)
+    }
+
     var outpost: some View {
         Section {
-            NavigationLink(value: owner.id) {
-                SettingsRow(
-                    icon: "rectangle.stack.fill",
-                    title: Text("Your Outpost", bundle: .module),
-                    detail: Text("^[\(postCount) post](inflect: true)", bundle: .module))
-            }
+            yourOutpostRow
             NavigationLink {
-                OutpostSettingsView(outpostSettings)
+                outpostSettingsScreen
             } label: {
                 SettingsRow(
                     icon: "text.bubble.fill",
@@ -124,10 +147,7 @@ extension YouView {
     var howItLooks: some View {
         Section {
             NavigationLink {
-                AppearanceSettingsView(
-                    accent: $accent, inbox: $inbox, appIcon: $appIcon,
-                    appIconIsSupported: appIconIsSupported, tagCount: tagCount,
-                    showsAvatars: $showsAvatars)
+                appearanceScreen
             } label: {
                 SettingsRow(
                     icon: "paintpalette.fill",
@@ -136,7 +156,7 @@ extension YouView {
                     swatch: true)
             }
             NavigationLink {
-                BehaviourSettingsView(playsHaptics: $playsHaptics, tutorialMode: $tutorialMode)
+                behaviourScreen
             } label: {
                 SettingsRow(
                     icon: "hand.tap.fill",
@@ -144,6 +164,17 @@ extension YouView {
             }
         }
         .groupedRowSurface()
+    }
+
+    var appearanceScreen: some View {
+        AppearanceSettingsView(
+            accent: $accent, inbox: $inbox, appIcon: $appIcon,
+            appIconIsSupported: appIconIsSupported, tagCount: tagCount,
+            showsAvatars: $showsAvatars)
+    }
+
+    var behaviourScreen: some View {
+        BehaviourSettingsView(playsHaptics: $playsHaptics, tutorialMode: $tutorialMode)
     }
 
     var thisDevice: some View {
@@ -217,16 +248,13 @@ extension YouView {
                     icon: "envelope.fill", tone: .device,
                     title: Text("Get product updates", bundle: .module))
             }
+            #if os(macOS)
+                .buttonStyle(.plain)
+            #endif
             #if DEBUG
-            if let debugActions {
+            if debugActions != nil {
                 NavigationLink {
-                    DebugMenuView(
-                        actions: debugActions,
-                        demoConversation: $demoConversation,
-                        demoParticipants: $demoParticipants,
-                        demoOutpost: $demoOutpost,
-                        blursEveryPhoto: $debugBlursEveryPhoto,
-                        showsMessageDelay: $showsMessageDelay)
+                    debugScreen
                 } label: {
                     SettingsRow(
                         icon: "ladybug.fill", tone: .device,
@@ -237,6 +265,21 @@ extension YouView {
         }
         .groupedRowSurface()
     }
+
+    #if DEBUG
+        @ViewBuilder
+        var debugScreen: some View {
+            if let debugActions {
+                DebugMenuView(
+                    actions: debugActions,
+                    demoConversation: $demoConversation,
+                    demoParticipants: $demoParticipants,
+                    demoOutpost: $demoOutpost,
+                    blursEveryPhoto: $debugBlursEveryPhoto,
+                    showsMessageDelay: $showsMessageDelay)
+            }
+        }
+    #endif
 
     var erase: some View {
         Section {

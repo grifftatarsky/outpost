@@ -3,11 +3,11 @@ import CarpenterMedia
 import SwiftUI
 
 public struct RootView: View {
-    @State var theme = ThemeStore()
+    @State var theme: ThemeStore
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.clock) var roomClock
     @Environment(\.stampDevice) var stampDevice
-    @State var icons = AppIconStore()
+    @State var icons: AppIconStore
     @State var organisation: RoomsListOrganisation
     @State var invite: PresentedInvite?
     @State var showingOutstanding: RoomID?
@@ -22,7 +22,7 @@ public struct RootView: View {
     @State var viewingMembers: RoomID?
     @State var notifying: RoomID?
     @State var showingWaiting: RoomID?
-    @State var preferences = RoomsListPreferences()
+    @State var preferences: RoomsListPreferences
     @State var safety: SafetyPreferences
     @State var destination: Destination? = .allOutposts
     @State var outpostsExpanded = true
@@ -35,6 +35,14 @@ public struct RootView: View {
     @State var reviewingAccessBefore: RoomSummary?
 
     enum PhoneTab: Hashable { case messages, rooms, outposts, you, search }
+
+    var isSettingsWindow = false
+
+    public func presentedAsSettings() -> Self {
+        var copy = self
+        copy.isSettingsWindow = true
+        return copy
+    }
 
     #if DEBUG
         func startingOn(_ tab: PhoneTab) -> Self {
@@ -314,6 +322,9 @@ public struct RootView: View {
         messageActions: MessageActions = MessageActions(),
         onAttach: ((PickedMedia, String?, RoomID) async -> String?)? = nil,
         safety: SafetyPreferences? = nil,
+        theme: ThemeStore? = nil,
+        icons: AppIconStore? = nil,
+        preferences: RoomsListPreferences? = nil,
         screening: ScreeningAvailability = .unsupported,
         onOpenSystemSettings: (() -> Void)? = nil,
         blockedPeople: [Member] = [],
@@ -392,6 +403,9 @@ public struct RootView: View {
         self.messageActions = messageActions
         self.onAttach = onAttach
         _safety = State(initialValue: safety ?? SafetyPreferences())
+        _theme = State(initialValue: theme ?? ThemeStore())
+        _icons = State(initialValue: icons ?? AppIconStore())
+        _preferences = State(initialValue: preferences ?? RoomsListPreferences())
         self.screening = screening
         self.onOpenSystemSettings = onOpenSystemSettings
         self.blockedPeople = blockedPeople
@@ -579,7 +593,11 @@ public struct RootView: View {
     @ViewBuilder
     var layout: some View {
         #if os(macOS)
-            desktop
+            if isSettingsWindow {
+                settingsWindow
+            } else {
+                desktop
+            }
         #else
             phone
         #endif

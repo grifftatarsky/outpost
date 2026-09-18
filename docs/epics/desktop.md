@@ -125,6 +125,47 @@ board 90 asked for; what is missing is the third column that would hold it. **De
 
 </details>
 
+<details markdown="1" id="a-settings-window">
+<summary><b>A Settings window</b> — Built, not seen</summary>
+
+**Story.** As somebody using this on a Mac, I want settings where every Mac app keeps them, so that
+the main window is for the people in it.
+
+**Acceptance criteria**
+
+- **Built, not seen.** ⌘, opens a Settings window with a toolbar of panes, titled by pane and reopened
+  on the last one: Appearance, Behavior, Notifications, Privacy & Safety, Outposts, Devices, Data.
+- **Built, not seen.** Each pane is the page the iPhone pushes from You, built by the same `var`, so
+  the two cannot drift. You on the Mac keeps your name, People, Supporter, your Outpost and help, and
+  gains a *Settings* row.
+- **Built, not seen.** A change made in Settings shows in the main window at once: both scenes share
+  one `AppShell` and one set of preference stores —
+  [Decisions](../decisions.md#the-mac-has-a-settings-window-built-from-the-same-pages).
+
+**Testing.** Builds for both platforms; the suite is green and covers none of it. Needs a person at
+the Mac: every pane, and a page that pushes inside a pane.
+
+</details>
+
+<details markdown="1" id="whats-waiting-in-the-toolbar">
+<summary><b>What's waiting, in the toolbar</b> — Built, not seen live</summary>
+
+**Story.** As somebody using this on a Mac, I want to see from any screen that something is waiting,
+and get to it, so that I do not have to walk the sidebar.
+
+**Acceptance criteria**
+
+- **Built.** The filled mailbox, without its antenna, in the window's toolbar, opening a popover of
+  rooms with something unread and Outposts with something new.
+- **Built, not seen live.** A count on it that is the Dock's number exactly, shown only while the
+  system has badges on for the app. A hand-drawn count departs from the HIG, which is recorded —
+  [Decisions](../decisions.md#the-mac-toolbars-mailbox-carries-a-hand-drawn-count-and-only-when-badges-are-on).
+
+**Testing.** `BadgeCountTests` holds the number. The count's placement was rendered in an offscreen
+window at 3, 12 and 99+ and is not clipped; Liquid Glass and dark mode were not drawn there.
+
+</details>
+
 <details markdown="1" id="draw-the-platforms-the-set-claims">
 <summary><b>Draw the platforms the set claims</b> — Not started</summary>
 

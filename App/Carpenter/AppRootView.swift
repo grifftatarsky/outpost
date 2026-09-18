@@ -30,28 +30,111 @@ struct AppRootView: View {
     @State var arrivingCode: ArrivingCode?
     @AppStorage("onboarding.tourSeen") var tourSeen = false
     @AppStorage("onboarding.syncedSplashSeen") var syncedSplashSeen = false
-    @State var syncing = false
-    @State var syncAgain = false
-    @State var lastRendezvous = Date.distantPast
-    @State var lastSync = Date.distantPast
-    @State var mediaBytes: Int?
     @Environment(\.scenePhase) private var scenePhase
-    @State var cloudTrouble: String?
-    @State var deviceSync: CloudKitEntrySync?
-    @State var startedSyncFor: DeviceID?
-    @State var messagePushArmed = false
     @State var openRoom: RoomID?
 
-    @State var session = AppSession(storage: .onDisk(), clock: UITestMode.clock)
 
     @State var problem: ActionProblem?
 
-    let cloud = CloudKitMailbox(
-        container: .default(),
-        directory: PeerZoneDirectory(store: AppRootView.mailboxDirectoryStore()))
+    let shell: AppShell
+    let surface: Surface
+
+    enum Surface { case window, settings }
+
+    var cloud: CloudKitMailbox { shell.cloud }
     #if DEBUG
-        let rig = FileMailbox.fromLaunchArguments()
+        var rig: FileMailbox? { shell.rig }
     #endif
+    var safety: SafetyPreferences { shell.safety }
+
+    var syncing: Bool {
+        get { shell.syncing }
+        nonmutating set { shell.syncing = newValue }
+    }
+    var syncAgain: Bool {
+        get { shell.syncAgain }
+        nonmutating set { shell.syncAgain = newValue }
+    }
+    var lastRendezvous: Date {
+        get { shell.lastRendezvous }
+        nonmutating set { shell.lastRendezvous = newValue }
+    }
+    var lastSync: Date {
+        get { shell.lastSync }
+        nonmutating set { shell.lastSync = newValue }
+    }
+    var mediaBytes: Int? {
+        get { shell.mediaBytes }
+        nonmutating set { shell.mediaBytes = newValue }
+    }
+    var cloudTrouble: String? {
+        get { shell.cloudTrouble }
+        nonmutating set { shell.cloudTrouble = newValue }
+    }
+    var deviceSync: CloudKitEntrySync? {
+        get { shell.deviceSync }
+        nonmutating set { shell.deviceSync = newValue }
+    }
+    var startedSyncFor: DeviceID? {
+        get { shell.startedSyncFor }
+        nonmutating set { shell.startedSyncFor = newValue }
+    }
+    var messagePushArmed: Bool {
+        get { shell.messagePushArmed }
+        nonmutating set { shell.messagePushArmed = newValue }
+    }
+    var session: AppSession {
+        get { shell.session }
+        nonmutating set { shell.session = newValue }
+    }
+    var pretendedFocus: Bool? {
+        get { shell.pretendedFocus }
+        nonmutating set { shell.pretendedFocus = newValue }
+    }
+    var mediaLoader: MediaLoader? {
+        get { shell.mediaLoader }
+        nonmutating set { shell.mediaLoader = newValue }
+    }
+    var ownAvatar: Image? {
+        get { shell.ownAvatar }
+        nonmutating set { shell.ownAvatar = newValue }
+    }
+    var personAvatars: [ParticipantID: Image] {
+        get { shell.personAvatars }
+        nonmutating set { shell.personAvatars = newValue }
+    }
+    var sharedAvatars: [ParticipantID: Image] {
+        get { shell.sharedAvatars }
+        nonmutating set { shell.sharedAvatars = newValue }
+    }
+    var distribution: DistributionChannel? {
+        get { shell.distribution }
+        nonmutating set { shell.distribution = newValue }
+    }
+    var outpostAvatars: [ParticipantID: Image] {
+        get { shell.outpostAvatars }
+        nonmutating set { shell.outpostAvatars = newValue }
+    }
+    var ownOutpostAvatar: Image? {
+        get { shell.ownOutpostAvatar }
+        nonmutating set { shell.ownOutpostAvatar = newValue }
+    }
+    var unfetchablePhotos: Set<AttachmentID> {
+        get { shell.unfetchablePhotos }
+        nonmutating set { shell.unfetchablePhotos = newValue }
+    }
+    var screening: ScreeningAvailability {
+        get { shell.screening }
+        nonmutating set { shell.screening = newValue }
+    }
+    var notificationsAllowed: Bool? {
+        get { shell.notificationsAllowed }
+        nonmutating set { shell.notificationsAllowed = newValue }
+    }
+    var badgesAllowed: Bool? {
+        get { shell.badgesAllowed }
+        nonmutating set { shell.badgesAllowed = newValue }
+    }
 
     var mailbox: any Mailbox {
         #if DEBUG
@@ -77,22 +160,9 @@ struct AppRootView: View {
         return cloud
     }
 
-    @State var safety = SafetyPreferences()
     @State var privacyNote = false
-    @State var pretendedFocus: Bool?
-    @State var mediaLoader: MediaLoader?
-    @State var ownAvatar: Image?
-    @State var personAvatars: [ParticipantID: Image] = [:]
-    @State var sharedAvatars: [ParticipantID: Image] = [:]
-    @State var distribution: DistributionChannel?
-    @State var outpostAvatars: [ParticipantID: Image] = [:]
-    @State var ownOutpostAvatar: Image?
-    @State var unfetchablePhotos: Set<AttachmentID> = []
-    @State var screening: ScreeningAvailability = .unsupported
     @AppStorage("explained.notifications") var notificationsExplained = false
     @State var explainingNotifications = false
-    @State var notificationsAllowed: Bool?
-    @State var badgesAllowed: Bool?
     @State var askingOutpostNotifications = false
 
     var debugActions: DebugActions? {
@@ -110,7 +180,12 @@ struct AppRootView: View {
     }
 
     var body: some View {
-        content
+        Group {
+            switch surface {
+            case .window: content
+            case .settings: settings
+            }
+        }
             .alert(
                 Text(problem?.title ?? ""),
                 isPresented: Binding(
@@ -264,17 +339,35 @@ struct AppRootView: View {
         }
     }
 
+    func environed(_ view: some View) -> some View {
+        view
+            .environment(\.mediaLoader, mediaLoader)
+            .environment(\.ownAvatar, ownAvatar)
+            .environment(\.personAvatars, personAvatars)
+            .environment(\.anonFace, session.anonPersona.face)
+            .environment(\.sharedAvatars, sharedAvatars)
+            .environment(\.outpostAvatars, outpostAvatars)
+            .environment(\.ownOutpostAvatar, ownOutpostAvatar)
+            .environment(\.viewerID, session.viewer.id)
+            .environment(\.supporters, session.supporterBadges)
+    }
+
+    @ViewBuilder
+    var settings: some View {
+        if RootScreen.for(session.state) == .ready {
+            environed(readySettings)
+        } else {
+            ContentUnavailableView(
+                "No settings yet",
+                systemImage: "gearshape",
+                description: Text("Finish setting up in the main window, and your settings will be here.")
+            )
+            .frame(width: 580, height: 300)
+        }
+    }
+
     var content: some View {
-        screen
-        .environment(\.mediaLoader, mediaLoader)
-        .environment(\.ownAvatar, ownAvatar)
-        .environment(\.personAvatars, personAvatars)
-        .environment(\.anonFace, session.anonPersona.face)
-        .environment(\.sharedAvatars, sharedAvatars)
-        .environment(\.outpostAvatars, outpostAvatars)
-        .environment(\.ownOutpostAvatar, ownOutpostAvatar)
-        .environment(\.viewerID, session.viewer.id)
-        .environment(\.supporters, session.supporterBadges)
+        environed(screen)
         .sizedSheet(isPresented: $askingOutpostNotifications) {
             NavigationStack {
                 OutpostNotificationsAskView { wanted in

@@ -3595,6 +3595,39 @@ changes, and nothing will say when that happens. Measured in an offscreen window
 clipped by the toolbar at 3, 12 or 99+. **Not** seen against real Liquid Glass — an offscreen render
 does not draw it — nor in dark mode for the same reason.
 
+### The Mac has a Settings window, built from the same pages
+
+`PROPOSED` — Claude, 2026-09-18. Griff asked for the Mac to get "some HIG love" and agreed to the
+Settings window when it was proposed; its shape is Claude's.
+
+Read from the HIG, *Settings*, before building: a Mac app's settings live in their own window,
+opened with ⌘, from the app menu, with a toolbar of panes; the window's title is the pane's name,
+and it reopens on the pane last seen. SwiftUI's `Settings` scene holding a `TabView` does all of that
+itself, so that is what it is. The last pane is `@AppStorage("settings.pane")`.
+
+**The panes are the iPhone's pages, not copies of them.** Each page You pushes — Appearance, Behavior,
+Notifications, Privacy & Safety, Outpost settings, Devices — is now one `var` on `YouView`, and both
+the row that pushes it and the pane that holds it call that `var`. Storage, the recovery key, the
+history check, hidden messages and *Erase everything* share a *Data* pane. The Settings window is
+`YouView` itself, `presentedAsSettings()`, built by the one `youScreen` construction. CLAUDE.md's trap
+about two constructions drifting is the reason for all of it.
+
+**The pane is called *Outposts*, not *Outpost*.** The feature and the product share the word, and
+the branding lint refuses the product's name as a Swift literal. The sidebar's section already says
+*Outposts*.
+
+**What it moved.** A `Settings` scene belongs to the app, not to a window, and everything You reads
+lived in `AppRootView`'s `@State` — one copy per window. The session, the mailbox, the preference
+stores and the state a sync round or a pairing writes now live in `AppShell`, which the app owns and
+both scenes share; `AppRootView` forwards to it, so its extensions did not change. `RootView` takes
+the theme, icon and list-preference stores the way it already took `safety`, because a second
+`ThemeStore` would let the Settings window change the accent without the main window noticing.
+The window runs the sync loop and push; the Settings surface runs neither.
+
+**What it costs.** Every pane is a fixed 580 × 540: a `List` has no natural height, and a Settings
+window sizes itself to its pane. **Not seen** — built for both platforms and green, and nobody has
+opened it.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.
