@@ -158,7 +158,7 @@ public struct MessageReactions: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(summary)
-        .accessibilityHint(Text("Double-tap to see who reacted", bundle: .module))
+        .accessibilityHint(Text("Shows who reacted", bundle: .module))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { onOpen() }
         .accessibilityAction(named: Text("Remove my reaction", bundle: .module)) {

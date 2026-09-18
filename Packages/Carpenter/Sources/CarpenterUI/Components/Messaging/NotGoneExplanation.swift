@@ -163,7 +163,7 @@ struct NotGoneExplanation: View {
                 bundle: .module)
         case (.newerMessagesCollected(let count), false):
             Text(
-                "It has not left this phone. ^[\(count) newer message](inflect: true) you sent here have been collected since, and this one has not — which is more than somebody being away.",
+                "It has not left this device. ^[\(count) newer message](inflect: true) you sent here have been collected since, and this one has not — which is more than somebody being away.",
                 bundle: .module)
         case (.waited(let days), true):
             Text(
@@ -171,7 +171,7 @@ struct NotGoneExplanation: View {
                 bundle: .module)
         case (.waited(let days), false):
             Text(
-                "It has not left this phone, and it has been trying for more than ^[\(days) day](inflect: true).",
+                "It has not left this device, and it has been trying for more than ^[\(days) day](inflect: true).",
                 bundle: .module)
         }
     }

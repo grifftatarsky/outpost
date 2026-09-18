@@ -32,7 +32,7 @@ public struct OutpostDetailSettingsView: View {
                 switch acrossAllOutposts {
                 case .each:
                     Text(
-                        "\(person.displayName) is not told that you asked, and nobody is. This is a setting on your phone.",
+                        "\(person.displayName) is not told that you asked, and nobody is. This is a setting on this device.",
                         bundle: .module)
                 case .all:
                     Text(

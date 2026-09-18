@@ -313,7 +313,7 @@ extension ConversationView {
         case (.video, false):
             Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), ready to send", bundle: .module)
         case (.video, true):
-            Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), longer than a minute. Double-tap to trim.", bundle: .module)
+            Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), longer than a minute. Trim it to send.", bundle: .module)
         }
     }
 

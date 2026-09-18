@@ -1,5 +1,15 @@
 import SwiftUI
 
+enum Platform {
+    static var isMac: Bool {
+        #if os(macOS)
+            true
+        #else
+            false
+        #endif
+    }
+}
+
 extension View {
     @ViewBuilder
     func largeNavigationTitle() -> some View {

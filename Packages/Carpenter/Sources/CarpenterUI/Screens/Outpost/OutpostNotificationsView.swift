@@ -94,7 +94,7 @@ public struct OutpostNotificationsView: View {
                 Text("When somebody comments", bundle: .module).sectionHeading()
             } footer: {
                 Text(
-                    "Writing a comment is what puts you in a thread. Reacting is kept separate — a tap is not the same as joining in, so it is off until you ask for it.",
+                    "Writing a comment is what puts you in a thread. Reacting is kept separate — a reaction is not the same as joining in, so it is off until you ask for it.",
                     bundle: .module)
             }
             .groupedRowSurface()

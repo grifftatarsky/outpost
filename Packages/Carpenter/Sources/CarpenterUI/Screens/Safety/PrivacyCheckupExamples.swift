@@ -350,7 +350,7 @@ struct RestoreHoldExample: View {
                     Text("Your copy goes straight away", bundle: .module)
                         .font(CarpenterFont.rowTitle)
                         .foregroundStyle(palette.primaryText)
-                    Text("Nothing waits on you being at your phone.", bundle: .module)
+                    Text("Nothing waits for you to open the app.", bundle: .module)
                         .font(CarpenterFont.rowDetail)
                         .foregroundStyle(palette.secondaryText)
                 }

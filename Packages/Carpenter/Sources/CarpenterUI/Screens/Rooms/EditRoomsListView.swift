@@ -65,26 +65,7 @@ public struct EditRoomsListView: View {
                     ForEach(unpinned) { room in
                         row(room)
                             .swipeActions(edge: .trailing) {
-                                switch roomDeletion(room.id) {
-                                case .stillIn:
-                                    if let onLeave {
-                                        Button(role: .destructive) {
-                                            onLeave(room.id)
-                                        } label: {
-                                            Text("Leave", bundle: .module)
-                                        }
-                                    }
-                                case .allowed:
-                                    if let onDelete {
-                                        Button(role: .destructive) {
-                                            onDelete(room.id)
-                                        } label: {
-                                            Text("Delete", bundle: .module)
-                                        }
-                                    }
-                                case .departureNotSent:
-                                    EmptyView()
-                                }
+                                departure(room)
                             }
                     }
                 } header: {
@@ -94,10 +75,13 @@ public struct EditRoomsListView: View {
             .alwaysEditing()
             .navigationTitle(Text(title))
             .safeAreaInset(edge: .top) {
-                Text(
-                    "Drag to reorder your pins. Tap a room's tags to change them. Swipe to leave.",
-                    bundle: .module
-                )
+                (Platform.isMac
+                    ? Text(
+                        "Drag to reorder your pins. Click a room's tags to change them. Control-click a room to leave it.",
+                        bundle: .module)
+                    : Text(
+                        "Drag to reorder your pins. Tap a room's tags to change them. Swipe to leave.",
+                        bundle: .module))
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.tertiaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -162,12 +146,46 @@ public struct EditRoomsListView: View {
             Spacer(minLength: 0)
         }
         .swipeActions(edge: .leading) {
-            Button {
-                onSilence(room.id, !isSilenced(room.id))
-            } label: {
-                isSilenced(room.id)
-                    ? Text("Unsilence", bundle: .module) : Text("Silence", bundle: .module)
+            silence(room)
+        }
+        .contextMenu {
+            silence(room)
+            if !pinned.contains(where: { $0.id == room.id }) {
+                departure(room)
             }
+        }
+    }
+
+    private func silence(_ room: RoomSummary) -> some View {
+        Button {
+            onSilence(room.id, !isSilenced(room.id))
+        } label: {
+            isSilenced(room.id)
+                ? Text("Unsilence", bundle: .module) : Text("Silence", bundle: .module)
+        }
+    }
+
+    @ViewBuilder
+    private func departure(_ room: RoomSummary) -> some View {
+        switch roomDeletion(room.id) {
+        case .stillIn:
+            if let onLeave {
+                Button(role: .destructive) {
+                    onLeave(room.id)
+                } label: {
+                    Text("Leave", bundle: .module)
+                }
+            }
+        case .allowed:
+            if let onDelete {
+                Button(role: .destructive) {
+                    onDelete(room.id)
+                } label: {
+                    Text("Delete", bundle: .module)
+                }
+            }
+        case .departureNotSent:
+            EmptyView()
         }
     }
 

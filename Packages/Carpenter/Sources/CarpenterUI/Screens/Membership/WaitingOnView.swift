@@ -31,7 +31,7 @@ public struct WaitingOnView: View {
                 }
             } footer: {
                 Text(
-                    "Nothing here is a fault. A message reaches somebody when their app next opens and collects it, so waiting on somebody who has not opened theirs is the ordinary case. Last heard is the newest thing of theirs this phone holds, and the time is the one their device wrote on it.",
+                    "Nothing here is a fault. A message reaches somebody when their app next opens and collects it, so waiting on somebody who has not opened theirs is the ordinary case. Last heard is the newest thing of theirs this device holds, and the time is the one their device wrote on it.",
                     bundle: .module)
             }
             .groupedRowSurface()

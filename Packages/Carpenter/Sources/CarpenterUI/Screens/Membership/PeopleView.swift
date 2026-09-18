@@ -195,7 +195,7 @@ public struct PersonDetailView: View {
                         .tint(palette.destructive)
                     }
                 } header: {
-                    Text("On your phone", bundle: .module).sectionHeading()
+                    Text("On this device", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
                         "A name or photo you set here is yours alone: drawn wherever this person appears, and never sent to anybody — not to them, not to a room. Clear the name to go back to what they shared.",

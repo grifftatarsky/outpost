@@ -34,9 +34,13 @@ public struct PostReactionsSheet: View {
                     }
                 } footer: {
                     if !isReadOnly {
-                        Text(
-                            "Tap one to react the same way, or tap your own to take it back. You have one reaction at a time.",
-                            bundle: .module)
+                        Platform.isMac
+                            ? Text(
+                                "Click one to react the same way, or click your own to take it back. You have one reaction at a time.",
+                                bundle: .module)
+                            : Text(
+                                "Tap one to react the same way, or tap your own to take it back. You have one reaction at a time.",
+                                bundle: .module)
                     }
                 }
                 .groupedRowSurface()

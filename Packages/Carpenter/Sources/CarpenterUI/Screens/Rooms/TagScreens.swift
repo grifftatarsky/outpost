@@ -170,7 +170,7 @@ public struct ManageTagsView: View {
                     }
                 } footer: {
                     Text(
-                        "A row of chips is quicker to reach with a few tags. A menu takes the same two taps however many you have.",
+                        "A row of chips is quicker to reach with a few tags. A menu takes the same two steps however many you have.",
                         bundle: .module
                     )
                 }

@@ -215,7 +215,7 @@ public struct ReportView: View {
                 Button(role: .cancel) {} label: { Text("Not yet", bundle: .module) }
             } message: {
                 Text(
-                    "Your report is copied and \(formHost) opens in whichever browser this phone uses. Paste it there. Nothing is sent until you send it.",
+                    "Your report is copied and \(formHost) opens in whichever browser this device uses. Paste it there. Nothing is sent until you send it.",
                     bundle: .module)
             }
         }

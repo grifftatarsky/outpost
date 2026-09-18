@@ -22,9 +22,13 @@ public struct BlockedPeopleView: View {
                         Image(systemName: "hand.raised")
                     }
                 } description: {
-                    Text(
-                        "Hold a message and choose Block to stop seeing anything that person sends.",
-                        bundle: .module)
+                    Platform.isMac
+                        ? Text(
+                            "Control-click a message and choose Block to stop seeing anything that person sends.",
+                            bundle: .module)
+                        : Text(
+                            "Hold a message and choose Block to stop seeing anything that person sends.",
+                            bundle: .module)
                 }
                 .listRowBackground(Color.clear)
             } else {
@@ -43,11 +47,26 @@ public struct BlockedPeopleView: View {
                                 }
                                 .tint(palette.accentColor)
                             }
+                            .contextMenu {
+                                Button {
+                                    Task { await onUnblock(person.id) }
+                                } label: {
+                                    Label {
+                                        Text("Unblock", bundle: .module)
+                                    } icon: {
+                                        Image(systemName: "hand.raised.slash")
+                                    }
+                                }
+                            }
                     }
                 } footer: {
-                    Text(
-                        "Swipe to unblock. Everything they sent while blocked is still here and appears when you do — it was kept, not read.",
-                        bundle: .module)
+                    Platform.isMac
+                        ? Text(
+                            "Control-click a person to unblock them. Everything they sent while blocked is still here and appears when you do — it was kept, not read.",
+                            bundle: .module)
+                        : Text(
+                            "Swipe to unblock. Everything they sent while blocked is still here and appears when you do — it was kept, not read.",
+                            bundle: .module)
                 }
                 .groupedRowSurface()
             }

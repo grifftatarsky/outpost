@@ -62,8 +62,12 @@ public struct ReactionListView: View {
                                         .font(CarpenterFont.rowTitle)
                                         .foregroundStyle(palette.primaryText)
                                     (row.isMine
-                                        ? Text("You · tap to remove", bundle: .module)
-                                        : Text("Tap to react the same way", bundle: .module))
+                                        ? (Platform.isMac
+                                            ? Text("You · click to remove", bundle: .module)
+                                            : Text("You · tap to remove", bundle: .module))
+                                        : (Platform.isMac
+                                            ? Text("Click to react the same way", bundle: .module)
+                                            : Text("Tap to react the same way", bundle: .module)))
                                         .font(CarpenterFont.caption)
                                         .foregroundStyle(palette.secondaryText)
                                 }

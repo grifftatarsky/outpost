@@ -25,6 +25,7 @@ public struct MediaPictureView: View {
             .onTapGesture { act(on: state) }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(label(for: state))
+            .accessibilityHint(hint(for: state))
             .accessibilityAddTraits(isActionable(state) ? [.isImage, .isButton] : [.isImage])
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: state)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: isRevealed)
@@ -79,7 +80,9 @@ public struct MediaPictureView: View {
                 notice(
                     symbol: "arrow.clockwise",
                     title: Text("Could not load", bundle: .module),
-                    detail: Text("Tap to try again.", bundle: .module))
+                    detail: Platform.isMac
+                        ? Text("Click to try again.", bundle: .module)
+                        : Text("Tap to try again.", bundle: .module))
             }
         }
     }
@@ -136,7 +139,7 @@ public struct MediaPictureView: View {
                         .font(CarpenterFont.footnote.weight(.semibold))
                     : Text("Sensitive photo", bundle: .module)
                         .font(CarpenterFont.footnote.weight(.semibold))
-                Text("Tap to show", bundle: .module)
+                (Platform.isMac ? Text("Click to show", bundle: .module) : Text("Tap to show", bundle: .module))
                     .font(CarpenterFont.caption)
             }
             .foregroundStyle(.white)
@@ -181,6 +184,17 @@ public struct MediaPictureView: View {
         }
     }
 
+    private func hint(for state: MediaLoadState) -> Text {
+        switch state {
+        case .loaded(let loaded):
+            isHidden(loaded) ? Text("Shows it", bundle: .module) : Text("Opens it full size", bundle: .module)
+        case .failed:
+            Text("Tries again", bundle: .module)
+        case .idle, .loading, .gone:
+            Text(verbatim: "")
+        }
+    }
+
     private func label(for state: MediaLoadState) -> Text {
         let what = isVideo
             ? Text("Video, \(Self.length(media.duration ?? 0))", bundle: .module)
@@ -190,12 +204,12 @@ public struct MediaPictureView: View {
             return Text("\(what), loading", bundle: .module)
         case .loaded(let loaded):
             return isHidden(loaded)
-                ? Text("\(what), sensitive, hidden. Double-tap to show.", bundle: .module)
+                ? Text("\(what), sensitive, hidden", bundle: .module)
                 : what
         case .gone:
             return Text("\(what), no longer available", bundle: .module)
         case .failed:
-            return Text("\(what), could not load. Double-tap to try again.", bundle: .module)
+            return Text("\(what), could not load", bundle: .module)
         }
     }
 }

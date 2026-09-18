@@ -26,7 +26,7 @@ public struct HowItWorksView: View {
                         section(
                             "There is a mailbox, and we will not pretend otherwise",
                             [
-                                "Messages have to get from your phone to theirs, and phones are not always awake. So there is a mailbox in the middle.",
+                                "Messages have to get from your device to theirs, and devices are not always awake. So there is a mailbox in the middle.",
                                 "What it holds is sealed. It is addressed to a code that changes, so whoever runs it cannot build a picture of who talks to whom, and it is deleted once everyone has collected. Nobody — not us, not Apple — can read what passes through it, because nothing readable was ever put in.",
                                 "A photo or a clip goes the same way, as a separate sealed file. The mailbox can see its size and nothing else.",
                             ]
@@ -35,7 +35,7 @@ public struct HowItWorksView: View {
                         section(
                             "You do not have an account",
                             [
-                                "There is no sign-up, no password, and no e-mail address. Your phone makes a key and that key is you.",
+                                "There is no sign-up, no password, and no e-mail address. Your device makes a key and that key is you.",
                                 "Nobody can look you up. Somebody already in a room has to invite you, and their invitation is signed, expires, and names you specifically — so everyone can see who let you in, and nobody can be added by a stranger.",
                                 "Whoever made a room can require approval before anyone new is let in — the founder's, one member's, or everybody's — and by default nobody else is asked. Either way you and whoever invited you read the same characters to each other first, so a room never takes somebody's word for who you are.",
                                 "Your keys live in your iCloud Keychain, so a new phone picks them up by itself. If the keychain goes too, your recovery key is the way back — it makes you you again. It carries no conversations, so the app asks the people you were talking to for their copies, and tells them it asked.",

@@ -48,7 +48,7 @@ public struct OutpostNotificationsAskView: View {
                     Text("What you would be told", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
-                        "Reactions are left off either way: a tap is not somebody writing to you, and you can turn them on later if you want them.",
+                        "Reactions are left off either way: a reaction is not somebody writing to you, and you can turn them on later if you want them.",
                         bundle: .module)
                 }
                 .groupedRowSurface()

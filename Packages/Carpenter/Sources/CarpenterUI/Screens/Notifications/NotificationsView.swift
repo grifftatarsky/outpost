@@ -57,7 +57,7 @@ public struct NotificationsView: View {
             Section {
             } footer: {
                 Text(
-                    "A Focus silences these like anything else. If you would rather they came through, you can allow this app in that Focus, in the Settings app under Focus. That is a choice on your phone, not something anybody writing to you can decide.",
+                    "A Focus silences these like anything else. If you would rather they came through, you can allow this app in that Focus, in the Settings app under Focus. That is a choice on this device, not something anybody writing to you can decide.",
                     bundle: .module)
             }
             .groupedRowSurface()

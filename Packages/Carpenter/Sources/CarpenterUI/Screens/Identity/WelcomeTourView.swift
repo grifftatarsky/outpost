@@ -22,7 +22,7 @@ public struct WelcomeTourView: View {
                 id: 0,
                 title: "You do not have an account",
                 body:
-                    "Your phone makes a key, and that key is you. No sign-up, no password, no phone number, and nobody can look you up.",
+                    "Your device makes a key, and that key is you. No sign-up, no password, no phone number, and nobody can look you up.",
                 icon: "key"),
             Panel(
                 id: 1,
