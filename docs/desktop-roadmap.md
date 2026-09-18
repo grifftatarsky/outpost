@@ -64,8 +64,15 @@ Everything below was left because it can only be settled by looking at a window,
 content into an occluded window, so the sidebar and every list rendered blank. None of it was guessed
 at instead.
 
-- **Look at it.** The sidebar, All Outposts, a room, and your own Outpost with the rail open and
-  closed. Nothing on the Mac was seen this pass beyond the toolbar.
+- **Look at the wide layout on a Mac.** It was walked on an iPad in both orientations, in dark, with
+  Increase Contrast and at large text sizes, and not on a Mac: during the pass of 2026-09-18 the
+  screen was locked, and a locked Mac draws no list into a window. The areas sidebar, the rooms list
+  as the middle column, a room, Outposts with the inspector, Search, and You with a page open in the
+  detail column.
+- **The menus against a window.** Their structure was dumped from a windowless probe; with a window
+  in front, New Room, the Conversation menu's items, ⌘1 onward and ⌘F should all enable and act.
+- **Escape on a sheet.** Every cancel button declares the Escape shortcut; on the Mac it should leave
+  the sheet.
 - **Return and Shift-Return.** The field already calls `.onSubmit(send)`. What a vertical `TextField`
   does with Return on macOS — submit or insert a line — has to be measured, not assumed; CLAUDE.md
   records one keyboard change made blind that had to be reverted.
