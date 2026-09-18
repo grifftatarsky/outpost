@@ -366,6 +366,18 @@ else
     printf '\nwarning: python3 not found; the xcconfig URL rule did not run.\n'
 fi
 
+# macOS sizes a sheet to its content, and a List, a ScrollView or a TextEditor has none. The
+#     notifications explainer reached the Mac on 2026-09-18 as a Continue button with nothing above it,
+#     and the new-post sheet collapsed the same way. sizedSheet gives the Mac a form size.
+if command -v python3 >/dev/null 2>&1; then
+    bare=$(python3 Scripts/lint/sheet-sizing.py 2>/dev/null)
+    if [ -n "$bare" ]; then
+        report "error: a bare .sheet( — use .sizedSheet( so the Mac gets a size:" "$bare"
+    fi
+else
+    printf '\nwarning: python3 not found; the sheet-sizing rule did not run.\n'
+fi
+
 if [ "$status" -eq 0 ]; then
     echo "branding lint: clean"
 fi

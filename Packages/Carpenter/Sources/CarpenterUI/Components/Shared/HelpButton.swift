@@ -38,6 +38,6 @@ private struct HelpButton: ViewModifier {
                     }
                 }
             }
-            .sheet(isPresented: $reading) { HowItWorksView() }
+            .sizedSheet(isPresented: $reading) { HowItWorksView() }
     }
 }

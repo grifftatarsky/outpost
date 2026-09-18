@@ -125,7 +125,7 @@ public struct OutpostConsentSheet: View {
 
 #if DEBUG
     #Preview("How comments travel") {
-        Color.clear.sheet(isPresented: .constant(true)) {
+        Color.clear.sizedSheet(isPresented: .constant(true)) {
             OutpostConsentSheet(onAnswer: { _ in })
         }
         .themed(.default)

@@ -84,7 +84,7 @@ public struct PostThreadView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(Text("Post", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
-        .sheet(isPresented: $explaining) {
+        .sizedSheet(isPresented: $explaining) {
             HiddenCommentsSheet(hidden: hidden, settings: settings)
                 .themed(.default)
         }

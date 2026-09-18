@@ -82,12 +82,12 @@ public struct AddSomeoneView: View {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
                 }
             }
-            .sheet(item: $issued) { presented in
+            .sizedSheet(item: $issued) { presented in
                 InviteView(
                     roomName: presented.roomName, invite: presented.invite,
                     phrase: phraseLookup(presented.invite))
             }
-            .sheet(isPresented: $naming) {
+            .sizedSheet(isPresented: $naming) {
                 NewRoomView(preferences: preferences, connections: connections) {
                     name, access, people in
                     await onCreateRoom(name, access, people)

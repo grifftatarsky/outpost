@@ -59,7 +59,7 @@ struct TriangleStyleTest: View {
         .safeAreaInset(edge: .top) { chooser }
         .navigationTitle(Text("The triangle", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
-        .sheet(isPresented: $explaining) {
+        .sizedSheet(isPresented: $explaining) {
             HiddenCommentsSheet(hidden: 1, settings: OutpostSettings(consent: standing))
                 .themed(.default)
         }

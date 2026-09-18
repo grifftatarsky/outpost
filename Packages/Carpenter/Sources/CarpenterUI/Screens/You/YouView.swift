@@ -257,12 +257,12 @@ public struct YouView: View {
             gettingHelp
             if onEraseEverything != nil { erase }
         }
-        .sheet(isPresented: $welcomingSupporter) {
+        .sizedSheet(isPresented: $welcomingSupporter) {
             SupporterWelcomeView(
                 owner: owner, ownAvatar: ownAvatar,
                 onShowBadge: { await supporter?.onShowBadge($0) })
         }
-        .sheet(isPresented: $erasing) {
+        .sizedSheet(isPresented: $erasing) {
             EraseEverythingView(onErase: { await onEraseEverything?() })
         }
         .scrollContentBackground(.hidden)

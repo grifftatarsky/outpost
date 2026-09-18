@@ -93,7 +93,7 @@ public struct PostReactionsSheet: View {
 
 #if DEBUG
     #Preview("Reactions on a post") {
-        Color.clear.sheet(isPresented: .constant(true)) {
+        Color.clear.sizedSheet(isPresented: .constant(true)) {
             PostReactionsSheet(
                 reactions: [
                     (emoji: "🔥", count: 9), (emoji: "😮", count: 6), (emoji: "👏", count: 4),

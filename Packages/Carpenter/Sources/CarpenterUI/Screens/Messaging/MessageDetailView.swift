@@ -72,7 +72,7 @@ public struct MessageDetailView: View {
         } message: {
             Text(verbatim: problem ?? "")
         }
-        .sheet(isPresented: $reporting) {
+        .sizedSheet(isPresented: $reporting) {
             ReportView(item: ViewedItem(message))
         }
     }

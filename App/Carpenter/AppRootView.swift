@@ -186,7 +186,7 @@ struct AppRootView: View {
                     #endif
                 }
                 .themed(.default)
-                .sheet(isPresented: $restoring) {
+                .sizedSheet(isPresented: $restoring) {
                     NavigationStack {
                         RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
                             await reporting("restore from a recovery key") {
@@ -215,7 +215,7 @@ struct AppRootView: View {
                     invitePending: arrivingInvite != nil
                 )
                 .themed(.default)
-                .sheet(isPresented: $restoring) {
+                .sizedSheet(isPresented: $restoring) {
                     NavigationStack {
                         RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
                             await reporting("restore from a recovery key") {
@@ -274,14 +274,14 @@ struct AppRootView: View {
         .environment(\.ownOutpostAvatar, ownOutpostAvatar)
         .environment(\.viewerID, session.viewer.id)
         .environment(\.supporters, session.supporterBadges)
-        .sheet(isPresented: $askingOutpostNotifications) {
+        .sizedSheet(isPresented: $askingOutpostNotifications) {
             NavigationStack {
                 OutpostNotificationsAskView { wanted in
                     await session.setOutpostNotifications(wanted ? .default : .none)
                 }
             }
         }
-        .sheet(isPresented: $explainingNotifications) {
+        .sizedSheet(isPresented: $explainingNotifications) {
             PermissionExplainerView(
                 .notifications,
                 onContinue: {
@@ -388,7 +388,7 @@ struct AppRootView: View {
                 await settleDistribution()
             }
         }
-        .sheet(isPresented: $redeeming, onDismiss: { arrivingInvite = nil }) {
+        .sizedSheet(isPresented: $redeeming, onDismiss: { arrivingInvite = nil }) {
             RedeemInviteView(
                 arriving: arrivingInvite,
                 read: { code in
@@ -416,7 +416,7 @@ struct AppRootView: View {
             )
             .themed(.default)
         }
-        .sheet(item: $arrivingCode) { code in
+        .sizedSheet(item: $arrivingCode) { code in
             AddSomeoneView(
                 rooms: { session.rooms.filter { !$0.isDirect } },
                 code: code.value,

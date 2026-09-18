@@ -59,7 +59,7 @@ public struct ReactionBar: View {
             isPickingEmoji = false
             Task { await onReact(emoji) }
         }
-        .sheet(isPresented: $isListingReactions) {
+        .sizedSheet(isPresented: $isListingReactions) {
             PostReactionsSheet(
                 reactions: ordered.map { (emoji: $0.emoji, count: $0.members.count) },
                 mine: ordered.first { $0.members.contains(viewer) }?.emoji,
@@ -352,7 +352,7 @@ private struct EmojiPickerPresentation: ViewModifier {
         if horizontalSizeClass == .regular {
             content.popover(isPresented: $isPresented) { EmojiPicker(choose: choose) }
         } else {
-            content.sheet(isPresented: $isPresented) { EmojiPicker(choose: choose) }
+            content.sizedSheet(isPresented: $isPresented) { EmojiPicker(choose: choose) }
         }
     }
 }
@@ -366,7 +366,7 @@ private struct EmojiPickerItemPresentation<Item: Identifiable>: ViewModifier {
         if horizontalSizeClass == .regular {
             content.popover(item: $item) { held in EmojiPicker { choose(held, $0) } }
         } else {
-            content.sheet(item: $item) { held in EmojiPicker { choose(held, $0) } }
+            content.sizedSheet(item: $item) { held in EmojiPicker { choose(held, $0) } }
         }
     }
 }

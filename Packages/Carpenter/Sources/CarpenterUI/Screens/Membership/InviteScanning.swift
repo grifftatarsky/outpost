@@ -156,7 +156,7 @@ enum ScanAttempt: Equatable {
 
                 if let notice { CameraRefusedNote(access: notice) }
             }
-            .sheet(isPresented: $isScanning) {
+            .sizedSheet(isPresented: $isScanning) {
                 InviteScannerSheet(accepts: accepts) { code in
                     isScanning = false
                     onScan(code)

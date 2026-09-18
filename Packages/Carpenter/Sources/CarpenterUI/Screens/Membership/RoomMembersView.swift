@@ -152,7 +152,7 @@ public struct RoomMembersView: View {
                 Button { dismiss() } label: { Text("Done", bundle: .module) }
             }
         }
-        .sheet(item: $removing) { member in
+        .sizedSheet(item: $removing) { member in
             RemoveMemberView(
                 member: member,
                 roomName: roomName,
@@ -162,7 +162,7 @@ public struct RoomMembersView: View {
             .presentationDragIndicator(.visible)
         }
         .confirmingBlock($blocking) { person in await onBlock?(person) }
-        .sheet(item: $rescinding) { person in
+        .sizedSheet(item: $rescinding) { person in
             RescindInvitationView(
                 person: person, roomName: roomName,
                 onRescind: { await onRescind?(person.id) }
@@ -170,7 +170,7 @@ public struct RoomMembersView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
-        .sheet(item: $showingPhrase) { person in
+        .sizedSheet(item: $showingPhrase) { person in
             VerificationPhraseSheet(
                 name: person.person.displayName, phrase: person.phrase, confirmedAt: nil)
                 .presentationDetents([.medium])

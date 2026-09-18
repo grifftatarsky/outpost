@@ -126,7 +126,7 @@ public struct DeviceListView: View {
                 .transition(.opacity)  // cross-fade only
             }
         }
-        .sheet(isPresented: .init(get: { !confirming.isEmpty }, set: { if !$0 { confirming = [] } })) {
+        .sizedSheet(isPresented: .init(get: { !confirming.isEmpty }, set: { if !$0 { confirming = [] } })) {
             removalSheet
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)

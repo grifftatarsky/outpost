@@ -265,7 +265,7 @@ struct PostPicturesView: View {
                 loaded: viewed.loaded, item: ViewedItem(post),
                 onReport: { reporting = ViewedItem(post) })
         }
-        .sheet(item: $reporting) { item in
+        .sizedSheet(item: $reporting) { item in
             ReportView(item: item)
         }
     }

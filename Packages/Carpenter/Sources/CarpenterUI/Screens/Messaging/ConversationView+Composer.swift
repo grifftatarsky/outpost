@@ -137,7 +137,7 @@ extension ConversationView {
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: problem)
         .haptic(.failure, trigger: failures)
-        .sheet(isPresented: $explainingPhotos) {
+        .sizedSheet(isPresented: $explainingPhotos) {
             PermissionExplainerView(
                 .photos,
                 onContinue: {

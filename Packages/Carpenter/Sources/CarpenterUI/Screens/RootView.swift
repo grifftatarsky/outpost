@@ -565,7 +565,7 @@ public struct RootView: View {
                     "Every message and photo in it goes from your devices, and being added back may not bring them back. This cannot be undone.",
                     bundle: .module)
             }
-            .sheet(item: $reviewingAccessBefore) { room in
+            .sizedSheet(item: $reviewingAccessBefore) { room in
                 LeavingRoomView(
                     roomName: room.name,
                     people: outpostAccessChosen(room.id),

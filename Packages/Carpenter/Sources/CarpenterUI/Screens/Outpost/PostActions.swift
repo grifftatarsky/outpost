@@ -97,10 +97,10 @@ private struct PostActionsModifier: ViewModifier {
                     .tint(palette.destructive)
                 }
             }
-            .sheet(isPresented: $reporting) {
+            .sizedSheet(isPresented: $reporting) {
                 ReportView(item: item)
             }
-            .sheet(isPresented: $editing) {
+            .sizedSheet(isPresented: $editing) {
                 EditWordsView(
                     title: kind == .post
                         ? Text("Edit post", bundle: .module)

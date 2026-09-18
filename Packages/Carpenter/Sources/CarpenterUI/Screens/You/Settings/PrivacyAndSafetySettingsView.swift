@@ -222,7 +222,7 @@ struct PrivacyAndSafetySettingsView: View {
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .navigationTitle(Text("Privacy & Safety", bundle: .module))
-        .sheet(isPresented: $isCheckingUp) {
+        .sizedSheet(isPresented: $isCheckingUp) {
             PrivacyCheckupView(
                 owner: owner,
                 current: PrivacyChoices(

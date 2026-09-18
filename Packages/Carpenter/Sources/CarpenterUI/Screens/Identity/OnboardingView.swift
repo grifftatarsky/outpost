@@ -48,7 +48,7 @@ public struct OnboardingView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .background(palette.background.ignoresSafeArea())
-        .sheet(isPresented: $explaining) {
+        .sizedSheet(isPresented: $explaining) {
             HowItWorksView()
                 .presentationDetents([.fraction(0.95)])
                 .presentationDragIndicator(.visible)

@@ -122,7 +122,7 @@ public struct PostComposerView: View {
             }
             .sensoryFeedback(.success, trigger: posted)
             .task { writing = true }
-            .sheet(isPresented: $explainingPhotos) {
+            .sizedSheet(isPresented: $explainingPhotos) {
                 PermissionExplainerView(
                     .photos,
                     onContinue: {
@@ -155,9 +155,6 @@ public struct PostComposerView: View {
                 }
             }
         }
-        #if os(macOS)
-            .presentationSizing(.form)
-        #endif
     }
 
     private func post() {

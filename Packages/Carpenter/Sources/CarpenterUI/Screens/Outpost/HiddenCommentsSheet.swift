@@ -110,7 +110,7 @@ public struct HiddenCommentsSheet: View {
 
 #if DEBUG
     #Preview("Missing comments") {
-        Color.clear.sheet(isPresented: .constant(true)) {
+        Color.clear.sizedSheet(isPresented: .constant(true)) {
             HiddenCommentsSheet(hidden: 2, settings: OutpostSettings(consent: .open))
         }
         .themed(.default)

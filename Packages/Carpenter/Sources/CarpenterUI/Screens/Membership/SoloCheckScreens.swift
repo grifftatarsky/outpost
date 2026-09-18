@@ -230,7 +230,7 @@ struct SoloCheckLine: View {
         .frame(maxWidth: .infinity)
         .background(palette.elevatedSurface)
         .accessibilityElement(children: .contain)
-        .sheet(isPresented: $answering) {
+        .sizedSheet(isPresented: $answering) {
             AnswerWhoYouAreTalkingToSheet(
                 onAnswer: { matched in await onAnswer?(matched) }, phrase: phrase)
                 .presentationDetents([.medium])

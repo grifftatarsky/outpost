@@ -54,7 +54,7 @@ struct NotGoneMark: View {
         .padding(-max(0, CarpenterMetrics.hitTarget - box - 2) / 2)
         .accessibilityLabel(Text("Not sent yet", bundle: .module))
         .accessibilityHint(Text("Says why.", bundle: .module))
-        .sheet(
+        .sizedSheet(
             isPresented: $explaining,
             onDismiss: {
                 let chosen = next

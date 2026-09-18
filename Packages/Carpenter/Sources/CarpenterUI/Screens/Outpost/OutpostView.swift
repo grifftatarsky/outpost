@@ -210,7 +210,7 @@ public struct OutpostView: View {
                 }
             }
         }
-        .sheet(isPresented: $isComposing) {
+        .sizedSheet(isPresented: $isComposing) {
             PostComposerView(onAttach: onAttach) { body in await onPost(body) }
                 .themed(.default)
         }

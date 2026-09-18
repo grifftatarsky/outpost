@@ -109,7 +109,7 @@ public struct EditRoomsListView: View {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
-            .sheet(item: $taggingRoom) { room in
+            .sizedSheet(item: $taggingRoom) { room in
                 RoomTagsSheet(room: room, organisation: $organisation)
             }
         }

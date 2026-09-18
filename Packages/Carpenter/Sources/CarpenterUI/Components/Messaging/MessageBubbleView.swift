@@ -105,10 +105,10 @@ public struct MessageRunView: View {
                     loaded: viewed.loaded, item: ViewedItem(viewed.message),
                     onReport: { reporting = viewed.message })
             }
-            .sheet(item: $reporting) { message in
+            .sizedSheet(item: $reporting) { message in
                 ReportView(item: ViewedItem(message))
             }
-            .sheet(item: $listingReactionsOf) { message in
+            .sizedSheet(item: $listingReactionsOf) { message in
                 ReactionListView(
                     message: message,
                     member: { actions?.member($0) },
@@ -121,7 +121,7 @@ public struct MessageRunView: View {
                 .presentationDragIndicator(.visible)
             }
             .confirmingBlock($blocking) { person in await actions?.block?(person) }
-            .sheet(item: $editing) { message in
+            .sizedSheet(item: $editing) { message in
                 EditWordsView(
                     title: Text("Edit message", bundle: .module),
                     placeholder: Text("Your message", bundle: .module),

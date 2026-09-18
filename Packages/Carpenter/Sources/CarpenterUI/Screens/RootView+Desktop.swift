@@ -115,7 +115,7 @@ extension RootView {
                         canJoinIn: canJoinIn
                     )
                     .onAppear { askingConsent = outpostSettings.consent == nil }
-                    .sheet(isPresented: $askingConsent) {
+                    .sizedSheet(isPresented: $askingConsent) {
                         OutpostConsentSheet { answer in
                             askingConsent = false
                             await outpostSettings.onConsent(answer)

@@ -120,7 +120,7 @@ extension RootView {
             )
             .environment(\.notGoneHelp, notGoneHelp(for: id))
             .environment(\.leavingThisRoom, leaving(id))
-            .sheet(item: $greeting) { greeted in
+            .sizedSheet(item: $greeting) { greeted in
                 JoinPromptView(greeting: greeted) { await onGreetingSeen(greeted.id) }
                     .interactiveDismissDisabled()
             }
@@ -133,10 +133,10 @@ extension RootView {
                 guard was?.id == id, now == nil else { return }
                 Task { await offerComparison(in: id) }
             }
-            .sheet(item: $offeringComparison) { offer in
+            .sizedSheet(item: $offeringComparison) { offer in
                 ComparisonOfferView(offer: offer, onMarkChecked: onMarkChecked)
             }
-            .sheet(item: $viewingMembers) { room in
+            .sizedSheet(item: $viewingMembers) { room in
                 NavigationStack {
                     RoomMembersView(
                         roomName: rooms.first { $0.id == room }?.name ?? "",
@@ -163,7 +163,7 @@ extension RootView {
                 }
                 .environment(\.leavingThisRoom, leaving(room))
             }
-            .sheet(item: $starting) { room in
+            .sizedSheet(item: $starting) { room in
                 StartInviteView(
                     roomName: rooms.first { $0.id == room }?.name ?? "",
                     onIssue: { code, lifetime in
@@ -177,14 +177,14 @@ extension RootView {
                     }
                 )
             }
-            .sheet(item: $showingWaiting) { room in
+            .sizedSheet(item: $showingWaiting) { room in
                 NavigationStack {
                     WaitingOnView(
                         roomName: rooms.first { $0.id == room }?.name ?? "",
                         people: waitingOn(room))
                 }
             }
-            .sheet(item: $checkingWho) { room in
+            .sizedSheet(item: $checkingWho) { room in
                 NavigationStack {
                     WhoYouAreTalkingToView(
                         roomName: rooms.first { $0.id == room }?.name ?? "",
@@ -192,12 +192,12 @@ extension RootView {
                         onMarkChecked: onMarkChecked)
                 }
             }
-            .sheet(item: $showingOutstanding) { room in
+            .sizedSheet(item: $showingOutstanding) { room in
                 OutstandingInviteSheet(
                     roomName: rooms.first { $0.id == room }?.name ?? "",
                     load: { await onOutstandingInvite(room) })
             }
-            .sheet(item: $invite) { presented in
+            .sizedSheet(item: $invite) { presented in
                 InviteView(
                     roomName: presented.roomName,
                     invite: presented.invite,
@@ -205,7 +205,7 @@ extension RootView {
                     notAskedYet: presented.notAskedYet
                 )
             }
-            .sheet(item: $notifying) { room in
+            .sizedSheet(item: $notifying) { room in
                 NavigationStack {
                     NotificationLevelView(
                         level: Binding(
@@ -220,7 +220,7 @@ extension RootView {
                     )
                 }
             }
-            .sheet(item: $adjusting) { room in
+            .sizedSheet(item: $adjusting) { room in
                 if let current = roomAccess(room) {
                     RoomAccessView(
                         roomName: rooms.first { $0.id == room }?.name ?? "",
@@ -230,7 +230,7 @@ extension RootView {
                     )
                 }
             }
-            .sheet(item: $reviewing) { room in
+            .sizedSheet(item: $reviewing) { room in
                 JoinRequestsView(
                     roomName: rooms.first { $0.id == room }?.name ?? "",
                     joins: { pendingJoins(room) },

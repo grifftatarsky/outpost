@@ -28,7 +28,7 @@ private struct CroppedPhotoPicker: ViewModifier {
                     pending = PendingPhoto(data: data)
                 }
             }
-            .sheet(item: $pending) { photo in
+            .sizedSheet(item: $pending) { photo in
                 AvatarCropView(photo.data) { crop in
                     Task { await onChosen(PickedAvatar(data: photo.data, crop: crop)) }
                 }
