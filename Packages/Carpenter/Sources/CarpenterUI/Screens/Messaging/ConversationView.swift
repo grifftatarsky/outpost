@@ -237,7 +237,7 @@ public struct ConversationView: View {
         .animation(reduceMotion ? nil : .default, value: repair)
         .animation(reduceMotion ? nil : .default, value: outpostReview)
         .animation(reduceMotion ? nil : .default, value: heldRestore)
-        .sheet(item: $reviewing) { review in
+        .sizedSheet(item: $reviewing) { review in
             OutpostReviewSheet(
                 review: review, onChoose: { person, choice in
                     await onOutpostChoice?(person, choice, review.room)
@@ -254,25 +254,33 @@ public struct ConversationView: View {
             )
         }
         .navigationTitle(Text(room.name))
+        #if os(macOS)
+            .navigationSubtitle(
+                room.isDirect
+                    ? Text(verbatim: "")
+                    : Text("^[\(room.memberCount) member](inflect: true)", bundle: .module))
+        #endif
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                VStack(spacing: 0) {
-                    Text(room.name)
-                        .font(.headline)
-                        .foregroundStyle(palette.primaryText)
-                    if !room.isDirect {
-                        Text("^[\(room.memberCount) member](inflect: true)", bundle: .module)
-                            .font(.caption2)
-                            .foregroundStyle(palette.tertiaryText)
+            #if !os(macOS)
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 0) {
+                        Text(room.name)
+                            .font(.headline)
+                            .foregroundStyle(palette.primaryText)
+                        if !room.isDirect {
+                            Text("^[\(room.memberCount) member](inflect: true)", bundle: .module)
+                                .font(.caption2)
+                                .foregroundStyle(palette.tertiaryText)
+                        }
                     }
                 }
-            }
+            #endif
             if hasRoomActions {
                 ToolbarItem(placement: .primaryAction) { roomMenu }
             }
         }
-        .sheet(isPresented: $askingCheck) {
+        .sizedSheet(isPresented: $askingCheck) {
             AskWhoYouAreTalkingToSheet(
                 onAsk: { holding in await onAskWhoYouAreTalkingTo?(holding) },
                 phrase: soloPhrase)

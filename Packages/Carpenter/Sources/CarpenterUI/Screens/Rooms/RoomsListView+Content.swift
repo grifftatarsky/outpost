@@ -93,16 +93,18 @@ extension RoomsListView {
         .helpButton()
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(scope.title).font(.headline)
-            }
+            #if !os(macOS)
+                ToolbarItem(placement: .principal) {
+                    Text(scope.title).font(.headline)
+                }
+            #endif
             ToolbarItem(placement: .navigation) { composeButton }
             ToolbarItem(placement: .primaryAction) { listMenu }
         }
         .safeAreaInset(edge: .top, spacing: 0) { tagFilter }
         .syncStatus(syncLine)
         .task { await onAppearSync() }
-        .sheet(isPresented: $isEditing) {
+        .sizedSheet(isPresented: $isEditing) {
             EditRoomsListView(
                 rooms: rooms.filter(scope.includes), title: scope.title, organisation: $organisation,
                 isSilenced: isSilenced, onSilence: onSilence,
@@ -120,12 +122,12 @@ extension RoomsListView {
                     }
                 })
         }
-        .sheet(isPresented: $isNamingRoom) {
+        .sizedSheet(isPresented: $isNamingRoom) {
             NewRoomView(preferences: preferences, connections: connections) { name, access, people in
                 await onCreateRoom(name, access, people)
             }
         }
-        .sheet(isPresented: $isStartingSolo) {
+        .sizedSheet(isPresented: $isStartingSolo) {
             SoloPickerView(connections: connections) { person in
                 if let invite = await onStartSolo(person.id) {
                     soloInvite = PresentedInvite(
@@ -133,19 +135,19 @@ extension RoomsListView {
                 }
             }
         }
-        .sheet(item: $soloInvite) { presented in
+        .sizedSheet(item: $soloInvite) { presented in
             InviteView(
                 roomName: presented.roomName, invite: presented.invite,
                 phrase: phraseLookup(presented.invite),
                 notAskedYet: presented.notAskedYet)
         }
-        .sheet(isPresented: $isManagingTags) {
+        .sizedSheet(isPresented: $isManagingTags) {
             ManageTagsView(organisation: $organisation, preferences: preferences)
         }
-        .sheet(item: $taggingRoom) { room in
+        .sizedSheet(item: $taggingRoom) { room in
             RoomTagsSheet(room: room, organisation: $organisation)
         }
-        .sheet(isPresented: $isWritingFocusMessage) {
+        .sizedSheet(isPresented: $isWritingFocusMessage) {
             if let focus {
                 FocusMessageSheet(focus: focus)
             }
