@@ -15,7 +15,7 @@ public struct HiddenCommentsSheet: View {
 
     public var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 SettingsHeaderCard(
                     icon: "eye.slash.fill",
                     title: hidden == 1
@@ -78,8 +78,8 @@ public struct HiddenCommentsSheet: View {
                 }
                 .groupedRowSurface()
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
             .navigationTitle(Text("Missing comments", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

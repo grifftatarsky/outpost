@@ -28,7 +28,7 @@ struct NewRoomView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 Section {
                     TextField(text: $name) { Text("Name", bundle: .module) }
                         .focused($naming)
@@ -70,9 +70,9 @@ struct NewRoomView: View {
                 }
             }
             .animation(reduceMotion ? nil : .default, value: isAdvanced)
-            .scrollContentBackground(.hidden)
+            .listSurfaceHidden()
             .scrollDismissesKeyboard(.interactively)
-            .background(palette.background)
+            .pageBackground()
             .navigationTitle(Text("New room", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $picking) {

@@ -38,7 +38,7 @@ public struct RoomAccessView: View {
 
     public var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 Section {
                     option(
                         .open,
@@ -124,8 +124,8 @@ public struct RoomAccessView: View {
                     .groupedRowSurface()
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
             .navigationTitle(Text("Who gets in", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

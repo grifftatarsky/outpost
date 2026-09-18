@@ -33,6 +33,54 @@ public struct DeviceListView: View {
     }
 
     public var body: some View {
+        devicesList
+            .sizedSheet(isPresented: .init(get: { !confirming.isEmpty }, set: { if !$0 { confirming = [] } })) {
+                removalSheet
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+            }
+            .alert(
+                Text("Name this device", bundle: .module),
+                isPresented: .init(get: { renaming != nil }, set: { if !$0 { renaming = nil } })
+            ) {
+                TextField(text: $draft) { Text("Name", bundle: .module) }
+                Button {
+                    if let device = renaming, let onRename {
+                        let wanted = draft
+                        renaming = nil
+                        Task { await onRename(device, wanted) }
+                    }
+                } label: {
+                    Text("Save", bundle: .module)
+                }
+                Button(role: .cancel) { renaming = nil } label: {
+                    Text("Cancel", bundle: .module)
+                }
+            } message: {
+                Text(
+                    "Only you see this. It travels to your own devices and reaches nobody else.",
+                    bundle: .module)
+            }
+    }
+
+    @ViewBuilder
+    private var devicesList: some View {
+        #if os(macOS)
+            macList
+        #else
+            phoneList
+        #endif
+    }
+
+    private var footer: some View {
+        Text(
+            "Anything on this list can send messages as you. Removing one stops it from reading what is said afterwards — but not from having sent what it already sent, because it really was you. Other people stop accepting it as you as their devices collect the removal, which is the next time each of them syncs.",
+            bundle: .module
+        )
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var phoneList: some View {
         List(selection: $chosen) {
             Section {
                 ForEach(devices) { device in
@@ -70,11 +118,7 @@ public struct DeviceListView: View {
                         }
                 }
             } footer: {
-                Text(
-                    "Anything on this list can send messages as you. Removing one stops it from reading what is said afterwards — but not from having sent what it already sent, because it really was you. Other people stop accepting it as you as their devices collect the removal, which is the next time each of them syncs.",
-                    bundle: .module
-                )
-                .fixedSize(horizontal: false, vertical: true)
+                footer
             }
             .groupedRowSurface()
         }
@@ -126,34 +170,67 @@ public struct DeviceListView: View {
                 .transition(.opacity)  // cross-fade only
             }
         }
-        .sizedSheet(isPresented: .init(get: { !confirming.isEmpty }, set: { if !$0 { confirming = [] } })) {
-            removalSheet
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-        }
-        .alert(
-            Text("Name this device", bundle: .module),
-            isPresented: .init(get: { renaming != nil }, set: { if !$0 { renaming = nil } })
-        ) {
-            TextField(text: $draft) { Text("Name", bundle: .module) }
-            Button {
-                if let device = renaming, let onRename {
-                    let wanted = draft
-                    renaming = nil
-                    Task { await onRename(device, wanted) }
-                }
-            } label: {
-                Text("Save", bundle: .module)
-            }
-            Button(role: .cancel) { renaming = nil } label: {
-                Text("Cancel", bundle: .module)
-            }
-        } message: {
-            Text(
-                "Only you see this. It travels to your own devices and reaches nobody else.",
-                bundle: .module)
-        }
     }
+
+    #if os(macOS)
+        private var macList: some View {
+            SettingsPage {
+                Section {
+                    ForEach(devices) { device in
+                        HStack(spacing: 8) {
+                            row(device)
+                            if hasActions(device) {
+                                Menu {
+                                    actions(for: device)
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                }
+                                .menuStyle(.borderlessButton)
+                                .menuIndicator(.hidden)
+                                .fixedSize()
+                                .help(Text("Rename or remove", bundle: .module))
+                            }
+                        }
+                        .contextMenu { actions(for: device) }
+                    }
+                } footer: {
+                    footer
+                }
+                if let onPair {
+                    Section {
+                        Button(action: onPair) {
+                            Text("Add a device", bundle: .module)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+            .navigationTitle(Text("Devices", bundle: .module))
+        }
+
+        private func hasActions(_ device: DeviceSummary) -> Bool {
+            onRename != nil || (device.isActive && !device.isCurrent)
+        }
+
+        @ViewBuilder
+        private func actions(for device: DeviceSummary) -> some View {
+            if onRename != nil {
+                Button {
+                    draft = device.name ?? ""
+                    renaming = device
+                } label: {
+                    Text("Rename…", bundle: .module)
+                }
+            }
+            if device.isActive && !device.isCurrent {
+                Button(role: .destructive) {
+                    confirming = [device]
+                } label: {
+                    Text("Remove…", bundle: .module)
+                }
+            }
+        }
+    #endif
 
     private var removalSheet: some View {
         VStack(alignment: .leading, spacing: 0) {

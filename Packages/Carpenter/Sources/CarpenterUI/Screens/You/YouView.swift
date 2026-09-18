@@ -237,7 +237,7 @@ public struct YouView: View {
     }
 
     var list: some View {
-        List {
+        SettingsPage {
             Section {
                 masthead
             }
@@ -293,7 +293,6 @@ public struct YouView: View {
                             icon: "gearshape.fill", tone: .device,
                             title: Text("Settings", bundle: .module))
                     }
-                    .buttonStyle(.plain)
                 }
                 .groupedRowSurface()
                 gettingHelp
@@ -306,9 +305,9 @@ public struct YouView: View {
                 if onEraseEverything != nil { erase }
             #endif
         }
-        .scrollContentBackground(.hidden)
+        .listSurfaceHidden()
         .contentMargins(.top, CarpenterMetrics.mastheadTopInset, for: .scrollContent)
-        .background(palette.background)
+        .pageBackground()
         .navigationTitle(Text(verbatim: ""))
         .helpButton()
         .toolbarTitleDisplayMode(.inline)

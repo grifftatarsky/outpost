@@ -248,9 +248,6 @@ extension YouView {
                     icon: "envelope.fill", tone: .device,
                     title: Text("Get product updates", bundle: .module))
             }
-            #if os(macOS)
-                .buttonStyle(.plain)
-            #endif
             #if DEBUG
             if debugActions != nil {
                 NavigationLink {
@@ -283,21 +280,30 @@ extension YouView {
 
     var erase: some View {
         Section {
-            Button(role: .destructive) {
-                erasing = true
-            } label: {
-                HStack(spacing: 12) {
-                    IconTile(fill: palette.destructiveFill) {
-                        Image("NukeMark", bundle: .module)
-                            .resizable()
-                            .scaledToFit()
-                            .padding(3)
-                    }
-                    Text("Erase everything", bundle: .module)
-                        .foregroundStyle(palette.destructive)
+            #if os(macOS)
+                Button(role: .destructive) {
+                    erasing = true
+                } label: {
+                    Text("Erase everything…", bundle: .module)
                 }
-            }
-            .tint(palette.destructive)
+                .buttonStyle(.bordered)
+            #else
+                Button(role: .destructive) {
+                    erasing = true
+                } label: {
+                    HStack(spacing: 12) {
+                        IconTile(fill: palette.destructiveFill) {
+                            Image("NukeMark", bundle: .module)
+                                .resizable()
+                                .scaledToFit()
+                                .padding(3)
+                        }
+                        Text("Erase everything", bundle: .module)
+                            .foregroundStyle(palette.destructive)
+                    }
+                }
+                .tint(palette.destructive)
+            #endif
         } footer: {
             Text(
                 "Removes your member and everything this Apple Account holds in iCloud, on every device. It cannot remove what you already sent from anybody else's.",

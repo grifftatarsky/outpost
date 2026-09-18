@@ -93,17 +93,35 @@
         }
 
         var dataScreen: some View {
-            List {
+            SettingsPage {
                 thisDevice
                 if onEraseEverything != nil { erase }
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
         }
 
         func pane(@ViewBuilder _ page: () -> some View) -> some View {
-            NavigationStack { page() }
-                .frame(width: 580, height: 540)
+            PaneHeight(limit: 620) {
+                NavigationStack { page() }
+            }
+            .frame(width: 560)
+        }
+    }
+
+    private struct PaneHeight: Layout {
+        let limit: CGFloat
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            guard let page = subviews.first else { return .zero }
+            let natural = page.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
+            return CGSize(width: proposal.width ?? natural.width, height: min(natural.height, limit))
+        }
+
+        func placeSubviews(
+            in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+        ) {
+            subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
         }
     }
 #endif

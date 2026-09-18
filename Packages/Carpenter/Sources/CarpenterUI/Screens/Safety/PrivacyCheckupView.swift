@@ -102,7 +102,7 @@ public struct PrivacyCheckupView: View {
     }
 
     private var doors: some View {
-        List {
+        SettingsPage {
             SettingsHeaderCard(
                 icon: "hand.raised.fill",
                 title: Text("Who sees what", bundle: .module),
@@ -166,8 +166,8 @@ public struct PrivacyCheckupView: View {
                 }
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Privacy", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .toolbar {

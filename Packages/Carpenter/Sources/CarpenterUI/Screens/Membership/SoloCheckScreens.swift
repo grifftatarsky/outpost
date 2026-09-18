@@ -251,7 +251,7 @@ struct AskWhoYouAreTalkingToSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 Section {
                     ChoiceRow(
                         title: Text("Keep talking", bundle: .module),
@@ -286,8 +286,8 @@ struct AskWhoYouAreTalkingToSheet: View {
                     .groupedRowSurface()
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
             .navigationTitle(Text("Who you are talking to", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

@@ -15,7 +15,7 @@ public struct OutpostConsentSheet: View {
 
     public var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 SettingsHeaderCard(
                     icon: "bubble.left.and.text.bubble.right.fill",
                     title: Text("Before you join in", bundle: .module),
@@ -58,8 +58,8 @@ public struct OutpostConsentSheet: View {
                         bundle: .module)
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
             .safeAreaInset(edge: .bottom) { decision }
             .navigationTitle(Text("How comments travel", bundle: .module))
             .toolbarTitleDisplayMode(.inline)

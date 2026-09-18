@@ -46,6 +46,62 @@ extension Palette {
     }
 }
 
+struct SettingsPage<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        #if os(macOS)
+            Form { content }
+                .formStyle(.grouped)
+                .buttonStyle(FormRowButtonStyle())
+        #else
+            List { content }
+        #endif
+    }
+}
+
+#if os(macOS)
+    private struct FormRowButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .foregroundStyle(.tint)
+                .opacity(configuration.isPressed ? 0.55 : 1)
+                .contentShape(.rect)
+        }
+    }
+#endif
+
+private struct PageBackground: ViewModifier {
+    @Environment(\.palette) private var palette
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+            content
+        #else
+            content.background(palette.background)
+        #endif
+    }
+}
+
+extension View {
+    func pageBackground() -> some View {
+        modifier(PageBackground())
+    }
+
+    @ViewBuilder
+    func listSurfaceHidden() -> some View {
+        #if os(macOS)
+            self
+        #else
+            scrollContentBackground(.hidden)
+        #endif
+    }
+}
+
 struct SettingsRow: View {
     @Environment(\.palette) private var palette
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -58,6 +114,34 @@ struct SettingsRow: View {
     var swatch = false
 
     var body: some View {
+        #if os(macOS)
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    title
+                    if let subtitle {
+                        subtitle
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 8)
+                if swatch {
+                    Circle().fill(palette.accentColor).frame(width: 12, height: 12)
+                        .accessibilityHidden(true)
+                }
+                if let detail {
+                    detail
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .contentShape(.rect)
+        #else
+            phoneRow
+        #endif
+    }
+
+    private var phoneRow: some View {
         let layout = AnyLayout(
             typeSize.isAccessibilitySize
                 ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
@@ -105,7 +189,12 @@ struct SettingsToggle: View {
 
     var body: some View {
         Toggle(isOn: $isOn) {
-            SettingsRow(icon: icon, tone: tone, title: title, detail: detail)
+            #if os(macOS)
+                title
+                if let detail { detail }
+            #else
+                SettingsRow(icon: icon, tone: tone, title: title, detail: detail)
+            #endif
         }
         .toggleStyle(.switch)
         .tint(palette.accentColor)
@@ -121,6 +210,27 @@ struct SettingsHeaderCard: View {
     let paragraph: Text
 
     var body: some View {
+        #if os(macOS)
+            Section {
+                HStack(alignment: .top, spacing: 12) {
+                    IconTile(icon, fill: palette.tileFill(tone), size: 36)
+                    VStack(alignment: .leading, spacing: 4) {
+                        title
+                            .font(.headline)
+                            .heading()
+                        paragraph
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        #else
+            phoneCard
+        #endif
+    }
+
+    private var phoneCard: some View {
         Section {
             VStack(alignment: .leading, spacing: 10) {
                 IconTile(icon, fill: palette.tileFill(tone), size: 56)

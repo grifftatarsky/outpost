@@ -54,7 +54,7 @@ struct PeopleView: View {
                 }
                 .background(palette.background)
             } else {
-                List {
+                SettingsPage {
                     ForEach(sections, id: \.title) { section in
                         Section {
                             ForEach(section.people) { connection in
@@ -81,8 +81,8 @@ struct PeopleView: View {
                 .overlay {
                     if sections.isEmpty, !query.isEmpty { noMatch }
                 }
-                .scrollContentBackground(.hidden)
-                .background(palette.background)
+                .listSurfaceHidden()
+                .pageBackground()
             }
         }
         .navigationTitle(Text("People", bundle: .module))
@@ -145,7 +145,7 @@ public struct PersonDetailView: View {
     private var canEdit: Bool { onNicknameChange != nil || onPersonAvatarChange != nil }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 VStack(spacing: 10) {
                     if onPersonAvatarChange != nil {
@@ -229,9 +229,9 @@ public struct PersonDetailView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
+        .listSurfaceHidden()
         .scrollDismissesKeyboard(.interactively)
-        .background(palette.background)
+        .pageBackground()
         .navigationTitle(Text(verbatim: person.displayName))
         .toolbarTitleDisplayMode(.inline)
         .croppingPickedPhoto($picked) { await onPersonAvatarChange?(person.id, $0) }

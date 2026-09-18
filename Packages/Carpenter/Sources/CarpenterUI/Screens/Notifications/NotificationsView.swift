@@ -11,7 +11,7 @@ public struct NotificationsView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 NavigationLink {
                     MessagingNotificationsView(
@@ -62,8 +62,8 @@ public struct NotificationsView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Notifications", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

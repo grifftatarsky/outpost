@@ -18,7 +18,7 @@ struct DebugMenuView: View {
     @Binding var showsMessageDelay: Bool
 
     var body: some View {
-        List {
+        SettingsPage {
             Section {
                 Button { Task { await actions.checkMailbox() } } label: {
                     SettingsRow(
@@ -124,8 +124,8 @@ struct DebugMenuView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Debug", bundle: .module))
     }
 }

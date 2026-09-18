@@ -25,7 +25,7 @@ public struct MessageDetailView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 Text(verbatim: message.body)
                     .font(CarpenterFont.bubble)
@@ -42,8 +42,8 @@ public struct MessageDetailView: View {
             history
             acts
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Details", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .alert(

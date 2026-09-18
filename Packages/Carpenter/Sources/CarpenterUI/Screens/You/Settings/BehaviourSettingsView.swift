@@ -10,7 +10,7 @@ struct BehaviourSettingsView: View {
     @Binding var tutorialMode: Bool
 
     var body: some View {
-        List {
+        SettingsPage {
             SettingsHeaderCard(
                 icon: "hand.tap.fill",
                 title: Text("Behavior", bundle: .module),
@@ -19,9 +19,11 @@ struct BehaviourSettingsView: View {
                     bundle: .module))
 
             Section {
-                SettingsToggle(
-                    icon: "hand.tap.fill", title: Text("Haptics", bundle: .module),
-                    isOn: $playsHaptics)
+                #if !os(macOS)
+                    SettingsToggle(
+                        icon: "hand.tap.fill", title: Text("Haptics", bundle: .module),
+                        isOn: $playsHaptics)
+                #endif
                 SettingsToggle(
                     icon: "questionmark.circle.fill",
                     title: Text("Help on every screen", bundle: .module), isOn: $tutorialMode)
@@ -32,8 +34,8 @@ struct BehaviourSettingsView: View {
                 InviteScanningSetting()
             #endif
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Behavior", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

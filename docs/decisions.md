@@ -3628,6 +3628,50 @@ The window runs the sync loop and push; the Settings surface runs neither.
 window sizes itself to its pane. **Not seen** — built for both platforms and green, and nobody has
 opened it.
 
+### On the Mac, a settings page is the system's grouped form
+
+`PROPOSED` — Claude, 2026-09-18. Griff, on the first look at the Settings window: "clean up the UI.
+Are you using the documentation and system setup, liquid glass, like iOS does?" It was not: the Mac
+drew the iPhone's pages — the app's own backgrounds, row surfaces, colored tiles on every row and a
+large header card — and only the window's toolbar was the system's.
+
+Read from the HIG before choosing. *Materials*: Liquid Glass "forms a distinct functional layer for
+controls and navigation", and "don't use Liquid Glass in the content layer"; standard components
+"pick up the appearance and behavior of this material automatically". *Settings*: a settings window
+"accommodates the size of the current pane". *Toggles*: a switch or checkbox belongs in the window
+body. So the answer to "liquid glass like iOS" is to stop painting over the system rather than to add
+glass: the toolbar, the switches and the menus are the system's, and the content is the system's
+grouped form.
+
+**What changed, all in the shared pieces.** `SettingsPage` is a `List` on iPhone and a
+`Form` with `.formStyle(.grouped)` on the Mac, and it replaced `List` at 36 places in 34 files. `SettingsRow`
+drops its icon tile on the Mac, `SettingsToggle` is a plain labelled switch, the header card is a
+compact icon, title and paragraph, `groupedRowSurface()` and the pages' own backgrounds step aside, and
+`sectionHeading()` leaves the font to the form. The iPhone runs the same code it ran before, by
+construction: every Mac difference is behind `#if os(macOS)`, and the two modifiers that replaced
+`.scrollContentBackground(.hidden)` and `.background(palette.background)` sit where those did.
+
+**What changed per page.** Color is a row of eight swatches in the pane, the way the Mac's own
+Appearance settings show an accent color, instead of a page to push into. Devices has a *…* menu and a
+context menu for renaming and removing, because swipes and an edit mode are the iPhone's, and *Add a
+device* is a button in the form rather than in the Settings window's toolbar, which the HIG keeps to
+the panes. *Erase everything…* is a push button. A row that performs an action is drawn in the accent
+color, as it is on the iPhone.
+
+**What the Mac no longer offers.** *Haptics*: the app's cues are impact, warning and error, and
+`sensoryFeedback` plays none of them on a Mac, so the switch changed nothing. *Inbox*: the Mac's
+sidebar does not split Solos from Rooms, so the choice changed nothing there either. A setting that
+does nothing is a claim the app cannot keep.
+
+**Pane height.** Each pane takes the height of what it holds, up to 620 points, and scrolls beyond
+that — Privacy & Safety and Outpost settings are both taller than a laptop's screen.
+
+**How it was checked.** A throwaway harness outside the repository links the package, builds the
+Settings window from the preview fixtures, and draws each pane into an offscreen window, in both
+appearances; one window switched through all eight panes without a layout cycle and resized to each.
+**Not seen:** the real Settings window's toolbar with these panes, and the main window's sheets,
+which now use the same form and were not drawn.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

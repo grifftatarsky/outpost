@@ -34,7 +34,7 @@ public struct LeavingRoomView: View {
 
     public var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 Section {
                     ForEach(people) { person in
                         ChoiceRow(
@@ -51,8 +51,8 @@ public struct LeavingRoomView: View {
                 }
                 .groupedRowSurface()
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
             .navigationTitle(Text("Leaving \(roomName)", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

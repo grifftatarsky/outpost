@@ -18,9 +18,14 @@ extension View {
         }
     }
 
+    @ViewBuilder
     public func sectionHeading() -> some View {
-        font(CarpenterFont.sectionLabel)
-            .accessibilityAddTraits(.isHeader)
+        #if os(macOS)
+            accessibilityAddTraits(.isHeader)
+        #else
+            font(CarpenterFont.sectionLabel)
+                .accessibilityAddTraits(.isHeader)
+        #endif
     }
 
     public func heading() -> some View {
@@ -191,9 +196,13 @@ public struct GroupedRowSurface: ViewModifier {
     @Environment(\.palette) private var palette
 
     public func body(content: Content) -> some View {
-        content
-            .listRowBackground(palette.contentSurface)
-            .environment(\.avatarGround, .contentSurface)
+        #if os(macOS)
+            content
+        #else
+            content
+                .listRowBackground(palette.contentSurface)
+                .environment(\.avatarGround, .contentSurface)
+        #endif
     }
 }
 

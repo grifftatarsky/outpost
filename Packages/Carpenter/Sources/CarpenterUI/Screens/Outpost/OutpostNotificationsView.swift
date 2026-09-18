@@ -44,7 +44,7 @@ public struct OutpostNotificationsView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 ChoiceRow(
                     title: Text("All posts", bundle: .module),
@@ -149,8 +149,8 @@ public struct OutpostNotificationsView: View {
                 .groupedRowSurface()
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Outpost notifications", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

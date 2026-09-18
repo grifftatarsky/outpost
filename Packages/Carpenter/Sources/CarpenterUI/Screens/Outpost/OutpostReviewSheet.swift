@@ -23,7 +23,7 @@ public struct OutpostReviewSheet: View {
 
     public var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 SettingsHeaderCard(
                     icon: "person.2.badge.key.fill",
                     title: Text("Who sees your Outpost", bundle: .module),
@@ -47,8 +47,8 @@ public struct OutpostReviewSheet: View {
                 }
                 .groupedRowSurface()
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
             .navigationTitle(Text("Who sees your Outpost", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

@@ -20,7 +20,7 @@ public struct OutpostDetailSettingsView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 SettingsToggle(
                     icon: "bell.fill",
@@ -46,8 +46,8 @@ public struct OutpostDetailSettingsView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text(verbatim: person.displayName))
         .toolbarTitleDisplayMode(.inline)
     }

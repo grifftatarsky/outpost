@@ -15,7 +15,7 @@ struct PresetPage: View {
     private var choices: PrivacyChoices { preset.choices }
 
     var body: some View {
-        List {
+        SettingsPage {
             switch preset {
             case .familiar:
                 SettingsHeaderCard(
@@ -58,8 +58,8 @@ struct PresetPage: View {
                     bundle: .module)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .toolbarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             Button(action: onConfirm) {
@@ -69,7 +69,7 @@ struct PresetPage: View {
             .disabled(finishing)
             .padding(.horizontal, CarpenterMetrics.screenMargin)
             .padding(.vertical, 10)
-            .background(palette.background)
+            .pageBackground()
         }
     }
 }
@@ -87,7 +87,7 @@ struct StepPage: View {
     let onNext: () -> Void
 
     var body: some View {
-        List {
+        SettingsPage {
             header
 
             example
@@ -184,8 +184,8 @@ struct StepPage: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .toolbarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             Button(action: onNext) {
@@ -197,7 +197,7 @@ struct StepPage: View {
             .disabled(finishing)
             .padding(.horizontal, CarpenterMetrics.screenMargin)
             .padding(.vertical, 10)
-            .background(palette.background)
+            .pageBackground()
         }
     }
 

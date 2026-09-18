@@ -298,7 +298,7 @@ public struct StartInviteView: View {
 
     public var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 Section {
                     TextField(text: $code, axis: .vertical) {
                         Text("Paste their code", bundle: .module)
@@ -344,7 +344,7 @@ public struct StartInviteView: View {
                     .listRowBackground(Color.clear)
                 }
             }
-            .scrollContentBackground(.hidden)
+            .listSurfaceHidden()
             .scrollDismissesKeyboard(.interactively)
             .toolbar {
                 ToolbarItem(placement: .keyboard) {
@@ -354,7 +354,7 @@ public struct StartInviteView: View {
                     }
                 }
             }
-            .background(palette.background)
+            .pageBackground()
             .navigationTitle(roomName)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -187,7 +187,7 @@ struct NotGoneWaitView: View {
     private var current: NotGoneWait { chosen ?? choice.wait }
 
     var body: some View {
-        List {
+        SettingsPage {
             Section {
                 ChoiceRow(
                     title: Text("Only when newer ones arrive first", bundle: .module),
@@ -206,8 +206,8 @@ struct NotGoneWaitView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Not sent yet", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

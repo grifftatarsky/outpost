@@ -202,6 +202,14 @@ Solos. Left as a specimen.
 
 ## Screens
 
+**Some copy a Mac shows is written for a phone.** The Notifications page ends "That is a choice on
+your phone, not something anybody writing to you can decide", and the Mac shows it in its Settings
+window. Found rendering every pane on 2026-09-18; the other pages were not read for it line by line.
+
+**A Mac page's masthead sits in a grouped box.** `.listRowBackground(Color.clear)` is what keeps You's
+animated mark and the People hero off a card on the iPhone, and a grouped `Form` on the Mac draws its
+box regardless.
+
 **The people picker has no index bar.** SwiftUI has no first-class section index; a real one needs a
 representable or a hand-drawn overlay, which native-first argues against.
 

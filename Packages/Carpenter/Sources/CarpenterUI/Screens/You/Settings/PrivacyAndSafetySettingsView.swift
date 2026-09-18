@@ -33,7 +33,7 @@ struct PrivacyAndSafetySettingsView: View {
     @State private var isCheckingUp = false
 
     var body: some View {
-        List {
+        SettingsPage {
             SettingsHeaderCard(
                 icon: "hand.raised.fill",
                 title: Text("Privacy & Safety", bundle: .module),
@@ -219,8 +219,8 @@ struct PrivacyAndSafetySettingsView: View {
                 .groupedRowSurface()
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Privacy & Safety", bundle: .module))
         .sizedSheet(isPresented: $isCheckingUp) {
             PrivacyCheckupView(

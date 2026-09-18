@@ -14,7 +14,7 @@ struct AppearanceSettingsView: View {
     @Binding var showsAvatars: Bool
 
     var body: some View {
-        List {
+        SettingsPage {
             SettingsHeaderCard(
                 icon: "paintpalette.fill",
                 title: Text("Appearance", bundle: .module),
@@ -23,15 +23,19 @@ struct AppearanceSettingsView: View {
                     bundle: .module))
 
             Section {
-                NavigationLink {
-                    AccentPickerView(accent: $accent)
-                } label: {
-                    SettingsRow(
-                        icon: "circle.lefthalf.filled",
-                        title: Text("Color", bundle: .module),
-                        detail: Text(accent.displayName),
-                        swatch: true)
-                }
+                #if os(macOS)
+                    AccentSwatchRow(accent: $accent)
+                #else
+                    NavigationLink {
+                        AccentPickerView(accent: $accent)
+                    } label: {
+                        SettingsRow(
+                            icon: "circle.lefthalf.filled",
+                            title: Text("Color", bundle: .module),
+                            detail: Text(accent.displayName),
+                            swatch: true)
+                    }
+                #endif
                 if appIconIsSupported {
                     NavigationLink {
                         AppIconPickerView(choice: $appIcon, isSupported: appIconIsSupported)
@@ -42,14 +46,16 @@ struct AppearanceSettingsView: View {
                             detail: Text(appIcon.displayName))
                     }
                 }
-                NavigationLink {
-                    InboxArrangementView(arrangement: $inbox)
-                } label: {
-                    SettingsRow(
-                        icon: "tray.2.fill",
-                        title: Text("Inbox", bundle: .module),
-                        detail: Text(inbox.shortTitle, bundle: .module))
-                }
+                #if !os(macOS)
+                    NavigationLink {
+                        InboxArrangementView(arrangement: $inbox)
+                    } label: {
+                        SettingsRow(
+                            icon: "tray.2.fill",
+                            title: Text("Inbox", bundle: .module),
+                            detail: Text(inbox.shortTitle, bundle: .module))
+                    }
+                #endif
                 SettingsRow(
                     icon: "tag.fill",
                     title: Text("Tags", bundle: .module),
@@ -68,8 +74,8 @@ struct AppearanceSettingsView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Appearance", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

@@ -34,7 +34,7 @@ public struct MessagingNotificationsView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 SettingsToggle(
                     icon: "bell.badge.fill",
@@ -138,8 +138,8 @@ public struct MessagingNotificationsView: View {
                 .groupedRowSurface()
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Messaging notifications", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

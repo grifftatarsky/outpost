@@ -34,7 +34,7 @@ public struct OutpostSettingsView: View {
     private var onPicture: ((PickedAvatar?) async -> Void)? { settings.onPicture }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 TextField(
                     text: $draft, axis: .vertical
@@ -72,9 +72,9 @@ public struct OutpostSettingsView: View {
             saveBlurb(now: true)
             saveName(now: true)
         }
-        .scrollContentBackground(.hidden)
+        .listSurfaceHidden()
         .scrollDismissesKeyboard(.interactively)
-        .background(palette.background)
+        .pageBackground()
         .navigationTitle(Text("Outpost settings", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .croppingPickedPhoto($picked) { await onFace?($0) }

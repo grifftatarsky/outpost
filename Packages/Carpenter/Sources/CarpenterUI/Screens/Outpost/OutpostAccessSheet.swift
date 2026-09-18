@@ -30,7 +30,7 @@ public struct OutpostAccessSheet: View {
 
     public var body: some View {
         NavigationStack {
-            List {
+            SettingsPage {
                 SettingsHeaderCard(
                     icon: "person.2.badge.key.fill",
                     title: Text(verbatim: person.displayName),
@@ -41,8 +41,8 @@ public struct OutpostAccessSheet: View {
                 record
                 changes
             }
-            .scrollContentBackground(.hidden)
-            .background(palette.background)
+            .listSurfaceHidden()
+            .pageBackground()
             .navigationTitle(Text("Their access", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

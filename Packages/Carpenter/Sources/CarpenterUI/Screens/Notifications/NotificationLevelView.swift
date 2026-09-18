@@ -22,7 +22,7 @@ public struct NotificationLevelView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             if room == nil {
                 SettingsHeaderCard(
                     icon: "bell.badge.fill",
@@ -58,8 +58,8 @@ public struct NotificationLevelView: View {
 
             notGoneSection
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(
             room.map { Text(verbatim: $0) } ?? Text("Notifications", bundle: .module))
         .toolbarTitleDisplayMode(.inline)

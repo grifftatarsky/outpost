@@ -11,7 +11,7 @@ public struct InboxArrangementView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             Section {
                 ForEach(InboxArrangement.allCases, id: \.self) { option in
                     ChoiceRow(
@@ -32,8 +32,8 @@ public struct InboxArrangementView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Inbox", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

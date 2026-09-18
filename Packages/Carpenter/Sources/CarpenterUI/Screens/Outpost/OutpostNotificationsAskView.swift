@@ -14,7 +14,7 @@ public struct OutpostNotificationsAskView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
                 Section {
                     SettingsHeaderCard(
                         icon: "rectangle.stack.badge.person.crop.fill",
@@ -53,7 +53,7 @@ public struct OutpostNotificationsAskView: View {
                 }
                 .groupedRowSurface()
             }
-        .scrollContentBackground(.hidden)
+        .listSurfaceHidden()
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
                 Button {

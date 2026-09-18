@@ -39,7 +39,7 @@ public struct RestoreFromKeyView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
                 Section {
                     SettingsHeaderCard(
                         icon: "key.horizontal.fill",
@@ -147,7 +147,7 @@ public struct RestoreFromKeyView: View {
                 }
                 .groupedRowSurface()
             }
-        .scrollContentBackground(.hidden)
+        .listSurfaceHidden()
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             Button(action: begin) {
@@ -158,7 +158,7 @@ public struct RestoreFromKeyView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
         }
-        .background(palette.background)
+        .pageBackground()
         .navigationTitle(Text("Recovery key", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
     }

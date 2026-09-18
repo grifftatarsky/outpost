@@ -25,7 +25,7 @@ struct FocusMessageView: View {
     }
 
     var body: some View {
-        List {
+        SettingsPage {
             SettingsHeaderCard(
                 icon: "moon.fill",
                 title: Text("Do Not Disturb message", bundle: .module),
@@ -75,9 +75,9 @@ struct FocusMessageView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
+        .listSurfaceHidden()
         .scrollDismissesKeyboard(.interactively)
-        .background(palette.background)
+        .pageBackground()
         .navigationTitle(Text("Do Not Disturb", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .onDisappear(perform: commit)

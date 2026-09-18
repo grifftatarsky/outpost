@@ -24,7 +24,7 @@ struct IdentitySettingsView: View {
     }
 
     var body: some View {
-        List {
+        SettingsPage {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
                     if onAvatarChange != nil {
@@ -126,8 +126,8 @@ struct IdentitySettingsView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Your identity", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .croppingPickedPhoto($pickedAvatar) { picked in await onAvatarChange?(picked) }

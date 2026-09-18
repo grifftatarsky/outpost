@@ -106,6 +106,49 @@ public struct AccentPickerView: View {
     }
 }
 
+#if os(macOS)
+    struct AccentSwatchRow: View {
+        @Environment(\.palette) private var palette
+
+        @Binding var accent: Accent
+
+        var body: some View {
+            LabeledContent {
+                HStack(spacing: 12) {
+                    ForEach(Accent.allCases, id: \.self) { candidate in
+                        Button {
+                            accent = candidate
+                        } label: {
+                            swatch(candidate)
+                        }
+                        .buttonStyle(.plain)
+                        .help(Text(candidate.displayName))
+                        .accessibilityLabel(candidate.displayName)
+                        .accessibilityAddTraits(candidate == accent ? [.isSelected] : [])
+                    }
+                }
+            } label: {
+                Text("Color", bundle: .module)
+                Text(accent.displayName)
+            }
+        }
+
+        private func swatch(_ candidate: Accent) -> some View {
+            let tone = Color(rgb: candidate.tone(for: palette.appearance).rgb)
+            return Circle()
+                .fill(tone)
+                .frame(width: 18, height: 18)
+                .overlay {
+                    Circle()
+                        .strokeBorder(candidate == accent ? tone : .clear, lineWidth: 2)
+                        .padding(-4)
+                }
+                .padding(4)
+                .contentShape(.circle)
+        }
+    }
+#endif
+
 private struct AccentSwatchTile: View {
     @Environment(\.palette) private var palette
 

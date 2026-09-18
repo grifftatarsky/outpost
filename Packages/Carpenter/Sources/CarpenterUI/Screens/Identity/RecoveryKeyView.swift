@@ -25,7 +25,7 @@ public struct RecoveryKeyView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
                 Section {
                     SettingsHeaderCard(
                         icon: "key.horizontal.fill",
@@ -80,7 +80,7 @@ public struct RecoveryKeyView: View {
                 }
                 .groupedRowSurface()
             }
-        .scrollContentBackground(.hidden)
+        .listSurfaceHidden()
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
@@ -104,7 +104,7 @@ public struct RecoveryKeyView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
         }
-        .background(palette.background)
+        .pageBackground()
         .navigationTitle(Text("Recovery key", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .confirmationDialog(

@@ -14,7 +14,7 @@ struct SupporterView: View {
     }
 
     var body: some View {
-        List {
+        SettingsPage {
             SettingsHeaderCard(
                 icon: "party.popper.fill",
                 title: Text("Supporter", bundle: .module),
@@ -54,8 +54,8 @@ struct SupporterView: View {
             }
             .groupedRowSurface()
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Supporter", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .onChange(of: showsBadge) { _, shows in

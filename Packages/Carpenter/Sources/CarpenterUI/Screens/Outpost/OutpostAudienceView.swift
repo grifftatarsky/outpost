@@ -69,7 +69,7 @@ public struct OutpostAudienceView: View {
     }
 
     public var body: some View {
-        List {
+        SettingsPage {
             SettingsHeaderCard(
                 icon: "person.2.badge.key.fill",
                 title: Text("Who sees your Outpost", bundle: .module),
@@ -138,8 +138,8 @@ public struct OutpostAudienceView: View {
                 .groupedRowSurface()
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
+        .listSurfaceHidden()
+        .pageBackground()
         .navigationTitle(Text("Who sees it", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .outpostAccessSheet(deciding: $deciding) { person, choice in
