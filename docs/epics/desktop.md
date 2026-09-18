@@ -51,7 +51,8 @@ it does not read as an iPad app in a window.
 - **Not done.** Return sends; Shift-Return makes a new line. Shared with *Sending feels like sending*; do it
   once.
 - **Not done.** The message field's border does not flicker while typing.
-- **Not done.** The new-post sheet does not collapse.
+- **Built, not seen.** The new-post sheet does not collapse. It had no size of its own and a text editor
+  has no natural height; it asks for `.presentationSizing(.form)` on the Mac since 2026-09-18.
 - **Not done.** A full keyboard path through sidebar, list and detail, with a visible focus ring on every stop;
   column order follows reading order.
 
@@ -66,17 +67,20 @@ behaviors the set does not draw.
 </details>
 
 <details markdown="1" id="the-app-icon-on-macos">
-<summary><b>The app icon on macOS</b> — Not started</summary>
+<summary><b>The app icon on macOS</b> — Built, not seen in the Dock</summary>
 
 **Story.** As somebody with this in their Dock, I want the icon to look like it belongs there, so
 that the app does not look unfinished before it opens.
 
 **Acceptance criteria**
 
-- **Not done.** The Mac icon renders with no dark fringing at every size the Dock and Finder use.
-- **Not done.** The dark-appearance variant is handled by whatever macOS actually supports, rather than by the
-  iOS mechanism that does not apply.
-- **Not done.** The alternate icons offered on iOS either work on macOS or are not offered there.
+- **Done.** The Mac icon renders with no dark fringing at every size the Dock and Finder use — checked in
+  the compiled `.icns` at 16, 32, 128 and 256 against dark and light grounds, 2026-09-18. It is an Icon
+  Composer document, `AppIconMac.icon`, scoped to the macOS SDK. At 16 points the full mark does not read.
+- **Done.** The dark-appearance variant is handled by whatever macOS actually supports — Icon Composer's
+  dark appearance, rendered with `ictool`. Not seen in a Dock set to dark.
+- **Done.** The alternate icons offered on iOS are not offered on macOS: they were already compiled for iOS
+  only, and the *App icon* row under Appearance is hidden where icons cannot change.
 
 **Testing.** Nothing yet. **Design.** Board 83: seven icons on the seven accents, plus a plain one for
 a home screen that should not announce what the app is, which the board names as the only reason the
@@ -99,14 +103,17 @@ sets from source. Rename the files.
 </details>
 
 <details markdown="1" id="the-desktop-wall">
-<summary><b>The desktop wall</b> — Not started</summary>
+<summary><b>The desktop wall</b> — Built, not seen</summary>
 
 **Story.** As somebody using this on a Mac, I want the third column to be worth having, so that the
 extra space earns itself.
 
 **Acceptance criteria**
 
-- **Not done.** A permanent audience rail in the third column, stating who will collect a post as a fact.
+- **Built, not seen.** An audience rail in the third column, stating who will collect a post as a fact:
+  an inspector beside your own Outpost holding *Who sees your Outpost*, open by default and hidden with
+  ⌥⌘I. "Permanent" became "open unless you close it", following the HIG —
+  [Decisions](../decisions.md#the-desktop-wall-is-an-inspector-open-by-default-and-hideable).
 
 **Testing.** Nothing yet. **Unblocked 2026-09-07**:
 [Per-person Outpost access](rooms-and-membership.md#per-person-outpost-access) landed, so the rail
