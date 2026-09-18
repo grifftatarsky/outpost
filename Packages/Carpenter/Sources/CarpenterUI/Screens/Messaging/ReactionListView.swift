@@ -91,6 +91,7 @@ public struct ReactionListView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
             }
         }

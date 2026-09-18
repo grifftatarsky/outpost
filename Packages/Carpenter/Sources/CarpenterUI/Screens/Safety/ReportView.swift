@@ -204,6 +204,7 @@ public struct ReportView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
             }
             .confirmationDialog(

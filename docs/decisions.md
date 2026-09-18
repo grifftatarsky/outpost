@@ -3773,6 +3773,25 @@ VoiceOver hints no longer say *Double-tap to…*: Apple's guidance for a hint is
 result and leave the gesture to VoiceOver, which knows the platform and the member's settings. A
 photo's label used to carry its instruction; the label says what it is and a hint says what happens.
 
+### Keyboard and pointer: the menu's shortcuts reach an iPad, and a sheet's cancel says Escape
+
+`PROPOSED` — Claude, 2026-09-18, in the Mac and iPad pass.
+
+*Designing for iPadOS* asks for a physical keyboard and a trackpad to be first-class. Measured on the
+iPad simulator by `WideLayoutTests.testTheKeyboardReachesTheMenuCommands`: ⌘N opens *New room*, ⇧⌘N
+opens *New solo*, and ⌘4 and ⌘5 open Search and You, from a keyboard, through the same commands the
+Mac's menu bar shows.
+
+Every sheet's cancel button now declares `.keyboardShortcut(.cancelAction)`, and
+`Scripts/lint/cancel-shortcut.py` fails a cancellation item without it. **What that was measured to
+do is less than it sounds**: on the iPad, ⌘. leaves a sheet with or without it — the system does that
+— and an Escape injected by XCUITest leaves one with neither. The shortcut is SwiftUI's documented
+binding for Escape, and the Mac is where Escape is how a sheet is left; that was not measured, because
+the screen was locked.
+
+A photo in a conversation is a tap gesture rather than a button, so it had no pointer effect on an
+iPad; it takes the system's highlight when it can be opened, shown or retried.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

@@ -359,6 +359,7 @@ public struct StartInviteView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
             }
         }

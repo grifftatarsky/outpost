@@ -293,6 +293,7 @@ struct AskWhoYouAreTalkingToSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
@@ -379,6 +380,7 @@ struct AnswerWhoYouAreTalkingToSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Not now", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
             }
         }

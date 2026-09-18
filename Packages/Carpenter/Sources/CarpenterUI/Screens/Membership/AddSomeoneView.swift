@@ -80,6 +80,7 @@ public struct AddSomeoneView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
             }
             .sizedSheet(item: $issued) { presented in

@@ -22,6 +22,9 @@ public struct MediaPictureView: View {
 
         picture(state)
             .contentShape(.rect)
+            #if os(iOS)
+                .hoverEffect(.highlight, isEnabled: isActionable(state))
+            #endif
             .onTapGesture { act(on: state) }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(label(for: state))

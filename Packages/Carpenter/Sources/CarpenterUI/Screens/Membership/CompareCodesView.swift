@@ -177,6 +177,7 @@ public struct ComparisonOfferView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Not now", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
             }
         }

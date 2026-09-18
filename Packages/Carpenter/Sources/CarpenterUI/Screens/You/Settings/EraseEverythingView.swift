@@ -102,6 +102,7 @@ public struct EraseEverythingView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
                         .disabled(erasing)
+                        .keyboardShortcut(.cancelAction)
                 }
             }
         }

@@ -378,6 +378,17 @@ else
     printf '\nwarning: python3 not found; the sheet-sizing rule did not run.\n'
 fi
 
+# Escape leaves a sheet on a Mac only through a button that says so, and on 2026-09-18 none of the
+#     nineteen cancel buttons did. The script's own note says what was and was not measured.
+if command -v python3 >/dev/null 2>&1; then
+    uncancellable=$(python3 Scripts/lint/cancel-shortcut.py 2>/dev/null)
+    if [ -n "$uncancellable" ]; then
+        report "error: a cancel button Escape cannot reach — add .keyboardShortcut(.cancelAction):" "$uncancellable"
+    fi
+else
+    printf '\nwarning: python3 not found; the cancel-shortcut rule did not run.\n'
+fi
+
 if [ "$status" -eq 0 ]; then
     echo "branding lint: clean"
 fi

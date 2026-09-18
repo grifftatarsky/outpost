@@ -123,6 +123,7 @@ public struct RedeemInviteView: View {
                 if !isRefused {
                     ToolbarItem(placement: .cancellationAction) {
                         Button { dismiss() } label: { Text("Cancel", bundle: .module) }
+                            .keyboardShortcut(.cancelAction)
                     }
                 }
             }

@@ -82,6 +82,7 @@ public struct JoinRequestsView: View {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
                         .accessibilityLabel(Text("Close", bundle: .module))
                         .barIconLargeContent(Text("Close", bundle: .module), systemImage: "xmark")
+                        .keyboardShortcut(.cancelAction)
                 }
             }
         }

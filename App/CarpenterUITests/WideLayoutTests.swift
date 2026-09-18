@@ -151,6 +151,44 @@ final class WideLayoutTests: XCTestCase {
         }
     }
 
+    func testTheKeyboardReachesTheMenuCommands() {
+        let app = launch("rooms", .landscapeLeft)
+        sleep(2)
+
+        app.typeKey("n", modifierFlags: .command)
+        XCTAssertTrue(
+            app.navigationBars["New room"].waitForExistence(timeout: 4), "Command-N opened no new room")
+        app.navigationBars["New room"].buttons["Cancel"].tap()
+        sleep(1)
+
+        app.typeKey("n", modifierFlags: [.command, .shift])
+        XCTAssertTrue(
+            app.navigationBars["New solo"].waitForExistence(timeout: 4), "Shift-Command-N opened no new solo")
+        shoot("keys new solo")
+        app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
+        sleep(1)
+        add(XTCNote("escape on New solo: \(app.navigationBars["New solo"].exists ? "stayed" : "dismissed")"))
+        if app.navigationBars["New solo"].exists {
+            app.typeKey(".", modifierFlags: .command)
+            sleep(1)
+        }
+        XCTAssertFalse(app.navigationBars["New solo"].exists, "neither Escape nor Command-period left New solo")
+
+        app.typeKey("4", modifierFlags: .command)
+        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 4), "Command-4 did not open Search")
+
+        app.typeKey("5", modifierFlags: .command)
+        let appearance = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Appearance")).firstMatch
+        XCTAssertTrue(appearance.waitForExistence(timeout: 4), "Command-5 did not open You")
+    }
+
+    private func XTCNote(_ text: String) -> XCTAttachment {
+        let attachment = XCTAttachment(string: text)
+        attachment.name = text
+        attachment.lifetime = .keepAlways
+        return attachment
+    }
+
     func testPortrait() { walk(.portrait, "portrait") }
 
     func testLandscape() { walk(.landscapeLeft, "landscape") }

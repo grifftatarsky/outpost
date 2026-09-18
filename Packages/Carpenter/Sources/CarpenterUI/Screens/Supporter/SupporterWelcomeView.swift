@@ -85,6 +85,7 @@ struct SupporterWelcomeView: View {
                 } label: {
                     Text("Close", bundle: .module)
                 }
+                    .keyboardShortcut(.cancelAction)
             }
         }
         .onAppear { announce($readingThanks) }

@@ -174,6 +174,7 @@ public struct PrivacyCheckupView: View {
             if onSkip == nil {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
+                        .keyboardShortcut(.cancelAction)
                 }
             }
         }
