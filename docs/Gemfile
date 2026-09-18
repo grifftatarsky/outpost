@@ -1,0 +1,10 @@
+source "https://rubygems.org"
+
+gem "jekyll", "~> 4.3"
+gem "just-the-docs", "~> 0.10"
+
+# Rewrites relative links to source .md files into their built URLs.
+gem "jekyll-relative-links"
+
+# webrick left the Ruby stdlib in 3.0; needed for `jekyll serve`.
+gem "webrick", "~> 1.8"

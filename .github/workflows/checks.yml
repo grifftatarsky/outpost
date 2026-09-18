@@ -1,0 +1,146 @@
+# The gate: the package suite, the lint, and a build of the thing that ships.
+#
+# **What this can and cannot prove.** The suite is fast, it is honest about the logic, and it has
+# been green while the app did not work — more than once. Everything crossing CloudKit is untested
+# here by construction: it needs an iCloud account, a container and entitlements, none of which a
+# runner has. So a green tick means "nothing above the mailbox seam regressed", never "this works".
+# `docs/testing.md` is the procedure that produces the other kind of evidence, and it needs two
+# Apple Accounts and real hardware.
+#
+# Kept to three jobs that each answer one question, so a red tick names its own cause:
+#   - suite: does the logic still hold?
+#   - lint:  does the house style still hold?
+#   - build: does the app that ships still compile, for both platforms it ships to?
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A superseded run tells you about a commit nobody is looking at any more.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+# **Every job runs on macOS 26, and the suite is the reason.** The package declares
+# `platforms: [.iOS(.v26), .macOS(.v26)]` and uses APIs that arrived in 26, so `swift test` builds a
+# macOS 26 binary and then has to *load* it on the runner. On a `macos-15` host that link fails at
+# launch — "Symbol not found ... built for macOS 26.0 which is newer than running OS" — which reads
+# like a code defect and is a runner-image one. The other jobs only have to compile, so they would
+# survive an older host; they are kept on the same image anyway, because a workflow where the OS
+# varies per job is a workflow where this comes back.
+jobs:
+  suite:
+    name: Package suite
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # Named rather than left to the image's default: the package needs the iOS 26 / macOS 26
+      # SDKs, and a runner rolling its default forward under us is a failure nobody caused. If the
+      # image stops carrying a 26.x, this says so in one line instead of failing later as a
+      # thousand missing symbols.
+      - uses: ./.github/actions/xcode-26
+
+      - name: Cache the build
+        uses: actions/cache@v4
+        with:
+          path: Packages/Carpenter/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('Packages/Carpenter/Package.swift') }}-${{ hashFiles('Packages/Carpenter/Sources/**/*.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Test
+        working-directory: Packages/Carpenter
+        run: swift test
+
+  # The tests that need an app bundle, and therefore cannot run under `swift test`.
+  #
+  # `SystemKeychainStore` is the one place that talks to Security.framework, and a real Keychain
+  # needs a real bundle. This target existed, was wired into the scheme, and was run by nothing —
+  # so it sat with a failing test in it, asserting the opposite of what `IdentityStore.enrol()`
+  # documents, until 2026-08-20. A test target nobody runs is worse than no test target: it looks
+  # like coverage.
+  #
+  # Deliberately not the UI test target. Those need a booted simulator, take minutes, and are the
+  # kind of flaky that teaches people to ignore a red tick.
+  #
+  # And deliberately **without** `CODE_SIGNING_ALLOWED=NO`, unlike the build job below. A build only
+  # has to compile; a test has to *launch*, and an unsigned bundle cannot be — the runner dies with
+  # "crashed before establishing connection", which reads like a test failure and is a signing one.
+  # Ad-hoc simulator signing is the default and needs no team.
+  app-suite:
+    name: App suite
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/xcode-26
+
+      # The device is chosen from what the runner actually has rather than named. A hard-coded
+      # "iPhone 17 Pro" fails on an image that ships a different set, with an error about
+      # destinations that reads like a project problem and is not one.
+      - name: Pick a simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available --json | python3 .github/scripts/pick-simulator.py)
+          if [ -z "$udid" ]; then
+            echo "::error::No available iPhone simulator on this runner."
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: |
+          xcodebuild test \
+            -workspace Carpenter.xcworkspace \
+            -scheme Carpenter \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -only-testing:CarpenterTests \
+            -quiet
+
+  lint:
+    name: House style
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/xcode-26
+
+      # Every rule in here is a defect that shipped once. The symbol check needs a real symbol
+      # catalogue, which is why this runs on macOS rather than on the cheaper Linux image.
+      - name: Lint
+        run: ./Scripts/lint-branding.sh
+
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: macos-26
+    strategy:
+      # Both, always. A change that compiles for one and not the other is the failure this catches,
+      # and stopping at the first one hides which.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: iOS
+            destination: generic/platform=iOS Simulator
+          - platform: macOS
+            destination: platform=macOS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/xcode-26
+
+      # No signing: a runner has no team and needs none to prove the code compiles. The parts that
+      # genuinely need an entitlement — CloudKit, the App Group, the keychain group — are exactly
+      # the parts this cannot test anyway.
+      - name: Build
+        run: |
+          xcodebuild build \
+            -workspace Carpenter.xcworkspace \
+            -scheme Carpenter \
+            -destination "${{ matrix.destination }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet

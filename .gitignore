@@ -1,0 +1,25 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserdatad/
+xcuserdata/
+.git-xcode-template-backup/
+
+# Icon rendering intermediates.
+.DS_Store
+render-icon
+
+# Documentation site build output (docs/ is the Jekyll source; the site is built in CI).
+docs/_site/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/vendor/
+
+# Scratch files written by Scripts/make-mark-frames.mjs
+.mark-frames-extract.html
+.mark-frames-verify.html
+
+# JetBrains project files. Machine-local IDE scaffolding, and this repo is built with Xcode and
+# swift build — these were swept in by a `git add -A` on 2026-09-02 and never belonged here.
+.idea/

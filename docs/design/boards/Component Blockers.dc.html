@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../boards.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/broadsheet-909da047-51b2-4ad9-ba60-45b750fb0931/styles.css">
+<script src="_ds/broadsheet-909da047-51b2-4ad9-ba60-45b750fb0931/_ds_bundle.js"></script>
+<style>
+.bl h2, .bl h3 { break-after: avoid; }
+.bl p { orphans: 3; widows: 3; }
+.bl table { break-inside: auto; }
+.bl tr { break-inside: avoid; }
+.bl td { vertical-align: top; }
+</style>
+</helmet>
+<x-import component-from-global-scope="doc-page" from="./doc-page.js" size="letter" margin="0.85in" hint-size="100%,100%">
+<div class="bl" style="font-family:var(--font-body);color:var(--color-text);max-width:38em">
+
+<div style="font-family:var(--font-heading);font-size:16px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:var(--space-3)">Outpost · design pass · specifications</div>
+
+<h1 style="font-family:var(--font-heading);font-size:44px;line-height:1.05;font-weight:600;letter-spacing:-.015em;margin:0 0 var(--space-4)">Design blockers and specifications</h1>
+
+<p style="font-size:18px;line-height:1.6;margin:0 0 var(--space-4);color:var(--color-neutral-800)">What is still open on the design side, the exact values every board draws from, and the accessibility requirement for each of the 84 boards. Component rulings and the changes they ask of the app live in the decision record; this document is only the part that is mine to answer.</p>
+
+<p style="font-size:18px;line-height:1.6;margin:0 0 var(--space-8);color:var(--color-neutral-700);font-style:italic">One blocker remains. Everything the earlier version of this page listed under contrast has been drawn and is specified below rather than pending.</p>
+
+<h2 style="font-family:var(--font-heading);font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-4);color:var(--color-text)">Open blockers</h2>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">D2 · Three flows confirmed but never re-read against the app</h3>
+<p style="font-size:16px;line-height:1.65;margin:0 0 var(--space-3)">Boards 23 to 25, the multi-step leave, were confirmed as still wanted. But the app currently leaves on a swipe with no questions asked, so the drawn flow has never been checked against what leaving now does — the steps may describe consequences the code no longer produces. Boards 27 to 30, recovery through nominated friends and the in-app lock, are unbuilt and were confirmed on their own terms rather than against anything.</p>
+<p style="font-size:16px;line-height:1.65;margin:0 0 var(--space-8)">Neither blocks a submission. Both should be read against the app before they are built, which is a session with the code rather than a drawing task.</p>
+
+<h2 style="font-family:var(--font-heading);font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-3);color:var(--color-text);break-before:page">Use exactly this</h2>
+<p style="font-size:16px;line-height:1.6;margin:0 0 var(--space-4);color:var(--color-neutral-800)">Every value the boards are drawn at. Where a value is derived rather than fixed, the derivation is given instead of a hex, because it has to hold at seven accents in two appearances.</p>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Accent tokens</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="font-family:ui-monospace,Menlo,monospace;padding-right:10px">--ac</td><td>The accent's dark value. Text, icons, edges, the unread dot, selection rings. Floor 3:1, which all seven clear.</td></tr>
+<tr><td style="font-family:ui-monospace,Menlo,monospace;padding-right:10px">--acL</td><td>The accent's separately measured light value. Same roles, light appearance.</td></tr>
+<tr><td style="font-family:ui-monospace,Menlo,monospace;padding-right:10px">--acF</td><td><strong>Solid fills that carry white text.</strong> Derived: scale the dark value's channels down until white reaches 4.6:1. Never a hand-picked hex. Filled buttons, sent bubbles.</td></tr>
+<tr><td style="font-family:ui-monospace,Menlo,monospace;padding-right:10px">--acFL</td><td>Same derivation from the light value.</td></tr>
+<tr><td style="font-family:ui-monospace,Menlo,monospace;padding-right:10px">--acT / --acTL</td><td>Tint at 22% dark, 13% light. Incoming bubbles, avatar discs, chips.</td></tr>
+<tr><td style="font-family:ui-monospace,Menlo,monospace;padding-right:10px">--acW</td><td>Wash at 14%. The optional bar tint only. Ships off.</td></tr>
+<tr><td style="padding-right:10px">Destructive</td><td style="font-family:ui-monospace,Menlo,monospace">#D1382F</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Surfaces</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">Ground</td><td style="font-family:ui-monospace,Menlo,monospace">#0F1113 dark · #F2F2F7 light</td></tr>
+<tr><td style="padding-right:10px">Content surface</td><td style="font-family:ui-monospace,Menlo,monospace">#1C1C1E dark · #FFFFFF light</td></tr>
+<tr><td style="padding-right:10px">Raised on ground</td><td style="font-family:ui-monospace,Menlo,monospace">rgba(255,255,255,.05)</td></tr>
+<tr><td style="padding-right:10px">Bars, untinted</td><td style="font-family:ui-monospace,Menlo,monospace">rgba(18,18,20,.94) · rgba(249,249,249,.94)</td></tr>
+<tr><td style="padding-right:10px">Separator</td><td style="font-family:ui-monospace,Menlo,monospace">rgba(84,84,88,.5) · rgba(60,60,67,.29) — 0.5pt</td></tr>
+<tr><td style="padding-right:10px">Text</td><td style="font-family:ui-monospace,Menlo,monospace">#fff / rgba(235,235,245,.6) / .45 — #000 / rgba(60,60,67,.6)</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Controls</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-6)">
+<tbody>
+<tr><td style="padding-right:10px">Filled button</td><td>52pt tall, 14pt continuous corner, <span style="font-family:ui-monospace,Menlo,monospace">--acF</span>, white 17pt semibold. Capsules only where a board draws a pill.</td></tr>
+<tr><td style="padding-right:10px">Disabled button</td><td>Neutral <span style="font-family:ui-monospace,Menlo,monospace">rgba(120,120,128,.24)</span>, label <span style="font-family:ui-monospace,Menlo,monospace">rgba(235,235,245,.55)</span> dark / <span style="font-family:ui-monospace,Menlo,monospace">rgba(60,60,67,.85)</span> light — both clear 4.5:1 against the fill. Never a dimmed accent.</td></tr>
+<tr><td style="padding-right:10px">Field</td><td>46–48pt, 12pt corner, 1pt <span style="font-family:ui-monospace,Menlo,monospace">rgba(84,84,88,.9)</span> border on <span style="font-family:ui-monospace,Menlo,monospace">rgba(120,120,128,.14)</span>. Focused: 1.5pt <span style="font-family:ui-monospace,Menlo,monospace">--ac</span>.</td></tr>
+<tr><td style="padding-right:10px">Bubble radius</td><td>Clamped to the bubble's own height: 9pt one line, 14pt two, 18–20pt beyond. Tail corner 6pt on incoming.</td></tr>
+<tr><td style="padding-right:10px">Sheet</td><td>20pt top corners, 36×5pt grabber, 24pt side padding.</td></tr>
+<tr><td style="padding-right:10px">Avatar</td><td>52pt list row, 40–44pt member row, 26–28pt inline.</td></tr>
+<tr><td style="padding-right:10px">Delivery marks</td><td>10pt box. Ring 1.2pt stroke; disc r4 filled <span style="font-family:ui-monospace,Menlo,monospace">--ac</span>; not-reported a 1.3pt dash.</td></tr>
+<tr><td style="padding-right:10px">Tab bar</td><td>Four tabs split, three blended, three with Outposts off. 26pt glyphs, 10pt labels.</td></tr>
+<tr><td style="padding-right:10px">Hit targets</td><td>44pt minimum, satisfied by a tappable inset rather than by the drawn diameter — the visual disc stays as drawn and the region around it is extended to 44pt. Accent swatches are 40pt drawn, 44pt tappable; reaction-row buttons 38pt drawn, 44pt tappable; reaction chips 30pt drawn, 44pt tappable. Delivery marks are not controls and have no tap area.</td></tr>
+</tbody>
+</table>
+
+<h2 style="font-family:var(--font-heading);font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-3);color:var(--color-text);break-before:page">Accessibility, board by board</h2>
+<p style="font-size:16px;line-height:1.6;margin:0 0 var(--space-3);color:var(--color-neutral-800)">Four rules hold everywhere and are not repeated per board: no state is carried by colour alone, every layout is built from system text styles and survives to the largest accessibility size, no control is under 44pt, and nothing announces a count where a sentence is what a person needs. The column below is what each board adds to those.</p>
+<p style="font-size:16px;line-height:1.6;margin:0 0 var(--space-4);color:var(--color-neutral-800)">Where a board's layout cannot survive the largest sizes, the alternate arrangement is named rather than left to whoever builds it.</p>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 1 · core</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">01 Onboarding</td><td>Name field is the first focus. The mark is decorative — hide it from VoiceOver rather than labelling it.</td></tr>
+<tr><td style="padding-right:10px">02 Rooms</td><td>Row reads name, then relative time, then sender and preview as one sentence. Unread is announced, not implied. Sync row is a live region that speaks once.</td></tr>
+<tr><td style="padding-right:10px">03 Conversation</td><td>Each bubble announces sender, text, then delivery state. Group bubbles by sender so a run is not re-announced.</td></tr>
+<tr><td style="padding-right:10px">04 Wall</td><td>Post, then reaction summary as words. The audience line is read before the composer, not after.</td></tr>
+<tr><td style="padding-right:10px">05 Color</td><td>Each swatch is a button labelled with its name, selected state on the chosen one. Never "swatch 3". Retint is the one animation — respect reduced motion by cutting to the new value. Swatches draw at 40pt with a 44pt tappable region.</td></tr>
+<tr><td style="padding-right:10px">06 Room settings</td><td>Grouped list semantics with real section headers.</td></tr>
+<tr><td style="padding-right:10px">07 Invite</td><td>Code is selectable, readable character by character on request, and has a copy action that confirms in words.</td></tr>
+<tr><td style="padding-right:10px">08 Join check</td><td>The three words are one label, spoken as words with pauses, not spelled.</td></tr>
+<tr><td style="padding-right:10px">09 Waiting</td><td>Live region announcing what changed, at most once per state.</td></tr>
+<tr><td style="padding-right:10px">10 Previews</td><td>Radio group. Each rung's disclosure text belongs to its option's label, so choosing without sight still tells you what it leaks. At the largest sizes the sample banners stack under their labels.</td></tr>
+<tr><td style="padding-right:10px">11 Outpost access</td><td>Row reads person, then access, then shared rooms. Access is a value, never a colour.</td></tr>
+<tr><td style="padding-right:10px">11b / 11c Change access</td><td>Date picker is the system's. The permanence sentence is part of the confirming button's accessibility hint.</td></tr>
+<tr><td style="padding-right:10px">12 Pairing</td><td>Superseded. Device list rows read name, then this-device, then enrolment date.</td></tr>
+<tr><td style="padding-right:10px">13 / 14 Light</td><td>Same as 02 and 03; only values differ.</td></tr>
+<tr><td style="padding-right:10px">15 Desktop Wall</td><td>Full keyboard path through sidebar, list and detail. Focus ring visible on every stop.</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 2 · consequential screens</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">21 Upgrade to Everything</td><td>The irreversible fact is in the button's hint, not only in body text above it.</td></tr>
+<tr><td style="padding-right:10px">22 Fingerprint</td><td>Words spoken as words. Offer a compare-again action from the same screen.</td></tr>
+<tr><td style="padding-right:10px">23–25 Leave</td><td>Each step announces which step of how many. Review step reads the full consequence list before the confirm.</td></tr>
+<tr><td style="padding-right:10px">27 Lost my devices</td><td>Nominated friends are a list with names, not avatars alone.</td></tr>
+<tr><td style="padding-right:10px">28 Keys are gone</td><td>The one screen that must not soften: the loss is stated in the heading, so it is the first thing spoken.</td></tr>
+<tr><td style="padding-right:10px">29 Social recovery</td><td>Signer list reads name and what they can and cannot do. Destructive action carries its own confirming hint.</td></tr>
+<tr><td style="padding-right:10px">30 Locked</td><td>Reachable with the lock engaged; the unlock control is the first focus.</td></tr>
+<tr><td style="padding-right:10px">31 Composer</td><td>Audience is read before the text field. Post button disabled state announces why.</td></tr>
+<tr><td style="padding-right:10px">32 Comment thread</td><td>Depth announced as a level, not conveyed by indent alone.</td></tr>
+<tr><td style="padding-right:10px">33 Storage</td><td>Sizes spoken in full words. Retention control is a value picker, not a slider.</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turns 3–5 · rooms, Outposts, messages</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">34 Rooms with pins</td><td>Pinned is announced as a trait on the row, since the badge sits on the avatar.</td></tr>
+<tr><td style="padding-right:10px">35 Filtered by tag</td><td>Filter row is a tab list; the active filter is announced on entering the list, so the shorter list is not mistaken for missing rooms.</td></tr>
+<tr><td style="padding-right:10px">36 List menu</td><td>System menu semantics. No custom trap.</td></tr>
+<tr><td style="padding-right:10px">37 Edit list</td><td>Swipe actions also reachable from the row's actions rotor. Leave carries a confirming hint.</td></tr>
+<tr><td style="padding-right:10px">38 / 39 Tags</td><td>Reorder available as move-up and move-down actions, not drag only.</td></tr>
+<tr><td style="padding-right:10px">40 Rooms light with pins</td><td>As 34.</td></tr>
+<tr><td style="padding-right:10px">41 Outpost feed</td><td>Rail is a list with names; entering a wall announces whose it is.</td></tr>
+<tr><td style="padding-right:10px">42 Someone's Outpost</td><td>Both directions of access are read as two separate facts, never merged into one.</td></tr>
+<tr><td style="padding-right:10px">43 Reaction picker</td><td>Trigger is a button labelled Add reaction. Each emoji is labelled by name. Plus announces that it opens the full picker.</td></tr>
+<tr><td style="padding-right:10px">44 Message reactions</td><td>Summary spoken as "two people clapped", not as glyphs and digits.</td></tr>
+<tr><td style="padding-right:10px">45 You</td><td>Grouped list with headers. Fingerprint spoken as words.</td></tr>
+<tr><td style="padding-right:10px">46 Desktop feed</td><td>Column order follows reading order; sidebar collapse is keyboard reachable.</td></tr>
+<tr><td style="padding-right:10px">51 / 52 Split</td><td>Tab labels are Messages and Rooms. Nothing distinguishes the two lists by icon alone.</td></tr>
+<tr><td style="padding-right:10px">53 Blended inbox</td><td>A group is announced as a group — the offset second disc is decorative, so the trait carries it. Sender prefix is part of the preview sentence.</td></tr>
+<tr><td style="padding-right:10px">54 Inbox setting</td><td>Two options as a radio group; each option's description is part of its label. The two pictures are decorative.</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 6 · empty, waiting, refused</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">55 Rooms, empty</td><td>Both actions are equal buttons in reading order. The empty state is a static message, not a live region.</td></tr>
+<tr><td style="padding-right:10px">56 Feed, empty</td><td>Explains the mechanism, so it must be spoken in full rather than truncated to a heading.</td></tr>
+<tr><td style="padding-right:10px">57 Collecting</td><td>Live region announcing progress at most once every few seconds, naming peers. Never a percentage.</td></tr>
+<tr><td style="padding-right:10px">58 Send failure</td><td>The failed bubble announces "not sent" as part of its label. The inline failure is a live region with the retry and delete actions after it.</td></tr>
+<tr><td style="padding-right:10px">59 Access review, prompt</td><td>Non-blocking, so it is announced once and does not steal focus from the conversation.</td></tr>
+<tr><td style="padding-right:10px">60 Access review, sheet</td><td>Each row reads name, then current access, then the action. Blanket buttons announce that they fill every row rather than replacing the list. At the largest sizes each row stacks its action below its name.</td></tr>
+<tr><td style="padding-right:10px">61 Outposts off</td><td>The switch announces the consequence — tab hidden, nothing deleted — in its hint.</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 7 · the two claims</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">62 Access allow-list</td><td>Two sections with real headers, so "not decided" and "allowed" are navigable groups rather than an ordering a sighted reader infers.</td></tr>
+<tr><td style="padding-right:10px">63 Reciprocal access</td><td>The direction you cannot change is announced as read-only with the reason, so no one hunts for a missing control.</td></tr>
+<tr><td style="padding-right:10px">64 Notification content</td><td>Radio group; each rung's sample banner is part of that option's label. The store caveat is spoken with the group, not left as a trailing footnote.</td></tr>
+<tr><td style="padding-right:10px">65 One room</td><td>The follow-my-default row announces which default it is following, so the value is never blank.</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 8 · the first ten minutes</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">66 / 67 Welcome</td><td>Each panel is a page in a paged container announcing "panel 1 of 5". Skip is reachable first, not last. Dots are decorative.</td></tr>
+<tr><td style="padding-right:10px">68 How this works</td><td>Questions are a list of links; the short version is read before them.</td></tr>
+<tr><td style="padding-right:10px">69 Registration check</td><td>Held indefinitely, so it announces once on appearing and again only when the numbered advice appears. Never a looping spinner announcement.</td></tr>
+<tr><td style="padding-right:10px">70 Device synced</td><td>Announced on appearing, since nothing the person did opened it. Device list rows read name and enrolment.</td></tr>
+<tr><td style="padding-right:10px">71 Integrity</td><td>Three groups with headers and counts in the header. Each entry reads room, date, then what the device did — no entry is presented as actionable.</td></tr>
+<tr><td style="padding-right:10px">72 Redeem an invite</td><td>Paste field accepts any whitespace. Scan is a separate labelled button. The consequence block is read before Continue.</td></tr>
+<tr><td style="padding-right:10px">73 Verify the phrase</td><td>Words spoken as words. Match and no-match are equal-weight buttons; skip is a third, clearly labelled with what it forgoes.</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 9 · rooms, hiding, blocking, reporting</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
+<tbody>
+<tr><td style="padding-right:10px">74 New room</td><td>Name field first focus; the policy radio group follows with each option's description in its label.</td></tr>
+<tr><td style="padding-right:10px">75 Admission policy</td><td>Announces who set it and whether you may change it, so a read-only state is never mistaken for a broken control.</td></tr>
+<tr><td style="padding-right:10px">76 Delete for me</td><td>The quoted message is part of the sheet's label. Hide carries the "nobody else is affected" fact as its hint.</td></tr>
+<tr><td style="padding-right:10px">77 Show hidden messages</td><td>Deliberately a count. The count is spoken; the messages are not enumerated, and that omission is stated so it does not read as a loading failure.</td></tr>
+<tr><td style="padding-right:10px">78 Block someone</td><td>Two effects announced as two facts. The limit — they stay in the room — is spoken before the buttons.</td></tr>
+<tr><td style="padding-right:10px">79 Report a message</td><td>The attachment table is a list of labelled value pairs, read in full before the send action, since it is the disclosure.</td></tr>
+<tr><td style="padding-right:10px">80 Devices</td><td>Rows read name, this-device, enrolment and last activity. Fingerprint spoken as words.</td></tr>
+<tr><td style="padding-right:10px">81 Compare again</td><td>Both fingerprints labelled by whose they are. The last-checked date is spoken with them.</td></tr>
+<tr><td style="padding-right:10px">82 Fingerprint changed</td><td>Old and new are labelled was and is — the strikethrough is decoration and cannot carry it. Both readings are spoken in order of likelihood.</td></tr>
+<tr><td style="padding-right:10px">83 App icon</td><td>Each tile is a button labelled by name, with selected state. Tiles are images, so the mark inside them is decorative.</td></tr>
+</tbody>
+</table>
+
+<h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 10 · rulings applied</h3>
+<table class="table" style="font-size:16px;margin:0 0 var(--space-6)">
+<tbody>
+<tr><td style="padding-right:10px">26 Remove a member</td><td>All three facts are spoken before either button. The check and info glyphs are decorative; the sentences carry the meaning.</td></tr>
+<tr><td style="padding-right:10px">85 System nav bar</td><td>System bar brings its own behaviour. The sync row is a live region announcing once, and is absent from the accessibility tree when there is nothing to report.</td></tr>
+<tr><td style="padding-right:10px">86 Delivery marks</td><td>The specimen. Spoken as "Collected. Not yet shown." — never a count of lit marks, never the word read. Not-reported speaks that it will not change. The marks are not tappable: they are part of the bubble's own label, so they need no hit area of their own.</td></tr>
+<tr><td style="padding-right:10px">87 Bubbles, buttons, fields</td><td>Reference sheet. Disabled buttons announce unavailable and why; fields announce their label, value and focus separately.</td></tr>
+<tr><td style="padding-right:10px">88 Reactions, tap to open</td><td>Trigger labelled Add reaction, reachable without a gesture. Existing reactions are one summary element, not five. Emoji buttons draw at 38pt and the chips at 30pt, both extended to a 44pt tappable region — the drawn size is the disc, not the target.</td></tr>
+<tr><td style="padding-right:10px">89 Tinted bars</td><td>The two previews are labelled Plain and Tinted; the switch announces the consequence. Tinting changes no label's contrast obligation. Swatches are the same component as board 05 — 40pt drawn, 44pt tappable, each labelled by name.</td></tr>
+<tr><td style="padding-right:10px">90 Audience rail</td><td>Read before the text field in both states. The empty state is a fact about who will collect, never phrased as a warning.</td></tr>
+<tr><td style="padding-right:10px">91 Light mode rules</td><td>Reference sheet. Every swatch has its value as text beside it, so the specification does not depend on seeing colour.</td></tr>
+<tr><td style="padding-right:10px">92 Rooms, light</td><td>As 02. Unread remains a dot that is present or absent and is announced either way.</td></tr>
+</tbody>
+</table>
+
+<h2 style="font-family:var(--font-heading);font-size:18px;font-weight:600;letter-spacing:.02em;margin:0 0 var(--space-2);color:var(--color-text)">Closed this pass</h2>
+<p style="font-size:16px;line-height:1.65;margin:0">White text on solid accent fill was the one open design blocker and it is drawn: 77 dark fills, 7 light fills and the three destructive buttons now sit on derived values that clear 4.5:1 at every accent in both appearances, and the derivation rather than the resulting hexes is what is specified above. Cobalt, which an earlier retint had collapsed onto verdigris in both the palette and the swatch rows, is restored — the picker offers seven distinct colours again.</p>
+
+<p style="font-size:16px;line-height:1.65;margin:var(--space-3) 0 0">D1 — the app icon having no glyph-only mark — is closed, and it was never really open. The mark exists: <code>Design/logos/icon/</code> holds 23 glyph-only files, <code>icon_white_&lt;accent&gt;</code> and <code>icon_black_&lt;accent&gt;</code> for each of the seven accents, plus hollow variants. The blocker was raised against the eight full lockups this pass was handed, which are the only files in the set that could not deliver it. Nothing needs drawing and nothing needs requesting of anybody; board 83 draws from the icon set.</p>
+
+</div>
+</x-import>
+</x-dc>
+</body>
+</html>

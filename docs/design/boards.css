@@ -1,0 +1,144 @@
+/* Responsive layer for the exported design boards.
+ *
+ * Lives beside docs/design/boards/ rather than inside it. That folder is a drop zone: a new
+ * export replaces it wholesale, so anything written into it survives exactly until the next
+ * export. This file is injected into the boards at build time instead — see
+ * docs/_plugins/design_boards.rb — which means a re-export inherits it with nothing to redo.
+ *
+ * **Every selector here is prefixed with `body` on purpose.** The export declares its layout in a
+ * <style> block inside <body>, which comes after this file however it is linked, so at equal
+ * specificity the export wins every time and this stylesheet silently does nothing. `body .dv-x`
+ * is (0,1,1) against the export's (0,1,0) and takes the cascade without needing !important —
+ * which matters, because !important would also beat the export's own media queries if it ever
+ * grows some.
+ *
+ * None of this changes how a board looks in a desktop window. It only decides what gives way
+ * when there is less room. */
+
+@media (max-width: 720px) {
+  /* The page itself must never scroll sideways on a phone: wide things scroll inside their own
+   * container instead, below. **Scoped to this width on purpose.** Unscoped, it also applies to
+   * the desk the document boards sit on — which is sized `min-width: max-content` precisely so
+   * that a sheet wider than the window can be scrolled to. Hiding that overflow does not make the
+   * sheet fit, it makes the right half of every line unreachable. */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 44px of side padding is comfortable in a window and is most of the screen on a phone. */
+  body .dv-turn {
+    padding: 24px 16px 20px;
+  }
+
+  body .dv-opts {
+    gap: 22px;
+  }
+
+  body .dv-grp {
+    margin: 26px 0 14px;
+  }
+
+  /* A board is an iPhone at true size — 402pt wide, the same figure the app is built against.
+   * It is deliberately not scaled down to fit: a design set that quietly shrinks its own mockups
+   * stops being measurable, and this set is the reference for exact values. So the boards keep
+   * 1:1 and the row they sit in scrolls instead. Wrapping stays on, so on a narrow screen the
+   * boards stack the way they read rather than turning into a filmstrip. */
+  body .dv-opts {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 6px;
+  }
+
+  body .dv-sub {
+    max-width: 100%;
+  }
+
+  /* The per-board caption is capped at the width of a board — 402px — which is right up to the
+   * point the screen is narrower than a board. Past that it has to fold to the screen instead:
+   * it sits inside the scrolling row, so a caption that overflows sets the scroll width for
+   * every board beside it, and the text runs off the edge rather than wrapping.
+   *
+   * `100%` is the wrong reference here. The caption's parent is a shrink-to-fit flex item, so
+   * `100%` resolves against the board's own width and changes nothing. */
+  body .dv-olabel {
+    max-width: min(402px, calc(100vw - 32px));
+  }
+
+  /* Component Blockers and Component Decisions are not boards — they are documents, rendered by
+   * the design system's `doc-page` component as a US Letter sheet on a grey desk. The component
+   * sets `min-width: max-content` on its own host so that on a narrow screen the desk scrolls
+   * sideways rather than cropping the paper. That is a deliberate choice and a good one at a
+   * desk; on a phone it means the page opens mid-sentence and every line runs off the edge.
+   *
+   * These are *flowing* documents — the component's own docs say a flowing document does not pin
+   * a paper size, and the size attribute is preview proportion only. So narrowing the sheet
+   * reflows the text and loses nothing; nothing here is a drawing measured in inches.
+   *
+   * Reachable without editing the export because of two facts about shadow DOM: a rule in the
+   * outer tree that targets the host element beats the shadow tree's own `:host` rule, and
+   * custom properties declared on the host are what the sheet is sized from. The component is
+   * mounted through `x-import`, so the attribute selector picks out the document pages and
+   * leaves the iPhone frames on the board canvas — which mount the same way — untouched. */
+  body doc-page,
+  body x-import[component-from-global-scope="doc-page"] {
+    min-width: 0;
+    padding: 16px 8px;
+    --doc-page-w: calc(100vw - 16px);
+    --doc-page-margin: 20px;
+  }
+
+  /* Eleven tables of exact values. A table that overflows the page is unreadable; one that
+   * scrolls in place is merely narrow. The document's content is slotted, so it sits in the
+   * light DOM and an ordinary selector reaches it. */
+  body table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* ---- Wide viewports -------------------------------------------------------------------------
+ *
+ * A board is 402pt and stays 402pt, so the boards in a row almost never divide evenly into the
+ * window — two fit on an iPad in landscape and the remainder, around 260pt of it, collects in one
+ * dead strip against the right edge. The flex row puts every board flush left and lets the
+ * leftover pile up wherever it falls.
+ *
+ * A grid of equal columns spends the same space differently: the boards still sit at 1:1 and
+ * still sit side by side, but the slack is divided between the columns as gutter instead of
+ * being dumped past the last one. The count follows the window — two on a tablet, three or four
+ * on a desktop display — with no breakpoint naming a number.
+ *
+ * The captions take the column width rather than the board width, which is where the reclaimed
+ * space actually goes: a caption that ran seven lines under a 402pt cap runs four or five, and
+ * the drawing it describes moves that much further up the screen. */
+@media (min-width: 900px) {
+  body .dv-opts {
+    display: grid;
+    /* `auto-fill`, never `auto-fit`. They differ only when a row is not full, which here is the
+     * common case — plenty of groups hold a single board. `auto-fit` collapses the empty tracks,
+     * so that lone board's column becomes the whole window and its caption sets as one 1000px
+     * line. `auto-fill` keeps the empty track, the board keeps a column, and the caption keeps a
+     * measure somebody can read. */
+    grid-template-columns: repeat(auto-fill, minmax(402px, 1fr));
+    gap: 34px 28px;
+    align-items: start;
+  }
+
+  /* Capped at a board's width for the flex row, where a caption wider than its drawing would
+   * have set the width of the row. In a grid the column is already decided, so the cap only
+   * costs lines. */
+  body .dv-olabel {
+    max-width: 68ch;
+  }
+
+  /* The turn's own prose keeps a reading measure — it is a paragraph, not a layout, and 760px is
+   * already about as wide as a line can be read comfortably. Only the padding grows, so the
+   * canvas has margins on a large display rather than running to the bezel. */
+  body .dv-turn {
+    padding: 48px 56px 40px;
+  }
+}

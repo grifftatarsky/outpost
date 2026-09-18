@@ -1,0 +1,73 @@
+# Builds the documentation site in docs/ and, optionally, publishes it to GitHub Pages.
+#
+# Manual only. There is no push trigger, on purpose: this repository is private and the site is
+# not, so publishing is a disclosure and wants a person deciding to do it rather than a commit
+# doing it for them. Running with **Publish** unchecked builds and reports without deploying, which
+# is the way to check a change renders before anyone can read it.
+#
+# Requires the repository's Pages source to be set to "GitHub Actions" (Settings → Pages → Build
+# and deployment → Source). The deploy step fails with a clear message until it is.
+name: Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to GitHub Pages (uncheck to build only)
+        type: boolean
+        default: true
+
+# Read the repository; mint a Pages deployment and the token that proves it came from here.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one in flight — a half-replaced site is worse than
+# a stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          # just-the-docs 0.10 needs Ruby >= 2.7; 3.3 is what GitHub's runners cache.
+          ruby-version: "3.3"
+          # Installs from the committed Gemfile.lock and caches it. The lock is what stops the
+          # theme drifting a minor version between runs and quietly re-rendering the site.
+          bundler-cache: true
+          working-directory: docs
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        # Deliberately no `static_site_generator: jekyll`: that injects its own baseurl, and
+        # docs/_config.yml already sets url and baseurl for this repository. One source of truth.
+
+      - name: Build
+        env:
+          JEKYLL_ENV: production
+        run: bundle exec jekyll build --destination _site --trace
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_site
+
+  deploy:
+    needs: build
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

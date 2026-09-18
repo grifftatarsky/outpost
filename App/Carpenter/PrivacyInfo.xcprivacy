@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	Apple's required privacy manifest. A starting point wired to what the code actually does; the
+	owner should confirm it against the App Store Connect privacy questionnaire before submission.
+
+	The app collects nothing for the developer: there is no server the developer runs, and a member's
+	data lives only in their own iCloud (§1.1). So the tracking and collected-data sections are empty.
+	The one required-reason API in use is UserDefaults (the theme store and @AppStorage), declared
+	with reason CA92.1 — access to information stored only by this app.
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

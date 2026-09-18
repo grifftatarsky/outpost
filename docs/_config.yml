@@ -1,0 +1,90 @@
+title: Outpost
+description: Group messaging for iPhone with no Outpost server. How it works, what is built, and what has been proved.
+
+theme: just-the-docs
+
+url: https://grifftatarsky.github.io
+baseurl: /outpost
+
+# SEARCH ###############################################################
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 3
+  rel_url: true
+
+# NAV / CHROME #########################################################
+heading_anchors: true
+aux_links:
+  "Source on GitHub": "https://github.com/grifftatarsky/outpost"
+  "outpostmessaging.com": "https://outpostmessaging.com"
+aux_links_new_tab: true
+
+footer_content: "Licensed under the Mozilla Public License 2.0." 
+
+# CALLOUTS #############################################################
+# `unbuilt` is red on purpose. The copy guide's first rule is that present
+# tense means it is in the build; this is the visual form of that rule, so a
+# page cannot quietly describe something that does not exist.
+callouts:
+  important:
+    title: Important
+    color: yellow
+  unbuilt:
+    title: Not built
+    color: red
+  unproven:
+    title: Built, unproven
+    color: purple
+  inbox:
+    color: blue
+
+# DESIGN ###############################################################
+# Every screen in this documentation points at a board rather than describing
+# one. Design details live on the board and nowhere else, so a ticket and a
+# drawing can never disagree — the ticket says what a member needs to be able
+# to do, the board says what it looks like.
+#
+# The set lives in this repository at docs/design/boards/ — 84 boards on the canvas,
+# plus two documents that are not optional reading:
+#
+#   Outpost Mockups.dc.html      the boards themselves
+#   Component Decisions.dc.html  twelve rulings where app and set disagreed,
+#                                and what each asks the app to change
+#   Component Blockers.dc.html   the exact values, and the accessibility
+#                                requirement for every board
+#
+# **The captions on the canvas are marketing copy, published verbatim. They are
+# not specifications.** Exact values and per-board accessibility requirements
+# exist only in Component Blockers. A story that cites a board without citing
+# the blockers page is citing prose.
+# Site-absolute, so one value works from every page regardless of depth. Always used as
+# `{{ site.baseurl }}{{ site.design_board }}` — the baseurl is not baked in here, so moving the
+# site does not mean editing sixty-two links.
+design_board: /design/boards/Outpost%20Mockups.dc.html
+design_decisions: /design/boards/Component%20Decisions.dc.html
+design_blockers: /design/boards/Component%20Blockers.dc.html
+
+# BUILD ################################################################
+plugins:
+  - jekyll-relative-links
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor
+  - README.md
+  # A legal text served verbatim, not a documentation page.
+  - TESTFLIGHT_LICENCE.txt
+
+# The theme (just-the-docs 0.12) still uses `@import`, `map-get`, `darken()` and `lighten()`, all
+# of which Dart Sass 1.8x+ warns about on every build — a hundred and eighty lines of somebody
+# else's deprecations in front of every "done in". They are the theme's to fix, not ours; nothing
+# under docs/ is Sass. `quiet_deps` covers the theme's partials, and the three categories cover
+# the theme's root stylesheets, which count as ours because Jekyll compiles them from here.
+sass:
+  quiet_deps: true
+  silence_deprecations:
+    - import
+    - global-builtin
+    - color-functions

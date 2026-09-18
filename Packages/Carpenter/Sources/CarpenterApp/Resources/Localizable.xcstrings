@@ -1,0 +1,99 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "A post carries up to four pictures." : {
+      "comment" : "More pictures than a post carries"
+    },
+    "Check who you are talking to first. Read the characters to each other and say whether they matched." : {
+      "comment" : "A solo held until the two people have checked each other"
+    },
+    "Leaving is a different thing, and the room is told differently. Use Leave." : {
+      "comment" : "Tried to remove oneself"
+    },
+    "Only the person who wrote it can change it." : {
+      "comment" : "Tried to change somebody else's words"
+    },
+    "Only whoever named this conversation can change how people are let into it." : {
+      "comment" : "Tried to change a room's access rule without founding it"
+    },
+    "That code came from a device that is already set up, so there is nothing to add." : {
+      "comment" : "The pasted offer carries no device subkey"
+    },
+    "That device is out. ^[%lld conversation](inflect: true) has not turned its key yet, so it can still read what is said there until something does." : {
+      "comment" : "A device was revoked but some rooms did not turn their key"
+    },
+    "That does not read as an invitation. Ask them to send it again — a code picks up stray characters easily." : {
+      "comment" : "The pasted text is not an invite"
+    },
+    "That invitation does not hold up to checking. Do not use it — ask the person by voice, on a number you already had." : {
+      "comment" : "The attestation failed verification"
+    },
+    "That invitation is for a different conversation." : {
+      "comment" : "An attestation naming another room"
+    },
+    "That invitation ran out before it was answered. Sending another is the way back." : {
+      "comment" : "The invitation's lifetime has passed"
+    },
+    "That invitation was taken back, so there is nothing to answer. The room says who took it back." : {
+      "comment" : "Acted on an invitation somebody had withdrawn"
+    },
+    "That is you." : {
+      "comment" : "Tried to invite or grant access to oneself"
+    },
+    "The fifteen minutes to change these words are up. Everybody who has it already read them as they are." : {
+      "comment" : "The edit window has closed"
+    },
+    "The reply to that invitation did not match the code it answered, so this app has stopped. Nothing from your conversations was shared. Send a fresh invitation and check the characters in person." : {
+      "comment" : "The joiner's nonce did not open the commitment in their code"
+    },
+    "The two minutes to take this back are up. It stays where it is." : {
+      "comment" : "The withdrawal window has closed"
+    },
+    "There is nothing there to save. Taking the words back is withdrawing it, which is a different thing." : {
+      "comment" : "An edit with no words in it"
+    },
+    "They are already here. Taking back an invitation somebody has used takes nothing back — putting them out is removing them, and the room says so." : {
+      "comment" : "Tried to withdraw an invitation somebody already joined on"
+    },
+    "This device does not have keys for whoever sent that, so it cannot answer them." : {
+      "comment" : "No keys held for the inviter"
+    },
+    "This device does not have that conversation." : {
+      "comment" : "A room this device does not hold"
+    },
+    "This device has no key for that Outpost, so nothing written there could be read. Ask them to let you in." : {
+      "comment" : "Tried to comment on an Outpost with no key for it"
+    },
+    "This device has not finished setting up yet." : {
+      "comment" : "No identity on the device yet"
+    },
+    "This device no longer has the entry behind that." : {
+      "comment" : "The entry is not on this device"
+    },
+    "This is the device you are holding. Removing it would leave nothing able to speak for you." : {
+      "comment" : "Tried to revoke the current device"
+    },
+    "Whoever signed that invitation is not in the conversation, so it lets nobody in." : {
+      "comment" : "The inviter has no standing in the room"
+    },
+    "You are not in that conversation, so nothing you say about who is in it would reach anybody." : {
+      "comment" : "Acted on a room this member is not in"
+    },
+    "You are signed out of iCloud, so there is nowhere to leave what you write. Sign in and it will go on its own." : {
+      "comment" : "The member is not signed in to iCloud"
+    },
+    "You chose to read other people's Outposts without joining in. Change that under Outpost settings on the You page." : {
+      "comment" : "Tried to comment or react while set to read only"
+    },
+    "You left this conversation. Nothing written here would reach anybody still in it." : {
+      "comment" : "Tried to write to a room this member left"
+    },
+    "You were removed from this conversation, so nothing written here would reach anybody in it." : {
+      "comment" : "Tried to write to a room this member was removed from"
+    },
+    "Your iCloud is full, so there is nowhere to leave what you write. Free some space in Settings and it will go on its own." : {
+      "comment" : "The member's iCloud has no room for the packet this app leaves there"
+    }
+  },
+  "version" : "1.0"
+}

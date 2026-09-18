@@ -1,0 +1,238 @@
+OUTPOST — TESTFLIGHT BETA LICENCE AGREEMENT
+
+Version 1.0
+Effective: 17 August 2026
+Issued by: Griff Tatarsky, Washington, DC, United States
+Contact: https://outpostmessaging.com/contact
+
+This agreement is between you ("you") and Griff Tatarsky ("we", "us"), the developer of
+Outpost, and governs your use of pre-release builds of Outpost ("beta builds") distributed
+through Apple's TestFlight ("the beta programme"). By installing or using a beta build you
+accept this agreement. If you do not accept it, do not install a beta build, and delete any
+build you already hold.
+
+It replaces Apple's standard beta licence agreement for this app. It does not govern the
+released version of Outpost on the App Store, which is covered by the terms at
+https://outpostmessaging.com/terms.
+
+
+1. WHO MAY TAKE PART
+
+You must be 18 or older, or the age of majority where you live, whichever is greater, and
+signed in to iCloud on each device you test with. You may not enrol on behalf of anyone
+else, and you may not share your TestFlight invitation.
+
+
+2. THIS IS UNFINISHED SOFTWARE
+
+Beta builds are incomplete and are expected to contain defects. In particular:
+
+  - Messages may fail to send, fail to arrive, arrive late, or arrive out of order.
+  - Your message history may be lost, corrupted, or deliberately wiped between builds. We
+    may change the on-device storage format without providing a migration, in which case
+    the app will require a reinstall and everything on that device will be gone.
+  - Features described in the app, on the website, or in release notes may be absent or
+    partial, or may behave differently from the description.
+  - Encryption, key handling and device enrolment are still being tested. Do not assume
+    any security property of a beta build has been independently verified. It has not.
+
+Do not rely on a beta build for anything that matters. Do not use it for confidential,
+sensitive, urgent, or safety-related communication, and do not use it as the only copy of
+anything you would be unhappy to lose.
+
+
+3. BUILDS EXPIRE, AND SO MAY THE PROGRAMME
+
+Each TestFlight build stops working 90 days after it is uploaded, and often sooner when it
+is superseded. We may change, suspend or end the beta programme, or remove you from it, at
+any time and without notice, with no obligation to release the app, preserve your data, or
+provide a way to export it. Sections 8 to 17 survive the end of your participation.
+
+
+4. WHAT THE APP DOES WITH WHAT YOU WRITE
+
+Outpost has no server of ours. What you write is encrypted on your device and written into
+your own iCloud storage, addressed to the people you wrote it to, until their devices
+collect it. It counts against your iCloud storage quota, not ours.
+
+A photo or a video clip goes the same way. It is scaled down and stripped of its location
+and camera information on your device, encrypted there, and written into your own iCloud
+storage as a separate file until collected. It counts against your iCloud storage quota
+in the same way.
+
+Because content is encrypted before it leaves your device, we cannot read it, produce it
+in response to a legal request, restore it, or delete it from anyone else's device.
+
+
+5. WHAT WE CAN SEE, STATED PRECISELY
+
+We do not operate a server, and the app contains no analytics, no advertising identifiers
+and no third-party SDKs. We do not receive your messages, your posts, your room names,
+your display name, or the names of the people you talk to.
+
+We are not claiming that nothing is observable anywhere. Apple operates iCloud and APNs,
+holds the encrypted material, and can see coarse delivery information — roughly, that one
+account left something for another, when, and how large it was. Apple cannot read the
+content, and neither can we. That distinction is the substance of the claim and is stated
+here precisely rather than in summary.
+
+Your use of iCloud and TestFlight is also subject to Apple's own terms.
+
+
+6. NOTIFICATION PREVIEWS
+
+If you switch on message previews in notifications, the decrypted preview text is written
+into iOS's own notification store, which is outside the app's control and not covered by
+the app's encryption. Content recovered from that store has survived app deletion in other
+products. Previews are off by default; turning them on accepts that specific exposure.
+
+
+7. THERE IS NO ACCOUNT, AND NO RECOVERY BY US
+
+There is no sign-up, no password, and no account on any system of ours. Your identity is a
+cryptographic key held on your devices and in your iCloud Keychain.
+
+We cannot reset it, recover it, restore it, transfer it, or verify who you are. If your
+iCloud Keychain is reset, or you lose access to your Apple Account, your Outpost identity
+and everything associated with it is gone permanently and we cannot help. There is no
+support path that ends in us restoring your access, because none exists to build on.
+
+
+8. HISTORY, MEMBERSHIP AND REMOVAL
+
+Admitting someone to a room gives them that room's entire history from its first message.
+Removing someone stops them receiving anything new; it does not and cannot retrieve what
+they already hold, because that content is on their device and always was. Deleting a
+message removes it from participating devices that behave honestly, and nowhere else.
+
+The application states each of these at the point at which it applies. You acknowledge that
+you understand them.
+
+
+9. YOUR CONTENT AND YOUR CONDUCT
+
+You are solely responsible for what you send and for whom you admit. You must not use
+Outpost to send anything unlawful, or to harass, threaten or abuse anyone. You keep
+ownership of your content; you grant us no licence to it, and we could not exercise one if
+you did.
+
+There is no tolerance for objectionable content or abusive conduct. Somebody reported for
+it may be removed from the beta programme and added to a list, shipped inside the app, of
+senders every member blocks by default; and where the law requires it, a report will be
+passed to the authorities. Neither the reporter nor the person reported is told which of
+these, if any, happened.
+
+We have no technical ability to read, review or remove content, and we do not claim to.
+Your own device can screen a photo it receives, using a capability built into your
+operating system, and blur it until you choose to look; that judgement is made on your
+device and reaches nobody. What otherwise limits exposure is that nothing reaches you from
+a stranger: there is no directory, no user search, and no public or discoverable content.
+Anyone who can reach you was admitted by you or by someone you admitted.
+
+
+10. REPORTING AND BLOCKING
+
+You may block any member unilaterally, and you may report any message to us from within
+the app. A report is composed on your device and shows you exactly what it carries before
+it is sent: your description, the sender's fingerprint, which message, and when. It never
+carries the message itself or any photo, and the app cannot attach them.
+
+The app sends nothing itself. It copies the report and opens
+https://outpostmessaging.com/report in your browser, where you paste it, choose a category
+and leave a way to be reached. A person reads every one. If you leave an email address and
+do not turn the option off, you are told what was done about it and whether our copy has
+been deleted. We will not tell the person you reported, ever.
+
+
+11. FEEDBACK
+
+Feedback you submit through TestFlight — screenshots, crash logs, device and OS details,
+and anything you type into the feedback form — comes to us through Apple, along with the
+email address on your Apple Account. Apple also sends us aggregate installation and crash
+statistics.
+
+You grant us a perpetual, irrevocable, worldwide, royalty-free licence to use, modify and
+incorporate your feedback into Outpost and any other product, with no obligation of
+confidentiality, attribution or payment. Do not include anything confidential, and do not
+include message content in a screenshot unless you intend us to see it.
+
+
+12. WHAT YOU MAY NOT DO WITH THE BUILD
+
+You may not sell, rent, redistribute or sublicense a beta build, publish an invitation
+link, or make the build available to anyone outside the programme.
+
+This applies to the compiled build distributed through TestFlight. It does not apply to the
+Outpost source code, which is published separately at
+https://github.com/grifftatarsky/outpost under the licence stated in that repository, and
+which is governed by that licence rather than by this agreement.
+Nothing in this agreement restricts what you may do with that source, and nothing in it
+prohibits you from studying, inspecting or building the application yourself.
+
+
+13. NO WARRANTY
+
+The beta build is provided "AS IS" and "AS AVAILABLE", with all faults and without
+warranty of any kind. To the fullest extent permitted by law, we disclaim all warranties,
+express or implied, including merchantability, fitness for a particular purpose,
+non-infringement, accuracy, and any warranty that the app will be uninterrupted, secure,
+timely or free of defects.
+
+
+14. LIMITATION OF LIABILITY
+
+To the fullest extent permitted by law, we are not liable for any indirect, incidental,
+special, consequential, exemplary or punitive damages, nor for lost profits, lost data,
+lost messages, loss of privacy, or the cost of substitute services, arising from or
+relating to the beta programme, however caused and on any theory of liability, even if we
+have been advised of the possibility.
+
+Our total aggregate liability arising from or relating to this agreement or the beta
+programme will not exceed twenty-five US dollars (USD 25.00). Beta builds are provided
+free of charge, and this limit reflects that.
+
+Some jurisdictions do not allow certain exclusions or limitations, in which case those
+provisions apply to you only to the extent permitted.
+
+
+15. EXPORT
+
+Outpost contains encryption. You may not use or export the app in violation of United
+States export laws, and you represent that you are not located in, and are not a national
+or resident of, a country subject to a US Government embargo or designated as supporting
+terrorism, and that you are not on any US Government list of prohibited or restricted
+parties.
+
+
+16. APPLE
+
+Apple is not a party to this agreement and has no responsibility for Outpost or its
+content. Apple has no obligation to provide any support or maintenance for the beta build.
+Apple and its subsidiaries are third-party beneficiaries of this agreement and may enforce
+it against you. Any claim relating to your possession or use of the beta build is between
+you and us, not Apple.
+
+
+17. CHANGES, TERMINATION AND GOVERNING LAW
+
+We may change this agreement by posting a revised version and distributing a subsequent
+build; continuing to use a beta build after that constitutes acceptance. You may end your
+participation at any time by leaving the programme in TestFlight and deleting the app.
+
+This agreement is governed by the laws of the District of Columbia, United States, without
+regard to its conflict-of-laws rules, and the courts located in the District of Columbia
+have exclusive jurisdiction, except that either party may seek injunctive relief in any
+court of competent jurisdiction, and except where the mandatory law of your country of
+residence gives you the right to bring proceedings locally, which this agreement does not
+remove. If any provision is held unenforceable, the rest remains in
+effect. This agreement, together with Apple's own terms governing TestFlight and iCloud,
+is the entire agreement between us regarding the beta programme.
+
+
+18. CONTACT
+
+Griff Tatarsky
+https://outpostmessaging.com/contact
+https://outpostmessaging.com/support
+
+© 2026 Griff Tatarsky

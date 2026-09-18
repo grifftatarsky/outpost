@@ -1,0 +1,22 @@
+# Selects an Xcode 26 on the runner, and says plainly when there is not one.
+#
+# Its own action because three jobs need it and a copied `xcode-select` line is three places for the
+# version to drift. The glob rather than an exact path: the image carries `Xcode_26.0.app`,
+# `Xcode_26.1.app` and so on, and any of them has the SDKs this project needs.
+name: Select Xcode 26
+description: Points xcode-select at an Xcode 26 toolchain.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        # Newest first, so a runner carrying several 26.x builds uses the most recent.
+        app=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+        if [ -z "$app" ]; then
+          echo "::error::No Xcode 26 on this runner. The package needs the iOS 26 / macOS 26 SDKs."
+          echo "Available:"; ls -d /Applications/Xcode*.app 2>/dev/null || echo "  (none)"
+          exit 1
+        fi
+        sudo xcode-select -switch "$app"
+        xcodebuild -version

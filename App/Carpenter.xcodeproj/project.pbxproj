@@ -1,0 +1,959 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		86BF0B6F3032E10A00343B0B /* CarpenterNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 86BF0B683032E10A00343B0B /* CarpenterNotificationService.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		86BF0B783032E63F00343B0B /* CarpenterApp in Frameworks */ = {isa = PBXBuildFile; productRef = 86BF0B773032E63F00343B0B /* CarpenterApp */; };
+		86BF0B7A3032E64600343B0B /* CarpenterCloudKit in Frameworks */ = {isa = PBXBuildFile; productRef = 86BF0B793032E64600343B0B /* CarpenterCloudKit */; };
+		86BF0B7C3032E64D00343B0B /* CarpenterKeychain in Frameworks */ = {isa = PBXBuildFile; productRef = 86BF0B7B3032E64D00343B0B /* CarpenterKeychain */; };
+		86BF0B7E3032E65300343B0B /* CarpenterKit in Frameworks */ = {isa = PBXBuildFile; productRef = 86BF0B7D3032E65300343B0B /* CarpenterKit */; };
+		CAB00000000000000000C001 /* CarpenterUI in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B001 /* CarpenterUI */; };
+		CAB00000000000000000C002 /* CarpenterKit in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B002 /* CarpenterKit */; };
+		CAB00000000000000000C003 /* CarpenterKit in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B003 /* CarpenterKit */; };
+		CAB00000000000000000C004 /* CarpenterKeychain in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B004 /* CarpenterKeychain */; };
+		CAB00000000000000000C005 /* CarpenterApp in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B005 /* CarpenterApp */; };
+		CAB00000000000000000C006 /* CarpenterKeychain in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B006 /* CarpenterKeychain */; };
+		CAB00000000000000000C007 /* CarpenterCloudKit in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B007 /* CarpenterCloudKit */; };
+		CAB00000000000000000C008 /* CarpenterMedia in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B008 /* CarpenterMedia */; };
+		CAB00000000000000000C009 /* CarpenterApp in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B009 /* CarpenterApp */; };
+		CAB00000000000000000C010 /* CarpenterKitTesting in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B010 /* CarpenterKitTesting */; };
+		CAB00000000000000000C011 /* CarpenterCloudKit in Frameworks */ = {isa = PBXBuildFile; productRef = CAB00000000000000000B011 /* CarpenterCloudKit */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		86BF0B6D3032E10A00343B0B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 86CBCF82302E86B400CE8FAD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 86BF0B673032E10A00343B0B;
+			remoteInfo = CarpenterNotificationService;
+		};
+		86CBCF9C302E86B700CE8FAD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 86CBCF82302E86B400CE8FAD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 86CBCF89302E86B400CE8FAD;
+			remoteInfo = Carpenter;
+		};
+		86CBCFA6302E86B700CE8FAD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 86CBCF82302E86B400CE8FAD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 86CBCF89302E86B400CE8FAD;
+			remoteInfo = Carpenter;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		86BF0B703032E10A00343B0B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				86BF0B6F3032E10A00343B0B /* CarpenterNotificationService.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		86BF0B683032E10A00343B0B /* CarpenterNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CarpenterNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		86CBCF8A302E86B400CE8FAD /* Outpost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Outpost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		86CBCF9B302E86B700CE8FAD /* CarpenterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarpenterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		86CBCFA5302E86B700CE8FAD /* CarpenterUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarpenterUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CAB00000000000000000D001 /* Branding.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Branding.xcconfig; path = ../Config/Branding.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		86BF0B743032E10B00343B0B /* Exceptions for "CarpenterNotificationService" folder in "CarpenterNotificationService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 86BF0B673032E10A00343B0B /* CarpenterNotificationService */;
+		};
+		86CBCFAD302E86B700CE8FAD /* Exceptions for "Carpenter" folder in "Carpenter" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 86CBCF89302E86B400CE8FAD /* Carpenter */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		86BF0B693032E10A00343B0B /* CarpenterNotificationService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				86BF0B743032E10B00343B0B /* Exceptions for "CarpenterNotificationService" folder in "CarpenterNotificationService" target */,
+			);
+			path = CarpenterNotificationService;
+			sourceTree = "<group>";
+		};
+		86CBCF8C302E86B400CE8FAD /* Carpenter */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				86CBCFAD302E86B700CE8FAD /* Exceptions for "Carpenter" folder in "Carpenter" target */,
+			);
+			path = Carpenter;
+			sourceTree = "<group>";
+		};
+		86CBCF9E302E86B700CE8FAD /* CarpenterTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CarpenterTests;
+			sourceTree = "<group>";
+		};
+		86CBCFA8302E86B700CE8FAD /* CarpenterUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CarpenterUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		86BF0B653032E10A00343B0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				86BF0B7E3032E65300343B0B /* CarpenterKit in Frameworks */,
+				86BF0B7A3032E64600343B0B /* CarpenterCloudKit in Frameworks */,
+				86BF0B783032E63F00343B0B /* CarpenterApp in Frameworks */,
+				86BF0B7C3032E64D00343B0B /* CarpenterKeychain in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCF87302E86B400CE8FAD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CAB00000000000000000C001 /* CarpenterUI in Frameworks */,
+				CAB00000000000000000C002 /* CarpenterKit in Frameworks */,
+				CAB00000000000000000C005 /* CarpenterApp in Frameworks */,
+				CAB00000000000000000C006 /* CarpenterKeychain in Frameworks */,
+				CAB00000000000000000C007 /* CarpenterCloudKit in Frameworks */,
+				CAB00000000000000000C008 /* CarpenterMedia in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCF98302E86B700CE8FAD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CAB00000000000000000C003 /* CarpenterKit in Frameworks */,
+				CAB00000000000000000C004 /* CarpenterKeychain in Frameworks */,
+				CAB00000000000000000C009 /* CarpenterApp in Frameworks */,
+				CAB00000000000000000C010 /* CarpenterKitTesting in Frameworks */,
+				CAB00000000000000000C011 /* CarpenterCloudKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCFA2302E86B700CE8FAD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		86BF0B763032E60E00343B0B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		86CBCF81302E86B400CE8FAD = {
+			isa = PBXGroup;
+			children = (
+				CAB00000000000000000D001 /* Branding.xcconfig */,
+				86CBCF8C302E86B400CE8FAD /* Carpenter */,
+				86CBCF9E302E86B700CE8FAD /* CarpenterTests */,
+				86CBCFA8302E86B700CE8FAD /* CarpenterUITests */,
+				86BF0B693032E10A00343B0B /* CarpenterNotificationService */,
+				86BF0B763032E60E00343B0B /* Frameworks */,
+				86CBCF8B302E86B400CE8FAD /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		86CBCF8B302E86B400CE8FAD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				86CBCF8A302E86B400CE8FAD /* Outpost.app */,
+				86CBCF9B302E86B700CE8FAD /* CarpenterTests.xctest */,
+				86CBCFA5302E86B700CE8FAD /* CarpenterUITests.xctest */,
+				86BF0B683032E10A00343B0B /* CarpenterNotificationService.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		86BF0B673032E10A00343B0B /* CarpenterNotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 86BF0B733032E10B00343B0B /* Build configuration list for PBXNativeTarget "CarpenterNotificationService" */;
+			buildPhases = (
+				86BF0B643032E10A00343B0B /* Sources */,
+				86BF0B653032E10A00343B0B /* Frameworks */,
+				86BF0B663032E10A00343B0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				86BF0B693032E10A00343B0B /* CarpenterNotificationService */,
+			);
+			name = CarpenterNotificationService;
+			packageProductDependencies = (
+				86BF0B773032E63F00343B0B /* CarpenterApp */,
+				86BF0B793032E64600343B0B /* CarpenterCloudKit */,
+				86BF0B7B3032E64D00343B0B /* CarpenterKeychain */,
+				86BF0B7D3032E65300343B0B /* CarpenterKit */,
+			);
+			productName = CarpenterNotificationService;
+			productReference = 86BF0B683032E10A00343B0B /* CarpenterNotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		86CBCF89302E86B400CE8FAD /* Carpenter */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 86CBCFAE302E86B700CE8FAD /* Build configuration list for PBXNativeTarget "Carpenter" */;
+			buildPhases = (
+				86CBCF86302E86B400CE8FAD /* Sources */,
+				86CBCF87302E86B400CE8FAD /* Frameworks */,
+				86CBCF88302E86B400CE8FAD /* Resources */,
+				86BF0B703032E10A00343B0B /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				86BF0B6E3032E10A00343B0B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				86CBCF8C302E86B400CE8FAD /* Carpenter */,
+			);
+			name = Carpenter;
+			packageProductDependencies = (
+				CAB00000000000000000B001 /* CarpenterUI */,
+				CAB00000000000000000B002 /* CarpenterKit */,
+				CAB00000000000000000B005 /* CarpenterApp */,
+				CAB00000000000000000B006 /* CarpenterKeychain */,
+				CAB00000000000000000B007 /* CarpenterCloudKit */,
+				CAB00000000000000000B008 /* CarpenterMedia */,
+			);
+			productName = Carpenter;
+			productReference = 86CBCF8A302E86B400CE8FAD /* Outpost.app */;
+			productType = "com.apple.product-type.application";
+		};
+		86CBCF9A302E86B700CE8FAD /* CarpenterTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 86CBCFB3302E86B700CE8FAD /* Build configuration list for PBXNativeTarget "CarpenterTests" */;
+			buildPhases = (
+				86CBCF97302E86B700CE8FAD /* Sources */,
+				86CBCF98302E86B700CE8FAD /* Frameworks */,
+				86CBCF99302E86B700CE8FAD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				86CBCF9D302E86B700CE8FAD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				86CBCF9E302E86B700CE8FAD /* CarpenterTests */,
+			);
+			name = CarpenterTests;
+			packageProductDependencies = (
+				CAB00000000000000000B003 /* CarpenterKit */,
+				CAB00000000000000000B004 /* CarpenterKeychain */,
+				CAB00000000000000000B009 /* CarpenterApp */,
+				CAB00000000000000000B010 /* CarpenterKitTesting */,
+				CAB00000000000000000B011 /* CarpenterCloudKit */,
+			);
+			productName = CarpenterTests;
+			productReference = 86CBCF9B302E86B700CE8FAD /* CarpenterTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		86CBCFA4302E86B700CE8FAD /* CarpenterUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 86CBCFB6302E86B700CE8FAD /* Build configuration list for PBXNativeTarget "CarpenterUITests" */;
+			buildPhases = (
+				86CBCFA1302E86B700CE8FAD /* Sources */,
+				86CBCFA2302E86B700CE8FAD /* Frameworks */,
+				86CBCFA3302E86B700CE8FAD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				86CBCFA7302E86B700CE8FAD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				86CBCFA8302E86B700CE8FAD /* CarpenterUITests */,
+			);
+			name = CarpenterUITests;
+			packageProductDependencies = (
+			);
+			productName = CarpenterUITests;
+			productReference = 86CBCFA5302E86B700CE8FAD /* CarpenterUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		86CBCF82302E86B400CE8FAD /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					86BF0B673032E10A00343B0B = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					86CBCF89302E86B400CE8FAD = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					86CBCF9A302E86B700CE8FAD = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 86CBCF89302E86B400CE8FAD;
+					};
+					86CBCFA4302E86B700CE8FAD = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 86CBCF89302E86B400CE8FAD;
+					};
+				};
+			};
+			buildConfigurationList = 86CBCF85302E86B400CE8FAD /* Build configuration list for PBXProject "Carpenter" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 86CBCF81302E86B400CE8FAD;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CAB00000000000000000A001 /* XCLocalSwiftPackageReference "../Packages/Carpenter" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 86CBCF8B302E86B400CE8FAD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				86CBCF89302E86B400CE8FAD /* Carpenter */,
+				86CBCF9A302E86B700CE8FAD /* CarpenterTests */,
+				86CBCFA4302E86B700CE8FAD /* CarpenterUITests */,
+				86BF0B673032E10A00343B0B /* CarpenterNotificationService */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		86BF0B663032E10A00343B0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCF88302E86B400CE8FAD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCF99302E86B700CE8FAD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCFA3302E86B700CE8FAD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		86BF0B643032E10A00343B0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCF86302E86B400CE8FAD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCF97302E86B700CE8FAD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86CBCFA1302E86B700CE8FAD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		86BF0B6E3032E10A00343B0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 86BF0B673032E10A00343B0B /* CarpenterNotificationService */;
+			targetProxy = 86BF0B6D3032E10A00343B0B /* PBXContainerItemProxy */;
+		};
+		86CBCF9D302E86B700CE8FAD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 86CBCF89302E86B400CE8FAD /* Carpenter */;
+			targetProxy = 86CBCF9C302E86B700CE8FAD /* PBXContainerItemProxy */;
+		};
+		86CBCFA7302E86B700CE8FAD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 86CBCF89302E86B400CE8FAD /* Carpenter */;
+			targetProxy = 86CBCFA6302E86B700CE8FAD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		86BF0B713032E10A00343B0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CarpenterNotificationService/CarpenterNotificationService.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CarpenterNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CarpenterNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter.CarpenterNotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		86BF0B723032E10A00343B0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CarpenterNotificationService/CarpenterNotificationService.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CarpenterNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CarpenterNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter.CarpenterNotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		86CBCFAF302E86B700CE8FAD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]" = "AppIcon-FullCobalt AppIcon-FullVerdigris AppIcon-FullSignalAmber AppIcon-FullOxblood AppIcon-FullAubergine AppIcon-FullHangarSlate AppIcon-FullOliveDrab AppIcon-PlainDark AppIcon-AntennaCobalt AppIcon-AntennaVerdigris AppIcon-AntennaSignalAmber AppIcon-AntennaOxblood AppIcon-AntennaAubergine AppIcon-AntennaHangarSlate AppIcon-AntennaOliveDrab AppIcon-AntennaWhite AppIcon-AntennaBlack AppIcon-MailboxCobalt AppIcon-MailboxVerdigris AppIcon-MailboxSignalAmber AppIcon-MailboxOxblood AppIcon-MailboxAubergine AppIcon-MailboxHangarSlate AppIcon-MailboxOliveDrab AppIcon-MailboxWhite AppIcon-MailboxBlack";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Carpenter/Carpenter.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Carpenter/Info.plist;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter;
+				PRODUCT_NAME = "$(APP_DISPLAY_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Debug;
+		};
+		86CBCFB0302E86B700CE8FAD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]" = "AppIcon-FullCobalt AppIcon-FullVerdigris AppIcon-FullSignalAmber AppIcon-FullOxblood AppIcon-FullAubergine AppIcon-FullHangarSlate AppIcon-FullOliveDrab AppIcon-PlainDark AppIcon-AntennaCobalt AppIcon-AntennaVerdigris AppIcon-AntennaSignalAmber AppIcon-AntennaOxblood AppIcon-AntennaAubergine AppIcon-AntennaHangarSlate AppIcon-AntennaOliveDrab AppIcon-AntennaWhite AppIcon-AntennaBlack AppIcon-MailboxCobalt AppIcon-MailboxVerdigris AppIcon-MailboxSignalAmber AppIcon-MailboxOxblood AppIcon-MailboxAubergine AppIcon-MailboxHangarSlate AppIcon-MailboxOliveDrab AppIcon-MailboxWhite AppIcon-MailboxBlack";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Carpenter/Carpenter.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Carpenter/Info.plist;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter;
+				PRODUCT_NAME = "$(APP_DISPLAY_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Release;
+		};
+		86CBCFB1302E86B700CE8FAD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = CAB00000000000000000D001 /* Branding.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		86CBCFB2302E86B700CE8FAD /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = CAB00000000000000000D001 /* Branding.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		86CBCFB4302E86B700CE8FAD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_DISPLAY_NAME).app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/$(APP_DISPLAY_NAME)";
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Debug;
+		};
+		86CBCFB5302E86B700CE8FAD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_DISPLAY_NAME).app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/$(APP_DISPLAY_NAME)";
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Release;
+		};
+		86CBCFB7302E86B700CE8FAD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = Carpenter;
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Debug;
+		};
+		86CBCFB8302E86B700CE8FAD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 999S5A5WC5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.microgpt.carpenter.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = Carpenter;
+				XROS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		86BF0B733032E10B00343B0B /* Build configuration list for PBXNativeTarget "CarpenterNotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86BF0B713032E10A00343B0B /* Debug */,
+				86BF0B723032E10A00343B0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		86CBCF85302E86B400CE8FAD /* Build configuration list for PBXProject "Carpenter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86CBCFB1302E86B700CE8FAD /* Debug */,
+				86CBCFB2302E86B700CE8FAD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		86CBCFAE302E86B700CE8FAD /* Build configuration list for PBXNativeTarget "Carpenter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86CBCFAF302E86B700CE8FAD /* Debug */,
+				86CBCFB0302E86B700CE8FAD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		86CBCFB3302E86B700CE8FAD /* Build configuration list for PBXNativeTarget "CarpenterTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86CBCFB4302E86B700CE8FAD /* Debug */,
+				86CBCFB5302E86B700CE8FAD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		86CBCFB6302E86B700CE8FAD /* Build configuration list for PBXNativeTarget "CarpenterUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86CBCFB7302E86B700CE8FAD /* Debug */,
+				86CBCFB8302E86B700CE8FAD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		CAB00000000000000000A001 /* XCLocalSwiftPackageReference "../Packages/Carpenter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Carpenter;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		86BF0B773032E63F00343B0B /* CarpenterApp */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CAB00000000000000000A001 /* XCLocalSwiftPackageReference "../Packages/Carpenter" */;
+			productName = CarpenterApp;
+		};
+		86BF0B793032E64600343B0B /* CarpenterCloudKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CAB00000000000000000A001 /* XCLocalSwiftPackageReference "../Packages/Carpenter" */;
+			productName = CarpenterCloudKit;
+		};
+		86BF0B7B3032E64D00343B0B /* CarpenterKeychain */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CAB00000000000000000A001 /* XCLocalSwiftPackageReference "../Packages/Carpenter" */;
+			productName = CarpenterKeychain;
+		};
+		86BF0B7D3032E65300343B0B /* CarpenterKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CAB00000000000000000A001 /* XCLocalSwiftPackageReference "../Packages/Carpenter" */;
+			productName = CarpenterKit;
+		};
+		CAB00000000000000000B001 /* CarpenterUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterUI;
+		};
+		CAB00000000000000000B002 /* CarpenterKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterKit;
+		};
+		CAB00000000000000000B003 /* CarpenterKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterKit;
+		};
+		CAB00000000000000000B004 /* CarpenterKeychain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterKeychain;
+		};
+		CAB00000000000000000B005 /* CarpenterApp */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterApp;
+		};
+		CAB00000000000000000B006 /* CarpenterKeychain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterKeychain;
+		};
+		CAB00000000000000000B007 /* CarpenterCloudKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterCloudKit;
+		};
+		CAB00000000000000000B008 /* CarpenterMedia */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterMedia;
+		};
+		CAB00000000000000000B009 /* CarpenterApp */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterApp;
+		};
+		CAB00000000000000000B010 /* CarpenterKitTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterKitTesting;
+		};
+		CAB00000000000000000B011 /* CarpenterCloudKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CarpenterCloudKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 86CBCF82302E86B400CE8FAD /* Project object */;
+}
