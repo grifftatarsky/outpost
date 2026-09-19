@@ -221,8 +221,12 @@ Detecting TestFlight through `AppTransaction` has not run on a TestFlight build 
 `RULED` — Griff, 2026-09-19: "the iOS app is unticked, since we have the mac app." The native Mac app
 is a second platform on the same App Store Connect record, so one purchase covers both; the
 *iPhone and iPad Apps on Apple Silicon Macs* option is off, so a Mac gets the Mac app and never the
-iPhone one. This replaces the 2026-09-13 ruling that the product was iPhone only. The iPad in the
-first version is still open.
+iPhone one. This replaces the 2026-09-13 ruling that the product was iPhone only.
+
+`RULED` — Griff, the same day: "Yes, ipad." The iPad ships in the first version, with the wide layout
+and the 13-inch screenshots. A Release build's Info.plist declares the device family `[1, 2]`, all four
+iPad orientations and a launch screen, which is what App Store Connect checks for an iPad that
+multitasks.
 
 ### A recovery key's header comes from the app's name, and every old name still opens one
 

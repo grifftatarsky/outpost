@@ -1,10 +1,10 @@
 # Working in this repository
 
-Outpost is group messaging for iPhone and the Mac with no server behind it. A message is sealed on
+Outpost is group messaging for iPhone, iPad and the Mac with no server behind it. A message is sealed on
 the sending device and left in that member's own iCloud; the people it is for collect it from there.
 Griff, 2026-09-19: the Mac ships as its own app, and the iPhone app is not offered on Macs ("since we
-have the mac app"). That replaces his 2026-09-13 ruling that the product was iPhone only. Whether the
-iPad is in the first version is still his call; its layout is built.
+have the mac app"), and the iPad is in the first version ("Yes, ipad"). That replaces his 2026-09-13
+ruling that the product was iPhone only.
 
 The source is named **Carpenter**. The product is named in `Config/Branding.xcconfig` and nowhere
 else — a lint fails the build over it. "Carpenter" must never reach a screen, and "Outpost" must

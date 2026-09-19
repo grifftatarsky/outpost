@@ -370,8 +370,8 @@ the second device is missing.
 
 ## 6. Screenshots
 
-The app target builds for iPhone and iPad, so App Store Connect asks for both sizes. Whether iPad
-ships in the first version is Griff's call; the iPad set is ready either way. Both come from the real
+The iPhone and the iPad both ship in the first version (Griff, 2026-09-19), so App Store Connect asks
+for both sizes. Both come from the real
 build, drawing the Debug build's `--site-shot` fixtures, made by `Scripts/app-store-shots.sh`:
 
 | Set | Simulator | Pixels |
