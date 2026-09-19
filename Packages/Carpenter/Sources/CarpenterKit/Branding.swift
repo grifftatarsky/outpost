@@ -37,6 +37,13 @@ public enum Branding {
         return raw.isEmpty ? nil : URL(string: raw)
     }
 
+    public static var blogURL: URL? {
+        let raw =
+            Bundle.main.infoDictionary?["BlogURL"] as? String
+            ?? ProcessInfo.processInfo.environment["APP_BLOG_URL"] ?? ""
+        return raw.isEmpty ? nil : URL(string: raw)
+    }
+
     public static var version: String {
         let info = Bundle.main.infoDictionary
         let short = info?["CFBundleShortVersionString"] as? String ?? ""

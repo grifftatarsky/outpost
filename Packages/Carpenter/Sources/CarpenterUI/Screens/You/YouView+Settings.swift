@@ -241,12 +241,14 @@ extension YouView {
                     icon: "questionmark.circle.fill", tone: .device,
                     title: Text("How this works", bundle: .module))
             }
-            Button {
-                openURL(Self.subscribeByEmail)
-            } label: {
-                SettingsRow(
-                    icon: "envelope.fill", tone: .device,
-                    title: Text("Get product updates", bundle: .module))
+            if let blog = Branding.blogURL {
+                Button {
+                    openURL(blog)
+                } label: {
+                    SettingsRow(
+                        icon: "newspaper.fill", tone: .device,
+                        title: Text("What's new", bundle: .module))
+                }
             }
             #if DEBUG
             if debugActions != nil {

@@ -6,6 +6,8 @@
 	<string>$(APP_REPORT_FORM_URL)</string>
 	<key>ContactFormURL</key>
 	<string>$(APP_CONTACT_FORM_URL)</string>
+	<key>BlogURL</key>
+	<string>$(APP_BLOG_URL)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

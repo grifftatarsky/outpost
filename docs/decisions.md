@@ -4003,6 +4003,37 @@ the clipboard rules on private pasteboards. **Not done:** the same on an iPad �
 destination needs iOS 27 and the app targets iOS 26 — and Edit ▸ Paste chosen with the pointer, which
 stays disabled for a photo because the field decides that.
 
+### Product updates are a blog on the site, and the app links to it
+
+`RULED` — Griff, 2026-09-19: "Instead of the You screen having a mail thing — we'll do updates for a
+blog." The shape of the blog, its tags and where it is written are `PROPOSED` by Claude the same day.
+
+**What's new** in Outpost settings opens `https://outpostmessaging.com/blog`, replacing a `mailto:`
+that asked to be added to an update list. That link was the last address in the app, and an address
+asks somebody to hand over theirs before they can read anything.
+
+The URL is configured, not written: `APP_BLOG_URL` in `Config/Branding.xcconfig` reaches the app as
+`BlogURL` in Info.plist and is read through `Branding.blogURL`, which is the pattern
+`reportFormURL` and `contactFormURL` already use. The row does not draw when the URL is empty.
+`APP_CONTACT_FORM_URL` was referenced by Info.plist and defined nowhere, so the contact link on
+Privacy and Safety had never drawn in a real build; it is set the same way now.
+
+**Where a post is written.** In the desk that already reads abuse reports and contact messages
+(`akira-ng`, `/desk`, the Posts tab), against `microgpt-comms`. A post carries a title, a byline the
+writer types, tags, an optional summary and a markdown body. It is a draft until it is published, and
+the service never serves a draft. Its address is made from its title, and stops following the title
+once it is published, because by then somebody may have linked to it.
+
+**The tags are a fixed list** — release notes, roadmap, articles, security, Outpost, bullet — so the
+site can offer them as filters. They are spelled in three places with no compiler between them:
+`BlogTag` in comms, `BLOG_TAGS` in the desk, and `src/data/blog.ts` on the site. `BlogTagTest` pins
+the service's side.
+
+**What it costs.** The site now reads from the comms service at runtime, where every other page is
+static — an unreachable service is a blog page that says so, and it is the first page here that can
+fail that way. Nobody is notified of a post: this replaces an update list with something a reader
+has to visit.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

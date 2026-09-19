@@ -61,11 +61,6 @@ public struct YouView: View {
     #endif
     @Environment(\.openURL) var openURL
 
-    static let subscribeByEmail = URL(
-        string:
-            "mailto:updates@outpostmessaging.com?subject=Subscribe&body=Send%20me%20feature%20and%20security%20updates%20about%20Outpost."
-    )!
-
     let owner: Member
     let fingerprint: String
     let identityCode: String
