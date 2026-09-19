@@ -66,6 +66,11 @@ extension AppSession {
         enforcesDenyList && denyList.contains(person)
     }
 
+    public var isBanned: Bool {
+        guard let enrolment else { return false }
+        return denyList.contains(enrolment.identity.id)
+    }
+
     func refusesToDraw(from author: ParticipantID) -> Bool {
         guard author != enrolment?.identity.id else { return false }
         return persisted.preferences.isBlocked(author) || isDenyListed(author)

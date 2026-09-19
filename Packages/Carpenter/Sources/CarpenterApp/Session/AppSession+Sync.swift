@@ -10,6 +10,10 @@ extension AppSession {
         through mailbox: any Mailbox, media: (any MediaMailbox)? = nil, mode: SyncMode = .full
     ) async throws -> SyncReport {
         guard enrolment != nil else { throw AppSessionError.noIdentity }
+        if isBanned {
+            Diagnostics.sync.notice("mailbox sync: this member is on the bundled list; no round runs")
+            return SyncReport()
+        }
         let session = SyncSession(mailbox: mailbox, clock: clock)
 
         var report = SyncReport()

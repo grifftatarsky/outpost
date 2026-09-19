@@ -7,6 +7,7 @@ public enum RootScreen: Equatable, Sendable {
     case registrationStalled(RegistrationStall)
     case onboarding(Onboarding)
     case ready
+    case banned
     case failed(String)
 
     public enum Onboarding: Equatable, Sendable {
@@ -14,7 +15,8 @@ public enum RootScreen: Equatable, Sendable {
         case nameOnly
     }
 
-    public static func `for`(_ state: AppSession.State) -> RootScreen {
+    public static func `for`(_ state: AppSession.State, bannedSelf: Bool) -> RootScreen {
+        if bannedSelf { return .banned }
         switch state {
         case .loading:
             return .loading

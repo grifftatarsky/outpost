@@ -11,12 +11,23 @@ struct RootDecisionsTests {
 
     @Test("Every other state maps to exactly one screen")
     func everyStateHasAScreen() {
-        #expect(RootScreen.for(.loading) == .loading)
-        #expect(RootScreen.for(.checkingForRegistration) == .checkingForRegistration)
-        #expect(RootScreen.for(.needsIdentity) == .onboarding(.newIdentity))
-        #expect(RootScreen.for(.needsProfile) == .onboarding(.nameOnly))
-        #expect(RootScreen.for(.ready) == .ready)
-        #expect(RootScreen.for(.failed("no keychain")) == .failed("no keychain"))
+        #expect(RootScreen.for(.loading, bannedSelf: false) == .loading)
+        #expect(RootScreen.for(.checkingForRegistration, bannedSelf: false) == .checkingForRegistration)
+        #expect(RootScreen.for(.needsIdentity, bannedSelf: false) == .onboarding(.newIdentity))
+        #expect(RootScreen.for(.needsProfile, bannedSelf: false) == .onboarding(.nameOnly))
+        #expect(RootScreen.for(.ready, bannedSelf: false) == .ready)
+        #expect(RootScreen.for(.failed("no keychain"), bannedSelf: false) == .failed("no keychain"))
+    }
+
+    @Test("A member on the bundled list is locked out of every state")
+    func theBannedSeeOneScreen() {
+        let states: [AppSession.State] = [
+            .loading, .checkingForRegistration, .needsIdentity, .needsProfile, .ready,
+            .failed("no keychain"), .registrationStalled(.accountOffline),
+        ]
+        for state in states {
+            #expect(RootScreen.for(state, bannedSelf: true) == .banned)
+        }
     }
 
     // MARK: Starting device sync

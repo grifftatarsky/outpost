@@ -37,6 +37,14 @@ public enum Branding {
         return raw.isEmpty ? nil : URL(string: raw)
     }
 
+    public static func contactFormURL(about topic: String) -> URL? {
+        guard let base = contactFormURL,
+            var parts = URLComponents(url: base, resolvingAgainstBaseURL: false)
+        else { return contactFormURL }
+        parts.queryItems = (parts.queryItems ?? []) + [URLQueryItem(name: "about", value: topic)]
+        return parts.url ?? contactFormURL
+    }
+
     public static var blogURL: URL? {
         let raw =
             Bundle.main.infoDictionary?["BlogURL"] as? String

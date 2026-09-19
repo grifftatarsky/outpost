@@ -220,7 +220,11 @@ struct AppRootView: View {
 
     var screen: some View {
         Group {
-            switch RootScreen.for(session.state) {
+            switch RootScreen.for(session.state, bannedSelf: session.isBanned) {
+            case .banned:
+                BannedView(contact: Branding.contactFormURL(about: "mistaken-ban"))
+                    .themed(.default)
+
             case .loading:
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -357,7 +361,7 @@ struct AppRootView: View {
 
     @ViewBuilder
     var settings: some View {
-        if RootScreen.for(session.state) == .ready {
+        if RootScreen.for(session.state, bannedSelf: session.isBanned) == .ready {
             environed(readySettings)
         } else {
             ContentUnavailableView(

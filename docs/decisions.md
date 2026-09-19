@@ -4034,6 +4034,42 @@ static — an unreachable service is a blog page that says so, and it is the fir
 fail that way. Nobody is notified of a post: this replaces an update list with something a reader
 has to visit.
 
+### A member on the bundled list is locked out of the app, list switch or not
+
+`RULED` — Griff, 2026-09-19: "regardless of whether it's on or not, the block list, if it detects YOU ARE AN
+ABUSER, should lock the app entirely." The screen, the wording of the button and where the appeal goes are his
+too. How it is checked, and what it does to a round, are `PROPOSED` by Claude the same day.
+
+`DenyList.contains` already answered "is this person on the list" for everybody else's entries. Asked about the
+member's own identity it answers the same way, and when it says yes the app draws one screen: the mark in white
+on the app's own red, the sentence Griff wrote, and an outlined button to the contact form with *A mistaken ban*
+already chosen. `RootScreen.for(_:bannedSelf:)` takes the answer beside the session's state, so **every** state
+maps to that screen rather than only the ready one — there is no path through onboarding, a stall or a restore
+that reaches the app.
+
+**It ignores `enforcesDenyList` on purpose.** That switch is the member's own choice about whose words they are
+shown, and it was never meant to be a choice about whether the app applies its own list to them. Reading it here
+would have made the lock opt-out with one toggle.
+
+**It is checked when an identity arrives, not only at launch**, because the identity is what is on the list and
+it can arrive twice: `load()` restores one from the keychain, and a recovery key restores one from twelve words.
+Both end in the same check because the check is computed rather than stored.
+
+**No round runs while it holds.** `AppSession.sync` returns an empty report before it builds a session, so a
+locked device stops offering entries and stops collecting them. A lock that only covered the screen would have
+left the log going out.
+
+**What it costs, and what it is not.** This is a local check against a list that ships inside the build, so it is
+worth exactly what that list is worth: it reaches a member when they take the update, and never before. Somebody
+who wants around it can decline the update, clear the account and start again, or build the source themselves —
+Griff's answer, 2026-09-19, is that clearing the account costs them every contact and every message they hold,
+which is the price. It is not a claim that a banned member cannot use a phone. The list names nobody: it holds
+SHA-256 fingerprints, so the build cannot say who anybody is, only whether this identity is one of them.
+
+**Still open**: the notification extension is a second process with its own session, and it has not been taught
+the check — a banned member's device would still draw a banner for something already collected. Nothing more is
+collected, so the window is what is already on disk.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.
