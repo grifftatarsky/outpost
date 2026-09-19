@@ -251,6 +251,11 @@ devices is **proved above the mailbox** and has to be written down in those word
 
 ### What these devices have shown
 
+- **Answering from the notification, 2026-09-19.** Trig answered Quad from the banner: Reply warm,
+  Reply cold (app quit), and Mark as Read. The replies drew on Quad's device and the read mark
+  crossed. Proved above the mailbox. A cold launch has no launch arguments, so its round goes to
+  CloudKit, which is signed out on gamma; the reply waits on disk for a launch under `--mailbox`.
+
 - **Three members, 2026-09-09.** Griff (alpha, on an account) invited Trig (gamma, no account). Both
   screens showed the same characters, Trig confirmed, and packets and acknowledgments went both ways.
 - **The stranger, 2026-09-09.** Quad (delta) shared a room with Griff and nothing with Outie; both were

@@ -1775,6 +1775,51 @@ reload discards that.
 **What it costs.** Opening the app from a banner shows the message once the app's own round has
 collected it, not from what the extension already held — a round the app runs as it comes forward.
 
+### Reply and Mark as Read need the device unlocked and never open the app
+
+`PROPOSED` — Claude, 2026-09-19, on Griff's "Do it".
+
+Both actions carry `.authenticationRequired` and neither carries `.foreground`. A reply appends to
+the log and seals under keys the app keeps in the keychain and in files that are unreadable while the
+device is locked, so an action that ran locked would fail after the member had typed. A banner action
+that opened the app would be the tap on the banner again, which the HIG warns against. Reply comes
+first because a watch's double tap runs the first nondestructive action, and Messages makes the same
+choice.
+
+**What it costs.** From a locked device, the member unlocks before either action runs.
+
+### An answer from a banner waits for the load and the round in flight, then runs its own round
+
+`PROPOSED` — Claude, 2026-09-19, from two faults measured on the rig.
+
+iOS suspends the app when the notification handler returns, so an answer's work has to finish
+inside the handler. Two things got in the way, and both were measured on gamma the same day:
+
+- **A cold background launch creates the window.** Its `.task` handlers register before its bring-up
+  has loaded the session, so a reply reached `send` with no identity and was dropped. An answer now
+  waits for `session.state` to leave `.loading`. Bring-up loads only a session nobody has loaded, and
+  two loads in flight share one, so the answer's load and bring-up's load cannot race.
+- **A round already running** made `syncNow()` flag "go again" and return. The handler returned with
+  it, iOS suspended the app, and the reply waited for the next foreground. An answer now waits for
+  that round, then runs one of its own.
+
+Both waits are capped at 20 seconds so the handler returns before the system gives up on it.
+
+**What it costs.** The handler can hold the app awake for a round and a half.
+
+### A reply that could not be sent comes back as a notification, with its words
+
+`PROPOSED` — Claude, 2026-09-19. **A deliberate departure from the HIG.**
+
+The HIG says to show an error in an alert, not a notification. A reply from a banner has no window
+to put an alert in: the member never opened the app, and the words exist nowhere else. So a failed
+reply posts a notification in its room saying it was not sent, with the words unless the Focus
+filter hides previews, and tapping it opens the conversation. The alternative, an alert the next time
+the app opens, reaches the member after they have stopped expecting an answer, and it would have to
+keep the words on disk to be any use.
+
+**What it costs.** A notification that is an error message, which the HIG asks apps not to send.
+
 ## Safety
 
 ### Screening is on the device, is the member's to switch off, and is never claimed when it is off

@@ -63,7 +63,12 @@ struct NotificationAnswerTests {
     func theCategory() throws {
         let categories = NotificationAnswer.categories
         #expect(categories.map(\.identifier) == [NotificationAnswer.messageCategory])
-        let actions = try #require(categories.first).actions
+        let category = try #require(categories.first)
+        #expect(
+            category.hiddenPreviewsBodyPlaceholder == "Message",
+            "with previews hidden the banner would say only Notification")
+        #expect(!category.options.contains(.hiddenPreviewsShowTitle), "a hidden preview would still name the room")
+        let actions = category.actions
         #expect(actions.map(\.identifier) == [NotificationAnswer.replyAction, NotificationAnswer.markReadAction])
         #expect(actions.first is UNTextInputNotificationAction, "Reply has no field to write in")
         #expect(!(actions.last is UNTextInputNotificationAction))
@@ -76,6 +81,25 @@ struct NotificationAnswerTests {
                 "\(action.identifier) opens the app, which answering from a banner is for not doing")
             #expect(!action.options.contains(.destructive))
         }
+    }
+
+    // MARK: A reply that could not be sent
+
+    @Test("A reply that could not be sent comes back as a notification in its room, never silently dropped")
+    func aFailedReplyComesBack() {
+        let shown = NotificationAnswer.notSent("on my way", in: room, named: "Hangar 7", showingWords: true)
+        #expect(shown.title == "Hangar 7")
+        #expect(shown.body.contains("on my way"), "the member's words were lost with the reply")
+        #expect(shown.threadIdentifier == MessageNotification.thread(for: room))
+        #expect(NotificationAnswer.from(action: UNNotificationDefaultActionIdentifier, userInfo: shown.userInfo, text: nil) == .open)
+        #expect(shown.categoryIdentifier.isEmpty, "a failure notice offered Reply, which is what just failed")
+    }
+
+    @Test("With previews hidden, the failure notice says a reply failed without repeating it")
+    func aFailedReplyKeepsPreviewsHidden() {
+        let hidden = NotificationAnswer.notSent("on my way", in: room, named: nil, showingWords: false)
+        #expect(!hidden.body.contains("on my way"))
+        #expect(!hidden.title.isEmpty)
     }
 
     // MARK: What answering does

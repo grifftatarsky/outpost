@@ -93,7 +93,7 @@ Seven epics, 87 tickets, counted 2026-09-17.
 </details>
 
 <details markdown="1">
-<summary><b>Telling someone it arrived</b> · 10 tickets — 4 tested · 6 hardware proof owed</summary>
+<summary><b>Telling someone it arrived</b> · 11 tickets — 4 tested · 7 hardware proof owed</summary>
 
 | Ticket | Status | Evidence |
 |---|---|---|
@@ -107,6 +107,7 @@ Seven epics, 87 tickets, counted 2026-09-17.
 | Focus filters | Complete (hardware proof owed) | A filter per Focus: which rooms may notify, whether banners carry the words (`FocusFilterTests`). 2026-09-17, found while making the extension's decisions testable: *Show what was said* was applied to a message and not to a post, so a Focus set to hide it still put a post's body on the lock screen. Fixed — the preview switch reaches a post, the room list deliberately does not ([Decisions](decisions.md#a-focus-filters-preview-switch-reaches-a-post-and-its-room-list-does-not)). A simulator has no Focus — [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
 | Settings split by what rings | Complete (hardware proof owed) | Notifications is a master switch over two pages, Messaging and Outposts, each with its own urgency; badges carry a separate setting saying what they count. `NotificationLevelTests`, `BadgeCountTests`, `WhatTheTabsBadgeTests`, driven on the rig 2026-09-11. Seeing one with a real push is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
 | Asking for Outpost notifications | Complete (tested) | A step in onboarding, and a gear on an Outpost's own page for one wall at a time. Walked end to end on two Apple Accounts 2026-09-15: beta allowed alpha in from the room banner — behind an alert that says plainly it cannot be undone — beta posted, the post crossed, Outie appeared on alpha's rail, and the gear on that wall carried *Get notifications for this Outpost* with the honest footer that the other person is not told. Turned on and it held. |
+| Answering from the notification | Complete (hardware proof owed) | Reply and Mark as Read on a message banner, through the composer's send path (`NotificationAnswerTests`). Proved above the mailbox on gamma and delta 2026-09-19, warm and cold, after two faults the rig found: a reply dropped because a cold launch's window answered before the session had loaded, and a reply left unsent because the app was suspended while a round was flagged to go again. Two Apple Accounts over CloudKit still owed — [epic](epics/notifications.md#answering-from-the-notification). |
 
 </details>
 

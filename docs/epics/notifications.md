@@ -233,6 +233,49 @@ the notification is a door rather than an announcement.
 
 </details>
 
+<details markdown="1" id="answering-from-the-notification">
+<summary><b>Answering from the notification</b> — Complete (proved above the mailbox; two-account proof owed)</summary>
+
+**Story.** As a member, I want to reply to a message, or mark its room read, from the notification
+itself, so that a quick answer does not mean opening the app.
+
+**Acceptance criteria**
+
+- **Done.** A decrypted message banner offers **Reply**, with a field, and **Mark as Read**, each with
+  its symbol. A post, a restore ask and the generic banner offer neither, because they name no room.
+  `NotificationAnswerTests`, `ArrivingBannerTests`.
+- **Done.** A reply is sealed and sent by `AppSession.send`, the composer's own path, and then marks
+  the room read. The suite checks that the words never reach the mailbox readable.
+- **Done.** Both actions need the device unlocked and neither opens the app.
+- **Done.** A reply from a cold launch waits for the session to finish loading, then waits out any
+  round already running, then runs its own round before handing control back to the system.
+- **Done.** A reply that cannot be sent comes back as a notification in its room, carrying the words
+  unless the Focus filter hides previews.
+- **Done.** With previews hidden, the banner reads *Message*, not *Notification*, and does not name
+  the room.
+
+**What was observed, 2026-09-19, on gamma (Trig) and delta (Quad) over `FileMailbox`.** This was
+proved above the mailbox; CloudKit was not involved.
+
+- **Warm**, app in the background: Quad asked, Trig pulled the banner down, chose Reply, typed on the
+  software keyboard and pressed Send. The reply drew on Quad's device as Trig's, and Quad's question
+  showed as seen.
+- **Cold**, app quit: the same, with the round afterwards. Before the fix this lost the reply: iOS
+  *did* create the window on a background launch, so the window's handler ran before the session had
+  loaded and `send` failed with `noIdentity`. After the fix the answer waited for the load (0.26 s),
+  and the reply went with the next round.
+- **Mark as Read**: the room's dot and the Rooms badge were gone on the next look, and a round sent
+  the read mark.
+- **First attempt, warm**: a round was already running, so the answer only flagged "go again" and
+  returned, and iOS suspended the app with the reply unsent. Fixed by waiting for that round, then
+  running one of the answer's own.
+
+**Still owed.** Two devices on two Apple Accounts over CloudKit, where a cold launch's round is the
+real mailbox. On the rig, a cold launch carries no `--mailbox`, so its round met a signed-out CloudKit
+and the reply waited for the next launch. The Mac shows the same category but has not been driven.
+
+</details>
+
 <details markdown="1" id="a-banner-from-a-person">
 <summary><b>A banner from a person</b> — Complete (hardware proof owed)</summary>
 

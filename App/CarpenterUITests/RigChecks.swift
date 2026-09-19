@@ -361,6 +361,71 @@ final class RigChecks: XCTestCase {
         shoot(app, "q-said")
     }
 
+    func testQuadSaysWhatItIsTold() throws {
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        send(app, ProcessInfo.processInfo.environment["RIG_SAY"] ?? "are you there, Trig")
+        sleep(6)
+        shoot(app, "q-told")
+    }
+
+    func testQuadSeesTheAnswer() throws {
+        let expected = ProcessInfo.processInfo.environment["RIG_EXPECT"] ?? "on my way"
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        let said = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", expected)).firstMatch
+        for _ in 0..<15 where !said.exists {
+            app.swipeUp()
+            _ = said.waitForExistence(timeout: 3)
+        }
+        XCTAssertTrue(said.exists, "the answer from the banner never reached Quad")
+        shoot(app, "q-saw-answer")
+    }
+
+    func testAnswerFromTheBanner() throws {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let env = ProcessInfo.processInfo.environment
+        let body = env["RIG_BANNER_BODY"] ?? "are you there"
+        let replying = env["RIG_ANSWER"] != "read"
+
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        try? FileManager.default.removeItem(atPath: "\(exchange)/pushed")
+        write("waiting", to: "ready-for-push")
+
+        let banner = springboard.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'NotificationShortLookView' AND label CONTAINS %@", body))
+            .firstMatch
+        XCTAssertTrue(banner.waitForExistence(timeout: 90), "no banner says \(body)")
+        try? FileManager.default.removeItem(atPath: "\(exchange)/ready-for-push")
+        shoot(springboard, "n-1-banner")
+
+        let action = springboard.buttons[replying ? "Reply" : "Mark as Read"]
+        let middle = banner.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        middle.press(forDuration: 0.1, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: 260)))
+        _ = action.waitForExistence(timeout: 4)
+        if !action.exists {
+            middle.press(forDuration: 2.0)
+            _ = action.waitForExistence(timeout: 4)
+        }
+        shoot(springboard, "n-2-actions")
+        XCTAssertTrue(action.exists, "the notification offers no \(replying ? "Reply" : "Mark as Read")")
+        action.tap()
+        if replying {
+            for _ in 0..<5 where springboard.keyboards.count == 0 { sleep(1) }
+            shoot(springboard, "n-3-field")
+            springboard.typeText(env["RIG_REPLY"] ?? "on my way")
+            shoot(springboard, "n-4-typed")
+            let send = springboard.buttons["Send"]
+            XCTAssertTrue(send.waitForExistence(timeout: 3), "the reply field has no Send")
+            send.tap()
+        }
+        sleep(4)
+        shoot(springboard, "n-5-after")
+    }
+
     func testTrigBlockSheet() throws {
         let app = launch()
         sleep(3)

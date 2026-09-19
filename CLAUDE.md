@@ -297,6 +297,13 @@ Read these before touching sync. Every one cost real time.
   packet found under yesterday's is still that peer's.
 - **The extension is a second process** over one App Group container. Both processes log which
   container they resolved; `appGroup=false` means it is reading a private, permanently-behind copy.
+- **Returning from a notification handler is the app being suspended.** Whatever the handler starts
+  and does not await never happens. Two faults, both measured on the rig on 2026-09-19 while building
+  Reply from a banner. First, a cold background launch **does** create the SwiftUI window, so a view's
+  handler ran before that view's bring-up had loaded the session, and the reply failed `noIdentity`
+  and vanished. Second, `syncNow()` during a running round only flags "go again" and returns, so the
+  reply sat on disk until the next foreground. Wait for `session.state` to leave `.loading`, wait out
+  the round in flight, run your own, and only then return. See `AppShell+Answers.swift`.
 - **The rig types on the Mac's keyboard, and no member has one.** Everything a software keyboard
   does — the return key's label and what it does, covering the control under the field, placing a
   caret by tapping, a sheet that has to grow — was unexamined until one was finally raised on

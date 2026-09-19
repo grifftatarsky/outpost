@@ -418,7 +418,7 @@ struct AppRootView: View {
 
             session.checkAccount(with: accountRegistry)
 
-            await session.load()
+            if session.state == .loading { await session.load() }
             #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--forget-supporter") {
                     await session.forgetSupporterYear()
@@ -441,7 +441,9 @@ struct AppRootView: View {
         .task { PushArrivals.shared.onArrival { await syncNow() } }
         .task {
             PushArrivals.shared.onAnswer { answer in
+                await shell.untilLoaded()
                 await answering(answer)
+                await shell.afterTheRoundInFlight()
                 await syncNow()
             }
         }

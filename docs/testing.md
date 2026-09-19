@@ -365,6 +365,28 @@ clock froze, and the first explanation written down was Xcode 27. Sampling the a
 thread busy decrypting the log inside a render. See
 [Architecture](architecture.md#nothing-a-render-reads-may-do-work).
 
+## Driving a notification's actions
+
+A message banner's Reply and Mark as Read can be driven on the rig without a real push. The pieces
+were measured on 2026-09-19:
+
+- **Deliver the banner yourself.** `xcrun simctl push <udid> com.microgpt.carpenter payload.json`
+  with `"category": "outpost.message"` in `aps` and the room's UUID under `"outpost.room"` at the top
+  level. Leave out `mutable-content`: on a signed-out simulator the extension cannot decrypt anything,
+  so the payload's own title and body are what draw. A room's UUID is in the App Group's
+  `focusFilter.rooms`.
+- **Pull the live banner down; don't long-press it in Notification Center.** Under XCUITest a press
+  on a Notification Center entry, for any duration, expands nothing, and a press-and-drag there
+  collapses the stack. Dragging the banner down while it is on screen shows the actions every time.
+  `RigChecks.testAnswerFromTheBanner` goes home, writes `ready-for-push` into the exchange directory,
+  and waits up to 90 seconds for the banner. Push once that file appears.
+- **Warm or cold.** Move the app to the background by launching Settings, or quit it with
+  `simctl terminate`. A cold launch by the system carries **no launch arguments**, so it has no
+  `--mailbox`: its round goes to CloudKit and the answer waits on disk for the next launch under
+  `--mailbox`. Read the log for `push: answered from a notification` and the round after it.
+- `testQuadSaysWhatItIsTold` (`RIG_SAY`) and `testQuadSeesTheAnswer` (`RIG_EXPECT`) are the other
+  end. The second scrolls, because a conversation with unread messages opens at the first of them.
+
 ## Still unproved underneath notifications
 
 Does a `CKRecordZoneSubscription` on your own private zone fire when a share participant writes into
