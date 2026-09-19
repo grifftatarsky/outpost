@@ -11,7 +11,7 @@ public struct RoomAccessView: View {
     private let onChange: (RoomAccess) async -> Void
 
     @State private var count: Int
-    @State private var approver: ParticipantID?
+    @State private var approvers: Set<ParticipantID>
 
     public init(
         roomName: String,
@@ -29,10 +29,10 @@ public struct RoomAccessView: View {
         } else {
             _count = State(initialValue: 2)
         }
-        if case .member(let who) = access {
-            _approver = State(initialValue: who)
+        if case .members(let who) = access, !who.isEmpty {
+            _approvers = State(initialValue: Set(who))
         } else {
-            _approver = State(initialValue: members.first?.id)
+            _approvers = State(initialValue: Set(members.first.map { [$0.id] } ?? []))
         }
     }
 
@@ -67,11 +67,11 @@ public struct RoomAccessView: View {
                             "Everybody already here has to agree, and one refusal is enough to keep someone out.",
                             bundle: .module)
                     )
-                    if let approver {
+                    if !approvers.isEmpty {
                         option(
-                            .member(approver),
-                            title: Text("One person decides", bundle: .module),
-                            detail: Text("You choose who.", bundle: .module)
+                            .members(ordered(approvers)),
+                            title: Text("Named members decide", bundle: .module),
+                            detail: Text("You choose who. Any one of them is enough.", bundle: .module)
                         )
                     }
                 } header: {
@@ -99,18 +99,17 @@ public struct RoomAccessView: View {
                     .groupedRowSurface()
                 }
 
-                if case .member = access {
+                if case .members = access {
                     Section {
                         ForEach(members) { member in
                             Button {
-                                approver = member.id
-                                Task { await onChange(.member(member.id)) }
+                                choose(member.id)
                             } label: {
                                 HStack {
                                     Text(member.displayName)
                                         .foregroundStyle(palette.primaryText)
                                     Spacer(minLength: 0)
-                                    if approver == member.id {
+                                    if approvers.contains(member.id) {
                                         Image(systemName: "checkmark")
                                             .font(.footnote.weight(.semibold))
                                             .foregroundStyle(palette.accentColor)
@@ -118,8 +117,12 @@ public struct RoomAccessView: View {
                                 }
                             }
                             .accessibilityAddTraits(
-                                approver == member.id ? [.isSelected] : [])
+                                approvers.contains(member.id) ? [.isSelected] : [])
                         }
+                    } footer: {
+                        Text(
+                            "Any one of the people you pick can let somebody in. The last one cannot be taken off, or nobody could ever join.",
+                            bundle: .module)
                     }
                     .groupedRowSurface()
                 }
@@ -149,11 +152,27 @@ public struct RoomAccessView: View {
         case (.open, .open), (.founder, .founder), (.anyMember, .anyMember),
             (.unanimous, .unanimous):
             return true
-        case (.atLeast, .atLeast), (.member, .member):
+        case (.atLeast, .atLeast), (.members, .members):
             return true
         default:
             return false
         }
+    }
+
+    private func ordered(_ people: Set<ParticipantID>) -> [ParticipantID] {
+        members.map(\.id).filter(people.contains)
+    }
+
+    private func choose(_ person: ParticipantID) {
+        var next = approvers
+        if next.contains(person) {
+            guard next.count > 1 else { return }
+            next.remove(person)
+        } else {
+            next.insert(person)
+        }
+        approvers = next
+        Task { await onChange(.members(ordered(next))) }
     }
 }
 

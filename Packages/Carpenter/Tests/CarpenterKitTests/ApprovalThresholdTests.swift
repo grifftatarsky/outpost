@@ -97,8 +97,12 @@ struct ApprovalThresholdTests {
 
         let onlyAlice = try room(
             threshold: 4, founder: alice, others: [bob], joiner: joiner, admittedBy: [alice])
-        #expect(onlyAlice.effectiveThreshold(4, admitting: joiner.id) == 2)
-        #expect(!onlyAlice.members.contains(joiner.id), "one of two was treated as enough")
+        #expect(
+            onlyAlice.effectiveThreshold(4, admitting: joiner.id) == 1,
+            "alice invited them, so bob is the only one who can agree")
+        #expect(
+            !onlyAlice.members.contains(joiner.id),
+            "the person who invited them counted as the agreement")
 
         let both = try room(
             threshold: 4, founder: alice, others: [bob], joiner: joiner, admittedBy: [alice, bob])
@@ -114,12 +118,21 @@ struct ApprovalThresholdTests {
 
         let two = try room(
             threshold: 2, founder: alice, others: [bob, carol], joiner: joiner,
-            admittedBy: [alice, bob])
+            admittedBy: [bob, carol])
 
-        #expect(two.effectiveThreshold(2, admitting: joiner.id) == 2, "three members, asked for two")
+        #expect(
+            two.effectiveThreshold(2, admitting: joiner.id) == 2,
+            "three members, one of them the inviter, asked for two")
         #expect(
             two.members.contains(joiner.id),
-            "two of three admitted under a threshold of two and it was refused")
+            "two of the three admitted under a threshold of two and it was refused")
+
+        let counting = try room(
+            threshold: 2, founder: alice, others: [bob, carol], joiner: joiner,
+            admittedBy: [alice, bob])
+        #expect(
+            !counting.members.contains(joiner.id),
+            "the inviter's own agreement was counted towards the two")
     }
 
     @Test("Changing your mind counts, in both directions")
@@ -162,7 +175,9 @@ struct ApprovalThresholdTests {
         let roster = try room(
             threshold: 5, founder: alice, others: [bob], joiner: joiner, admittedBy: [])
 
-        #expect(roster.effectiveThreshold(5, admitting: joiner.id) == 2)
+        #expect(
+            roster.effectiveThreshold(5, admitting: joiner.id) == 1,
+            "alice invited them, so the room can only ever ask bob")
         #expect(roster.effectiveThreshold(1, admitting: joiner.id) == 1)
     }
 }

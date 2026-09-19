@@ -4098,6 +4098,35 @@ second one's effect is invisible from the device that sets it — the proof that
 somebody else's phone. `SupporterBadgeTests` holds both directions: showing without sharing reaches
 nobody, sharing without showing reaches a peer and not your own avatar.
 
+### Who may agree to an invitation: a list of names, and never the person who sent it
+
+`RULED` — Griff, 2026-09-19, on reading what the code actually did: "I don't think a designated
+approver is how that option should work; it should be a list, which can be one person, but can also
+be a few." And: "The inviter shouldn't be able to approve their own invite...that's crazy. That's not
+what our app implies, either. That would be the same as Open."
+
+Two changes, both in `RoomRoster` and `RoomAccess`.
+
+**A named approver is now a list.** `RoomAccess.member(ParticipantID)` is
+`RoomAccess.members([ParticipantID])`, any one of whom is enough. `member(_:)` survives as a factory
+that makes a list of one, and a room whose rule was written by an older build still reads: the decoder
+accepts the old `member` key and turns it into a list of one. The picker is a multi-select and refuses
+to let the last name be taken off, because an empty list is a room nobody can ever join.
+
+**Three rules no longer count the inviter.** Under *any member*, *a set number* and *unanimous*, the
+person who sent the invitation is not one of the people who may agree to it — "unless there are no
+other members able to approve," which is the case that keeps a room of one working. `eligibleApprovers`
+computes that set once and everything reads it: the admission count, the threshold clamp, the unanimous
+set, and the queue, so the inviter is not even asked about their own invitation. *Named members* and
+*the room creator* are deliberately exempt: naming somebody, or being the owner, is the room saying
+that person's word is enough.
+
+**What it changes.** *Any member* used to be reachable by the inviter alone, which made it the same
+thing as *anyone invited* with an extra tap. It is now what its sentence says. A two-person room is
+unaffected — with nobody else to ask, the inviter is still the one who agrees. `WhoMayApproveTests`
+holds every case including both fallbacks, and six older tests that had encoded the old behaviour were
+rewritten rather than deleted.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

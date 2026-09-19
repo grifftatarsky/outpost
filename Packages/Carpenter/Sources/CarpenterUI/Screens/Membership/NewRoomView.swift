@@ -204,7 +204,7 @@ struct NewRoomView: View {
         case (.open, .open), (.founder, .founder), (.anyMember, .anyMember),
             (.unanimous, .unanimous):
             return true
-        case (.atLeast, .atLeast), (.member, .member):
+        case (.atLeast, .atLeast), (.members, .members):
             return true
         default:
             return false

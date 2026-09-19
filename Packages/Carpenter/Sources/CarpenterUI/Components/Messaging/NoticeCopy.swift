@@ -60,8 +60,12 @@ enum NoticeCopy {
                 comment: "How a room admits people, completing “changed who gets in: …”")
         case .founder:
             String(localized: "whoever started the room decides", bundle: .module)
-        case .member:
-            String(localized: "one member decides", bundle: .module)
+        case .members(let who):
+            who.count == 1
+                ? String(localized: "one member decides", bundle: .module)
+                : String(
+                    localized: "^[\(who.count) named member](inflect: true) can decide",
+                    bundle: .module)
         case .anyMember:
             String(localized: "any member can agree", bundle: .module)
         case .atLeast(let count):

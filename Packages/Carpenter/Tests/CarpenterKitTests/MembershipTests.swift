@@ -275,8 +275,9 @@ struct RoomRosterTests {
                 rendered(alice.id, .joinConfirmed, hash: UInt8(120 + offset)),
                 body: try Payload.joinConfirmed(
                     try JoinConfirmedBody.signed(confirming: attestation, by: joiner)))
+            let decides = offset == 0 ? alice : bob
             roster.apply(
-                rendered(alice.id, .admission, hash: UInt8(10 + offset)),
+                rendered(decides.id, .admission, hash: UInt8(10 + offset)),
                 body: try Payload.admission(of: joiner.id, admitted: true))
         }
 

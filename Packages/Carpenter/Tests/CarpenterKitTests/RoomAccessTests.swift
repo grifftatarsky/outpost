@@ -181,9 +181,14 @@ struct RoomAccessTests {
         try request(joiner, from: alice, into: &roster, hash: 2)
 
         try decide(joiner, by: alice, admitted: true, into: &roster, hash: 3)
-        #expect(!roster.members.contains(joiner.id), "one admission satisfied a minimum of two")
+        #expect(
+            !roster.members.contains(joiner.id),
+            "alice invited them, so her own agreement is not one of the two")
 
         try decide(joiner, by: bob, admitted: true, into: &roster, hash: 4)
+        #expect(!roster.members.contains(joiner.id), "one admission satisfied a minimum of two")
+
+        try decide(joiner, by: carol, admitted: true, into: &roster, hash: 5)
         #expect(roster.members.contains(joiner.id))
     }
 

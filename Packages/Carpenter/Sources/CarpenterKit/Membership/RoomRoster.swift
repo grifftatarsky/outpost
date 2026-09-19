@@ -135,12 +135,10 @@ public struct RoomRoster: Hashable, Sendable {
     }
 
     public func pending(for viewer: ParticipantID, at instant: Date) -> [MembershipAttestation] {
-        guard access.approvers(among: established, founder: founder).contains(viewer) else {
-            return []
-        }
-        return requests
+        requests
             .filter {
                 $0.key != viewer && !established.contains($0.key)
+                    && mayDecide(viewer, on: $0.value)
                     && !hasDecided(on: $0.key, as: viewer)
                     && isOpen($0.value)
                     && !($0.value.hasLapsed(at: instant)
@@ -213,6 +211,18 @@ public struct RoomRoster: Hashable, Sendable {
         access = newAccess
     }
 
+    public func mayDecide(_ viewer: ParticipantID, on attestation: MembershipAttestation) -> Bool {
+        eligibleApprovers(of: attestation).contains(viewer)
+    }
+
+    public func eligibleApprovers(of attestation: MembershipAttestation) -> Set<ParticipantID> {
+        let standing = access.approvers(among: established, founder: founder)
+            .subtracting([attestation.joiner])
+        guard access.excludesTheInviter else { return standing }
+        let others = standing.subtracting([attestation.inviter])
+        return others.isEmpty ? standing : others
+    }
+
     private func isAdmitted(_ joiner: ParticipantID) -> Bool {
         guard let attestation = requests[joiner] else { return false }
 
@@ -220,7 +230,8 @@ public struct RoomRoster: Hashable, Sendable {
 
         guard isOpen(attestation) else { return false }
 
-        let admitters = admissionsByInvitation[attestation.signature] ?? []
+        let eligible = eligibleApprovers(of: attestation)
+        let admitters = (admissionsByInvitation[attestation.signature] ?? []).intersection(eligible)
         let refusers = refusalsByInvitation[attestation.signature] ?? []
 
         switch access {
@@ -228,22 +239,27 @@ public struct RoomRoster: Hashable, Sendable {
             return true
         case .founder:
             return founder.map { admitters.contains($0) } ?? false
-        case .member(let who):
-            return admitters.contains(who)
+        case .members:
+            return !admitters.isEmpty
         case .anyMember:
             return !admitters.isEmpty
         case .atLeast(let count):
-            return admitters.count >= effectiveThreshold(count, admitting: joiner)
+            return admitters.count >= effectiveThreshold(count, admitting: attestation)
         case .unanimous:
             guard refusers.isEmpty else { return false }
-            let mustAgree = established.subtracting([joiner])
-            return !mustAgree.isEmpty && mustAgree.isSubset(of: admitters)
+            return !eligible.isEmpty && eligible.isSubset(of: admitters)
         }
     }
 
+    public func effectiveThreshold(_ chosen: Int, admitting attestation: MembershipAttestation) -> Int {
+        max(1, min(chosen, eligibleApprovers(of: attestation).count))
+    }
+
     public func effectiveThreshold(_ chosen: Int, admitting joiner: ParticipantID) -> Int {
-        let eligible = established.subtracting([joiner]).count
-        return max(1, min(chosen, eligible))
+        guard let attestation = requests[joiner] else {
+            return max(1, min(chosen, established.subtracting([joiner]).count))
+        }
+        return effectiveThreshold(chosen, admitting: attestation)
     }
 
     public func isUnanimous(_ joiner: ParticipantID) -> Bool {

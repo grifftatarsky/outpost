@@ -113,7 +113,10 @@ struct JoinEndToEndTests {
 
         var verifiedBy: [ParticipantID] = []
         for index in 0..<3 {
-            #expect(residents[index].roster.pending(for: residents[index].id, at: start).count == 1)
+            #expect(
+                residents[index].roster.pending(for: residents[index].id, at: start).count
+                    == (index == 0 ? 0 : 1),
+                "the person who invited them was asked to agree to their own invitation")
 
             try residents[index].roster.verify(
                 attestation,
@@ -126,6 +129,12 @@ struct JoinEndToEndTests {
             let entry = try residents[index].author.append(
                 admission, at: start.addingTimeInterval(240), room: roomID)
             try broadcast(entry, admission, to: &residents)
+
+            if index == 0 {
+                #expect(
+                    !residents[0].roster.members.contains(residents[3].id),
+                    "the inviter's own agreement was enough under a unanimous rule")
+            }
         }
 
         #expect(verifiedBy.count == 3)
