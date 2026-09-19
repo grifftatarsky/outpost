@@ -49,6 +49,19 @@ struct EveryAppIconShipsTests {
         #expect(Set(sets) == chosen, "orphaned or missing sets: \(Set(sets).symmetricDifference(chosen).sorted())")
     }
 
+    @Test("No app icon carries an alpha channel, which App Store Connect refuses on upload")
+    func everyIconIsOpaque() throws {
+        let sets = try FileManager.default.contentsOfDirectory(atPath: catalogue.path).filter { $0.hasSuffix(".appiconset") }
+        for set in sets {
+            let folder = catalogue.appending(path: set)
+            for file in try FileManager.default.contentsOfDirectory(atPath: folder.path) where file.hasSuffix(".png") {
+                let bytes = try Data(contentsOf: folder.appending(path: file))
+                let colourType = bytes.count > 25 ? bytes[25] : 0
+                #expect(colourType == 2, "\(set)/\(file) has PNG colour type \(colourType); 2 is RGB with no alpha")
+            }
+        }
+    }
+
     @Test("A member who has never chosen sees the icon the app ships with selected")
     func theDefaultIsThePrimary() {
         #expect(AppIconChoice.default.alternateName == nil)

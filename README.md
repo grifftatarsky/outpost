@@ -83,7 +83,8 @@ Read [`CLAUDE.md`](CLAUDE.md) before changing code. It holds the rules the lint 
 mistakes this codebase has already made. Decisions and who made them are in
 [Decisions](docs/decisions.md).
 
-To report a security problem, email info@outpostmessaging.com rather than opening a public issue.
+To report a security problem, use the contact form at outpostmessaging.com/contact rather than
+opening a public issue.
 
 ## License
 

@@ -18,11 +18,10 @@ extension AppSession {
     private func loadFromStorage() async {
         do {
             let store = IdentityStore(keychain: storage.keychain)
-            guard try await store.loadIdentity() != nil else {
+            guard let identity = try await store.loadIdentity() else {
                 state = .checkingForRegistration
                 return
             }
-            let identity = try await store.loadIdentity()!
 
             let existingDevice = try await store.loadDeviceKeys()
             let device = existingDevice ?? DeviceKeys.generate()

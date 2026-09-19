@@ -96,7 +96,7 @@ def render(svg_text, out, px):
     SCRATCH.mkdir(parents=True, exist_ok=True)
     source = SCRATCH / (out.parent.name + ".svg")
     source.write_text(svg_text)
-    subprocess.run([str(RENDER), str(source), str(out), str(px), "none"], check=True)
+    subprocess.run([str(RENDER), str(source), str(out), str(px), "none", "opaque"], check=True)
 
 
 def build(name, svg_text):

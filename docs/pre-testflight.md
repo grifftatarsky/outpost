@@ -241,6 +241,10 @@ Added 2026-09-16, from Griff.
 
 ## Before the source is public
 
+- **Open, and his.** **Two tracked files would go public as they are.** `scratch.md` holds notes for
+  •bullet, a different app, and `YouView.subscribeByEmail` opens a mail to `updates@`, an address, in
+  a build where the 2026-09-17 ruling says the only route to a person is a form. Found 2026-09-19.
+
 - **Done.** **The history is one commit.** `RULED` — Griff, 2026-09-17; done 2026-09-18 with an
   orphan branch rather than `git filter-repo`, since the whole history went rather than one field of
   it. Every commit now carries one identity.
@@ -281,11 +285,13 @@ Added 2026-09-16, from Griff.
   point in the history. A production schema is additive and a container cannot be deleted, so the fix
   is to leave it unused. **Read the container name in the Console breadcrumb before every schema
   action.**
-- **Open.** **A real write has never been proven against the schema.** The live suite is what would
-  settle it and it cannot run: alpha answers `CKError 36, Account Temporarily Unavailable`. Sign it
-  back in, then `TEST_RUNNER_CARPENTER_CLOUDKIT_TESTS=1 xcodebuild test … -only-testing:CarpenterTests`
-  — the `TEST_RUNNER_` prefix is not optional, because xcodebuild does not forward the shell
-  environment into the test process and without it every live test skips and reports success.
+- **Done, in development.** **Real writes against the schema.** The live suite ran on alpha on
+  2026-09-19 once its account was signed in again: 47 tests in 10 suites passed against
+  `iCloud.com.microgpt.outpost`'s development environment, including a message crossing between two
+  identities, a round bigger than one packet, a hole refilled over the network, a restore from a
+  recovery key, and ciphertext alone reaching the server. The same day two accounts exchanged rooms,
+  replies and bells on the rig. Production is proven by the first TestFlight build writing, after the
+  schema is deployed.
 - **Done.** **A Release build talks to the production APNs gateway.** `aps-environment` was
   hard-coded to `development` in `Carpenter.entitlements` and one file serves both configurations, so
   the TestFlight build would have registered, been accepted and received nothing. It comes from
