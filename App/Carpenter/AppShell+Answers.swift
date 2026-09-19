@@ -54,9 +54,10 @@ extension AppShell {
 
     func tellNotSent(_ answer: NotificationAnswer) async {
         guard case .reply(let room, let words) = answer else { return }
+        let kept = await session.keepUnsentReply(words, in: room)
         let content = NotificationAnswer.notSent(
             words, in: room, named: session.rooms.first { $0.id == room }?.name,
-            showingWords: FocusFilterStore.shared.read().showsPreviews)
+            keptAsDraft: kept, showingWords: FocusFilterStore.shared.read().showsPreviews)
         try? await UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }

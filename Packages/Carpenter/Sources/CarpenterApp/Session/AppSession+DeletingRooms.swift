@@ -39,6 +39,11 @@ extension AppSession {
         var removed: [Entry] = []
         for room in rooms { removed.append(contentsOf: replica.close(room)) }
         persisted.spentEntries = replica.spentEntries
+        let keptDrafts = persisted.drafts
+        for room in rooms {
+            persisted.drafts[room] = nil
+            drafts[room] = nil
+        }
 
         do {
             try await saveState()
@@ -46,6 +51,7 @@ extension AppSession {
             for room in rooms { replica.reopen(room) }
             for entry in removed { _ = try? replica.integrate(entry) }
             persisted.spentEntries = replica.spentEntries
+            persisted.drafts = keptDrafts
             integrity.writesFailed += 1
             Diagnostics.sync.error(
                 "storage: could not record a deleted conversation, so nothing was deleted (\(String(describing: error), privacy: .public))")

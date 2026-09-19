@@ -7,6 +7,7 @@ struct RoomRow: View {
     @Environment(\.sharedAvatars) private var sharedAvatars
     @Environment(\.clock) private var clock
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.drafts) private var drafts
 
     let room: RoomSummary
     let organisation: RoomsListOrganisation
@@ -78,9 +79,7 @@ struct RoomRow: View {
                 }
 
                 if density != .compact {
-                    (room.lastMessage.isEmpty
-                        ? Text("No messages yet", bundle: .module)
-                        : Text(room.lastMessage))
+                    detail
                         .font(CarpenterFont.rowDetail)
                         .foregroundStyle(palette.secondaryText)
                         .lineLimit(
@@ -92,5 +91,15 @@ struct RoomRow: View {
             .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
         }
         .alignmentGuide(.listRowSeparatorTrailing) { $0.width + CarpenterMetrics.screenMargin }
+    }
+
+    private var detail: Text {
+        let draft = drafts?.read(room.id) ?? ""
+        if !draft.isEmpty {
+            let words = draft.split(whereSeparator: \.isNewline).joined(separator: " ")
+            let label = Text("Draft", bundle: .module).foregroundStyle(palette.accentColor).fontWeight(.semibold)
+            return Text("\(label) \(words)", bundle: .module, comment: "A conversation's draft in the rooms list: the word Draft, then what was written")
+        }
+        return room.lastMessage.isEmpty ? Text("No messages yet", bundle: .module) : Text(room.lastMessage)
     }
 }

@@ -74,14 +74,16 @@ extension NotificationAnswer {
 
 extension NotificationAnswer {
     public static func notSent(
-        _ words: String, in room: RoomID, named name: String?, showingWords: Bool
+        _ words: String, in room: RoomID, named name: String?, keptAsDraft: Bool, showingWords: Bool
     ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = name ?? String(localized: "Your reply", bundle: .module)
         content.body =
-            showingWords
-            ? String(localized: "Not sent: “\(words)”. Open the conversation to send it again.", bundle: .module)
-            : String(localized: "Your reply was not sent. Open the conversation to send it again.", bundle: .module)
+            keptAsDraft
+            ? String(localized: "Your reply was not sent. It is waiting in the conversation as a draft.", bundle: .module)
+            : showingWords
+                ? String(localized: "Not sent: “\(words)”. Open the conversation to send it again.", bundle: .module)
+                : String(localized: "Your reply was not sent. Open the conversation to send it again.", bundle: .module)
         content.threadIdentifier = MessageNotification.thread(for: room)
         content.userInfo = userInfo(for: room)
         return content

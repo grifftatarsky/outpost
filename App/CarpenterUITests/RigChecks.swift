@@ -389,6 +389,59 @@ final class RigChecks: XCTestCase {
         shoot(app, "q-saw-answer")
     }
 
+    func composer(_ app: XCUIApplication) -> XCUIElement {
+        let named = entry(app, "Message")
+        if named.waitForExistence(timeout: 3) { return named }
+        return app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
+    }
+
+    func testDraftSurvives() throws {
+        let words = "half a thought about the mast"
+        var app = launch()
+        sleep(3)
+        openChecks(app)
+        let field = composer(app)
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        for _ in 0..<4 where app.keyboards.count == 0 {
+            field.tap()
+            sleep(1)
+        }
+        let leftover = (field.value as? String) ?? ""
+        if !leftover.isEmpty, leftover != "Message" {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: leftover.count))
+        }
+        field.typeText(words)
+        sleep(2)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        sleep(2)
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", words)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "the rooms list does not show the draft")
+        shoot(app, "draft-1-row")
+
+        app.terminate()
+        app = launch()
+        sleep(4)
+        settle(app)
+        app.buttons["Rooms"].firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(
+            app.buttons.matching(NSPredicate(format: "label CONTAINS %@", words)).firstMatch.waitForExistence(timeout: 8),
+            "the draft did not survive a relaunch in the list")
+        openChecks(app)
+        let back = composer(app)
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        XCTAssertEqual(back.value as? String, words, "the composer did not bring the draft back")
+        shoot(app, "draft-2-back")
+
+        XCTAssertTrue(tapIfThere(app, "Send", timeout: 3))
+        sleep(3)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        sleep(2)
+        let still = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS 'Draft'", words)).firstMatch
+        XCTAssertFalse(still.exists, "the draft stayed after it was sent")
+        shoot(app, "draft-3-sent")
+    }
+
     func testAnswerFromTheBanner() throws {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let env = ProcessInfo.processInfo.environment

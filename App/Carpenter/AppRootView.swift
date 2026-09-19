@@ -340,6 +340,17 @@ struct AppRootView: View {
             .environment(\.ownOutpostAvatar, ownOutpostAvatar)
             .environment(\.viewerID, session.viewer.id)
             .environment(\.supporters, session.supporterBadges)
+            .environment(\.drafts, draftKeeping)
+    }
+
+    var draftKeeping: DraftKeeping {
+        let session = session
+        return DraftKeeping(
+            read: { session.draft(in: $0) },
+            keep: { words, room in
+                session.noteDraft(words, in: room)
+                Task { await session.sealDraft(in: room) }
+            })
     }
 
     @ViewBuilder

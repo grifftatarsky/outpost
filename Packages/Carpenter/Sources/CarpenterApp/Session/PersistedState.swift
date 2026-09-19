@@ -29,6 +29,7 @@ struct PersistedState: Codable, Sendable {
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
     var turnsEveryKeyAfterALoss = false
+    var drafts: [RoomID: Data] = [:]
 
     private enum RetiredKeys: String, CodingKey { case awaitingJoin }
     var knownKeys: [IdentityPublicKeys] = []
@@ -106,5 +107,6 @@ struct PersistedState: Codable, Sendable {
             try container.decodeIfPresent(Bool.self, forKey: .wantsWhatWasSaid) ?? false
         turnsEveryKeyAfterALoss =
             try container.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
+        drafts = try container.decodeIfPresent([RoomID: Data].self, forKey: .drafts) ?? [:]
     }
 }

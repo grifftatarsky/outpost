@@ -87,7 +87,7 @@ struct NotificationAnswerTests {
 
     @Test("A reply that could not be sent comes back as a notification in its room, never silently dropped")
     func aFailedReplyComesBack() {
-        let shown = NotificationAnswer.notSent("on my way", in: room, named: "Hangar 7", showingWords: true)
+        let shown = NotificationAnswer.notSent("on my way", in: room, named: "Hangar 7", keptAsDraft: false, showingWords: true)
         #expect(shown.title == "Hangar 7")
         #expect(shown.body.contains("on my way"), "the member's words were lost with the reply")
         #expect(shown.threadIdentifier == MessageNotification.thread(for: room))
@@ -95,9 +95,16 @@ struct NotificationAnswerTests {
         #expect(shown.categoryIdentifier.isEmpty, "a failure notice offered Reply, which is what just failed")
     }
 
+    @Test("A reply kept as a draft is not repeated in the notice, which says where it is")
+    func aKeptReplyIsNotRepeated() {
+        let kept = NotificationAnswer.notSent("on my way", in: room, named: "Hangar 7", keptAsDraft: true, showingWords: true)
+        #expect(!kept.body.contains("on my way"))
+        #expect(kept.body.contains("draft"))
+    }
+
     @Test("With previews hidden, the failure notice says a reply failed without repeating it")
     func aFailedReplyKeepsPreviewsHidden() {
-        let hidden = NotificationAnswer.notSent("on my way", in: room, named: nil, showingWords: false)
+        let hidden = NotificationAnswer.notSent("on my way", in: room, named: nil, keptAsDraft: false, showingWords: false)
         #expect(!hidden.body.contains("on my way"))
         #expect(!hidden.title.isEmpty)
     }

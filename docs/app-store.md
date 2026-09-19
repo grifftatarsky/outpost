@@ -88,8 +88,17 @@ private,encrypted,group chat,friends,e2e,no server,messaging,secure,rooms,wall,o
 Answer **"No, we do not collect data from this app."**
 
 That is accurate and defensible: `Package.swift` has zero external dependencies, there is no
-analytics or telemetry code anywhere in the tree, and no data is transmitted to any server we
-operate — we operate none.
+analytics or telemetry code anywhere in the tree, and the app transmits nothing to any server we
+operate.
+
+That last clause used to read "we operate none", which stopped being true when abuse intake moved to
+`microgpt-comms` behind `outpostmessaging.com/report`. The app still never talks to it: the report
+screen copies the report and opens the site in the browser, and the person submits it there
+("This app sends nothing itself" — `ReportView`). What the form receives is the website's
+collection, covered by the site's privacy policy, not the app's label.
+
+**User Privacy Choices URL: leave it empty.** It is for an app that collects data and offers a page to
+manage it. This one collects none, so there is nothing for such a page to govern.
 
 The one thing worth understanding before answering: Apple's definition of *collect* is "transmit
 data off the device in a way that allows you or your third-party partners to access it for longer

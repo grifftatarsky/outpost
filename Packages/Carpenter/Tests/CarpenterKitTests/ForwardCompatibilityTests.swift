@@ -111,6 +111,7 @@ extension ForwardCompatibilityTests {
         state.phraseNonces = ["Y29tbWl0bWVudA==": Data(repeating: 9, count: 32)]
         state.wantsWhatWasSaid = true
         state.turnsEveryKeyAfterALoss = true
+        state.drafts = [room: Data([9, 9, 9])]
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)
