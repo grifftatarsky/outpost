@@ -228,8 +228,12 @@ extension ConversationView {
                 .lineLimit(1...6)
                 .onSubmit(send)
                 .shiftReturnBreaksLine($draft, selection: $draftSelection)
+                .focused($composing)
+                #if os(macOS)
+                    .background(MediaPasteKey(isActive: composing && acceptsDrops, onPaste: stageDropped))
+                #endif
                 .onChange(of: draft) { old, new in
-                    guard acceptsDrops, let files = DroppedPaths.files(insertedBetween: old, and: new) else {
+                    guard acceptsDrops, let files = DroppedPaths.filesArriving(between: old, and: new) else {
                         return
                     }
                     draft = old

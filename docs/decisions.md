@@ -3852,6 +3852,32 @@ post's text view and to the field being typed in came out staged, with no path i
 done:** a drag by a real pointer from Finder or Photos on a Mac or an iPad — the harness hands the
 drop to a destination it chose, and AppKit's own choice of destination was not measured.
 
+### ⌘V with a photo on the clipboard attaches it, and words still paste as words
+
+`PROPOSED` — Claude, 2026-09-19. Griff: "Do it", of pasting a photo into the composer.
+
+On the Mac, in the conversation composer and a new post. Measured on the real fields, with the
+harness's clipboard swapped for a private one in its own process so Griff's was never read or written:
+before the change, ⌘V with an image on the clipboard did nothing — the field's Paste is disabled for
+anything that is not text — and a file copied in Finder pasted as its **name**. SwiftUI's
+`pasteDestination` on the field was tried and is never consulted while the field has focus, and a
+key handler on the field never sees ⌘V, because the menu bar takes the key even when Paste is
+disabled (measured: `performKeyEquivalent` returns true for a disabled item).
+
+What works is a ⌘V shortcut on an invisible button inside the composer, present only while its field
+has focus: a window's views are offered a key equivalent before the menu bar. With a copied photo or
+media file on the clipboard it stages them exactly as a drop does; otherwise it hands Paste to the
+field in its own window, so words paste as they always did. Copied writing that happens to carry an
+image stays writing; an image that carries only its link is the image. A file name pasted by any other
+route — Edit ▸ Paste clicked — is still turned back into the file when it names a media file on the
+clipboard.
+
+**Measured** with AppKit's own order, the window first and a standard Edit menu second: a photo and a
+Finder-copied file are staged in both composers, and words paste into both. `ClipboardMediaTests` holds
+the clipboard rules on private pasteboards. **Not done:** the same on an iPad — SwiftUI's paste
+destination needs iOS 27 and the app targets iOS 26 — and Edit ▸ Paste chosen with the pointer, which
+stays disabled for a photo because the field decides that.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

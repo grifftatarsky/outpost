@@ -11,6 +11,7 @@ public struct ConversationView: View {
 
     @State var draft = ""
     @State var draftSelection: TextSelection?
+    @FocusState var composing: Bool
     @State var sent = 0
     @State var failures = 0
     @State var problem: String?

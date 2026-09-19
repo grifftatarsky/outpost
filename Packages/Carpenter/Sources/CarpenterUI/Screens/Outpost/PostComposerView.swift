@@ -71,6 +71,9 @@ public struct PostComposerView: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
+                #if os(macOS)
+                    .background(MediaPasteKey(isActive: writing && onAttach != nil, onPaste: stageDropped))
+                #endif
                 .padding(.horizontal, CarpenterMetrics.screenMargin - 5)
                 .padding(.top, 8)
                 .focused($writing)
@@ -101,7 +104,7 @@ public struct PostComposerView: View {
             .background(palette.background.ignoresSafeArea())
             .acceptsDroppedMedia(onAttach != nil, onDrop: stageDropped)
             .onChange(of: draft) { old, new in
-                guard onAttach != nil, let files = DroppedPaths.files(insertedBetween: old, and: new) else {
+                guard onAttach != nil, let files = DroppedPaths.filesArriving(between: old, and: new) else {
                     return
                 }
                 draft = old
@@ -109,8 +112,8 @@ public struct PostComposerView: View {
             }
             .onChange(of: rich) { old, new in
                 guard onAttach != nil,
-                    let files = DroppedPaths.files(
-                        insertedBetween: String(old.characters), and: String(new.characters))
+                    let files = DroppedPaths.filesArriving(
+                        between: String(old.characters), and: String(new.characters))
                 else { return }
                 rich = old
                 stageDropped(files.compactMap(DroppedPaths.media))

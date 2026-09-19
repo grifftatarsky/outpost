@@ -55,6 +55,16 @@ extension View {
 
 enum DroppedPaths {
     static func files(insertedBetween old: String, and new: String) -> [URL]? {
+        guard let lines = insertedLines(between: old, and: new) else { return nil }
+        var files: [URL] = []
+        for line in lines {
+            guard let url = fileURL(line) else { return nil }
+            files.append(url)
+        }
+        return files
+    }
+
+    static func insertedLines(between old: String, and new: String) -> [String]? {
         guard new.count > old.count else { return nil }
         let head = old.commonPrefix(with: new).count
         let oldTail = old.dropFirst(head)
@@ -66,17 +76,22 @@ enum DroppedPaths {
         {
             tail += 1
         }
-        let inserted = newTail.dropLast(tail)
-        let lines = inserted.split(whereSeparator: \.isNewline)
+        let lines = newTail.dropLast(tail).split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        guard !lines.isEmpty else { return nil }
-        var files: [URL] = []
-        for line in lines {
-            guard let url = fileURL(line) else { return nil }
-            files.append(url)
+        return lines.isEmpty ? nil : lines
+    }
+
+    static func isMedia(_ url: URL) -> Bool {
+        guard url.isFileURL, FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
+            return false
         }
-        return files
+        return looksLikeMedia(url.pathExtension)
+    }
+
+    static func looksLikeMedia(_ fileExtension: String) -> Bool {
+        guard let type = UTType(filenameExtension: fileExtension) else { return false }
+        return type.conforms(to: .image) || type.conforms(to: .movie)
     }
 
     private static func fileURL(_ text: String) -> URL? {
@@ -88,10 +103,7 @@ enum DroppedPaths {
         } else {
             url = nil
         }
-        guard let url, url.isFileURL, FileManager.default.fileExists(atPath: url.path(percentEncoded: false)),
-            let type = UTType(filenameExtension: url.pathExtension),
-            type.conforms(to: .image) || type.conforms(to: .movie)
-        else { return nil }
+        guard let url, isMedia(url) else { return nil }
         return url
     }
 
@@ -105,4 +117,110 @@ enum DroppedPaths {
         }
         return (try? Data(contentsOf: url)).map { .image($0) }
     }
+
+    static func filesArriving(between old: String, and new: String) -> [URL]? {
+        if let files = files(insertedBetween: old, and: new) { return files }
+        #if os(macOS)
+            guard let names = insertedLines(between: old, and: new),
+                names.allSatisfy({ !$0.contains("/") && looksLikeMedia(($0 as NSString).pathExtension) })
+            else { return nil }
+            return ClipboardMedia.files(named: names, on: .general)
+        #else
+            return nil
+        #endif
+    }
 }
+
+#if os(macOS)
+    import AppKit
+
+    final class WindowBox {
+        weak var window: NSWindow?
+    }
+
+    private struct WindowHandle: NSViewRepresentable {
+        let box: WindowBox
+
+        func makeNSView(context: Context) -> NSView { Reader(box: box) }
+        func updateNSView(_ view: NSView, context: Context) { box.window = view.window }
+
+        final class Reader: NSView {
+            let box: WindowBox
+            init(box: WindowBox) {
+                self.box = box
+                super.init(frame: .zero)
+            }
+            required init?(coder: NSCoder) { nil }
+            override func viewDidMoveToWindow() {
+                super.viewDidMoveToWindow()
+                box.window = window
+            }
+        }
+    }
+
+    struct MediaPasteKey: View {
+        let isActive: Bool
+        let onPaste: ([PickedMedia]) -> Void
+        @State private var box = WindowBox()
+
+        var body: some View {
+            if isActive {
+                Button {
+                    let media = ClipboardMedia.media(on: .general)
+                    if media.isEmpty {
+                        let paste = #selector(NSText.paste(_:))
+                        let handled = box.window?.firstResponder?.tryToPerform(paste, with: nil) ?? false
+                        if !handled { NSApp.sendAction(paste, to: nil, from: nil) }
+                    } else {
+                        onPaste(media)
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .background(WindowHandle(box: box))
+                .keyboardShortcut("v", modifiers: .command)
+                .buttonStyle(.plain)
+                .frame(width: 0, height: 0)
+                .opacity(0)
+                .accessibilityHidden(true)
+            }
+        }
+    }
+
+    enum ClipboardMedia {
+        static let imageTypes: [NSPasteboard.PasteboardType] = [
+            .png, .tiff, .init("public.jpeg"), .init("public.heic"),
+        ]
+
+        static func mediaFiles(on board: NSPasteboard) -> [URL] {
+            let urls = board.readObjects(
+                forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+            return urls.filter(DroppedPaths.isMedia)
+        }
+
+        static func media(on board: NSPasteboard) -> [PickedMedia] {
+            let files = mediaFiles(on: board)
+            if !files.isEmpty { return files.compactMap(DroppedPaths.media) }
+            if let words = board.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                !words.isEmpty, !isJustALink(words)
+            {
+                return []
+            }
+            for type in imageTypes {
+                if let data = board.data(forType: type) { return [.image(data)] }
+            }
+            return []
+        }
+
+        private static func isJustALink(_ words: String) -> Bool {
+            guard !words.contains(where: \.isWhitespace), let url = URL(string: words) else { return false }
+            return url.scheme == "http" || url.scheme == "https"
+        }
+
+        static func files(named names: [String], on board: NSPasteboard) -> [URL]? {
+            let files = mediaFiles(on: board)
+            let matched = names.compactMap { name in files.first { $0.lastPathComponent == name } }
+            return matched.count == names.count && !matched.isEmpty ? matched : nil
+        }
+    }
+#endif
