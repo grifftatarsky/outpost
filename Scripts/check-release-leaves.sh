@@ -56,6 +56,7 @@ LEAVES=(
     "clock-ahead-days"
     "--channel"
     "mailbox-refuses"
+    "rig-codes"
     "Haptics probe"
     "Style test"
     "Start over"

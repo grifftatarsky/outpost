@@ -193,11 +193,18 @@
     }
 
     enum RigCodes {
-        static func leave(_ code: String, as name: String) {
+        static var directory: URL? {
             let arguments = ProcessInfo.processInfo.arguments
+            if let index = arguments.firstIndex(of: "--rig-codes"), index + 1 < arguments.count {
+                return URL(fileURLWithPath: arguments[index + 1])
+            }
             guard let index = arguments.firstIndex(of: "--mailbox"), index + 1 < arguments.count
-            else { return }
-            let codes = URL(fileURLWithPath: arguments[index + 1]).appending(path: "codes")
+            else { return nil }
+            return URL(fileURLWithPath: arguments[index + 1]).appending(path: "codes")
+        }
+
+        static func leave(_ code: String, as name: String) {
+            guard let codes = directory else { return }
             do {
                 try FileManager.default.createDirectory(at: codes, withIntermediateDirectories: true)
                 try code.write(to: codes.appending(path: name), atomically: true, encoding: .utf8)

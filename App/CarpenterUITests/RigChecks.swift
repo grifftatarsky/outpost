@@ -4,6 +4,10 @@ import XCTest
 final class RigChecks: XCTestCase {
     let exchange = "/tmp/outpost-rig-exchange"
 
+    var isCloud: Bool { ProcessInfo.processInfo.environment["RIG_CLOUD"] == "1" }
+
+    var codes: String { isCloud ? "/tmp/outpost-rig-codes" : "/tmp/outpost-rig-mailbox/codes" }
+
     override func setUpWithError() throws {
         try XCTSkipUnless(
             ProcessInfo.processInfo.environment["OUTPOST_RIG"] == "1",
@@ -13,7 +17,7 @@ final class RigChecks: XCTestCase {
 
     func launch(_ extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["--mailbox", "/tmp/outpost-rig-mailbox"] + extra
+        app.launchArguments += (isCloud ? ["--rig-codes", codes] : ["--mailbox", "/tmp/outpost-rig-mailbox"]) + extra
         app.launch()
         _ = app.wait(for: .runningForeground, timeout: 20)
         return app
@@ -124,7 +128,7 @@ final class RigChecks: XCTestCase {
         let field = app.textFields.firstMatch
         if field.waitForExistence(timeout: 5) {
             field.tap()
-            field.typeText("Trig")
+            field.typeText(ProcessInfo.processInfo.environment["RIG_NAME"] ?? "Trig")
             _ = tapIfThere(app, "Create my identity")
         }
         sleep(3)
@@ -254,7 +258,7 @@ final class RigChecks: XCTestCase {
     }
 
     func code(_ name: String) -> String {
-        (try? String(contentsOfFile: "/tmp/outpost-rig-mailbox/codes/\(name)", encoding: .utf8)) ?? ""
+        (try? String(contentsOfFile: "\(codes)/\(name)", encoding: .utf8)) ?? ""
     }
 
     func testTrigMakesARoomAndInvitesQuad() throws {
@@ -293,8 +297,9 @@ final class RigChecks: XCTestCase {
     }
 
     func testQuadJoins() throws {
-        let invite = code("Trig.invite")
-        XCTAssertFalse(invite.isEmpty, "Trig has not left an invite")
+        let inviter = ProcessInfo.processInfo.environment["RIG_INVITER"] ?? "Trig"
+        let invite = code("\(inviter).invite")
+        XCTAssertFalse(invite.isEmpty, "\(inviter) has not left an invite")
         let app = launch()
         sleep(3)
         settle(app)

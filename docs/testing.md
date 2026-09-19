@@ -227,6 +227,9 @@ are on [the simulator rig](simulator-rig.md).
   time. Invitation expiry moves too.
 - **`--channel testflight|appstore`** makes a debug build behave as a TestFlight or App Store build for
   the Supporter year.
+- **`--rig-codes <dir>`** leaves this member's identity code and each invitation it makes in `<dir>`,
+  the way `--mailbox` does, while the transport stays CloudKit. It is how two Apple Accounts exchange
+  codes on the rig without the simulator's pasteboard, which is the Mac's clipboard.
 
 ## Accessibility
 

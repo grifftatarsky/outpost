@@ -209,7 +209,7 @@ extension AppRootView {
                         joinerCode: joinerCode, joining: room, mailbox: url,
                         lasting: lifetime)
                     #if DEBUG
-                        if rig != nil, let code = try? issued.encoded() {
+                        if RigCodes.directory != nil, let code = try? issued.encoded() {
                             RigCodes.leave(code, as: "\(session.viewer.displayName).invite")
                         }
                     #endif
