@@ -234,7 +234,7 @@ the notification is a door rather than an announcement.
 </details>
 
 <details markdown="1" id="answering-from-the-notification">
-<summary><b>Answering from the notification</b> — Complete (proved above the mailbox; two-account proof owed)</summary>
+<summary><b>Answering from the notification</b> — Complete (proved on two accounts; the extension's half owed on a phone)</summary>
 
 **Story.** As a member, I want to reply to a message, or mark its room read, from the notification
 itself, so that a quick answer does not mean opening the app.
@@ -270,9 +270,22 @@ proved above the mailbox; CloudKit was not involved.
   returned, and iOS suspended the app with the reply unsent. Fixed by waiting for that round, then
   running one of the answer's own.
 
-**Still owed.** Two devices on two Apple Accounts over CloudKit, where a cold launch's round is the
-real mailbox. On the rig, a cold launch carries no `--mailbox`, so its round met a signed-out CloudKit
-and the reply waited for the next launch. The Mac shows the same category but has not been driven.
+**What was observed, 2026-09-19, on alpha (Griff) and beta (Outie), two Apple Accounts over
+CloudKit.** Alpha's account was reset and Griff onboarded again, and Griff invited Outie into
+*Checks*.
+
+- **Warm:** Outie replied from the banner at 10:11:53. The round 8.6 s later wrote one packet with
+  one entry, and *on my way, from the banner (cloud warm)* drew on alpha as Outie's.
+- **Cold (app quit):** iOS launched a new process. The answer waited 62 ms for the load, the round
+  at 10:14:35 wrote the reply to CloudKit, and it drew on alpha.
+- **Mark as Read:** Checks had its dot and Rooms showed 1 on beta. After the banner action, both were
+  gone.
+
+**Still owed, on a phone.** A simulator never receives a CloudKit push, and in Xcode 27 `simctl push`
+posts the notification without running the service extension. The banner on the rig therefore
+carried the category and room in its payload, the way the extension writes them. The step where the
+extension decrypts a real bell and attaches both has only been run by `ArrivingBannerTests`. The
+Mac shows the same category but has not been driven.
 
 </details>
 

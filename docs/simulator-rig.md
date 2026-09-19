@@ -109,7 +109,7 @@ Measured on this Mac on 2026-09-01 and since.
 | CloudKit against a real account | yes | Unless the account has Advanced Data Protection on; see below. |
 | App Group container shared with the extension | yes | `storage: … appGroup=true` in the log. |
 | Push from real APNs | registers | A real sandbox token on Apple silicon. A bell rung by the other account on 2026-09-14 did not arrive in five minutes. |
-| Notification service extension | yes | Runs, including for `xcrun simctl push`. |
+| Notification service extension | not reachable | Nothing triggers it. No real push arrives, and in Xcode 27 `simctl push` goes through CoreSimulatorBridge, which adds the request directly: a payload with `mutable-content: 1` was posted as sent, with no extension process, on 2026-09-19. It ran for `simctl push` on 2026-09-01. |
 | Keychain generic password items | yes | Persist across launches. `simctl uninstall` does not clear them. |
 | Keychain access groups | no | Simulator builds are unsigned, so the app and extension's shared group behaves differently than on a phone. |
 | Sensitive Content Analysis | yes | Judged a photo clear on 2026-09-04. A positive verdict needs Apple's test profile on a phone. |
@@ -251,6 +251,11 @@ devices is **proved above the mailbox** and has to be written down in those word
 
 ### What these devices have shown
 
+- **Answering from the notification on two accounts, 2026-09-19.** Alpha's account was reset on
+  Griff's word, and Griff onboarded again. Griff invited Outie over CloudKit, with codes passed through
+  `--rig-codes`. Outie replied from a banner warm and cold, and marked read, and the replies drew on
+  alpha. The banner's payload carried the category and room, because nothing on a simulator runs the
+  extension.
 - **Answering from the notification, 2026-09-19.** Trig answered Quad from the banner: Reply warm,
   Reply cold (app quit), and Mark as Read. The replies drew on Quad's device and the read mark
   crossed. Proved above the mailbox. A cold launch has no launch arguments, so its round goes to
