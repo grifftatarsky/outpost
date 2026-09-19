@@ -75,7 +75,7 @@ Seven epics, 87 tickets, counted 2026-09-17.
 | Pushed out or canceled | 3 |
 
 <details markdown="1">
-<summary><b>Getting a message there</b> · 10 tickets — 9 tested · 1 proved above the mailbox</summary>
+<summary><b>Getting a message there</b> · 11 tickets — 10 tested · 1 proved above the mailbox</summary>
 
 | Ticket | Status | Evidence |
 |---|---|---|
@@ -89,6 +89,7 @@ Seven epics, 87 tickets, counted 2026-09-17.
 | Per-room read reporting | Complete (tested) | A room can report while the rest do not, or never report while the rest do; each change writes that room's own `readPolicy` entry (`PerRoomReportingTests`). Proved over real CloudKit 2026-09-14: a reader reported a message shown and the sender's mark moved (`LiveRoundTests`). |
 | The read-by detail view | Complete (tested) | A section on message detail, reached from the message's own actions and never from the marks, in the marks' own words (`WhoHasReadItTests`). The observation it draws proved over real cloudkit 2026-09-14. |
 | Repairing a history with holes in it | Complete (tested) | Gaps named from an index kept where entries enter, chased after two minutes, answered with what a peer holds (`HistoryRepairTests`). Proved over real CloudKit 2026-09-14: a packet was deleted off the server, the reader named exactly one missing entry, asked, and **got the words back** (`LiveRoundTests`). This row said a hole recovered over the network had never been seen. |
+| A draft that survives | Complete (tested) | One per conversation, back after a relaunch, shown in the rooms list as *Draft*, cleared by sending. Sealed on disk under a key kept in this device's keychain (`DraftTests`); walked on gamma 2026-09-19 (`RigChecks.testDraftSurvives`). A failed reply from a banner joins it — [epic](epics/messaging.md#a-draft-that-survives). |
 
 </details>
 

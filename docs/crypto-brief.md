@@ -816,9 +816,18 @@ unreadable until you have unlocked the phone once after it boots.
 |---|---|---|
 | `identity.keys` (both seeds, concatenated) | `.synchronized` — iCloud Keychain | `kSecAttrAccessibleAfterFirstUnlock` |
 | `device.signing` | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlock` |
+| `draft.sealing` (32 random bytes) | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlock` |
 
 Everything uses `kSecUseDataProtectionKeychain: true`, and the log, media and document stores are
 written with `FileProtectionType.completeUntilFirstUserAuthentication`.
+
+**Drafts are the one piece of unsent writing on disk, and they are sealed.** `DraftSeal` seals each
+conversation's draft with ChaChaPoly under `draft.sealing`, with the room's canonical bytes under
+`carpenter.draft.v1` as associated data, so a draft cannot be moved to another room. The key is
+random rather than derived: deriving it from an identity seed would be the pattern the sibling feed
+section says should not spread. A copy of the state file without this device's keychain holds
+ciphertext. The key is not synchronized through iCloud Keychain, so a draft does not follow the member
+to their other devices. What a device backup carries of it has not been measured.
 
 **Two consequences, named.** `afterFirstUnlock` means that on a phone which has been unlocked once
 since boot, the keys are available to the operating system even while the screen is locked. That is

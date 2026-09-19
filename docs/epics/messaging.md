@@ -619,6 +619,38 @@ by `LiveRoundTests` on 2026-09-14.
 
 </details>
 
+<details markdown="1" id="a-draft-that-survives">
+<summary><b>A draft that survives</b> — Complete (tested)</summary>
+
+**Story.** As a member, I want what I was writing in a conversation to still be there when I come
+back, even after the app was closed, so that leaving a sentence half-written does not lose it.
+
+**Acceptance criteria**
+
+- **Done.** Each conversation keeps one draft. It comes back into the composer when the conversation
+  opens again, after the app has been closed or the device restarted.
+- **Done.** The rooms list shows it in place of the last message: **Draft**, in the accent, then the
+  words.
+- **Done.** Sending clears it, and so does emptying the field.
+- **Done.** It is written down 0.6 s after typing stops, when the conversation closes, and when the
+  app leaves the foreground.
+- **Done.** It is sealed on disk. The state file holds ChaChaPoly ciphertext bound to the room, under
+  a key kept in this device's keychain and never synced (`DraftSeal`). A copy of the state file without
+  that keychain cannot open it. `DraftTests` checks that the words never reach the file readable.
+- **Done.** A reply from a banner that could not be sent joins the conversation's draft on a new line,
+  and the not-sent notification says so rather than repeating the words.
+- **Done.** Deleting a conversation deletes its draft.
+
+**Not in this ticket.** A comment on an Outpost post and a new post still lose what was being
+written when their screen closes. Drafts stay on the device they were written on; they do not follow
+the member to their other devices.
+
+**What was observed, 2026-09-19, on gamma.** Trig typed into Checks and went back: the row said
+*Draft half a thought 46250*. The app was quit and opened again: the row still said it, and the
+composer held the words. Sending cleared the row. `RigChecks.testDraftSurvives`.
+
+</details>
+
 **What would falsify the epic.** A message that arrives twice. A message that never arrives and is
 not reported missing. A mark that claims delivery or reading that did not happen. Any of those is
 worse than a crash, because the app looks fine while it is wrong.

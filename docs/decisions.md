@@ -3853,6 +3853,21 @@ was.
 A photo in a conversation is a tap gesture rather than a button, so it had no pointer effect on an
 iPad; it takes the system's highlight when it can be opened, shown or retried.
 
+### A draft is kept per conversation, sealed on this device, and never synced
+
+`RULED` in part — Griff, 2026-09-19: "do draft that survives." The rest is `PROPOSED` by Claude the
+same day.
+
+One draft per conversation, written down as the member pauses, when the conversation closes and when
+the app leaves the foreground, and shown in the rooms list as **Draft**. It is sealed on disk under a
+random key kept in this device's keychain rather than stored as plain JSON. The state file is only
+protected by iOS file protection, and it is the file a backup carries. It stays on the device it was
+written on, as iMessage drafts do; following the member to their Mac would mean putting unsent words
+in the sibling feed.
+
+**What it costs.** A draft started on the iPhone is not there on the Mac. Whether a draft survives a
+restore from a backup onto a new device has not been measured.
+
 ### The Return key says what it does, and every field can put the keyboard away
 
 `PROPOSED` — Claude, 2026-09-19, from Griff's report that the Outpost blurb's key said one thing, did
