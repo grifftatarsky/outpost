@@ -13,16 +13,22 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
     case mailboxAubergine, mailboxHangarSlate, mailboxOliveDrab
     case mailboxWhite, mailboxBlack
 
+    case filledCobalt, filledVerdigris, filledSignalAmber, filledOxblood
+    case filledAubergine, filledHangarSlate, filledOliveDrab
+    case filledWhite, filledBlack
+
     public static let `default` = AppIconChoice.plainLight
 
     public enum Mark: Hashable, Sendable, CaseIterable {
-        case full, antenna, mailbox
+        case full, antenna, mailbox, filledMailbox
 
         public var displayName: String {
             switch self {
             case .full: String(localized: "Classic", bundle: .module, comment: "App icon drawing: the mailbox on its stand")
             case .antenna: String(localized: "Antenna", bundle: .module, comment: "App icon drawing: the mailbox with an antenna")
             case .mailbox: String(localized: "Mailbox", bundle: .module, comment: "App icon drawing: the mailbox alone")
+            case .filledMailbox:
+                String(localized: "Filled mailbox", bundle: .module, comment: "App icon drawing: the mailbox alone, drawn solid")
             }
         }
     }
@@ -30,6 +36,7 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
     public var mark: Mark {
         if rawValue.hasPrefix("antenna") { return .antenna }
         if rawValue.hasPrefix("mailbox") { return .mailbox }
+        if rawValue.hasPrefix("filled") { return .filledMailbox }
         return .full
     }
 
@@ -47,8 +54,8 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
 
     public var ground: Ground {
         switch self {
-        case .plainLight, .antennaWhite, .mailboxWhite: .white
-        case .plainDark, .antennaBlack, .mailboxBlack: .black
+        case .plainLight, .antennaWhite, .mailboxWhite, .filledWhite: .white
+        case .plainDark, .antennaBlack, .mailboxBlack, .filledBlack: .black
         default: .accent
         }
     }
@@ -59,14 +66,16 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
 
     public var accent: Accent? {
         switch self {
-        case .plainLight, .plainDark, .antennaWhite, .antennaBlack, .mailboxWhite, .mailboxBlack: nil
-        case .fullCobalt, .antennaCobalt, .mailboxCobalt: .cobalt
-        case .fullVerdigris, .antennaVerdigris, .mailboxVerdigris: .verdigris
-        case .fullSignalAmber, .antennaSignalAmber, .mailboxSignalAmber: .signalAmber
-        case .fullOxblood, .antennaOxblood, .mailboxOxblood: .oxblood
-        case .fullAubergine, .antennaAubergine, .mailboxAubergine: .aubergine
-        case .fullHangarSlate, .antennaHangarSlate, .mailboxHangarSlate: .hangarSlate
-        case .fullOliveDrab, .antennaOliveDrab, .mailboxOliveDrab: .oliveDrab
+        case .plainLight, .plainDark, .antennaWhite, .antennaBlack, .mailboxWhite, .mailboxBlack, .filledWhite,
+            .filledBlack:
+            nil
+        case .fullCobalt, .antennaCobalt, .mailboxCobalt, .filledCobalt: .cobalt
+        case .fullVerdigris, .antennaVerdigris, .mailboxVerdigris, .filledVerdigris: .verdigris
+        case .fullSignalAmber, .antennaSignalAmber, .mailboxSignalAmber, .filledSignalAmber: .signalAmber
+        case .fullOxblood, .antennaOxblood, .mailboxOxblood, .filledOxblood: .oxblood
+        case .fullAubergine, .antennaAubergine, .mailboxAubergine, .filledAubergine: .aubergine
+        case .fullHangarSlate, .antennaHangarSlate, .mailboxHangarSlate, .filledHangarSlate: .hangarSlate
+        case .fullOliveDrab, .antennaOliveDrab, .mailboxOliveDrab, .filledOliveDrab: .oliveDrab
         }
     }
 
@@ -91,6 +100,7 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
             case .full: "Full"
             case .antenna: "Antenna"
             case .mailbox: "Mailbox"
+            case .filledMailbox: "MailboxFilled"
             }
         switch accent {
         case .cobalt: return prefix + "Cobalt"

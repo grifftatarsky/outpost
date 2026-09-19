@@ -216,7 +216,7 @@ member's own devices keeps the record, so a modified build can show one without 
 member can tell. The badge says somebody chose to show it, and nothing more is claimed for it.
 Detecting TestFlight through `AppTransaction` has not run on a TestFlight build yet.
 
-### App icons are a white drawing on a color, in three drawings
+### App icons are a white drawing on a color, in four drawings
 
 `RULED` — Griff, 2026-09-17: add the antenna and mailbox drawings in every accent and in black and
 white; drop the icons with the drawing stroked in an accent over white or black, because the white
@@ -232,8 +232,14 @@ reads at 4.6:1 on all seven. `Scripts/make-app-icons.py` draws them from `logo_s
 `EveryAppIconShipsTests` fails if a choice, an icon set and the build's list of alternate icons stop
 agreeing.
 
+`RULED` — Griff, 2026-09-19: the mailbox is offered **filled and unfilled**, each in every accent with
+the mailbox in white, and on white (the mailbox black) and on black (the mailbox white). The filled
+drawing had only been used for the white Mailbox icon; it is its own drawing now, *Filled mailbox*,
+and the white Mailbox is unfilled like the rest of its row. Four drawings, thirty-six choices.
+
 **What it costs.** Anybody on a build that used one of the fourteen dropped icons keeps it on the
-Home Screen until they choose again, and the picker shows the default selected meanwhile.
+Home Screen until they choose again, and the picker shows the default selected meanwhile. Somebody who
+chose the white Mailbox sees it unfilled after updating.
 `AppIcon.appiconset` still carries Mac sizes from the earlier drawing; the Mac is not offered.
 
 ## Sync and the log
@@ -3853,20 +3859,28 @@ was.
 A photo in a conversation is a tap gesture rather than a button, so it had no pointer effect on an
 iPad; it takes the system's highlight when it can be opened, shown or retried.
 
-### A draft is kept per conversation, sealed on this device, and never synced
+### A draft is kept per conversation, per post and per comment, sealed on this device, never synced
 
-`RULED` in part — Griff, 2026-09-19: "do draft that survives." The rest is `PROPOSED` by Claude the
-same day.
+`RULED` — Griff, 2026-09-19: "do draft that survives", then "do the drafts for outpost comments, new
+posts. In outpost settings add a button to wipe all drafts." The rest is `PROPOSED` by Claude the same
+day.
 
-One draft per conversation, written down as the member pauses, when the conversation closes and when
-the app leaves the foreground, and shown in the rooms list as **Draft**. It is sealed on disk under a
-random key kept in this device's keychain rather than stored as plain JSON. The state file is only
-protected by iOS file protection, and it is the file a backup carries. It stays on the device it was
-written on, as iMessage drafts do; following the member to their Mac would mean putting unsent words
-in the sibling feed.
+One draft per conversation, one for the new post, and one per post being commented on, written down
+as the member pauses, when the screen closes and when the app leaves the foreground. A conversation's
+shows in the rooms list as **Draft**. They are sealed on disk under a random key kept in this device's
+keychain rather than stored as plain JSON. The state file is only protected by iOS file protection,
+and it is the file a backup carries. Each is bound to its place, so a comment's draft cannot be opened
+as another comment's. They stay on the device they were written on, as iMessage drafts do; following
+the member to their Mac would mean putting unsent words in the sibling feed.
 
-**What it costs.** A draft started on the iPhone is not there on the Mac. Whether a draft survives a
-restore from a backup onto a new device has not been measured.
+**Delete drafts, in Outpost settings, deletes the Outpost's drafts only**: the new post and every
+comment. It asks first and says it cannot be undone. A conversation's draft goes when it is sent or
+emptied. That scope is Claude's reading of "wipe all drafts" placed in Outpost settings, and one
+line widens it.
+
+**What it costs.** A draft started on the iPhone is not there on the Mac. Photos staged on a new post
+are not kept, only its words. Whether a draft survives a restore from a backup onto a new device has
+not been measured.
 
 ### The Return key says what it does, and every field can put the keyboard away
 

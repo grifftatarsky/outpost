@@ -21,7 +21,12 @@ ACCENTS = [
     ("OliveDrab", 0x607120),
 ]
 
-MARK_FILES = [("Full", "outpost-glyph"), ("Antenna", "face_logo_base"), ("Mailbox", "face_logo_base_no_flag")]
+MARK_FILES = [
+    ("Full", "outpost-glyph"),
+    ("Antenna", "face_logo_base"),
+    ("Mailbox", "face_logo_base_no_flag"),
+    ("MailboxFilled", "face_logo_base_no_flag_filled"),
+]
 
 DRAWN_EXTENT = {
     "outpost-glyph": 83.785,
@@ -29,8 +34,6 @@ DRAWN_EXTENT = {
     "face_logo_base_no_flag": 65.6,
     "face_logo_base_no_flag_filled": 65.6,
 }
-
-ON_WHITE = {"Mailbox": "face_logo_base_no_flag_filled"}
 
 GLYPH_SHARE = 0.61
 DARK_GROUND = 0x12141A
@@ -131,8 +134,7 @@ if __name__ == "__main__":
             continue
         for suffix, ground, glyph in (("White", 0xFFFFFF, 0x000000), ("Black", DARK_GROUND, 0xFFFFFF)):
             name = f"AppIcon-{label}{suffix}"
-            source = ON_WHITE.get(label, file) if suffix == "White" else file
-            build(name, drawing(source, ground, glyph))
+            build(name, drawing(file, ground, glyph))
             names.append(name)
     print()
     print(" ".join(names))
