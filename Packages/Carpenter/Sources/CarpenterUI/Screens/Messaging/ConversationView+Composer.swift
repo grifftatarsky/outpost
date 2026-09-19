@@ -65,7 +65,20 @@ extension ConversationView {
             failures += 1
             return
         }
+        await stage(picked)
+    }
 
+    var acceptsDrops: Bool {
+        onAttach != nil && standing == .present && !soloCheck.closesTheComposer
+    }
+
+    func stageDropped(_ items: [PickedMedia]) {
+        problem = nil
+        Diagnostics.sync.notice("media: \(items.count, privacy: .public) item(s) dropped on the composer")
+        Task { for item in items.prefix(10) { await stage(item) } }
+    }
+
+    private func stage(_ picked: PickedMedia) async {
         switch picked {
         case .image(let data):
             let thumbnail = await Task.detached(priority: .userInitiated) {
@@ -215,6 +228,13 @@ extension ConversationView {
                 .lineLimit(1...6)
                 .onSubmit(send)
                 .shiftReturnBreaksLine($draft, selection: $draftSelection)
+                .onChange(of: draft) { old, new in
+                    guard acceptsDrops, let files = DroppedPaths.files(insertedBetween: old, and: new) else {
+                        return
+                    }
+                    draft = old
+                    stageDropped(files.compactMap(DroppedPaths.media))
+                }
 
                 if hasSomethingToSend {
                     Button(action: send) {

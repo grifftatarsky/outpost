@@ -99,6 +99,22 @@ public struct PostComposerView: View {
                 formatBar
             }
             .background(palette.background.ignoresSafeArea())
+            .acceptsDroppedMedia(onAttach != nil, onDrop: stageDropped)
+            .onChange(of: draft) { old, new in
+                guard onAttach != nil, let files = DroppedPaths.files(insertedBetween: old, and: new) else {
+                    return
+                }
+                draft = old
+                stageDropped(files.compactMap(DroppedPaths.media))
+            }
+            .onChange(of: rich) { old, new in
+                guard onAttach != nil,
+                    let files = DroppedPaths.files(
+                        insertedBetween: String(old.characters), and: String(new.characters))
+                else { return }
+                rich = old
+                stageDropped(files.compactMap(DroppedPaths.media))
+            }
             .navigationTitle(Text("New post", bundle: .module))
             #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
@@ -199,11 +215,7 @@ public struct PostComposerView: View {
                 problem = Self.unreadable
                 return
             }
-            let poster = await MediaLoader.poster(of: clip.url)
-            let seconds = try? await VideoPreparer.duration(of: clip.url)
-            photos.append(
-                StagedPhoto(
-                    picked: .video(clip.url), kind: .video, thumbnail: poster, duration: seconds))
+            await stage(.video(clip.url))
             return
         }
 
@@ -211,10 +223,37 @@ public struct PostComposerView: View {
             problem = Self.unreadable
             return
         }
-        let thumbnail = await Task.detached(priority: .userInitiated) {
-            (try? ImagePreparer.thumbnail(data, edge: 240)).map(DecodedImage.init)
-        }.value
-        photos.append(StagedPhoto(picked: .image(data), kind: .image, thumbnail: thumbnail))
+        await stage(.image(data))
+    }
+
+    private func stage(_ picked: PickedMedia) async {
+        guard !isFull else { return }
+        switch picked {
+        case .video(let url):
+            let poster = await MediaLoader.poster(of: url)
+            let seconds = try? await VideoPreparer.duration(of: url)
+            photos.append(StagedPhoto(picked: picked, kind: .video, thumbnail: poster, duration: seconds))
+        case .image(let data):
+            let thumbnail = await Task.detached(priority: .userInitiated) {
+                (try? ImagePreparer.thumbnail(data, edge: 240)).map(DecodedImage.init)
+            }.value
+            photos.append(StagedPhoto(picked: picked, kind: .image, thumbnail: thumbnail))
+        }
+    }
+
+    private func stageDropped(_ items: [PickedMedia]) {
+        problem = nil
+        Task {
+            var refused = 0
+            for item in items {
+                if isFull {
+                    refused += 1
+                } else {
+                    await stage(item)
+                }
+            }
+            if refused > 0 { problem = Self.overflow(refused) }
+        }
     }
 
     private static let unreadable = String(

@@ -3822,6 +3822,36 @@ Measured on the real Mac field after the change: Return sent, Shift-Return and O
 a line. On iPhone and iPad nothing changed; Return already writes a line there, measured again on the
 iPad by `WideLayoutTests.testTheComposerStillTypesAndReturnWritesALine`.
 
+### A photo or clip dragged onto a conversation or a new post is attached, never pasted as its path
+
+`PROPOSED` — Claude, 2026-09-18. Griff: "Drag and drop go."
+
+*Designing for iPadOS* names drag and drop among the things iPad people value most, and a Mac person
+drags a photo from Finder without thinking. A photo or a clip dropped anywhere on a conversation, or
+on the new-post sheet, is staged exactly as if the picker had handed it over — `DroppedMedia` imports
+it as the picker's `PickedMedia`, and from there it takes the same path: `ImagePreparer` redraws it and
+strips every tag before it is sealed. It is accepted only where *Add a photo* would be — attachments
+on, the member still in the room, no solo check holding the composer shut — and a drop highlights the
+conversation with an accent outline while it hovers. A post keeps its own limit of ten, and says how
+many did not fit.
+
+**A defect found while measuring it, and why the fix is where it is.** Dropped on the post's text, a
+photo arrived as its **file path** — `/private/…/Users-…/drop.png` in the body of a post, which would
+have published the member's username and folder to every reader. The conversation's field does the
+same while it is being typed in: AppKit's text views accept file names, and a text view registered for
+a drag's types is found before the drop target around it. Stripping those types from the text views
+was tried and does not hold — a text view registers them again when it takes focus. So the composers
+watch their own text instead: when an edit inserts nothing but the paths of existing image or video
+files, the edit is taken back and those files are staged. `DroppedPathsTests` holds that typing, a
+missing file, a path to a document and deletions are never taken for a drop.
+
+**How it was checked.** `DroppedMediaTests` imports a PNG, a QuickTime file and plain text the way a
+drag delivers them. On a Mac, a real conversation window on screen was handed a real PNG through its
+drag destination, and captured: the hover outline, then the photo staged. The same file handed to the
+post's text view and to the field being typed in came out staged, with no path in the text. **Not
+done:** a drag by a real pointer from Finder or Photos on a Mac or an iPad — the harness hands the
+drop to a destination it chose, and AppKit's own choice of destination was not measured.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

@@ -245,6 +245,7 @@ public struct ConversationView: View {
                 })
         }
         .background(palette.background.ignoresSafeArea())
+        .acceptsDroppedMedia(acceptsDrops, onDrop: stageDropped)
         .haptic(.commit, trigger: sent)
         .task {
             await ActiveSyncLoop.run(
