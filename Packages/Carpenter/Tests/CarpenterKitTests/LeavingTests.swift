@@ -305,7 +305,6 @@ struct SessionLeavingTests {
         let (alice, bob, room, mailbox) = try await joined()
         let them = try #require(bob.enrolment?.identity.id)
 
-        // No `chosenIn`: this member allowed them deliberately, not because of any room.
         try await alice.allowOutpost(them, everything: true)
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)

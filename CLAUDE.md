@@ -37,7 +37,9 @@ So: **read the code, and trust the tests over any prose.** What a thing does is 
 is that way is in `docs/decisions.md` and in the traps below. Do not reintroduce explanatory
 comments. Five comments survive because the lint reads them as mechanism (`cross-fade only`,
 `divides regions`, `intentionally empty`, `reentrancy considered`) plus `// MARK:` and
-`swift-tools-version`. Deleting those breaks the build or the lint.
+`swift-tools-version`. Deleting those breaks the build or the lint. Everything else is refused by
+`Scripts/lint/no-comments.py`: 326 had crept back within a week, every one written by Claude, and
+Griff had them removed on 2026-09-19. A marker is the phrase alone, never followed by a reason.
 
 If you learn something worth keeping, put it in a doc, not above a line.
 

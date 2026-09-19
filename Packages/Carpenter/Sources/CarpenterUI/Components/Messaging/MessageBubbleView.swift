@@ -384,8 +384,6 @@ extension MessageRunView {
 }
 
 extension MessageRunView {
-    /// The message being hidden, short enough for a dialog title. Apple asks that a title fit one
-    /// line; a long message is cut rather than wrapped, and a message with no words says so.
     fileprivate func quoted(_ message: Message) -> Text {
         let words = message.body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !words.isEmpty else { return Text("Hide this?", bundle: .module) }

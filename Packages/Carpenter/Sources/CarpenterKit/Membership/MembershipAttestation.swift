@@ -9,9 +9,6 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
     public var issuedAt: Date
     public var expiresAt: Date
 
-    /// `SHA256` of a nonce the joiner picked before this was signed, taken from their code. The
-    /// verification phrase cannot be computed without the nonce, so the inviter has nothing to
-    /// grind with — see `JoinCommitment`.
     public var joinerCommitment: Data
 
     public var joinerRequires: PhraseLength
@@ -47,7 +44,6 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
         self.signature = signature
     }
 
-    /// What the two of them will read to each other: whichever of the two is stricter.
     public var phraseLength: PhraseLength {
         PhraseLength.agreed(joinerRequires, inviterRequires)
     }
@@ -129,13 +125,6 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
         try verify(against: inviterKeys, at: instant)
     }
 
-    /// The characters two people read to each other, or `nil` until the joiner's nonce has arrived.
-    ///
-    /// The **signature is deliberately not in the transcript.** Two different valid signatures over
-    /// one payload mean the same thing — `verify(against:at:)` checks the signature separately — so
-    /// including it attested nothing extra while handing whoever produced it unlimited post-hoc
-    /// freedom to grind. The nonce is what the transcript takes instead, and unlike a signature it
-    /// was fixed before the signing happened.
     public func verificationPhrase(opening nonce: Data?) -> String? {
         guard let nonce, JoinCommitment.opens(nonce, joinerCommitment) else { return nil }
         return ShortAuthenticationString.derive(
@@ -143,12 +132,6 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
     }
 }
 
-/// What a joiner hands out so somebody can invite them: their public keys, the commitment that
-/// stops the inviter grinding the phrase, and how many characters they insist on reading.
-///
-/// **Single use.** The commitment is only worth anything while its nonce is unknown, so a code
-/// shown to two people would let the first grind against the second. A fresh one is minted each
-/// time the code is shown, and the issuing device keeps the outstanding nonces until they lapse.
 public struct JoinerCode: Hashable, Sendable, Codable {
     public let keys: IdentityPublicKeys
     public let commitment: Data

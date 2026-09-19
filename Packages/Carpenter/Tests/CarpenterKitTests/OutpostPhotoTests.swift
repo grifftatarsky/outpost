@@ -18,7 +18,7 @@ struct OutpostPhotoTests {
         try await alice.post(SendingPhotoTests.photo(caption: "Look at this"), through: mailbox)
         try await alice.post(SendingPhotoTests.photo(), through: mailbox)
 
-        let feed = alice.feed()  // newest first
+        let feed = alice.feed()
         #expect(feed.count == 2)
         let captioned = try #require(feed.last)
         #expect(!captioned.media.isEmpty)

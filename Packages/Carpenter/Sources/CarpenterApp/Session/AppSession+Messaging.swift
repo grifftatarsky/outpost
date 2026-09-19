@@ -554,8 +554,6 @@ extension AppSession {
 
     public var hiddenMessageCount: Int { persisted.preferences.hiddenEntries.count }
 
-    /// How many of this room's messages this member has hidden. A transcript that is quietly short
-    /// reads as something having failed to load, so the room says the number instead.
     public func hiddenMessageCount(in room: RoomID) -> Int {
         let inRoom = Set(projection.messages(in: room).map(\.id.entry))
         return persisted.preferences.hiddenEntries.intersection(inRoom).count

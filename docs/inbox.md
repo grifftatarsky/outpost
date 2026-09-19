@@ -302,13 +302,6 @@ signal. `Scripts/lint/control-label-case.py` now holds the second half automatic
 
 ## Tooling
 
-**The comments are coming back, and nothing stops them.** 231 comment lines in 35 Swift files on
-2026-09-19, a week after 19,000 were deleted — doc comments in `CarpenterKitTesting/Fakes.swift`,
-explanations in `ConversationView+Transcript.swift` and `VerificationPhraseLookup.swift`, among
-others. The lint enforces the five mechanism comments but not the rule itself. Found while fixing a
-bubble layout, not audited. The question for Griff is whether a lint should refuse any `//` other
-than those five and `// MARK:`; until then each one is a claim nobody re-checks.
-
 
 **`RandomSource` is a seam nothing uses.** Every byte of key material comes from CryptoKit directly,
 which is the good outcome, but the file reads as though a seam existed. Delete it or say what it is

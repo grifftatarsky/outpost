@@ -65,10 +65,6 @@ enum LiveRig {
             saving: [], deleting: [zone])
     }
 
-    /// Two identities, one real zone. Both sessions write to and read from the same outbox,
-    /// which is what makes a whole round provable on one Apple Account: a packet is addressed by
-    /// `RecipientTag`, never by account. What this cannot prove is the *share* — a second account
-    /// accepting a `CKShare` — and that stays on the rig.
     static func joined(named name: String = "Lanterns", label: String = "round") async throws -> Pair
     {
         let zone = zone(label)
@@ -183,8 +179,6 @@ struct LiveRoundTests {
         }
         #expect(written.count >= 3, "precondition: three packets reached the zone")
 
-        // Take the middle packet off the server before Bob ever sees it. This is the real-wire
-        // equivalent of `InMemoryMailbox.forget(packet:)`, which the suite above the mailbox uses.
         let vanished = written[1]
         _ = try await CKContainer.default().privateCloudDatabase.modifyRecords(
             saving: [],
@@ -319,34 +313,12 @@ struct LiveRoundTests {
     }
 }
 
-/// Recovery settings and the backfill notice were ruled and built on 2026-09-13, against twenty-three
-/// tests — and the row said "None of it built" until the code was read on 2026-09-14. All of it ran
-/// against the in-memory mailbox. This is the same path over the real transport.
 @Suite(
     "Coming back from a recovery key, on a real CloudKit account",
     .enabled(if: LiveCloudKit.isAsked),
     .serialized)
 @MainActor
 struct LiveRecoveryTests {
-
-    // A third test lived here and was removed on 2026-09-14: a restored device asking for history
-    // and the peer being told over the real wire. It is not a gap in the app.
-    //
-    // A device coming back from a key has no rooms of its own, so `askEverybodyForWhatWasSaid`,
-    // which iterates `rooms`, has nothing to ask about and nobody to ask. It bootstraps from the
-    // sibling feed — which outlives the device that wrote it, so the lost-phone case works in
-    // practice, and `RestoringFromAKeyTests` covers it above the mailbox.
-    //
-    // What could not be made reliable here is CKSyncEngine's timing: two engines in one process,
-    // against one account, did not deliver a feed within seventy-five seconds of polling. The
-    // pieces are each proved elsewhere — the feed's bytes and a sibling receiving it in
-    // `LiveSiblingFeedTests`, the ask and the notice across twenty-four tests above the mailbox.
-    // A test that fails on a timer teaches nothing, so it is written down instead of shipped red.
-    //
-    // It did earn its keep before it went: it is what found that being told about a restore
-    // defaulted to OFF, so anybody who never opened the privacy check-up was never told that a
-    // device signing as them had asked for everything they ever said. Ruled "not a setting —
-    // everybody gets it" on 2026-09-13; fixed and pinned 2026-09-14.
 
     @Test("A restore that asks nobody is silent, and comes back to empty rooms")
     func aQuietRestoreAsksNobody() async throws {

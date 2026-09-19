@@ -340,6 +340,16 @@ else
     printf '\nwarning: python3 not found; the control-label rule did not run.\n'
 fi
 
+# Swift carries no comments but the ones a tool reads. The script's docstring has the history.
+if command -v python3 >/dev/null 2>&1; then
+    comments=$(python3 Scripts/lint/no-comments.py 2>/dev/null)
+    if [ -n "$comments" ]; then
+        report "error: a comment in Swift — put it in docs/, not above a line:" "$comments"
+    fi
+else
+    printf '\nwarning: python3 not found; the no-comments rule did not run.\n'
+fi
+
 # A context menu's preview is hosted outside the hierarchy that themed it, so `\.palette` falls back
 #     to its default — which is dark, unconditionally. A preview that forgets to re-theme itself
 #     draws dark inside a light app, and does it quietly, because every colour in it is a real

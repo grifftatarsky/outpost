@@ -35,8 +35,6 @@ extension ConversationView {
                     }
                 }
 
-                // A transcript that is quietly short reads as something having failed to load, so
-                // the omission is said rather than left to be noticed.
                 if hiddenCount > 0 {
                     hiddenNotice
                         .padding(.top, 10)

@@ -225,9 +225,9 @@ struct HistoryRepairTests {
         #expect(started.stillMissing == 1)
         #expect(started.asked.map(\.id) == [aliceID])
 
-        try await bob.sync(through: mailbox)  // the question goes out
-        try await alice.sync(through: mailbox)  // read, and answered in the same round
-        try await bob.sync(through: mailbox)  // the answer and the entry arrive
+        try await bob.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await bob.sync(through: mailbox)
 
         let status = try #require(bob.repairStatus(of: room))
         #expect(status.isComplete)
@@ -332,16 +332,16 @@ struct HistoryRepairTests {
         try await bob.send("before Carol", to: room)
         try await bob.sync(through: mailbox)
         try await alice.sync(through: mailbox)
-        try await alice.sync(through: mailbox)  // and forwards Bob's words, once, to Bob
+        try await alice.sync(through: mailbox)
 
         await carol.load()
         try await carol.createIdentity(displayName: "Carol")
         let invite = try await alice.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
         try await carol.redeem(inviteCode: try invite.encoded())
-        try await carol.sync(through: mailbox)  // confirms, and asks Alice for the room
-        try await alice.sync(through: mailbox)  // collects the confirmation and relays it in
-        try await alice.sync(through: mailbox)  // sends the room, the relay and the key
-        try await carol.sync(through: mailbox)  // folds it, walks the keys back, and meets Bob
+        try await carol.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await carol.sync(through: mailbox)
         try await carol.sync(through: mailbox)
         try await carol.sync(through: mailbox)
 
@@ -580,9 +580,9 @@ struct AutomaticRepairTests {
         #expect(!bob.messages(in: room).map(\.body).contains("second"), "it was chased too early")
 
         clock.advance(by: AppSession.holeSettlingDelay + 1)
-        try await bob.sync(through: mailbox)   // notices, asks
-        try await alice.sync(through: mailbox) // answers
-        try await bob.sync(through: mailbox)   // folds the answer
+        try await bob.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await bob.sync(through: mailbox)
 
         #expect(bob.messages(in: room).map(\.body).contains("second"))
         #expect(bob.missingHistory(in: room).isEmpty)

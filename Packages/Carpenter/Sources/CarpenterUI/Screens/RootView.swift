@@ -539,8 +539,6 @@ public struct RootView: View {
     public var body: some View {
         layout
             .environment(\.showsHelp, theme.tutorialMode)
-            // A confirmation dialog rather than an alert: Apple's answer for a choice related to an
-            // intentional action, and an alert offers no additional choices related to the action.
             .confirmationDialog(
                 Text("Leave \(leaving?.name ?? "")", bundle: .module),
                 isPresented: Binding(get: { leaving != nil }, set: { if !$0 { leaving = nil } }),

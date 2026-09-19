@@ -195,7 +195,6 @@ struct CloudKitMailboxTests {
             (try await mailbox.pendingAttachments())[attachment.id] == [first, second],
             "precondition: both recipients owe it")
 
-        // One of two. The bytes have to stay, because somebody still has not collected them.
         try await mailbox.acknowledge(attachment: attachment.id, by: [first])
         #expect(
             (try await mailbox.pendingAttachments())[attachment.id] == [second],
@@ -208,7 +207,6 @@ struct CloudKitMailboxTests {
             for the second person and no error anywhere.
             """)
 
-        // The last one. Now it should go.
         try await mailbox.acknowledge(attachment: attachment.id, by: [second])
         #expect(
             (try await mailbox.pendingAttachments())[attachment.id] == nil,

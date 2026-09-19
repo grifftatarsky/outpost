@@ -51,7 +51,7 @@ public struct PostThreadView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     original
                     Rectangle()
-                        // divides regions: the post from the thread answering it
+                        // divides regions
                         .fill(palette.separator)
                         .frame(height: CarpenterMetrics.hairline)
 

@@ -190,9 +190,6 @@ struct AnsweringIsNotTheSameAsNotAnsweringTests {
         await session.load()
         try await session.createIdentity(displayName: "Griff")
 
-        // Being told defaults to ON since 2026-09-14 — everybody gets the notice unless they say
-        // otherwise. The property under test is unchanged: choosing the value that is already the
-        // default must still be recorded as an answer, with a stamp.
         #expect(session.isToldAboutRestores, "the fixture's default changed")
         await session.setToldAboutRestores(true)
 

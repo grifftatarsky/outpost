@@ -5,9 +5,6 @@ import CloudKit
 import Foundation
 import Testing
 
-/// Everything on the Outpost epic was covered by the suite and by nothing else: every one of those
-/// tests ran against the in-memory mailbox, so a picture reaching a reader, a wall's own avatar and
-/// an edit taking effect for somebody else had never touched a real transport. These do.
 @Suite(
     "An Outpost on a real CloudKit account",
     .enabled(if: LiveCloudKit.isAsked),
@@ -15,7 +12,6 @@ import Testing
 @MainActor
 struct LiveOutpostTests {
 
-    /// A small but genuine JPEG, so the bytes that cross are bytes rather than a placeholder.
     private func picture(_ seed: UInt8) -> Data {
         var bytes = Data([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00])
         bytes.append(contentsOf: (0..<4096).map { _ in UInt8.random(in: .min ... .max) })
@@ -30,7 +26,6 @@ struct LiveOutpostTests {
             caption: caption)
     }
 
-    /// Alice lets Bob read her Outpost, and both settle.
     private func withAudience(_ rig: LiveRig.Pair) async throws {
         let bob = try #require(rig.bob.enrolment?.identity.id)
         try await rig.alice.allowOutpost(bob, everything: true)
@@ -75,8 +70,6 @@ struct LiveOutpostTests {
         defer { Task { await LiveRig.tearDown(rig.zone) } }
         try await withAudience(rig)
 
-        // Words, not a photo: a photo post is deliberately not editable, because the fold would
-        // refuse the edit. `OutpostEditingTests` pins that. So this is the case an edit can reach.
         try await rig.alice.send("frist light", to: nil)
         try await rig.alice.send("this one goes", to: nil)
         try await LiveRig.settle([rig.alice, rig.bob], through: rig.mailbox, rounds: 6)
@@ -102,11 +95,7 @@ struct LiveOutpostTests {
         defer { Task { await LiveRig.tearDown(rig.zone) } }
         try await withAudience(rig)
 
-        // Drawing other people's pictures is off until a member turns it on — `showsOthersAvatars`
-        // is nil-means-no — so a reader who never opted in is *correct* to hold no reference.
         await rig.bob.setShowsOthersAvatars(true)
-        // And the author has to be sharing one at all: `sharesAvatar` is nil-means-no, and
-        // `shareOutpostPhoto` quietly withdraws rather than announcing when it is off.
         await rig.alice.setSharesAvatar(true)
         await rig.alice.setShowsPhotoOnOutpost(true)
         try await LiveRig.settle([rig.alice, rig.bob], through: rig.mailbox)

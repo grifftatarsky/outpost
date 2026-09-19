@@ -119,11 +119,6 @@ extension AppSession {
         try await append(try Payload.invitationRescinded(of: attestation), to: attestation.room)
     }
 
-    /// A fresh code for somebody to invite this member with.
-    /// **Not a property, because it mints.** Each code carries a one-time commitment whose nonce
-    /// this device keeps — the commitment is only worth anything while the nonce is unknown, so a
-    /// code shown to two people would let the first grind the second's phrase. Outstanding nonces
-    /// are kept until they lapse, so a code already handed out keeps working.
     func prepareCodeForSharing(replacingSpent spent: Bool = false) {
         guard enrolment != nil else { return }
         guard spent || codeForSharing.isEmpty else { return }
@@ -142,7 +137,6 @@ extension AppSession {
         return (try? code.encoded()) ?? ""
     }
 
-    /// How many characters this member insists on reading. Ten unless they asked for twenty.
     public var phraseLengthThisMemberRequires: PhraseLength {
         persisted.preferences.requiresLongPhrase ? .strict : .standard
     }
@@ -157,8 +151,6 @@ extension AppSession {
         persisted.phraseNonces[commitment.base64EncodedString()]
     }
 
-    /// The characters to read aloud for this invitation, or `nil` while the joiner's nonce has not
-    /// arrived — which for the inviter is until the joiner has opened the invitation.
     public func phrase(for attestation: MembershipAttestation) -> String? {
         attestation.verificationPhrase(opening: nonce(opening: attestation.joinerCommitment))
     }
@@ -303,8 +295,6 @@ extension AppSession {
 
     public var requiresLongPhrase: Bool { persisted.preferences.requiresLongPhrase }
 
-    /// Applies to invitations from here on. Codes already handed out carry the length they were
-    /// minted with, which is why this says "from now on" rather than pretending to be retroactive.
     public func setRequiresLongPhrase(_ required: Bool) async {
         persisted.preferences.setRequiresLongPhrase(required, stamp: stamp())
         await savePreferences()

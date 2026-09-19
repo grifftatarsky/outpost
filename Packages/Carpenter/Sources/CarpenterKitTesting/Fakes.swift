@@ -452,13 +452,6 @@ public actor MemoryLogStore: LogStore {
     }
 }
 
-/// A `ParticipantID` and a `DeviceID` are SHA256 digests, always 32 bytes, and `FeedKey` leans on
-/// that: it concatenates the two without length prefixes, so a fixture of some other width is a
-/// fixture that could not exist in the app. Decoding now refuses one.
-///
-/// Test fixtures used to be written as `Data([1])` because nothing stopped them. `WideID.of([1])`
-/// keeps the seed bytes at the front — so a failure still reads as "the one starting 01" — and pads
-/// to the width the real thing has.
 public enum WideID {
     public static func of(_ seed: [UInt8]) -> Data {
         var bytes = seed
@@ -467,16 +460,6 @@ public enum WideID {
     }
 }
 
-/// Invitations for tests, with a commitment that can be opened again later.
-///
-/// Every real invitation carries `SHA256` of a nonce the joiner picked, and the verification phrase
-/// cannot be computed without that nonce — which is the whole point, because it leaves the inviter
-/// nothing to grind with. A test that built an attestation by hand had no nonce to hand back.
-///
-/// So the nonce here is **derived from the joiner's own signing key** rather than random: any test,
-/// anywhere, can recover it from the attestation without having threaded it through. That is safe
-/// precisely because it is not safe — a predictable nonce is exactly what the commitment is supposed
-/// to prevent, so this must never leave the testing module.
 public enum TestInvite {
     public static func nonce(for joinerKeys: IdentityPublicKeys) -> Data {
         Data(SHA256.hash(data: Data("carpenter.test-nonce".utf8) + joinerKeys.signing))
@@ -515,7 +498,6 @@ public enum TestInvite {
 }
 
 extension MembershipAttestation {
-    /// The phrase, opened with the testing nonce. `nil` in production terms means "not yet".
     public var testPhrase: String {
         verificationPhrase(opening: TestInvite.nonce(for: self)) ?? ""
     }

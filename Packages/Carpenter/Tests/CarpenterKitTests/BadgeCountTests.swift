@@ -25,12 +25,6 @@ struct BadgeCountTests {
 
     // MARK: The four sentences the Notifications screen shows a member
 
-    /*
-     * `BadgeMeaningLine` states, in the present tense, what the number counts at each of the four
-     * settings. Each test here is one of those sentences. They were all false until 2026-09-17:
-     * the count was unread rooms, always, and the switches reached nothing.
-     */
-
     private let both = BadgeChoices(messages: true, outposts: true)
     private let outpostsOnly = BadgeChoices(messages: false, outposts: true)
     private let messagesOnly = BadgeChoices(messages: true, outposts: false)

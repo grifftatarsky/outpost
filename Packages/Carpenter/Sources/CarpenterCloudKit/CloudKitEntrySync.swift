@@ -55,7 +55,7 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
 
     public func start() async throws {
         if engine != nil { return }
-        // reentrancy considered: the start is held as a task and a second caller awaits it.
+        // reentrancy considered
         if let starting { return try await starting.value }
 
         let task = Task { try await bringUp() }

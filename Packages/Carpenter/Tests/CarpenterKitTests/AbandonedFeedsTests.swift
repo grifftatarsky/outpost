@@ -53,11 +53,11 @@ import Testing
     func mixedAccount() {
         let reaped = AbandonedFeeds.reapable(
             among: [
-                .init(device: device(1), writtenAt: longAgo()),   // this device
-                .init(device: device(2), writtenAt: longAgo()),   // enrolled
-                .init(device: device(3), writtenAt: recently()),  // too new
-                .init(device: device(4), writtenAt: nil),         // undateable
-                .init(device: device(5), writtenAt: longAgo()),   // abandoned
+                .init(device: device(1), writtenAt: longAgo()),
+                .init(device: device(2), writtenAt: longAgo()),
+                .init(device: device(3), writtenAt: recently()),
+                .init(device: device(4), writtenAt: nil),
+                .init(device: device(5), writtenAt: longAgo()),
             ],
             knownDevices: [device(1), device(2)], thisDevice: device(1), now: now)
         #expect(reaped == [device(5)])

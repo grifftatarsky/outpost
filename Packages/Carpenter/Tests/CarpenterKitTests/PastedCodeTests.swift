@@ -10,8 +10,6 @@ struct PastedCodeTests {
     private func identity() -> Identity { Identity.generate() }
     private func keys() -> IdentityPublicKeys { identity().publicKeys }
 
-    /// A code is a `JoinerCode` now: the keys, plus the commitment that stops the inviter grinding
-    /// the verification phrase, plus how many characters this person insists on reading.
     private func code(_ keys: IdentityPublicKeys? = nil) -> JoinerCode {
         let mine = keys ?? self.keys()
         return JoinerCode(

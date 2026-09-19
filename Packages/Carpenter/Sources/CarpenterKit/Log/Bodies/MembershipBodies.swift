@@ -14,10 +14,6 @@ public struct JoinConfirmedBody: Hashable, Sendable, Codable {
     public let invitation: Data
     public let joiner: ParticipantID
 
-    /// The joiner opening the commitment they published in their code, **after** the inviter signed.
-    /// Until this arrives the inviter cannot compute the verification phrase, which is the whole
-    /// point: it leaves them nothing to grind with. Carried here rather than in a body of its own
-    /// because this is already the one thing the joiner sends back.
     public let nonce: Data
 
     public let signature: Data

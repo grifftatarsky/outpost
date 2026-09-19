@@ -5,13 +5,6 @@ import CryptoKit
 import Foundation
 import Testing
 
-/// The commitment, end to end through two sessions.
-///
-/// The attack it closes: the party who signs **last** can grind. They see the other side's keys,
-/// then choose the room, the timestamps, their own keypair and — because RFC 8032 does not require a
-/// deterministic nonce — the signature itself, testing candidates offline until the phrase matches
-/// one they already learned from the other side of a man-in-the-middle. Ten characters prices that
-/// attack out of the time an invitation is open; the commitment removes it.
 @MainActor
 @Suite("The verification phrase is committed before it is signed")
 struct PhraseCommitmentTests {
@@ -98,7 +91,6 @@ struct PhraseCommitmentTests {
             by: identity)
         #expect(throws: Never.self) { try honest.verify(confirming: invite.attestation) }
 
-        // Signed properly by the real joiner, but opening with a nonce they never committed to.
         let swapped = try JoinConfirmedBody.signed(
             confirming: invite.attestation, opening: JoinCommitment.nonce(), by: identity)
         #expect(throws: MembershipError.commitmentNotOpened) {

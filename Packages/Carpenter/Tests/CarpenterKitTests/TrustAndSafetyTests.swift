@@ -27,16 +27,6 @@ struct AbuseReportTests {
         #expect(body.contains("no message content and no media"))
     }
 
-    /*
-     * The intake at outpostmessaging.com/report reads this body and refuses
-     * anything that is not it — a fingerprint of exactly 64 lowercase hex, a
-     * short code of exactly six uppercase hex, ISO-8601 times, and one of two
-     * kind phrases. That parser lives in another repository, so nothing the
-     * compiler does can keep the two in step. This test pins the shape from this
-     * side: change the wording and it fails here, which is the signal to change
-     * ReportParser with it. Its own tests pin the same grammar from the other
-     * side, so neither can drift alone.
-     */
     @Test("The body keeps the shape the report form verifies")
     func bodyMatchesWhatTheFormParses() throws {
         let body = report().body
@@ -78,11 +68,6 @@ struct AbuseReportTests {
 
     @Test("A report is text a strict decoder accepts, because the form refuses anything else")
     func bodyIsPlainText() {
-        /*
-         * The form decodes strict UTF-8 and refuses control characters, which is
-         * the gate an image dies at. A report that ever carried one would be
-         * refused by the app's own intake.
-         */
         let body = report(description: "Line one.\n\nLine two, with an em dash — and a quote \u{201C}here\u{201D}.").body
         #expect(body.data(using: .utf8) != nil)
         for character in body.unicodeScalars where character.properties.generalCategory == .control {
@@ -167,8 +152,6 @@ struct DenyListDateTests {
     @Test("An empty list is still a list, and says so with a date rather than a silence")
     func anEmptyListStillHasADate() throws {
         let list = DenyList.bundled()
-        // Emptiness is the honest state today and is not a failure. What would be a failure is
-        // shipping an empty list with no date, because the footer would then promise nothing.
         if list.fingerprints.isEmpty {
             #expect(!list.updated.isEmpty, "an empty list still has to say when it was last looked at")
         }

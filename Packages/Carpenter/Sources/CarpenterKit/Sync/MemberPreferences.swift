@@ -279,9 +279,6 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
 
     public var toldAboutRestores: Stamped<Bool>?
 
-    /// On unless the member turned it off. Ruled 2026-09-13: being told that somebody restored and
-    /// asked for your history is "not a setting — everybody gets it". It was `== true`, so nil meant
-    /// no and anybody who never opened the check-up was never told at all.
     public var isToldAboutRestores: Bool { toldAboutRestores?.value != false }
 
     public mutating func setToldAboutRestores(_ told: Bool, stamp: OrganisationStamp) {
@@ -290,10 +287,6 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
 
     public var longPhrase: Stamped<Bool>?
 
-    /// Off unless the member asked for it. Ten characters is already past any offline grind that
-    /// fits inside an invitation, and the commitment makes the length a second line rather than the
-    /// first one — so twenty is for somebody who wants the check to hold even if the commitment
-    /// itself turns out to be wrong. It costs them ten more characters to read aloud, every time.
     public var requiresLongPhrase: Bool { longPhrase?.value == true }
 
     public mutating func setRequiresLongPhrase(_ requires: Bool, stamp: OrganisationStamp) {

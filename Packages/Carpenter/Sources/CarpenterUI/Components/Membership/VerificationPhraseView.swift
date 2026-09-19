@@ -18,8 +18,6 @@ public struct VerificationPhrase: View {
         self.size = size
     }
 
-    /// Long phrases are read aloud, and twenty unbroken characters are read aloud badly. Five at a
-    /// time is what people already do with anything they dictate.
     private static let group = 5
 
     private var grouped: String {
@@ -73,11 +71,6 @@ public struct VerificationPhrase: View {
     }
 }
 
-/// What stands where the phrase will be, before the other person has opened the invitation.
-///
-/// There is genuinely nothing to show yet: the phrase is derived from a nonce the joiner reveals
-/// only after this invitation was signed, which is what leaves the inviter nothing to grind with.
-/// So this is a real wait, not a spinner over work already done.
 public struct VerificationPhrasePending: View {
     @Environment(\.palette) private var palette
 

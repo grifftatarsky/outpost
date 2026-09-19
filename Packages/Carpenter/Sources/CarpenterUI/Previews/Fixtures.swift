@@ -27,12 +27,6 @@
             EntryHash(rawValue: Data(repeating: seed, count: 32))
         }
 
-        /*
-         * The id is derived from the name rather than generated, so a fixture's fingerprint, the
-         * colour of its avatar disc and every id-derived detail are the same on every launch. The
-         * marketing site's screens are captured from these, and a random id churned every image on
-         * every capture — which makes "did this screen change?" unanswerable from a diff.
-         */
         static func member(_ displayName: String) -> Member {
             Member(id: ParticipantID(rawValue: Data(SHA256.hash(data: Data(displayName.utf8)))),
                    displayName: displayName)

@@ -77,7 +77,7 @@ struct OutpostHeaderDivider: View {
 
     var body: some View {
         Rectangle()
-            // divides regions: the header from the wall
+            // divides regions
             .fill(palette.separator)
             .frame(height: 0.5)
             .padding(.horizontal, CarpenterMetrics.screenMargin)

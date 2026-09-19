@@ -382,9 +382,6 @@ struct BlockingTests {
         await bob.unblock(aliceID)
         #expect(bob.blockedPeople.isEmpty)
 
-        // Since 2026-09-14 a block is not answering rather than not drawing, so the entry was never
-        // collected and cannot appear without a round. What matters is that it was not *lost*: the
-        // sender never had an acknowledgement, so the packet is still on offer and comes back.
         try await bob.sync(through: mailbox, media: mailbox)
 
         #expect(
@@ -532,8 +529,6 @@ struct BlockingTests {
         bob.enforcesDenyList = false
         #expect(!bob.isDenyListed(aliceID))
 
-        // As with a block, a listed sender is not answered, so their words were never collected and
-        // the switch alone cannot show them. A round after the switch must.
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
             try await bob.sync(through: mailbox, media: mailbox)

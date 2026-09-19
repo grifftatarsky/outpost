@@ -123,9 +123,6 @@ extension AppSession {
         notShutOut(outpostAccess.audience(at: clock.now))
     }
 
-    /// Everybody whose Outpost access this member chose *because of* a particular room, and who
-    /// still has it. Leaving that room is the moment to ask about them: the room ends, and the
-    /// access it led to would otherwise stand for ever.
     public func outpostAccessChosen(in room: RoomID) -> [Member] {
         outpostAccess.granted
             .filter { $0.value.value.chosenIn == room && $0.value.value.isAllowed }

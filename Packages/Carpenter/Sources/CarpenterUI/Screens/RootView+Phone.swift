@@ -148,11 +148,6 @@ extension RootView {
 
             Tab(value: PhoneTab.you) {
                 NavigationStack {
-                    // One constructor for both platforms. There were two, with the same very
-                    // long argument list, and they had already drifted: this one omitted
-                    // `tutorialMode`, so *Help on every screen* wrote a preference that nothing
-                    // on iPhone read — the exact defect its own ticket claimed to have fixed,
-                    // fixed on the desktop path only. Found by walking the rig, 2026-09-15.
                     youScreen
                     .navigationDestination(for: ParticipantID.self) { id in
                         outpostDestination(id)
