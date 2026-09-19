@@ -41,8 +41,11 @@ extension AppRootView {
             standing: session.supporterStanding,
             canClaim: session.canClaimSupporterYear,
             showsBadge: session.showsSupporterBadge,
+            sharesBadge: session.sharesSupporterBadge,
             onClaim: { await session.claimSupporterYear() },
-            onShowBadge: { await session.setShowsSupporterBadge($0) })
+            onShowBadge: { await session.setShowsSupporterBadge($0) },
+            onShareBadge: { await session.setSharesSupporterBadge($0) },
+            onAnswerBadge: { await session.answerSupporterBadge($0) })
     }
 
     func settleDistribution() async {

@@ -211,7 +211,7 @@ public struct YouView: View {
             .sizedSheet(isPresented: $welcomingSupporter) {
                 SupporterWelcomeView(
                     owner: owner, ownAvatar: ownAvatar,
-                    onShowBadge: { await supporter?.onShowBadge($0) })
+                    onShowBadge: { await supporter?.onAnswerBadge($0) })
             }
             .sizedSheet(isPresented: $erasing) {
                 EraseEverythingView(onErase: { await onEraseEverything?() })

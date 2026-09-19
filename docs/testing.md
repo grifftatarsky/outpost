@@ -410,3 +410,14 @@ database, and the device-sync subscription behaves that way. It has not been obs
 fire, the fallback is a database subscription on the shared database, still scoped to `MessageBell`,
 at the cost of an occasional banner for somebody who shares the sender's outbox but not the room; only
 `PushChannel` and `CloudKitMailbox+Bell.swift` would change.
+
+## An injected tap does not flip a SwiftUI toggle
+
+Measured on alpha, 2026-09-19, while proving the Supporter badge's two switches. `simctl`-style taps
+land on buttons, navigation rows and sheets, and do **nothing** to a `Toggle` in a settings list — the
+switch stays where it was and no preference is written. A touch path that presses, dwells about ninety
+milliseconds and moves a point before lifting flips it every time.
+
+So: drive a toggle with a touch path, and read `state.json` in the App Group container rather than the
+pixels when a switch is the thing under test. A screenshot of a toggle that did not move looks exactly
+like a toggle that moved back.

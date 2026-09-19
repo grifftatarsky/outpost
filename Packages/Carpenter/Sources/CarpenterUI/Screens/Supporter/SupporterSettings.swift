@@ -5,21 +5,30 @@ public struct SupporterSettings {
     public let standing: SupporterStanding
     public let canClaim: Bool
     public let showsBadge: Bool
+    public let sharesBadge: Bool
     public let onClaim: () async -> Void
     public let onShowBadge: (Bool) async -> Void
+    public let onShareBadge: (Bool) async -> Void
+    public let onAnswerBadge: (Bool) async -> Void
 
     public init(
         standing: SupporterStanding,
         canClaim: Bool,
         showsBadge: Bool,
+        sharesBadge: Bool,
         onClaim: @escaping () async -> Void,
-        onShowBadge: @escaping (Bool) async -> Void
+        onShowBadge: @escaping (Bool) async -> Void,
+        onShareBadge: @escaping (Bool) async -> Void,
+        onAnswerBadge: @escaping (Bool) async -> Void
     ) {
         self.standing = standing
         self.canClaim = canClaim
         self.showsBadge = showsBadge
+        self.sharesBadge = sharesBadge
         self.onClaim = onClaim
         self.onShowBadge = onShowBadge
+        self.onShareBadge = onShareBadge
+        self.onAnswerBadge = onAnswerBadge
     }
 
     var standingSentence: Text {

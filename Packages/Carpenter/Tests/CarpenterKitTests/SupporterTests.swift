@@ -124,7 +124,7 @@ struct SupporterBadgeTests {
         let (alice, bob, mailbox, _) = try await joined()
         let aliceID = try #require(alice.enrolment?.identity.id)
 
-        await alice.setShowsSupporterBadge(true)
+        await alice.answerSupporterBadge(true)
         try await settle(alice, bob, mailbox)
         #expect(!bob.supporterBadges.contains(aliceID), "somebody who is not a Supporter showed a badge")
 
@@ -134,10 +134,69 @@ struct SupporterBadgeTests {
         #expect(bob.supporterBadges.contains(aliceID))
         #expect(alice.supporterBadges.contains(aliceID), "your own badge is not drawn for you")
 
-        await alice.setShowsSupporterBadge(false)
+        await alice.answerSupporterBadge(false)
         try await settle(alice, bob, mailbox)
         #expect(!bob.supporterBadges.contains(aliceID))
         #expect(!alice.supporterBadges.contains(aliceID))
+    }
+
+
+    @Test("Showing it on your own picture tells nobody else")
+    func showingIsLocal() async throws {
+        let (alice, bob, mailbox, _) = try await joined()
+        let aliceID = try #require(alice.enrolment?.identity.id)
+        await alice.claimSupporterYear()
+
+        await alice.setShowsSupporterBadge(true)
+        try await settle(alice, bob, mailbox)
+
+        #expect(alice.supporterBadges.contains(aliceID))
+        #expect(!bob.supporterBadges.contains(aliceID), "a local switch reached somebody else")
+    }
+
+    @Test("Showing it to other people does not put it on your own picture")
+    func sharingIsNotShowing() async throws {
+        let (alice, bob, mailbox, _) = try await joined()
+        let aliceID = try #require(alice.enrolment?.identity.id)
+        await alice.claimSupporterYear()
+
+        await alice.setSharesSupporterBadge(true)
+        try await settle(alice, bob, mailbox)
+
+        #expect(bob.supporterBadges.contains(aliceID))
+        #expect(!alice.supporterBadges.contains(aliceID), "the badge was drawn for somebody who did not ask for it")
+    }
+
+    @Test("Turning off sharing takes it back without touching your own picture")
+    func stoppingSharingKeepsTheLocalOne() async throws {
+        let (alice, bob, mailbox, _) = try await joined()
+        let aliceID = try #require(alice.enrolment?.identity.id)
+        await alice.claimSupporterYear()
+        await alice.answerSupporterBadge(true)
+        try await settle(alice, bob, mailbox)
+        #expect(bob.supporterBadges.contains(aliceID))
+
+        await alice.setSharesSupporterBadge(false)
+        try await settle(alice, bob, mailbox)
+
+        #expect(!bob.supporterBadges.contains(aliceID))
+        #expect(alice.supporterBadges.contains(aliceID), "their own badge went with the shared one")
+    }
+
+    @Test("A state file written before the split shares what it showed")
+    func oneAnswerBecomesTwo() throws {
+        let stamp = OrganisationStamp(at: TestSession.now, device: DeviceID(rawValue: WideID.of([7])))
+        var before = MemberPreferences()
+        before.setShowsSupporterBadge(true, stamp: stamp)
+        let written = try JSONEncoder().encode(before)
+
+        var decoded = try JSONDecoder().decode(MemberPreferences.self, from: written)
+        #expect(decoded.isShowingSupporterBadge)
+        #expect(decoded.isSharingSupporterBadge, "an old answer stopped reaching the people it used to reach")
+
+        decoded.setSharesSupporterBadge(false, stamp: stamp)
+        #expect(decoded.isShowingSupporterBadge)
+        #expect(!decoded.isSharingSupporterBadge)
     }
 
     @Test("The badge goes into a room you join after turning it on")
@@ -145,7 +204,7 @@ struct SupporterBadgeTests {
         let (alice, bob, mailbox, _) = try await joined()
         let aliceID = try #require(alice.enrolment?.identity.id)
         await bob.claimSupporterYear()
-        await bob.setShowsSupporterBadge(true)
+        await bob.answerSupporterBadge(true)
 
         let second = try await alice.createRoom(named: "Second")
         let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: second, mailbox: nil)
@@ -165,7 +224,7 @@ struct SupporterBadgeTests {
         let (alice, bob, mailbox, _) = try await joined()
         let aliceID = try #require(alice.enrolment?.identity.id)
         await alice.claimSupporterYear()
-        await alice.setShowsSupporterBadge(true)
+        await alice.answerSupporterBadge(true)
         try await settle(alice, bob, mailbox)
         #expect(bob.supporterBadges.contains(aliceID))
 
@@ -179,7 +238,7 @@ struct SupporterBadgeTests {
         let (alice, bob, mailbox, _) = try await joined(clock: clock)
         let aliceID = try #require(alice.enrolment?.identity.id)
         await alice.claimSupporterYear()
-        await alice.setShowsSupporterBadge(true)
+        await alice.answerSupporterBadge(true)
         try await settle(alice, bob, mailbox)
 
         alice.distribution = .appStore

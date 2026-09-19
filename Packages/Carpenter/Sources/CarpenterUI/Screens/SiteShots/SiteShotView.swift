@@ -45,8 +45,9 @@
                 RootView.demo(
                     tab: .you,
                     supporter: SupporterSettings(
-                        standing: .none, canClaim: true, showsBadge: false, onClaim: {},
-                        onShowBadge: { _ in }))
+                        standing: .none, canClaim: true, showsBadge: false, sharesBadge: false,
+                        onClaim: {}, onShowBadge: { _ in }, onShareBadge: { _ in },
+                        onAnswerBadge: { _ in }))
             case .conversation: standalone { conversation }
             case .supporter: standalone { welcome }
             case .verify: presented { verify }

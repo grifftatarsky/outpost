@@ -375,8 +375,13 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
     public var supporterYearClaimed: Stamped<Date>?
     public var supporterYearStarted: Stamped<Date>?
     public var showsSupporterBadge: Stamped<Bool>?
+    public var sharesSupporterBadge: Stamped<Bool>?
 
     public var isShowingSupporterBadge: Bool { showsSupporterBadge?.value == true }
+
+    public var isSharingSupporterBadge: Bool {
+        (sharesSupporterBadge ?? showsSupporterBadge)?.value == true
+    }
 
     public mutating func claimSupporterYear(at date: Date, stamp: OrganisationStamp) {
         guard supporterYearClaimed == nil else { return }
@@ -393,11 +398,16 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
             supporterYearClaimed = nil
             supporterYearStarted = nil
             showsSupporterBadge = nil
+            sharesSupporterBadge = nil
         }
     #endif
 
     public mutating func setShowsSupporterBadge(_ shows: Bool, stamp: OrganisationStamp) {
         showsSupporterBadge = Stamped(shows, stamp: stamp)
+    }
+
+    public mutating func setSharesSupporterBadge(_ shares: Bool, stamp: OrganisationStamp) {
+        sharesSupporterBadge = Stamped(shares, stamp: stamp)
     }
 
     public init() {}
@@ -415,7 +425,7 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         case toldAboutRestores, holdsHistoryForRestores, asksPeersForHistory
         case longPhrase
         case deviceNames
-        case supporterYearClaimed, supporterYearStarted, showsSupporterBadge
+        case supporterYearClaimed, supporterYearStarted, showsSupporterBadge, sharesSupporterBadge
     }
 
     public init(from decoder: any Decoder) throws {
@@ -502,6 +512,8 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
             try container.decodeIfPresent(Stamped<Date>.self, forKey: .supporterYearStarted)
         showsSupporterBadge =
             try container.decodeIfPresent(Stamped<Bool>.self, forKey: .showsSupporterBadge)
+        sharesSupporterBadge =
+            try container.decodeIfPresent(Stamped<Bool>.self, forKey: .sharesSupporterBadge)
     }
 
     public func isHidden(_ entry: EntryHash) -> Bool { hidden[entry]?.value == true }
@@ -669,6 +681,10 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         if let theirs = other.showsSupporterBadge {
             merged.showsSupporterBadge =
                 merged.showsSupporterBadge.map { $0.merged(with: theirs) } ?? theirs
+        }
+        if let theirs = other.sharesSupporterBadge {
+            merged.sharesSupporterBadge =
+                merged.sharesSupporterBadge.map { $0.merged(with: theirs) } ?? theirs
         }
         return merged
     }

@@ -7,10 +7,12 @@ struct SupporterView: View {
     let settings: SupporterSettings
 
     @State private var showsBadge: Bool
+    @State private var sharesBadge: Bool
 
     init(settings: SupporterSettings) {
         self.settings = settings
         _showsBadge = State(initialValue: settings.showsBadge)
+        _sharesBadge = State(initialValue: settings.sharesBadge)
     }
 
     var body: some View {
@@ -24,11 +26,23 @@ struct SupporterView: View {
                 Section {
                     SettingsToggle(
                         icon: "checkmark.seal.fill",
-                        title: Text("Show the badge", bundle: .module),
+                        title: Text("Show it on your picture", bundle: .module),
                         isOn: $showsBadge)
                 } footer: {
                     Text(
-                        "A small mark on your picture. Everyone in your conversations sees it, and so does anyone who can read your Outpost.",
+                        "A small mark on your own picture, on this device and your others. Nobody else is told either way.",
+                        bundle: .module)
+                }
+                .groupedRowSurface()
+
+                Section {
+                    SettingsToggle(
+                        icon: "person.2.fill",
+                        title: Text("Show it to other people", bundle: .module),
+                        isOn: $sharesBadge)
+                } footer: {
+                    Text(
+                        "Everyone in your conversations sees it, and so does anyone who can read your Outpost. Turning it off tells them to stop drawing it.",
                         bundle: .module)
                 }
                 .groupedRowSurface()
@@ -60,6 +74,9 @@ struct SupporterView: View {
         .toolbarTitleDisplayMode(.inline)
         .onChange(of: showsBadge) { _, shows in
             Task { await settings.onShowBadge(shows) }
+        }
+        .onChange(of: sharesBadge) { _, shares in
+            Task { await settings.onShareBadge(shares) }
         }
     }
 }

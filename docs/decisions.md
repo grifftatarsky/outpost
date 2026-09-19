@@ -4070,6 +4070,34 @@ SHA-256 fingerprints, so the build cannot say who anybody is, only whether this 
 the check — a banned member's device would still draw a banner for something already collected. Nothing more is
 collected, so the window is what is already on disk.
 
+### The Supporter badge is two switches: one draws it for you, one tells everybody else
+
+`RULED` — Griff, 2026-09-19: "They should have a setting to show it on their own profile, and a
+separate setting to display it to other users." The wording of both rows is Claude's and is a
+placeholder until Griff writes it.
+
+It was one switch until today, and that switch did two unrelated things: it drew the mark on the
+member's own picture, and it wrote a `supporterBadge` entry into every room and Outpost they are in.
+`showsSupporterBadge` now does only the first and touches nothing on the network;
+`sharesSupporterBadge` is the one that announces, and it is the only one a peer can observe.
+`announceSupporterBadge` reads the second, so a member can wear it privately, show it to everybody
+without seeing it themselves, or neither.
+
+**One answer still becomes two.** The question a new Supporter is asked has not been split — answering
+it sets both, through `answerSupporterBadge`. Two questions in a welcome sheet for one mark would be
+worse than the thing this fixed.
+
+**A state file written before today keeps its meaning.** `isSharingSupporterBadge` reads
+`sharesSupporterBadge ?? showsSupporterBadge`, so a member who had said yes under the old single
+switch goes on being seen, rather than silently disappearing from everybody's avatars on the update.
+The pair merges across a member's own devices the way every other preference does, last write per
+field.
+
+**What it costs.** Two switches for one mark is more settings surface than the thing deserves, and the
+second one's effect is invisible from the device that sets it — the proof that it worked is on
+somebody else's phone. `SupporterBadgeTests` holds both directions: showing without sharing reaches
+nobody, sharing without showing reaches a peer and not your own avatar.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

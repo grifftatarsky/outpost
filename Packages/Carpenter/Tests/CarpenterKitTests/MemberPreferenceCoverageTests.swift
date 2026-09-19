@@ -64,6 +64,7 @@ struct MemberPreferenceCoverageTests {
         prefs.claimSupporterYear(at: Date(timeIntervalSince1970: 4_000), stamp: stamp)
         prefs.startSupporterYear(at: Date(timeIntervalSince1970: 5_000), stamp: stamp)
         prefs.setShowsSupporterBadge(true, stamp: stamp)
+        prefs.setSharesSupporterBadge(true, stamp: stamp)
         return prefs
     }
 

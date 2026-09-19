@@ -24,6 +24,10 @@ extension AppSession {
         isSupporter && persisted.preferences.isShowingSupporterBadge
     }
 
+    public var sharesSupporterBadge: Bool {
+        isSupporter && persisted.preferences.isSharingSupporterBadge
+    }
+
     public var supporterBadges: Set<ParticipantID> {
         var shown = projection.supporterBadges.filter { !refusesToDraw(from: $0) }
         if let me = enrolment?.identity.id {
@@ -50,9 +54,21 @@ extension AppSession {
         guard persisted.preferences.showsSupporterBadge?.value != shows else { return }
         persisted.preferences.setShowsSupporterBadge(shows, stamp: stamp())
         await savePreferences()
+        refresh()
+    }
+
+    public func setSharesSupporterBadge(_ shares: Bool) async {
+        guard persisted.preferences.sharesSupporterBadge?.value != shares else { return }
+        persisted.preferences.setSharesSupporterBadge(shares, stamp: stamp())
+        await savePreferences()
         await announceOrReport("your Supporter badge") {
             try await announceSupporterBadge(in: roomsToTell())
         }
+    }
+
+    public func answerSupporterBadge(_ shows: Bool) async {
+        await setShowsSupporterBadge(shows)
+        await setSharesSupporterBadge(shows)
     }
 
     public func refreshSupporterStanding() async {
@@ -70,7 +86,7 @@ extension AppSession {
 
     func announceSupporterBadge(in rooms: [RoomID]) async throws {
         guard let me = enrolment?.identity.id else { return }
-        let shows = showsSupporterBadge
+        let shows = sharesSupporterBadge
         var told = 0
         for room in rooms {
             let last = projection.lastSupporterBadge(of: me, in: room)
