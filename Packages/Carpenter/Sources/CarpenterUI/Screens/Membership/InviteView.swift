@@ -307,6 +307,8 @@ public struct StartInviteView: View {
                     .codeEntry()
                     .lineLimit(4...8)
                     .focused($pasting)
+                    .returnIsDone($code, focus: $pasting)
+                    .doneAboveKeyboard($pasting)
 
                     PasteCodeButton { code = $0 }
                 } header: {
@@ -346,14 +348,6 @@ public struct StartInviteView: View {
             }
             .listSurfaceHidden()
             .scrollDismissesKeyboard(.interactively)
-            .toolbar {
-                ToolbarItem(placement: .keyboard) {
-                    HStack {
-                        Spacer()
-                        Button { pasting = false } label: { Text("Done", bundle: .module) }
-                    }
-                }
-            }
             .pageBackground()
             .navigationTitle(roomName)
             .toolbar {

@@ -461,6 +461,7 @@ struct EditWordsView: View {
             .foregroundStyle(palette.primaryText)
             .lineLimit(1...6)
             .focused($writing)
+            .doneAboveKeyboard($writing)
             .fieldChrome(isFocused: writing)
             .contentShape(.rect)
             .onTapGesture { if !writing { writing = true } }
@@ -491,14 +492,6 @@ struct EditWordsView: View {
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(palette.background.ignoresSafeArea())
-        .toolbar {
-            ToolbarItem(placement: .keyboard) {
-                HStack {
-                    Spacer()
-                    Button { writing = false } label: { Text("Done", bundle: .module) }
-                }
-            }
-        }
         .onAppear {
             text = current
             writing = true

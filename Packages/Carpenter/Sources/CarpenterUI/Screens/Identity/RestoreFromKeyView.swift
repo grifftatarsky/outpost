@@ -63,6 +63,7 @@ public struct RestoreFromKeyView: View {
                     .lineLimit(4...10)
                     .codeEntry()
                     .focused($typing)
+                    .returnIsDone($key, focus: $typing)
                     .onAppear { typing = true }
                 } header: {
                     Text("The file", bundle: .module).sectionHeading()

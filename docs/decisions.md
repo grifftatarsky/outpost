@@ -3853,6 +3853,31 @@ was.
 A photo in a conversation is a tap gesture rather than a button, so it had no pointer effect on an
 iPad; it takes the system's highlight when it can be opened, shown or retried.
 
+### The Return key says what it does, and every field can put the keyboard away
+
+`PROPOSED` — Claude, 2026-09-19, from Griff's report that the Outpost blurb's key said one thing, did
+another, and left no way to close the keyboard short of leaving the page. Read against the HIG's
+*Virtual keyboards*, *Text fields* and *Text views*.
+
+- **A field that is one line of meaning ends on Return**, even when it wraps: the blurb (*A line
+  about you*) and the three pasted codes (their code, the invite, the recovery key). The key says
+  *done*, and pressing it saves and puts the keyboard away. A typed Return is taken back out; a paste
+  that carries line breaks is left alone. `returnIsDone`.
+- **A field for prose writes a line on Return**, with the key left as *return*, and a **Done** button
+  in the standard bar above the keyboard puts it away: a report, a new post, editing a message, and
+  *New tag*, whose Return (*next*) keeps the keyboard up for the next tag. `doneAboveKeyboard`, one
+  construction for all of them.
+- **Short fields** keep `.submitLabel(.done)` or `.next` with the action it names. Emoji search says
+  *search*.
+- **The composers** are unchanged: the arrow in the field sends, Return writes a line, and dragging the
+  conversation down puts the keyboard away, as in Messages.
+
+Measured on an iPhone 17 Pro Max with the software keyboard, every field the demo reaches, by
+`KeyboardChecks`. Editing a message, joining with an invite, restoring from a key and onboarding are
+not reached by the demo and share a measured modifier.
+
+**What it costs.** A blurb or a code cannot hold a line break typed on the keyboard.
+
 ### Shift-Return writes a line on the Mac
 
 `RULED` — Griff, 2026-09-18: "shift return should add a new line."

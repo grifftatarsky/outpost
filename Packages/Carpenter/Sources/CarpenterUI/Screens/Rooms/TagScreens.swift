@@ -9,6 +9,7 @@ public struct RoomTagsSheet: View {
 
     @Binding private var organisation: RoomsListOrganisation
     @State private var newTagName = ""
+    @FocusState private var addingTag: Bool
 
     private let room: RoomSummary
 
@@ -44,8 +45,13 @@ public struct RoomTagsSheet: View {
                         TextField(text: $newTagName) {
                             Text("New tag", bundle: .module)
                         }
+                        .focused($addingTag)
+                        .doneAboveKeyboard($addingTag)
                         .submitLabel(.next)
-                        .onSubmit(createTag)
+                        .onSubmit {
+                            createTag()
+                            addingTag = true
+                        }
 
                         Button(action: createTag) {
                             Image(systemName: "plus.circle.fill")
@@ -97,6 +103,7 @@ public struct ManageTagsView: View {
 
     @Binding private var organisation: RoomsListOrganisation
     @State private var newTagName = ""
+    @FocusState private var addingTag: Bool
 
     private let preferences: RoomsListPreferences
 
@@ -148,8 +155,13 @@ public struct ManageTagsView: View {
                         TextField(text: $newTagName) {
                             Text("New tag", bundle: .module)
                         }
+                        .focused($addingTag)
+                        .doneAboveKeyboard($addingTag)
                         .submitLabel(.next)
-                        .onSubmit(createTag)
+                        .onSubmit {
+                            createTag()
+                            addingTag = true
+                        }
 
                         Button(action: createTag) {
                             Image(systemName: "plus.circle.fill")

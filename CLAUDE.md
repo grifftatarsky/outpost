@@ -319,8 +319,12 @@ Read these before touching sync. Every one cost real time.
   2026-09-11, and four things were wrong at once. Worse, `.submitLabel(.send)` on a
   `TextField(axis: .vertical)` renames the key, takes the newline away and still does not submit:
   measured, then reverted. The arrow in the field sends; ↵ writes a second line; `.onSubmit` is for
-  the Mac. Turn the software keyboard on before looking at any screen with a field in it —
-  [docs/testing.md](docs/testing.md) has the table.
+  the Mac. It happened again on 2026-09-19: the Outpost blurb had `.submitLabel(.done)` on a vertical
+  field, so the key said *done*, wrote a second line, and nothing on the page could put the keyboard
+  away. A multi-line field that should end on Return uses `.returnIsDone`; one that writes lines uses
+  `.doneAboveKeyboard`; `KeyboardChecks` walks every field that has either. Turn the software keyboard
+  on before looking at any screen with a field in it — [docs/testing.md](docs/testing.md) has the
+  table.
 - **Two Apple Accounts are needed to prove anything peer-to-peer.** An account cannot participate in
   its own share, so the second account is not optional. That much stands; the rest of what this
   entry used to say about simulators was wrong and cost a session — see

@@ -49,8 +49,7 @@ public struct OutpostSettingsView: View {
                         draft = String(typed.prefix(MemberProfileBody.blurbLimit))
                     }
                 }
-                .submitLabel(.done)
-                .onSubmit { saveBlurb(now: true) }
+                .returnIsDone($draft) { saveBlurb(now: true) }
             } header: {
                 Text("Your blurb", bundle: .module).sectionHeading()
             } footer: {

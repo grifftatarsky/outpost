@@ -290,6 +290,7 @@ struct EmojiPicker: View {
             TextField(text: $query) {
                 Text("Search by name", bundle: .module)
             }
+            .submitLabel(.search)
             .textFieldStyle(.plain)
             .autocorrectionDisabled()
             #if !os(macOS)

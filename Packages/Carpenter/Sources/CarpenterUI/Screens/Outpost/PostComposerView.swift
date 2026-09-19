@@ -77,6 +77,7 @@ public struct PostComposerView: View {
                 .padding(.horizontal, CarpenterMetrics.screenMargin - 5)
                 .padding(.top, 8)
                 .focused($writing)
+                .doneAboveKeyboard($writing)
                 .overlay(alignment: .topLeading) {
                     if !hasWords {
                         Text("Say something to your Outpost", bundle: .module)

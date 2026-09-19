@@ -329,6 +329,10 @@ four things were wrong at once:
   making it send. It was measured and reverted: the arrow in the field sends, and return writes a
   second line.
 - Nine screens had no way to dismiss the keyboard, which covered the control below the field.
+  It happened again on 2026-09-19 with the Outpost blurb, which is why `KeyboardChecks` exists: with
+  `TEST_RUNNER_OUTPOST_KEYS=1` on an iPhone, it opens each field the demo reaches, presses the Return
+  key the keyboard actually shows, and writes what happened to `/tmp/outpost-keyboard-report.txt`,
+  including whether anything above the keyboard puts it away.
 - A tap gesture over a focused field swallowed caret placement.
 - A sheet with a fixed height hid its own button under a growing field.
 

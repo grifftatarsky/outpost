@@ -71,6 +71,7 @@ public struct ReportView: View {
                         Text("What happened?", bundle: .module)
                     }
                     .lineLimit(3...8)
+                    .doneAboveKeyboard()
                 } header: {
                     Text("In your words", bundle: .module).sectionHeading()
                 } footer: {

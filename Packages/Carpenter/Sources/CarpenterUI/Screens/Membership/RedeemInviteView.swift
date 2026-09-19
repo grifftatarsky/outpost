@@ -161,6 +161,7 @@ public struct RedeemInviteView: View {
             .font(.system(.body, design: .monospaced))
             .codeEntry()
             .lineLimit(4...8)
+            .returnIsDone(Binding(get: { flow.code }, set: { flow.paste($0) }))
             .padding(12)
             .background(
                 palette.elevatedSurface,
