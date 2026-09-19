@@ -286,6 +286,7 @@ public struct MessageRunView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: run.isMine ? .trailing : .leading)
+            .fixedSize(horizontal: false, vertical: true)
             .transition(
                 reduceMotion ? .opacity : .messageArrival(isMine: run.isMine))
         }

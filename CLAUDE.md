@@ -297,6 +297,13 @@ Read these before touching sync. Every one cost real time.
   packet found under yesterday's is still that peer's.
 - **The extension is a second process** over one App Group container. Both processes log which
   container they resolved; `appGroup=false` means it is reading a private, permanently-behind copy.
+- **A stack given an exact height shares it out, and the tallest child loses.** A message with
+  reactions was cut to one line with an ellipsis whenever it shared a run with another message; alone
+  it was fine. The top padding that makes room for the reaction chips made it the taller child, and
+  the run's `VStack`, placed at a fixed height, offered it an equal share. A spacer did the same;
+  `.fixedSize(horizontal: false, vertical: true)` on each message is the fix. Found on 2026-09-19
+  only because App Store screenshots were being read closely. A text that ends in "…" where nothing
+  set a line limit is this.
 - **Returning from a notification handler is the app being suspended.** Whatever the handler starts
   and does not await never happens. Two faults, both measured on the rig on 2026-09-19 while building
   Reply from a banner. First, a cold background launch **does** create the SwiftUI window, so a view's
