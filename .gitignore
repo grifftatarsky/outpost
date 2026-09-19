@@ -23,3 +23,6 @@ docs/vendor/
 # JetBrains project files. Machine-local IDE scaffolding, and this repo is built with Xcode and
 # swift build — these were swept in by a `git add -A` on 2026-09-02 and never belonged here.
 .idea/
+
+# Python bytecode from Scripts/lint and the icon scripts.
+__pycache__/
