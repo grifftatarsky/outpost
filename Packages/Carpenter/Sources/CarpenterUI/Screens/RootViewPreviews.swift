@@ -46,6 +46,7 @@ import SwiftUI
                 owner: Fixtures.cassilda,
                 posts: Fixtures.posts,
                 audiencePeople: Fixtures.audiencePeople,
+                outpostAudience: Fixtures.outpostAudience,
                 conversation: Fixtures.conversation,
                 openRoom: openRoom,
                 organisation: Fixtures.organisation,

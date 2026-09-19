@@ -387,6 +387,14 @@ were measured on 2026-09-19:
 - `testQuadSaysWhatItIsTold` (`RIG_SAY`) and `testQuadSeesTheAnswer` (`RIG_EXPECT`) are the other
   end. The second scrolls, because a conversation with unread messages opens at the first of them.
 
+## App Store screenshots
+
+`Scripts/app-store-shots.sh <iphone-udid> <ipad-udid> <out-dir>` boots both, sets the status bar to
+9:41, runs `AppStoreShots.testShots` (`TEST_RUNNER_OUTPOST_SHOTS=1`) over the `--site-shot` fixtures,
+and exports the images at App Store sizes. The iPad set is captured in landscape and comes out turned,
+with an orientation tag that would turn it again; the script fixes both. What the set is and why is in
+[App Store](app-store.md#6-screenshots).
+
 ## Still unproved underneath notifications
 
 Does a `CKRecordZoneSubscription` on your own private zone fire when a share participant writes into

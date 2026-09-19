@@ -14,6 +14,7 @@
         case checkup
         case notifications
         case photos
+        case compare
 
         public static let argument = "--site-shot"
 
@@ -30,6 +31,7 @@
     public struct SiteShotView: View {
         private let shot: SiteShot
         @State private var theme = ThemeStore()
+        @Environment(\.horizontalSizeClass) private var sizeClass
 
         public init(_ shot: SiteShot) {
             self.shot = shot
@@ -47,16 +49,28 @@
                         onShowBadge: { _ in }))
             case .conversation: standalone { conversation }
             case .supporter: standalone { welcome }
-            case .verify: standalone { verify }
+            case .verify: presented { verify }
             case .audience: standalone { audience }
             case .checkup: standalone { checkup }
             case .notifications: standalone { PermissionExplainerView(.notifications, onContinue: {}) }
             case .photos: standalone { PermissionExplainerView(.photos, onContinue: {}) }
+            case .compare: presented { compare }
             }
         }
 
         private func shell(_ tab: RootView.PhoneTab) -> some View {
             RootView.demo(tab: tab)
+        }
+
+        @ViewBuilder
+        private func presented<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+            if sizeClass == .regular {
+                let sheet = standalone(content)
+                RootView.demo(tab: .rooms, opening: Fixtures.hangar7.id)
+                    .sizedSheet(isPresented: .constant(true)) { sheet }
+            } else {
+                standalone(content)
+            }
         }
 
         private func standalone(@ViewBuilder _ content: () -> some View) -> some View {
@@ -94,13 +108,22 @@
             }
         }
 
+        private var compare: some View {
+            NavigationStack {
+                CompareCodesView(
+                    person: VerifiedPerson(
+                        person: Fixtures.hastur, phrase: "K9F4V9TR2M", confirmedAt: nil,
+                        comparison: [
+                            ComparisonHalf(name: Fixtures.cassilda.displayName, half: "3HMQ7VXC4P", isViewer: true),
+                            ComparisonHalf(name: Fixtures.hastur.displayName, half: "R8WD2KTN6F", isViewer: false),
+                        ]),
+                    isOffered: true, onMarkChecked: { _ in })
+            }
+        }
+
         private var audience: some View {
-            var access = OutpostAccess()
-            access.allow(
-                Fixtures.hastur.id,
-                stamp: OrganisationStamp(at: .distantPast, device: DeviceID(rawValue: Data([1]))))
-            return NavigationStack {
-                OutpostAudienceView(people: [Fixtures.hastur, Fixtures.camilla], access: access)
+            NavigationStack {
+                OutpostAudienceView(Fixtures.outpostAudience)
             }
         }
 

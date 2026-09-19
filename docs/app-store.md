@@ -361,16 +361,36 @@ the second device is missing.
 
 ## 6. Screenshots
 
-iPhone only: the 6.9-inch size. Screenshots come from the real build.
+The app target builds for iPhone and iPad, so App Store Connect asks for both sizes. Whether iPad
+ships in the first version is Griff's call; the iPad set is ready either way. Both come from the real
+build, drawing the Debug build's `--site-shot` fixtures, made by `Scripts/app-store-shots.sh`:
 
-Suggested order, leading with what is different:
+| Set | Simulator | Pixels |
+|---|---|---|
+| iPhone 6.9-inch | `outpost-shots-iphone`, iPhone 17 Pro Max | 1320 × 2868, portrait |
+| iPad 13-inch | `outpost-shots-ipad`, iPad Pro 13-inch (M5) | 2752 × 2064, landscape |
 
-1. The rooms list
-2. A conversation with photos and reactions
-3. Somebody's Outpost
-4. Choosing who sees your Outpost
-5. The ten characters at an invitation
-6. Who you are talking to
+Order, leading with what is different:
+
+1. The rooms list. On iPad, with a conversation open beside it.
+2. A conversation with reactions. On iPad the first shot already carries it.
+3. Somebody's Outpost.
+4. Choosing who sees your Outpost. On iPad, the panel beside your own Outpost.
+5. The ten characters: comparing codes with somebody.
+6. Who you are talking to. On iPad, as the sheet it is.
+
+**Photos are not in the conversation yet.** The fixture has none, the project holds no photo it could
+use, and a generated one looks generated. Two or three photos Griff owns, added to the fixture, finish
+shot 2.
+
+**Two things the export has to fix, both measured 2026-09-19.** An iPad captured in landscape comes out
+as portrait pixels with the picture turned; and every capture carries an `eXIf` chunk whose
+orientation still says "turn" after the pixels have been turned, so a viewer that honours it turns
+them again. The script rotates the iPad set and keeps only the image and colour chunks.
+
+The fixtures had to agree with themselves before they could be shown: the composer said *Visible to
+14 people* beside a panel saying *Nobody can see your Outpost*, and *Hangar 7* had three members
+and four people listed in it. The audience count is derived from the fixture's audience now.
 
 ---
 

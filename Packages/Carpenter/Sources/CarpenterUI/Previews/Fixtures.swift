@@ -100,7 +100,9 @@
                 body:
                     "The Graf Zeppelin crossed the Pacific in 1929 with a grand piano on board. Aluminum. 350 pounds.",
                 sentAt: ago(hours: 4, minutes: 38),
-                isMine: false
+                isMine: false,
+                reactions: ["😮": [cassilda.id, yhtill.id, camilla.id]],
+                myReaction: "😮"
             ),
             Message(
                 id: fixtureMessageID(2),
@@ -121,7 +123,9 @@
                 author: yhtill,
                 body: "I found a 1936 Hindenburg deck plan at an estate sale for eleven dollars",
                 sentAt: ago(hours: 4, minutes: 32),
-                isMine: false
+                isMine: false,
+                reactions: ["🔥": [hastur.id, cassilda.id], "❤️": [camilla.id]],
+                myReaction: "🔥"
             ),
             Message(
                 id: fixtureMessageID(5),
@@ -178,7 +182,7 @@
 
         static let hangar7 = RoomSummary(
             name: "Hangar 7",
-            memberCount: 3,
+            memberCount: 4,
             lastAuthor: camilla,
             lastMessage: "door code changed again, it's the year the R101 went down",
             lastActivity: ago(days: 2),
@@ -222,6 +226,23 @@
                 postedAt: ago(minutes: 22),
                 commentCount: 4,
                 reactions: ["🔥": [cassilda.id, camilla.id, yhtill.id], "😮": [thale.id, naotalba.id]]
+            ),
+            OutpostPost(
+                id: PostID(entry: hash(17)),
+                author: hastur,
+                body:
+                    "Someone at the museum let me hold a scrap of original outer cover. I will be talking about this for weeks.",
+                postedAt: ago(hours: 3),
+                commentCount: 6,
+                reactions: ["😮": [cassilda.id, thale.id], "❤️": [camilla.id]]
+            ),
+            OutpostPost(
+                id: PostID(entry: hash(18)),
+                author: hastur,
+                body: "Mooring mast visit on Saturday. Bring gloves; the railings are older than any of us.",
+                postedAt: ago(days: 1),
+                commentCount: 2,
+                reactions: ["👍": [yhtill.id, naotalba.id, cassilda.id]]
             ),
             OutpostPost(
                 id: PostID(entry: hash(15)),
@@ -275,7 +296,14 @@
                 hasCustomFace: false, showsPicture: true)
         }
 
-        static let audiencePeople = 14
+        static var outpostAudience: OutpostAudience {
+            var access = OutpostAccess()
+            access.allow(
+                hastur.id, stamp: OrganisationStamp(at: .distantPast, device: DeviceID(rawValue: Data([1]))))
+            return OutpostAudience(people: [hastur, camilla], access: access)
+        }
+
+        static var audiencePeople: Int { outpostAudience.count }
 
         struct PreviewClock: Clock {
             var now: Date { Fixtures.now }
