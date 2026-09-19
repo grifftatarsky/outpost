@@ -1,7 +1,7 @@
 ---
 title: The crypto, written down
 layout: default
-nav_order: 13
+nav_order: 3
 ---
 
 # The crypto, written down
@@ -271,7 +271,7 @@ anywhere, it is a reader who can see more than intended and no log line anywhere
 
 **Known weakness, named.** Two members advancing the same room's epoch at the same moment is
 untested and genuinely needs three real accounts to exercise — it is on
-[Proofs a rig cannot run](proofs-a-rig-cannot-run.md). If rival advances resolved differently on
+[Still to prove](roadmap.md#still-to-prove). If rival advances resolved differently on
 different devices, members would hold different secrets for the same epoch number and messages would
 stop opening for somebody, with no error that names the cause.
 
@@ -886,7 +886,7 @@ Stated so that nobody mistakes its silence for a clean bill.
 - **No adversarial testing of the membership state machine.** Roster, invitation and removal logic
   is heavily unit-tested against intended behavior, and has not been fuzzed or attacked.
 - **Three-party cryptographic cases are unproven over the real transport**, and genuinely need a
-  third Apple Account — see [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
+  third Apple Account — see [Still to prove](roadmap.md#still-to-prove).
 - **No post-quantum anything.** X25519 and Ed25519 are classical. Harvest-now-decrypt-later applies
   to everything this app has ever sealed. Apple's own protocols are moving to PQ3-style hybrids; this
   is not, and nothing in the product should imply otherwise.

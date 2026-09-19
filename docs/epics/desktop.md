@@ -24,7 +24,7 @@ The Mac and iPad as first-class, rather than a stretched phone.
 > below is what it would take to change that.
 >
 > **Sequenced after TestFlight** since 2026-09-14, and lifted out of the iPhone roadmap into
-> [the desktop roadmap](../desktop-roadmap.md), which is the status of record for this epic.
+> [the desktop roadmap](../roadmap.md#the-desktop), which is the status of record for this epic.
 
 The Mac runs, in a window, with three columns and a sidebar that folds, and its keychain behaves like
 iOS's rather than the legacy file-based one; without that, a Mac and an iPhone carried two different

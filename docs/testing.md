@@ -1,15 +1,16 @@
 ---
 title: Testing
 layout: default
-nav_order: 5
+nav_order: 14
 ---
 
 # Testing
 
 {: .no_toc }
 
-The suites, what each can and cannot prove, and the practical knowledge for running the app on
-simulators. How four simulators are set up and driven is on [the simulator rig](simulator-rig.md).
+How to test this app: which suite to run, how to run it against a real CloudKit account, and how to
+drive a simulator through the things a suite cannot reach. Setting the four simulators up is on
+[the simulator rig](simulator-rig.md).
 
 Two constraints shape everything here.
 
@@ -30,7 +31,7 @@ Each epic has its own test plan: [Messaging](epics/messaging.md#test-plan),
 1. TOC
 {:toc}
 
-## The suites
+## Run the suites
 
 | Suite | Runs with | Covers |
 |---|---|---|
@@ -44,7 +45,7 @@ CI runs the package suite, the lint and a build of the app.
 It proves the logic above the mailbox and cannot prove CloudKit. A run on two accounts is the only
 evidence for anything that crosses the network.
 
-## The fakes are held to the real seams
+## Hold a fake to the real seam
 
 A fake that is easier than the real thing hides the bugs the real thing has. `TheFakeIsNoEasierTests`
 holds each in-memory stand-in to the rules its real counterpart enforces. Add to it when a seam gains
@@ -66,14 +67,14 @@ on, and the one refusal the real keychain has, reading before first unlock, has 
 One fake is harsher than the real thing, and stays that way: `InMemoryMailbox` is one pool where the
 real mailbox is a zone per account, so a test can only ever sweep more than the app would.
 
-## The app and the extension
+## Run the app and the extension together
 
 The notification extension opens the shared container through the `readOnly` view of its
 `SessionStorage` and writes nothing. `AppAndExtensionTests` checks that a setting and a room deletion
 the app saves while the extension runs both survive, that an extension round leaves the shared files
 byte-for-byte unchanged, and that the app still collects what the extension saw.
 
-## The CloudKit integration tests
+## Run against a real CloudKit account
 
 `App/CarpenterTests` holds tests that run against a **real account and container**. They are off
 unless asked for, so CI and ordinary runs pass without an account:
@@ -109,7 +110,7 @@ fresh zone per test.
 | `LiveSiblingFeedTests` | the raw record fetched back and searched for the epoch key it must not contain; the payload being exactly the ciphertext; a stranger's identity refused; a second device opening it |
 | `LiveOutpostTests` | a post with a photo arriving with identical bytes; an edit and a deletion; an Outpost's own photo; a post unseen by its reader and never by its author; a comment crossing back |
 
-What this cannot cover is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md): a second account
+What this cannot cover is on [Still to prove](roadmap.md#still-to-prove): a second account
 accepting a share, a third party, and anything that needs a phone.
 
 Preferences default to off, and a test that forgets one looks like a delivery failure. Showing other
@@ -137,7 +138,7 @@ other with the room key crossing, and the bell rung.
 nothing reached the app. Griff had seen a banner arrive on a real phone on 2026-09-09, and simulators
 are a poor witness for subscription delivery, so this does not show push is broken; it shows the app
 cannot depend on push, which is why it syncs in the foreground. See
-[Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
+[Still to prove](roadmap.md#still-to-prove).
 
 **Two things these tests have taught.** A subscription saved for a record type the container does not
 have is saved anyway, and then breaks `allSubscriptions()` for the whole database; the app now says so
@@ -157,7 +158,7 @@ come back; turn it on in Settings.
 **Record types are created by the app.** `MessageBell` is seeded into a `Schema` zone before the
 subscription that names it. Look for `bell: record type present` in the log.
 
-## Reading the logs
+## Read the logs
 
 The app writes its own diagnostics to a file in the App Group container, and the pull script
 collects them:
@@ -194,7 +195,7 @@ push on that device yet.
 container, so it is reading a private copy that is always behind, and that looks exactly like a slow
 process.
 
-## Tools in a debug build
+## Reach for the debug tools
 
 You › **Debug**, which is compiled out of a release build; `Scripts/check-release-leaves.sh` checks the
 release binary for their words.
@@ -215,7 +216,7 @@ release binary for their words.
 person or the other person in a Solo, and says who has answered and what is still missing, counted
 from the log when it is read.
 
-## Launch arguments for the rig
+## Launch arguments
 
 Debug builds only, all named in `Scripts/check-release-leaves.sh`, and defined in
 `App/Carpenter/UITestMode.swift` and `FileMailbox.swift`. The rig's own flags, such as `--mailbox`,
@@ -231,7 +232,7 @@ are on [the simulator rig](simulator-rig.md).
   the way `--mailbox` does, while the transport stays CloudKit. It is how two Apple Accounts exchange
   codes on the rig without the simulator's pasteboard, which is the Mac's clipboard.
 
-## Accessibility
+## Test accessibility
 
 **Apple's audit.** `AccessibilityAuditTests` calls `performAccessibilityAudit()` on the rooms list,
 every tab and a conversation: contrast, hit regions, clipped text and missing descriptions, over the
@@ -319,7 +320,7 @@ the VoiceOver cost is recorded there.
 
 In Xcode 27, `Simulator.app` is replaced by `DeviceHub.app` in `Xcode.app/Contents/Applications`.
 
-## Practical traps on the rig
+## Traps to avoid on the rig
 
 **Turn the software keyboard on before looking at any screen with a field.** A simulator types on the
 Mac's keyboard, which no member has. The first time a software keyboard was raised, on 2026-09-11,
@@ -372,7 +373,7 @@ clock froze, and the first explanation written down was Xcode 27. Sampling the a
 thread busy decrypting the log inside a render. See
 [Architecture](architecture.md#nothing-a-render-reads-may-do-work).
 
-## Driving a notification's actions
+## Drive a notification's actions
 
 A message banner's Reply and Mark as Read can be driven on the rig without a real push. The pieces
 were measured on 2026-09-19:
@@ -394,7 +395,7 @@ were measured on 2026-09-19:
 - `testQuadSaysWhatItIsTold` (`RIG_SAY`) and `testQuadSeesTheAnswer` (`RIG_EXPECT`) are the other
   end. The second scrolls, because a conversation with unread messages opens at the first of them.
 
-## App Store screenshots
+## Take App Store screenshots
 
 `Scripts/app-store-shots.sh <iphone-udid> <ipad-udid> <out-dir>` boots both, sets the status bar to
 9:41, runs `AppStoreShots.testShots` (`TEST_RUNNER_OUTPOST_SHOTS=1`) over the `--site-shot` fixtures,
@@ -402,16 +403,14 @@ and exports the images at App Store sizes. The iPad set is captured in landscape
 with an orientation tag that would turn it again; the script fixes both. What the set is and why is in
 [App Store](app-store.md#6-screenshots).
 
-## Still unproved underneath notifications
+## What a run here cannot settle
 
-Does a `CKRecordZoneSubscription` on your own private zone fire when a share participant writes into
-that zone? It should, because a participant's write into your shared zone lands in your private
-database, and the device-sync subscription behaves that way. It has not been observed. If it does not
-fire, the fallback is a database subscription on the shared database, still scoped to `MessageBell`,
-at the cost of an occasional banner for somebody who shares the sender's outbox but not the room; only
-`PushChannel` and `CloudKitMailbox+Bell.swift` would change.
+Anything needing a push to arrive, a Focus to exist, a second real device, or a third Apple Account
+is listed on [Still to prove](roadmap.md#still-to-prove). Run what you can here and say plainly which
+device it ran on.
 
-## An injected tap does not flip a SwiftUI toggle
+
+## Drive a toggle with a touch path, not a tap
 
 Measured on alpha, 2026-09-19, while proving the Supporter badge's two switches. `simctl`-style taps
 land on buttons, navigation rows and sheets, and do **nothing** to a `Toggle` in a settings list — the

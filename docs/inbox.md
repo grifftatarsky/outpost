@@ -1,7 +1,7 @@
 ---
 title: Inbox
 layout: default
-nav_order: 7
+nav_order: 12
 ---
 
 # Inbox
@@ -53,7 +53,7 @@ it. A resource loader that decrypts ranges on demand would end it.
 **A stolen unlocked phone gives up everything that phone holds.** The in-app lock was canceled because
 iOS locks apps behind Face ID better than the app could. What is still missing is a sentence where the
 app talks about what somebody with the phone can see, saying that iOS does the locking; see
-[After TestFlight](after-testflight.md#an-in-app-lock).
+[the roadmap](roadmap.md#an-in-app-lock).
 
 ## Membership
 
@@ -67,7 +67,7 @@ removal needs a third participant.
 **Two concurrent advances could mint rival secrets for the same epoch.** *An audit's claim, not
 verified.* One advancer is guaranteed per membership change, not per epoch number; two members removing
 the same person inside one sync interval is the natural way in. On
-[Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
+[Still to prove](roadmap.md#still-to-prove).
 
 **A removal entry is offered once and its address expires.** *An audit's claim, not verified.* The entry
 goes out once under one day's tag, and readers look back seven days, so a device that does not sync

@@ -1,7 +1,7 @@
 ---
 title: App Store
 layout: default
-nav_order: 8
+nav_order: 13
 ---
 
 # App Store Connect
@@ -406,7 +406,7 @@ and four people listed in it. The audience count is derived from the fixture's a
 ## 7. Before submitting
 
 What has to be true for the listing, the review notes and the website to be honest. The operational
-list is on [Before TestFlight](pre-testflight.md#operational).
+list is on [Before a build goes out](epics/foundations.md#operational).
 
 | Item | Where it stands |
 |---|---|

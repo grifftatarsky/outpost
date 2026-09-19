@@ -1,7 +1,8 @@
 ---
 title: Design
 layout: default
-nav_order: 6
+nav_order: 16
+nav_exclude: true
 has_children: true
 ---
 
@@ -9,7 +10,9 @@ has_children: true
 
 {: .no_toc }
 
-Where the boards are, what they cover, and what they do not.
+The drawings the app was built against, kept for reference. They are a record of what was
+intended, not a description of what the build does — where the two disagree, the build is the
+answer and [the roadmap](roadmap.md) is its status.
 
 1. TOC
 {:toc}

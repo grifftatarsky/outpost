@@ -1,20 +1,21 @@
 ---
 title: The simulator rig
 layout: default
-nav_order: 8
+nav_order: 15
 ---
 
 # The simulator rig
 
 {: .no_toc }
 
-The simulators this project proves things on, what a simulator can and cannot do, and how to drive
-them without taking over the Mac.
+How to set up the four simulators this project tests on, how to drive them without taking over the
+Mac, and what a simulator can and cannot do. Read this before running anything that crosses the
+network.
 
 1. TOC
 {:toc}
 
-## The devices
+## Set up the devices
 
 Four simulators on iOS 26.5, run from Xcode 27, where `DeviceHub.app` replaces `Simulator.app`.
 **Address them by `id=<UDID>`, never by `name=`**: a duplicate name once made `xcodebuild` boot a
@@ -57,7 +58,7 @@ fail, the last obscurely on the `@Entry` macro. Point it at Xcode:
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 
-## Driving the devices without taking the Mac
+## Drive them without taking the Mac
 
 **Use XCUITest, one step per test, one device per run.** It runs headless and takes no focus from
 whoever is using the Mac. Do not bring a simulator window to the front or send it keystrokes while
@@ -100,7 +101,7 @@ Reading a device's log:
 xcrun simctl spawn <udid> log show --last 3m --predicate 'subsystem CONTAINS "microgpt"' --style compact --info --debug
 ```
 
-## What a simulator can actually do
+## Know what a simulator can do
 
 Measured on this Mac on 2026-09-01 and since.
 
@@ -198,7 +199,7 @@ exists.
 **A simulator's iCloud can drop into `Account Temporarily Unavailable`** (CKError 36) and stay there
 until the password is entered again in Settings. Only the account owner can do that.
 
-## A quiet peer is usually a dead share
+## When a peer goes quiet
 
 On 2026-09-04 beta read only its own zone all day, and a message from alpha was never found, because
 the share link in alpha's standing offer had gone stale. It healed without re-pairing once alpha
@@ -215,7 +216,7 @@ within the minute so the other reads the dead offer. The other logs `1 failed` w
 exist*, retracts the offer, and shows `[own]`. Relaunch the first, and within about 90 seconds the
 other reads `found 1 offer(s)` and `2 zone(s) reachable`.
 
-## Members without an Apple Account
+## Add members without an Apple Account
 
 A third Apple Account needs a phone number Griff does not have, so gamma and delta run with **no
 Apple Account** and a different transport. A signed-out simulator has no CloudKit (every request
@@ -273,11 +274,11 @@ devices is **proved above the mailbox** and has to be written down in those word
   key. And a round acknowledged packets before writing them to disk, so terminating a device mid-round
   lost a comment on both ends; that comment is still gone.
 
-## What the rig cannot prove
+## What to take somewhere else
 
 A second Apple Account can accept a share; nothing else on this Mac can. A third party over CloudKit
-needs a third account, and one member on two devices needs two phones. Those proofs are listed, with
-what shipping without them costs, on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
+needs a third account, and one member on two devices needs two phones. Those are listed on
+[Still to prove](roadmap.md#still-to-prove).
 
-Anything that crosses the network is unproven until it has run on two accounts, and a simulator is
-weaker evidence than a phone for anything involving the keychain or the extension. Say which was used.
+When you write down what you saw, say which device it ran on. A simulator is weaker evidence than a
+phone for anything involving the keychain or the notification extension.

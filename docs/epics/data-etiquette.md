@@ -227,7 +227,7 @@ a purge is visible and not deniable. The three smaller questions are answered to
 reached.* push opens the room and leaves a permanent line in the transcript; a member who never
 answers does not consent and does not refuse, so the request stays open until its starter closes it;
 and hiding reaches a member's own devices. See [Decisions](../decisions.md#deleting-and-hiding). What
-is left is building consensus deletion, [after TestFlight](../after-testflight.md#consensus-hard-delete).
+is left is building consensus deletion, [after TestFlight](../roadmap.md#consensus-hard-delete).
 
 ## Test plan
 

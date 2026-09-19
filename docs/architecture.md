@@ -1,7 +1,7 @@
 ---
 title: Architecture
 layout: default
-nav_order: 3
+nav_order: 2
 ---
 
 # Architecture
@@ -30,6 +30,21 @@ clock, time and room are outside that seal, and the whole entry then travels ins
 again for its recipients. So the transport cannot tell a message from a reaction.
 
 No member can remove another member's entry from the log. A deletion is an entry too.
+
+## Joining a room
+
+A room's key is a chain: each epoch's link wraps the one before it, so somebody holding the current
+key and every link can unwind the whole conversation. That is what an invitation decides. An
+invitation that carries the history hands over the links; one that does not turns the key as the
+member joins and never hands over the older ones, so what was said before them stays sealed.
+
+The floor is recorded in the log, on the admission, where every member's app reads it — one member
+turns the key, because two turning it at once would write two different secrets for the same epoch.
+Until that floor is recorded, every member withholds the room's keys from the new member.
+
+Because the roster is rebuilt by folding entries a member can open, a member who joins from today
+would otherwise see a room with nobody in it. The room restates itself at the new key: its members,
+its founder, its name and its rule.
 
 ## The mailbox
 

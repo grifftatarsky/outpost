@@ -199,7 +199,7 @@ no before the system asks, so that the prompt is not a surprise.
 
 - Device: seen on both simulators at first ready screen, 2026-09-04.
 
-**Detail.** [Before TestFlight](../pre-testflight.md#permissions-explained-before-they-are-asked).
+**Detail.** [Before a build goes out](foundations.md#permissions-explained-before-they-are-asked).
 
 </details>
 

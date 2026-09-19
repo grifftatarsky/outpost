@@ -1,7 +1,7 @@
 ---
 title: Decisions
 layout: default
-nav_order: 4
+nav_order: 11
 ---
 
 # Decisions
@@ -703,7 +703,7 @@ open, and the brief describes it.
 **One premise did not hold at the time.** Griff also gave a pre-TestFlight vulnerability scan as a
 reason, and there was none. There is now: `Scripts/scan-for-vulnerabilities.sh` checks dependencies,
 runs the static analyzer and scans for secrets, and ran clean on 2026-09-15 (see
-[Before TestFlight](pre-testflight.md#a-scan-for-known-vulnerabilities)).
+[Before a build goes out](epics/foundations.md#a-scan-for-known-vulnerabilities)).
 
 ### What the crypto brief found
 
@@ -1786,7 +1786,7 @@ happens, (b) tell people in the Notifications screen that they can allow this ap
 is one sentence and true, or (c) offer to write a member into Contacts, which is a new permission for
 a small gain. **(b) was proposed and is built**: the Notifications page says a Focus silences these
 like anything else and that the app can be allowed in a Focus. (c) is not proposed, and Griff parked
-it on 2026-09-15 ([After TestFlight](after-testflight.md#whether-a-member-can-be-written-into-contacts)).
+it on 2026-09-15 ([the roadmap](roadmap.md#whether-a-member-can-be-written-into-contacts)).
 
 ### The notification extension writes nothing to the container it shares
 
@@ -2020,7 +2020,7 @@ and is gone. That is the honest reading and the screens must not dress it as any
 transcript that closed over the gap would be the app hiding a thing it knows. It also means a purge
 is not deniable: everybody who folded the room knows the message existed and knows it was destroyed.
 
-**What this unblocks.** [Consensus hard delete](after-testflight.md#consensus-hard-delete) and
+**What this unblocks.** [Consensus hard delete](roadmap.md#consensus-hard-delete) and
 *Hard delete and desync quietly*, which were both blocked on this one question and were moved past
 TestFlight on 2026-09-14.
 
@@ -3304,7 +3304,7 @@ Mutation-checked by dropping the `showsSender` guard, which the test catches.
 **What it costs.** `IncomingMessage`, `IncomingPost` and `RestoreAsk` gained public initialisers so a
 test can build one. They are read-only value types, so the cost is API surface rather than a new way
 to be wrong. What is still not proved is delivery: no push has reached the extension on this rig, and
-that is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
+that is on [Still to prove](roadmap.md#still-to-prove).
 
 ### The kit takes no framework dependency
 

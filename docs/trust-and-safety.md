@@ -1,7 +1,7 @@
 ---
 title: Trust and safety
 layout: default
-nav_order: 9
+nav_order: 6
 ---
 
 # Trust and safety
@@ -102,6 +102,12 @@ As of 2026-09-17.
   fingerprints, covered by the app's code signature.
 - **Built.** A listed sender is treated as blocked on receive.
 - **Built.** `Scripts/denylist.py add <fingerprint>` appends to the list and updates the date.
+- **Built.** A member who finds **their own** fingerprint on the list is locked out of the app: one
+  red screen, and a button to the contact form's *A mistaken ban*. It does not read the member's
+  deny-list switch — that switch is their choice about whose words they are shown, not a choice
+  about whether the app applies its own list to them — and no sync round runs while it holds, so the
+  device stops offering and collecting. It reaches somebody when they take the update and never
+  before, and starting again as a stranger costs them every conversation the old identity held.
 
 ### Documents
 

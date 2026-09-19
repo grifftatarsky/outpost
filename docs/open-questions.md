@@ -1,7 +1,7 @@
 ---
 title: Open questions
 layout: default
-nav_order: 2
+nav_order: 10
 ---
 
 # Open questions
@@ -210,4 +210,4 @@ the period, the price, and a way to restore.
 with the machinery both need now built), and an in-app lock (canceled). Reasons on
 [After TestFlight](after-testflight.md).
 
-**Desktop.** Its own [roadmap](desktop-roadmap.md), sequenced after TestFlight.
+**Desktop.** Its own [roadmap](roadmap.md#the-desktop), sequenced after TestFlight.

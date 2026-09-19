@@ -1089,7 +1089,7 @@ met to get my words and nothing else about me.
   because they have met.
 - **Done.** The triangle, on three devices and three identities, **above the mailbox**. 2026-09-09.
 - **Deferred.** The triangle on real accounts, over CloudKit. Needs a third Apple Account — moved off the
-  roadmap 2026-09-14 to [Proofs a rig cannot run](../proofs-a-rig-cannot-run.md).
+  roadmap 2026-09-14 to [Still to prove](../roadmap.md#still-to-prove).
 
 **Testing.** `AnonymousCommentTests` (five) and `OutpostConsentTests` (four). Four were
 mutation-proven on 2026-09-07: dropping the anonymizing branch, sealing a comment under the writer's
@@ -1232,7 +1232,7 @@ same entry. Design it as a second recipient, not as a second entry.
   and the owner read it.
 - **Done.** The triangle, on three devices and three identities, **above the mailbox**. 2026-09-09.
 - **Deferred.** The triangle on real accounts, over CloudKit. Needs a third Apple Account — moved off the
-  roadmap 2026-09-14 to [Proofs a rig cannot run](../proofs-a-rig-cannot-run.md).
+  roadmap 2026-09-14 to [Still to prove](../roadmap.md#still-to-prove).
 
 **Testing.** `closedIsInvisibleToTheRest` is the one that matters and it is the triangle in memory:
 Carol writes closed under Bob's post having let in Bob and not Alice; Bob reads it, Alice's thread is
@@ -1319,7 +1319,7 @@ so that the two-member proof is not the whole proof.
 - **Deferred.** Rival epoch secrets from two concurrent advances resolve identically everywhere.
 - **Deferred.** The narrow grant window with a stale roster is closed end to end.
 
-Both deferred items moved to [Proofs a rig cannot run](../proofs-a-rig-cannot-run.md) on 2026-09-14: two
+Both deferred items moved to [Still to prove](../roadmap.md#still-to-prove) on 2026-09-14: two
 members can only advance an epoch concurrently if there are three parties, and there are two
 accounts.
 

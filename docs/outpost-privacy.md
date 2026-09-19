@@ -1,7 +1,7 @@
 ---
 title: What an Outpost promises
 layout: default
-nav_order: 11
+nav_order: 5
 ---
 
 # What an Outpost promises

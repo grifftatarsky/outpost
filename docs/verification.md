@@ -1,7 +1,7 @@
 ---
 title: Who you are talking to
 layout: default
-nav_order: 12
+nav_order: 4
 ---
 
 # Who you are talking to
@@ -70,10 +70,28 @@ After the characters, the room's own rule applies. The characters are required u
 |---|---|
 | **Anyone invited** | B is in. The characters are the only check. |
 | **You approve** | waiting for whoever started the room |
-| **One person decides** | waiting for the member chosen. If they have left, nobody can approve, and the room says so. |
-| **Any member approves** | waiting; the first yes lets B in |
-| **Several members approve** | waiting, with a running count |
-| **Everyone approves** | waiting for every member; one silence holds it |
+| **Named members decide** | waiting for anybody on the list A chose. Any one of them is enough. If every one of them has left, nobody can approve, and the room says so. |
+| **Any member approves** | waiting; the first yes lets B in, and it cannot be A |
+| **Several members approve** | waiting, with a running count, and A is not one of the count |
+| **Everyone approves** | waiting for every member but A; one silence holds it |
+
+**The person who invited B does not get to agree to their own invitation** under the last three.
+They are not asked and their answer is not counted — unless there is nobody else who could agree, in
+which case the room would otherwise be unable to let anybody in and A's answer stands.
+
+## What B can read once they are in
+
+A carries the answer in the invitation itself, signed with the rest of it, so B and every member
+read the same one:
+
+- **Everything said in this room.** B is handed the keys that unwind the whole chain, so the
+  conversation opens from its first line. This cannot be taken back.
+- **Only what is said from now on.** The room's key turns as B joins and B is never handed the older
+  ones, so what was said before stays sealed to them. Everybody already in the room keeps it, and can
+  still tell B what was said — it is a promise every member's app keeps, not a wall between people.
+
+Because a room's membership is rebuilt from entries a member can open, a room joined this way
+restates itself at the new key: who is in it, who started it, its name and its rule.
 
 ## A room nobody has joined yet
 
@@ -119,7 +137,7 @@ sends nothing. When somebody you talk to adds a device, a dated line saying so a
 conversations with them.
 
 This part is built and has run on the rig; the line about a new device needs one account on two
-phones to see, and is listed on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
+phones to see, and is listed on [Still to prove](roadmap.md#still-to-prove).
 
 ## What this cost
 

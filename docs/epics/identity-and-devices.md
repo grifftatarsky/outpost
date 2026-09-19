@@ -334,7 +334,7 @@ conversation. A stolen unlocked phone currently gives up every room in full.
 
 - **Canceled.** Canceled 2026-09-14 — iOS locks apps behind Face ID already, and does it better than this
   could: Settings › Face ID & Passcode › Require Face ID for individual apps. See
-  [After TestFlight](../after-testflight.md#an-in-app-lock). The honesty half of the third criterion
+  [the roadmap](../roadmap.md#an-in-app-lock). The honesty half of the third criterion
   survives as a copy change on the Safety pages.
 - **Canceled.** Locks behind the device's own biometric or passcode, on a timeout the member chooses.
 - **Canceled.** Notification content respects the lock and interacts correctly with notification previews.
