@@ -641,13 +641,17 @@ back, even after the app was closed, so that leaving a sentence half-written doe
   and the not-sent notification says so rather than repeating the words.
 - **Done.** Deleting a conversation deletes its draft.
 
-**Not in this ticket.** A comment on an Outpost post and a new post still lose what was being
-written when their screen closes. Drafts stay on the device they were written on; they do not follow
-the member to their other devices.
+- **Done.** A new post and a comment on any post keep a draft the same way, by one shared modifier
+  (`keepsDraft`), and **Delete drafts** in Outpost settings deletes them after asking.
+
+**Not in this ticket.** Photos staged on a new post are not kept, only the words. Drafts stay on the
+device they were written on; they do not follow the member to their other devices.
 
 **What was observed, 2026-09-19, on gamma.** Trig typed into Checks and went back: the row said
 *Draft half a thought 46250*. The app was quit and opened again: the row still said it, and the
-composer held the words. Sending cleared the row. `RigChecks.testDraftSurvives`.
+composer held the words. Sending cleared the row. `RigChecks.testDraftSurvives`. A new post, cancelled
+and reopened, held its words; Outpost settings showed *Delete drafts 1*, deleted it after the
+confirmation, and the next new post was empty. `RigChecks.testOutpostDraftsAndIcons`.
 
 </details>
 

@@ -97,7 +97,7 @@ public final class AppSession {
     var head: EntryLink?
     var accountRegistry: (any AccountRegistry)?
     var loadInFlight: Task<Void, Never>?
-    public internal(set) var drafts: [RoomID: String] = [:]
+    public internal(set) var drafts: [DraftPlace: String] = [:]
     var draftKey: Data?
     var draftKeyInFlight: Task<Data, any Error>?
 

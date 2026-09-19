@@ -5,6 +5,8 @@ import SwiftUI
 
 public struct OutpostSettingsView: View {
     @Environment(\.palette) private var palette
+    @Environment(\.drafts) private var drafts
+    @State private var deletingDrafts = false
 
     private let settings: OutpostSettings
 
@@ -66,6 +68,7 @@ public struct OutpostSettingsView: View {
             picture
             stranger
             participation
+            draftsSection
         }
         .onDisappear {
             saveBlurb(now: true)
@@ -227,6 +230,40 @@ public struct OutpostSettingsView: View {
                 bundle: .module)
         }
         .groupedRowSurface()
+    }
+
+    @ViewBuilder private var draftsSection: some View {
+        if let drafts {
+            let count = drafts.outpostCount()
+            Section {
+                Button(role: .destructive) { deletingDrafts = true } label: {
+                    SettingsRow(
+                        icon: "trash", tone: .destructive,
+                        title: Text("Delete drafts", bundle: .module),
+                        detail: Text(verbatim: "\(count)"))
+                }
+                .tint(palette.destructive)
+                .disabled(count == 0)
+                .confirmationDialog(
+                    Text("Delete ^[\(count) draft](inflect: true)?", bundle: .module),
+                    isPresented: $deletingDrafts, titleVisibility: .visible
+                ) {
+                    Button(role: .destructive) { drafts.deleteOutpost() } label: {
+                        Text("Delete drafts", bundle: .module)
+                    }
+                    .tint(palette.destructive)
+                } message: {
+                    Text("They cannot be brought back.", bundle: .module)
+                }
+            } header: {
+                Text("Drafts", bundle: .module).sectionHeading()
+            } footer: {
+                Text(
+                    "A post or a comment you started and did not send is kept on this device, sealed, until you send it or delete it here. Drafts in conversations are not affected.",
+                    bundle: .module)
+            }
+            .groupedRowSurface()
+        }
     }
 
     private var reviewing: Binding<Bool> {

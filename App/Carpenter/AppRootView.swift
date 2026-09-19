@@ -346,11 +346,13 @@ struct AppRootView: View {
     var draftKeeping: DraftKeeping {
         let session = session
         return DraftKeeping(
-            read: { session.draft(in: $0) },
-            keep: { words, room in
-                session.noteDraft(words, in: room)
-                Task { await session.sealDraft(in: room) }
-            })
+            read: { session.draft(at: $0) },
+            keep: { words, place in
+                session.noteDraft(words, at: place)
+                Task { await session.sealDraft(at: place) }
+            },
+            outpostCount: { session.outpostDraftCount },
+            deleteOutpost: { Task { await session.deleteOutpostDrafts() } })
     }
 
     @ViewBuilder

@@ -442,6 +442,70 @@ final class RigChecks: XCTestCase {
         shoot(app, "draft-3-sent")
     }
 
+    func testOutpostDraftsAndIcons() throws {
+        let words = "a post about masts \(Int(Date().timeIntervalSince1970) % 100_000)"
+        let app = launch()
+        sleep(3)
+        settle(app)
+        app.buttons["Outposts"].firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(tapIfThere(app, "New post", timeout: 4))
+        let editor = app.textViews.firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        for _ in 0..<4 where app.keyboards.count == 0 {
+            editor.tap()
+            sleep(1)
+        }
+        editor.typeText(words)
+        sleep(1)
+        XCTAssertTrue(tapIfThere(app, "Cancel", timeout: 3))
+        sleep(2)
+        XCTAssertTrue(tapIfThere(app, "New post", timeout: 4))
+        let again = app.textViews.firstMatch
+        XCTAssertTrue(again.waitForExistence(timeout: 5))
+        XCTAssertTrue(((again.value as? String) ?? "").contains(words), "the new post did not keep its draft")
+        shoot(app, "od-1-kept")
+        XCTAssertTrue(tapIfThere(app, "Cancel", timeout: 3))
+        sleep(1)
+
+        app.buttons["You"].firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(tapIfThere(app, "Outpost settings", timeout: 4, scrolling: true))
+        sleep(1)
+        let delete = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Delete drafts'")).firstMatch
+        for _ in 0..<6 where !delete.isHittable { app.swipeUp() }
+        XCTAssertTrue(delete.exists && delete.isEnabled, "Delete drafts is missing or has nothing to delete")
+        shoot(app, "od-2-settings")
+        delete.tap()
+        sleep(1)
+        shoot(app, "od-3-confirm")
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Delete drafts'")).allElementsBoundByIndex.last
+        confirm?.tap()
+        sleep(2)
+        XCTAssertFalse(delete.isEnabled, "Delete drafts still has something to delete")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        sleep(1)
+
+        app.buttons["Outposts"].firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(tapIfThere(app, "New post", timeout: 4))
+        let cleared = app.textViews.firstMatch
+        XCTAssertTrue(cleared.waitForExistence(timeout: 5))
+        XCTAssertFalse(((cleared.value as? String) ?? "").contains(words), "the draft came back after it was deleted")
+        XCTAssertTrue(tapIfThere(app, "Cancel", timeout: 3))
+        sleep(1)
+
+        app.buttons["You"].firstMatch.tap()
+        sleep(1)
+        _ = tapIfThere(app, "Appearance", timeout: 3, scrolling: true)
+        sleep(1)
+        _ = tapIfThere(app, "App icon", timeout: 3, scrolling: true)
+        sleep(2)
+        for _ in 0..<6 where !app.staticTexts["Filled mailbox"].exists { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Filled mailbox"].exists, "the icon picker has no filled mailbox")
+        shoot(app, "od-4-icons")
+    }
+
     func testAnswerFromTheBanner() throws {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let env = ProcessInfo.processInfo.environment

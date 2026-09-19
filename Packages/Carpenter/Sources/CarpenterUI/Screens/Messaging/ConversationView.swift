@@ -10,9 +10,6 @@ public struct ConversationView: View {
     @Environment(\.notGoneHelp) var notGoneHelp
 
     @State var draft = ""
-    @State var keepingDraft: Task<Void, Never>?
-    @Environment(\.drafts) var drafts
-    @Environment(\.scenePhase) var scenePhase
     @State var draftSelection: TextSelection?
     @FocusState var composing: Bool
     @State var sent = 0

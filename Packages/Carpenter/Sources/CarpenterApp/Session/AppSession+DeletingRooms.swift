@@ -42,7 +42,7 @@ extension AppSession {
         let keptDrafts = persisted.drafts
         for room in rooms {
             persisted.drafts[room] = nil
-            drafts[room] = nil
+            drafts[.room(room)] = nil
         }
 
         do {

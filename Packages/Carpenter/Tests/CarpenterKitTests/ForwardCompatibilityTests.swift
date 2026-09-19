@@ -112,6 +112,8 @@ extension ForwardCompatibilityTests {
         state.wantsWhatWasSaid = true
         state.turnsEveryKeyAfterALoss = true
         state.drafts = [room: Data([9, 9, 9])]
+        state.newPostDraft = Data([8, 8])
+        state.commentDrafts = [PostID(entry: entry): Data([7, 7])]
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)

@@ -30,6 +30,8 @@ struct PersistedState: Codable, Sendable {
     var wantsWhatWasSaid = false
     var turnsEveryKeyAfterALoss = false
     var drafts: [RoomID: Data] = [:]
+    var newPostDraft: Data?
+    var commentDrafts: [PostID: Data] = [:]
 
     private enum RetiredKeys: String, CodingKey { case awaitingJoin }
     var knownKeys: [IdentityPublicKeys] = []
@@ -37,6 +39,28 @@ struct PersistedState: Codable, Sendable {
     var revocations: [DeviceRevocation] = []
 
     var preferences = MemberPreferences()
+
+    func sealedDraft(at place: DraftPlace) -> Data? {
+        switch place {
+        case .room(let room): drafts[room]
+        case .newPost: newPostDraft
+        case .comment(let post): commentDrafts[post]
+        }
+    }
+
+    mutating func setSealedDraft(_ sealed: Data?, at place: DraftPlace) {
+        switch place {
+        case .room(let room): drafts[room] = sealed
+        case .newPost: newPostDraft = sealed
+        case .comment(let post): commentDrafts[post] = sealed
+        }
+    }
+
+    var sealedDrafts: [(DraftPlace, Data)] {
+        drafts.map { (.room($0.key), $0.value) }
+            + (newPostDraft.map { [(.newPost, $0)] } ?? [])
+            + commentDrafts.map { (.comment($0.key), $0.value) }
+    }
 
     init() {}
 
@@ -108,5 +132,7 @@ struct PersistedState: Codable, Sendable {
         turnsEveryKeyAfterALoss =
             try container.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
         drafts = try container.decodeIfPresent([RoomID: Data].self, forKey: .drafts) ?? [:]
+        newPostDraft = try container.decodeIfPresent(Data.self, forKey: .newPostDraft)
+        commentDrafts = try container.decodeIfPresent([PostID: Data].self, forKey: .commentDrafts) ?? [:]
     }
 }

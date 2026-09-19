@@ -6,30 +6,6 @@ import SwiftUI
 // MARK: Writing, staging and sending
 
 extension ConversationView {
-    func bringBackDraft() {
-        guard draft.isEmpty, let kept = drafts?.read(room.id), !kept.isEmpty else { return }
-        draft = kept
-    }
-
-    func keepDraftSoon() {
-        guard let drafts else { return }
-        keepingDraft?.cancel()
-        guard drafts.read(room.id) != draft else { return }
-        let words = draft
-        let room = room.id
-        keepingDraft = Task {
-            try? await Task.sleep(for: .milliseconds(600))
-            guard !Task.isCancelled else { return }
-            drafts.keep(words, room)
-        }
-    }
-
-    func keepDraftNow() {
-        keepingDraft?.cancel()
-        guard let drafts, drafts.read(room.id) != draft else { return }
-        drafts.keep(draft, room.id)
-    }
-
     private func send() {
         let outgoing = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         let items = staged
@@ -45,7 +21,6 @@ extension ConversationView {
         }
 
         draft = ""
-        keepDraftNow()
         staged = []
         sent += 1
         problem = nil
@@ -259,17 +234,12 @@ extension ConversationView {
                 #endif
                 .onChange(of: draft) { old, new in
                     guard acceptsDrops, let files = DroppedPaths.filesArriving(between: old, and: new) else {
-                        keepDraftSoon()
                         return
                     }
                     draft = old
                     stageDropped(files.compactMap(DroppedPaths.media))
                 }
-                .onAppear(perform: bringBackDraft)
-                .onDisappear(perform: keepDraftNow)
-                .onChange(of: scenePhase) { _, phase in
-                    if phase != .active { keepDraftNow() }
-                }
+                .keepsDraft(draft, at: .room(room.id)) { draft = $0 }
 
                 if hasSomethingToSend {
                     Button(action: send) {

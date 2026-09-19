@@ -8,20 +8,26 @@ public enum DraftSeal {
         SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
     }
 
-    public static func seal(_ words: String, in room: RoomID, with key: Data) throws -> Data {
+    public static func seal(_ words: String, at place: DraftPlace, with key: Data) throws -> Data {
         try ChaChaPoly.seal(
-            Data(words.utf8), using: SymmetricKey(data: key), authenticating: boundTo(room)
+            Data(words.utf8), using: SymmetricKey(data: key), authenticating: boundTo(place)
         ).combined
     }
 
-    public static func open(_ sealed: Data, in room: RoomID, with key: Data) -> String? {
+    public static func open(_ sealed: Data, at place: DraftPlace, with key: Data) -> String? {
         guard let box = try? ChaChaPoly.SealedBox(combined: sealed),
-            let words = try? ChaChaPoly.open(box, using: SymmetricKey(data: key), authenticating: boundTo(room))
+            let words = try? ChaChaPoly.open(box, using: SymmetricKey(data: key), authenticating: boundTo(place))
         else { return nil }
         return String(data: words, encoding: .utf8)
     }
 
-    private static func boundTo(_ room: RoomID) -> Data {
-        CanonicalBytes.payload(domain: Domain.draft, fields: [room.canonicalBytes])
+    private static func boundTo(_ place: DraftPlace) -> Data {
+        let fields: [Data] =
+            switch place {
+            case .room(let room): [room.canonicalBytes]
+            case .newPost: [Data("new post".utf8), Data()]
+            case .comment(let post): [Data("comment".utf8), post.entry.rawValue]
+            }
+        return CanonicalBytes.payload(domain: Domain.draft, fields: fields)
     }
 }

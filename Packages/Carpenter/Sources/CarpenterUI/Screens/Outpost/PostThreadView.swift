@@ -165,6 +165,7 @@ public struct PostThreadView: View {
                 Task { await onComment(outgoing) }
             }
             .shiftReturnBreaksLine($draft, selection: $draftSelection)
+            .keepsDraft(draft, at: .comment(post.id)) { draft = $0 }
 
             if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button {

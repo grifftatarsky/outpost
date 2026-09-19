@@ -119,6 +119,10 @@ public struct PostComposerView: View {
                 rich = old
                 stageDropped(files.compactMap(DroppedPaths.media))
             }
+            .keepsDraft(outgoing, at: .newPost) { kept in
+                rich = FormattedText.attributed(PostFormatting.runs(in: kept), palette: palette)
+                draft = kept
+            }
             .navigationTitle(Text("New post", bundle: .module))
             #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
@@ -191,6 +195,8 @@ public struct PostComposerView: View {
                     problem = failure
                 } else {
                     posted += 1
+                    draft = ""
+                    rich = AttributedString()
                     dismiss()
                 }
             }
@@ -204,6 +210,8 @@ public struct PostComposerView: View {
                     problem = failure
                 } else {
                     posted += 1
+                    draft = ""
+                    rich = AttributedString()
                     dismiss()
                 }
             }

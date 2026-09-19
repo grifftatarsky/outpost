@@ -94,7 +94,7 @@ struct RoomRow: View {
     }
 
     private var detail: Text {
-        let draft = drafts?.read(room.id) ?? ""
+        let draft = drafts?.read(.room(room.id)) ?? ""
         if !draft.isEmpty {
             let words = draft.split(whereSeparator: \.isNewline).joined(separator: " ")
             let label = Text("Draft", bundle: .module).foregroundStyle(palette.accentColor).fontWeight(.semibold)
