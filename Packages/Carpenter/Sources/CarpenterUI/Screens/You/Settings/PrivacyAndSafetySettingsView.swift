@@ -68,7 +68,7 @@ struct PrivacyAndSafetySettingsView: View {
                 Text("Send", bundle: .module).sectionHeading()
             } footer: {
                 Text(
-                    "Your name goes to the rooms you are in, as the name people see for you, once this is on; off, they see a short code. People you write to get it as the default name for you, and can call you something else on their own phone. Turning it off does not take a name back from a room that has it. Your photo goes the same way, to those rooms and to the people you let read your Outpost, and unlike a name it comes back: off, it is taken down everywhere, and their devices let it go as they next collect. Read receipts tell a sender when their message has been shown on your screen; off, they are told you do not report. Silenced notifications tells the people you write to when a Focus is on, the way Messages does, with the words you choose.",
+                    "Your name goes to the rooms you are in, as the name people see for you, once this is on; off, they see a short code. People you write to get it as the default name for you, and can call you something else on their own device. Turning it off does not take a name back from a room that has it. Your photo goes the same way, to those rooms and to the people you let read your Outpost, and unlike a name it comes back: off, it is taken down everywhere, and their devices let it go as they next collect. Read receipts tell a sender when their message has been shown on your screen; off, they are told you do not report. Silenced notifications tells the people you write to when a Focus is on, the way Messages does, with the words you choose.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -165,7 +165,7 @@ struct PrivacyAndSafetySettingsView: View {
                         set: { wanted in Task { await onHoldsHistoryForRestores(wanted) } }))
             } footer: {
                 Text(
-                    "Somebody who loses every device comes back with a recovery key, and their conversations come back from the people who were in them. The first decides whether you are told when one of those asks reaches you, and which conversation it was for. The second holds what was said before they lost their phone until you have read the characters to each other and said they matched — off, it goes as soon as the ask arrives. Either way they are still in your conversations, so anything said from now on still reaches them.",
+                    "Somebody who loses every device comes back with a recovery key, and their conversations come back from the people who were in them. The first decides whether you are told when one of those asks reaches you, and which conversation it was for. The second holds what was said before they lost their devices until you have read the characters to each other and said they matched — off, it goes as soon as the ask arrives. Either way they are still in your conversations, so anything said from now on still reaches them.",
                     bundle: .module)
             }
             .groupedRowSurface()

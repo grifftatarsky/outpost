@@ -4,7 +4,7 @@ import Testing
 
 @Suite("The code two people compare later is the same on both phones, and costs a full search to fake")
 struct ComparisonCodeTests {
-    @Test("Both phones show the same two halves, in the same order")
+    @Test("Both devices show the same two halves, in the same order")
     func symmetric() {
         let alice = Identity.generate()
         let carol = Identity.generate()

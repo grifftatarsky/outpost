@@ -33,7 +33,7 @@ public struct CompareCodesView: View {
                 }
 
                 Text(
-                    "Both phones show these same two halves. Read yours to \(name) and listen to theirs: each should match what the other person reads. If somebody had put themselves in the middle, one half would be different.",
+                    "Both devices show these same two halves. Read yours to \(name) and listen to theirs: each should match what the other person reads. If somebody had put themselves in the middle, one half would be different.",
                     bundle: .module
                 )
                 .font(CarpenterFont.rowDetail)

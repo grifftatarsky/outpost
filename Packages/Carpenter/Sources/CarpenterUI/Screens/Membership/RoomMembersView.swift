@@ -391,10 +391,10 @@ struct RescindInvitationView: View {
                 "eye.slash",
                 person.isMine
                     ? Text(
-                        "They are not told. On their phone this looks the same as nobody getting round to it, and you can invite them again at any time.",
+                        "They are not told. On their device this looks the same as nobody getting round to it, and you can invite them again at any time.",
                         bundle: .module)
                     : Text(
-                        "They are not told. On their phone this looks the same as nobody getting round to it.",
+                        "They are not told. On their device this looks the same as nobody getting round to it.",
                         bundle: .module))
             if !person.isMine {
                 MembershipFact(

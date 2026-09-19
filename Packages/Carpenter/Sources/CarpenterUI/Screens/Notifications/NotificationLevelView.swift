@@ -28,7 +28,7 @@ public struct NotificationLevelView: View {
                     icon: "bell.badge.fill",
                     title: Text("Notifications", bundle: .module),
                     paragraph: Text(
-                        "Choose how much a banner shows before the phone is unlocked. If you have not allowed notifications, nothing announces itself; messages still arrive every time you open the app.",
+                        "Choose how much a banner shows before this device is unlocked. If you have not allowed notifications, nothing announces itself; messages still arrive every time you open the app.",
                         bundle: .module))
             }
 

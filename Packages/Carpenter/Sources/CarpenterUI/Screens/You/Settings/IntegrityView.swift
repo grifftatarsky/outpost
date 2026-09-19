@@ -185,7 +185,7 @@ public struct IntegrityView: View {
             .foregroundStyle(palette.primaryText)
 
             Text(
-                "^[\(report.sealedForOthers) message](inflect: true) this device is passing along and cannot read, written by ^[\(report.unmetAuthorsHeld) person](inflect: true) you have not met. This is how a message gets from one phone to another with nothing in between, and none of it is readable here.",
+                "^[\(report.sealedForOthers) message](inflect: true) this device is passing along and cannot read, written by ^[\(report.unmetAuthorsHeld) person](inflect: true) you have not met. This is how a message gets from one device to another with nothing in between, and none of it is readable here.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)

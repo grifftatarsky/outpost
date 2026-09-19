@@ -209,7 +209,7 @@ struct StepPage: View {
                 icon: "person.text.rectangle.fill",
                 title: Text("Share my name", bundle: .module),
                 paragraph: Text(
-                    "Your name goes to the rooms you are in, as the default name people see for you; they can call you something else on their own phone. Off, they see a short code. Turning it off later does not take a name back from a room that already has it.",
+                    "Your name goes to the rooms you are in, as the default name people see for you; they can call you something else on their own device. Off, they see a short code. Turning it off later does not take a name back from a room that already has it.",
                     bundle: .module))
         case .sharePhoto:
             SettingsHeaderCard(
@@ -286,7 +286,7 @@ struct StepPage: View {
                 icon: "hand.raised.fingers.spread.fill",
                 title: Text("Before your history goes back", bundle: .module),
                 paragraph: Text(
-                    "Off, your copy goes as soon as the ask arrives — what Messages would do, and what most people want. On, it waits. You are shown the characters the two of you already share, you read them to each other on a line you trust, and none of it goes until you say it matched. This covers what was said before they lost their phone; they are still in your conversations, so anything said from now on still reaches them. The cost is that somebody who has genuinely lost their phone waits for you to pick up.",
+                    "Off, your copy goes as soon as the ask arrives — what Messages would do, and what most people want. On, it waits. You are shown the characters the two of you already share, you read them to each other on a line you trust, and none of it goes until you say it matched. This covers what was said before they lost their devices; they are still in your conversations, so anything said from now on still reaches them. The cost is that somebody who has genuinely lost their devices waits for you to pick up.",
                     bundle: .module))
         case .outpostsOn:
             SettingsHeaderCard(

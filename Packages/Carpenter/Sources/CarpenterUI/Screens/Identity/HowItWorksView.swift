@@ -19,7 +19,7 @@ public struct HowItWorksView: View {
                             "What this is",
                             [
                                 "A place for a group of friends to talk. Rooms for shared conversation, and an Outpost of your own for the things you want that group to see.",
-                                "Everything you write lives on the phones of the people you wrote it to. Not on a server that happens to be encrypted — on their devices.",
+                                "Everything you write lives on the devices of the people you wrote it to. Not on a server that happens to be encrypted — with them.",
                             ]
                         )
 
@@ -38,7 +38,7 @@ public struct HowItWorksView: View {
                                 "There is no sign-up, no password, and no e-mail address. Your device makes a key and that key is you.",
                                 "Nobody can look you up. Somebody already in a room has to invite you, and their invitation is signed, expires, and names you specifically — so everyone can see who let you in, and nobody can be added by a stranger.",
                                 "Whoever made a room can require approval before anyone new is let in — the founder's, one member's, or everybody's — and by default nobody else is asked. Either way you and whoever invited you read the same characters to each other first, so a room never takes somebody's word for who you are.",
-                                "Your keys live in your iCloud Keychain, so a new phone picks them up by itself. If the keychain goes too, your recovery key is the way back — it makes you you again. It carries no conversations, so the app asks the people you were talking to for their copies, and tells them it asked.",
+                                "Your keys live in your iCloud Keychain, so a new device picks them up by itself. If the keychain goes too, your recovery key is the way back — it makes you you again. It carries no conversations, so the app asks the people you were talking to for their copies, and tells them it asked.",
                             ]
                         )
 

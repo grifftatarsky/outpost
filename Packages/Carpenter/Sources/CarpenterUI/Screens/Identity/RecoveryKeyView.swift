@@ -74,7 +74,7 @@ public struct RecoveryKeyView: View {
                 Section {
                 } footer: {
                     Text(
-                        "Anybody who has this file can become you, and there is no way to undo that. Keep it where you keep passwords — not in the photos on the phone it is meant to replace.",
+                        "Anybody who has this file can become you, and there is no way to undo that. Keep it where you keep passwords — not in the photos on the device it is meant to replace.",
                         bundle: .module)
                         .foregroundStyle(palette.destructive)
                 }

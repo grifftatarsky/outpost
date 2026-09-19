@@ -100,7 +100,7 @@ public struct RestoreFromKeyView: View {
                             bundle: .module)
                     default:
                         Text(
-                            "This app cannot tell a new phone from a stolen one, and the answer decides whether every room turns its key. Nothing is restored until you say which it was.",
+                            "This app cannot tell a new device from a stolen one, and the answer decides whether every room turns its key. Nothing is restored until you say which it was.",
                             bundle: .module)
                     }
                 }
