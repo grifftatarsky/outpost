@@ -53,7 +53,7 @@ public struct RestoreFromKeyView: View {
                 Section {
                     TextField(
                         text: $key,
-                        prompt: Text("OUTPOST RECOVERY KEY…", bundle: .module),
+                        prompt: Text(verbatim: RecoveryKey.header + "…"),
                         axis: .vertical
                     ) {
                         Text("Recovery key", bundle: .module)

@@ -1,6 +1,9 @@
 import Foundation
 
 public enum Branding {
+    // Every name this app has shipped under. Recovery keys saved under an old name must keep opening, so a rename adds here and never removes.
+    public static let historicalDisplayNames = ["Outpost"]
+
     public static var displayName: String {
         let info = Bundle.main.infoDictionary
         let name =

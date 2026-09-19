@@ -2,7 +2,19 @@ import CryptoKit
 import Foundation
 
 public enum RecoveryKey {
-    public static let header = "OUTPOST RECOVERY KEY"
+    public static var header: String {
+        header(for: Branding.displayName.isEmpty ? Branding.historicalDisplayNames.last ?? "" : Branding.displayName)
+    }
+
+    static func header(for name: String) -> String {
+        "\(name.uppercased()) RECOVERY KEY"
+    }
+
+    static var headersThatOpen: [String] {
+        ([header] + Branding.historicalDisplayNames.map(header(for:))).reduce(into: []) { kept, next in
+            if !kept.contains(next) { kept.append(next) }
+        }
+    }
 
     public static let version = 1
 
@@ -38,11 +50,15 @@ public enum RecoveryKey {
         let lines = text.split(whereSeparator: \.isNewline).map {
             $0.trimmingCharacters(in: .whitespaces)
         }
-        guard let headerLine = lines.first(where: { $0.hasPrefix(header) }) else {
+        guard
+            let (headerLine, matched) = lines.lazy.compactMap({ line in
+                headersThatOpen.first { line.hasPrefix($0) }.map { (line, $0) }
+            }).first
+        else {
             throw Failure.notARecoveryKey
         }
 
-        let stamped = headerLine.dropFirst(header.count).trimmingCharacters(in: .whitespaces)
+        let stamped = headerLine.dropFirst(matched.count).trimmingCharacters(in: .whitespaces)
         if stamped.hasPrefix("v"), let found = Int(stamped.dropFirst()), found > version {
             throw Failure.fromANewerVersion(found)
         }

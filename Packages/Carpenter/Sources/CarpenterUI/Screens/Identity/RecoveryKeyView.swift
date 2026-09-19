@@ -132,7 +132,7 @@ public struct RecoveryKeyView: View {
     #Preview("Recovery key") {
         NavigationStack {
             RecoveryKeyView(
-                text: "OUTPOST RECOVERY KEY v1\n…", fingerprint: "K7M2QX", isFirstTime: true,
+                text: "\(RecoveryKey.header) v1\n…", fingerprint: "K7M2QX", isFirstTime: true,
                 onSaved: {}, onSkip: {})
         }
         .themed(.default)

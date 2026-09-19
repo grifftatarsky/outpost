@@ -302,12 +302,6 @@ signal. `Scripts/lint/control-label-case.py` now holds the second half automatic
 
 ## Tooling
 
-**The recovery key's header is the product's name, in Swift.** `RecoveryKey.header` is `"OUTPOST
-RECOVERY KEY"`, and the restore field's prompt repeats it. The branding lint reads `Outpost` and lets
-the capitals through. It is a file format, so renaming the product would leave every saved key saying
-the old name, and changing the header would stop old keys from opening. A question for Griff: is it
-a format marker that keeps its word, or branding that should come from `Branding`?
-
 **`RandomSource` is a seam nothing uses.** Every byte of key material comes from CryptoKit directly,
 which is the good outcome, but the file reads as though a seam existed. Delete it or say what it is
 for.

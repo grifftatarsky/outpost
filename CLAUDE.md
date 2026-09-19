@@ -1,13 +1,15 @@
 # Working in this repository
 
-Outpost is group messaging for iPhone with no server behind it. A message is sealed on the sending
-device and left in that member's own iCloud; the people it is for collect it from there. It builds
-and runs on a Mac, which is **not** an offered platform — Griff ruled on 2026-09-13 that the product
-is iPhone until somebody draws the other two.
+Outpost is group messaging for iPhone and the Mac with no server behind it. A message is sealed on
+the sending device and left in that member's own iCloud; the people it is for collect it from there.
+Griff, 2026-09-19: the Mac ships as its own app, and the iPhone app is not offered on Macs ("since we
+have the mac app"). That replaces his 2026-09-13 ruling that the product was iPhone only. Whether the
+iPad is in the first version is still his call; its layout is built.
 
 The source is named **Carpenter**. The product is named in `Config/Branding.xcconfig` and nowhere
 else — a lint fails the build over it. "Carpenter" must never reach a screen, and "Outpost" must
-never be written down in Swift.
+never be written down in Swift, except in `Branding.historicalDisplayNames`: every name the app has
+shipped under, so a recovery key saved under an old name still opens.
 
 ## Read this first
 
@@ -39,7 +41,9 @@ comments. Five comments survive because the lint reads them as mechanism (`cross
 `divides regions`, `intentionally empty`, `reentrancy considered`) plus `// MARK:` and
 `swift-tools-version`. Deleting those breaks the build or the lint. Everything else is refused by
 `Scripts/lint/no-comments.py`: 326 had crept back within a week, every one written by Claude, and
-Griff had them removed on 2026-09-19. A marker is the phrase alone, never followed by a reason.
+Griff had them removed on 2026-09-19. A marker is the phrase alone, never followed by a reason. One
+more is there because Griff asked for it on 2026-09-19: the note above
+`Branding.historicalDisplayNames`, which the lint allows by its exact words.
 
 If you learn something worth keeping, put it in a doc, not above a line.
 

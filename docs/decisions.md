@@ -216,6 +216,28 @@ member's own devices keeps the record, so a modified build can show one without 
 member can tell. The badge says somebody chose to show it, and nothing more is claimed for it.
 Detecting TestFlight through `AppTransaction` has not run on a TestFlight build yet.
 
+### The Mac ships as its own app, and the iPhone app is not offered on Macs
+
+`RULED` — Griff, 2026-09-19: "the iOS app is unticked, since we have the mac app." The native Mac app
+is a second platform on the same App Store Connect record, so one purchase covers both; the
+*iPhone and iPad Apps on Apple Silicon Macs* option is off, so a Mac gets the Mac app and never the
+iPhone one. This replaces the 2026-09-13 ruling that the product was iPhone only. The iPad in the
+first version is still open.
+
+### A recovery key's header comes from the app's name, and every old name still opens one
+
+`RULED` — Griff, 2026-09-19: use the branding variable for the header, and accept keys saved under
+earlier names from a hard-coded list, with a note saying why.
+
+`RecoveryKey.header` is the display name in capitals followed by *RECOVERY KEY*, so a key written today
+says what the app is called today. `Branding.historicalDisplayNames` lists every name the app has
+shipped under (today only one) and a key saved under any of them opens. A rename adds to that list
+and never removes from it. `ARecoveryKeyTests` holds the header saved keys actually carry, written out
+by hand, and fails if the name it came from is dropped.
+
+**What it costs.** The old name stays written in `Branding.swift`, the one file the branding lint
+exempts, for as long as anybody might hold a key saved under it.
+
 ### App icons are a white drawing on a color, in four drawings
 
 `RULED` — Griff, 2026-09-17: add the antenna and mailbox drawings in every accent and in black and

@@ -22,6 +22,33 @@ struct ARecoveryKeyTests {
         #expect(read.agreementSeed == identity.agreementSeed)
     }
 
+    private func underHeader(_ header: String) throws -> String {
+        let text = RecoveryKey.text(for: try anIdentity(), createdAt: .distantPast)
+        return text.replacingOccurrences(of: RecoveryKey.header, with: header)
+    }
+
+    @Test("A key saved before any rename, under the header written out by hand, still opens")
+    func theFirstHeaderStillOpens() throws {
+        let read = try RecoveryKey.identity(from: try underHeader("OUTPOST RECOVERY KEY"))
+        #expect(read.id == (try anIdentity()).id)
+    }
+
+    @Test("Every name the app has shipped under opens a key, and the current one writes it")
+    func everyHistoricalNameOpens() throws {
+        for name in Branding.historicalDisplayNames {
+            let read = try RecoveryKey.identity(from: try underHeader(RecoveryKey.header(for: name)))
+            #expect(read.id == (try anIdentity()).id, "a key saved as \(name) no longer opens")
+        }
+        #expect(RecoveryKey.text(for: try anIdentity(), createdAt: .distantPast).hasPrefix(RecoveryKey.header))
+    }
+
+    @Test("A header under a name the app never had is not a recovery key")
+    func anotherAppsKeyIsRefused() throws {
+        #expect(throws: RecoveryKey.Failure.notARecoveryKey) {
+            try RecoveryKey.identity(from: try underHeader("ELSEWHERE RECOVERY KEY"))
+        }
+    }
+
     @Test("It survives being mangled on the way")
     func survivesTheJourney() throws {
         let identity = try anIdentity()
