@@ -71,13 +71,20 @@ extension Payload {
     }
 
     public static func admission(
-        of joiner: ParticipantID, admitted: Bool, invitation: Data? = nil
+        of joiner: ParticipantID, admitted: Bool, invitation: Data? = nil,
+        sinceEpoch: UInt64? = nil
     ) throws -> Payload {
         Payload(
             type: .admission,
             body: try encode(
-                AdmissionBody(joiner: joiner, admitted: admitted, invitation: invitation)),
+                AdmissionBody(
+                    joiner: joiner, admitted: admitted, invitation: invitation,
+                    sinceEpoch: sinceEpoch)),
             fallbackText: nil)
+    }
+
+    public static func roomState(_ body: RoomStateBody) throws -> Payload {
+        Payload(type: .roomState, body: try encode(body), fallbackText: nil)
     }
 
     public static func epochChange(_ link: EpochLink) throws -> Payload {

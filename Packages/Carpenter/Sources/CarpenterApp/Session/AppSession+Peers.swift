@@ -76,16 +76,29 @@ extension AppSession {
             let secret = try chain.secret(for: epoch)
 
             let isWall = room == outpostRoom(for: enrolment.identity.id)
-            let floors = isWall
+            let roomRoster = roster(of: room)
+            let floors: [ParticipantID: UInt64?] = isWall
                 ? projection.outpostFloors(of: enrolment.identity.id, opening: payloadOpener())
-                : [:]
+                : roomRoster.everyHistoryFloor.mapValues { Optional($0.rawValue) }
+            let owedAFloor = isWall
+                ? []
+                : Set(
+                    roomRoster.members.filter {
+                        roomRoster.invitation(of: $0).map { !$0.sharesHistory } ?? false
+                            && roomRoster.historyFloor(of: $0) == nil
+                    })
             let targets: [ParticipantID] =
                 isWall
                 ? outpostReaders().sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
                 : Array(notShutOut(roster(of: room).rewrapTargets(of: enrolment.identity.id)))
 
             for target in targets {
-                let floor = isWall ? (floors[target] ?? nil).map(EpochNumber.init(rawValue:)) : nil
+                if owedAFloor.contains(target) {
+                    Diagnostics.sync.notice(
+                        "mailbox sync: holding this room's keys from a new member until their history is closed")
+                    continue
+                }
+                let floor = (floors[target] ?? nil).map(EpochNumber.init(rawValue:))
                 let link = floor.map { epoch > $0 ? chain.link(at: epoch) : nil } ?? chain.link(at: epoch)
                 let links = floor.map { ceiling in chain.everyLink.filter { $0.epoch > ceiling } }
                     ?? chain.everyLink

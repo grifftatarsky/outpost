@@ -51,7 +51,8 @@ extension MembershipAttestation {
         lasting lifetime: InvitationLifetime,
         joinerCommitment: Data = Data(),
         joinerRequires: PhraseLength = .standard,
-        inviterRequires: PhraseLength = .standard
+        inviterRequires: PhraseLength = .standard,
+        sharesHistory: Bool = true
     ) throws -> MembershipAttestation {
         var attestation = MembershipAttestation(
             room: room,
@@ -64,6 +65,7 @@ extension MembershipAttestation {
             joinerCommitment: joinerCommitment,
             joinerRequires: joinerRequires,
             inviterRequires: inviterRequires,
+            sharesHistory: sharesHistory,
             signature: Data()
         )
         attestation.signature = try identity.sign(attestation.signingPayload)
@@ -76,12 +78,13 @@ extension MembershipAttestation {
         by identity: Identity,
         at issuedAt: Date,
         lasting lifetime: InvitationLifetime,
-        requiring mine: PhraseLength = .standard
+        requiring mine: PhraseLength = .standard,
+        sharesHistory: Bool = true
     ) throws -> MembershipAttestation {
         try issue(
             joining: room, joinerKeys: code.keys, by: identity, at: issuedAt, lasting: lifetime,
             joinerCommitment: code.commitment, joinerRequires: code.requires,
-            inviterRequires: mine)
+            inviterRequires: mine, sharesHistory: sharesHistory)
     }
 
     public func hasLapsed(at instant: Date) -> Bool { instant >= expiresAt }

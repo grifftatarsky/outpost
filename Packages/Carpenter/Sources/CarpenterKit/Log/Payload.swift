@@ -49,19 +49,20 @@ public struct PayloadType: Hashable, Sendable, Codable, RawRepresentable {
     public static let invitationRescinded = PayloadType(rawValue: 22)
     public static let soloCheck = PayloadType(rawValue: 23)
     public static let supporterBadge = PayloadType(rawValue: 24)
+    public static let roomState = PayloadType(rawValue: 25)
 
     public static let allKnown: [PayloadType] = [
         .post, .edit, .tombstone, .reaction, .roomProfile, .memberProfile, .comment,
         .joinRequest, .admission, .epochChange, .roomAccess, .readReceipt, .readPolicy, .removal,
         .departure, .media, .memberPhoto, .focusStatus, .outpostAccess, .commentTally,
-        .joinConfirmed, .invitationRescinded, .soloCheck, .supporterBadge,
+        .joinConfirmed, .invitationRescinded, .soloCheck, .supporterBadge, .roomState,
     ]
 
     public static let plumbing: Set<PayloadType> = [
         .memberProfile, .roomProfile, .comment, .joinRequest, .admission, .epochChange,
         .roomAccess, .readReceipt, .readPolicy, .removal, .departure, .memberPhoto, .focusStatus,
         .outpostAccess, .commentTally, .joinConfirmed, .invitationRescinded, .soloCheck,
-        .supporterBadge,
+        .supporterBadge, .roomState,
     ]
 
     var canonicalBytes: Data {

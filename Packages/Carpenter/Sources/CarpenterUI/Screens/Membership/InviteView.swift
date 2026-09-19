@@ -213,12 +213,16 @@ public struct StartInviteView: View {
     @State private var failed = false
     @FocusState private var pasting: Bool
     @State private var lifetime: InvitationLifetime = .aDay
+    @State private var sharesHistory = true
     @State private var pickedDay = Date().addingTimeInterval(7 * 24 * 60 * 60)
 
     private let roomName: String
-    private let onIssue: (String, InvitationLifetime) async -> Bool
+    private let onIssue: (String, InvitationLifetime, Bool) async -> Bool
 
-    public init(roomName: String, onIssue: @escaping (String, InvitationLifetime) async -> Bool) {
+    public init(
+        roomName: String,
+        onIssue: @escaping (String, InvitationLifetime, Bool) async -> Bool
+    ) {
         self.roomName = roomName
         self.onIssue = onIssue
     }
@@ -263,6 +267,37 @@ public struct StartInviteView: View {
             lifetime = InvitationLifetime.endOfDay(pickedDay)
             pasting = false
         }
+    }
+
+    @ViewBuilder
+    private var historySection: some View {
+        Section {
+            ChoiceRow(
+                title: Text("Everything said in this room", bundle: .module),
+                detail: Text(
+                    "They can read the whole conversation, including everything from before you met. This cannot be undone.",
+                    bundle: .module),
+                isSelected: sharesHistory
+            ) {
+                sharesHistory = true
+            }
+            ChoiceRow(
+                title: Text("Only what is said from now on", bundle: .module),
+                detail: Text(
+                    "The room's key turns as they join, and they are never handed the old ones.",
+                    bundle: .module),
+                isSelected: !sharesHistory
+            ) {
+                sharesHistory = false
+            }
+        } header: {
+            Text("What they can read", bundle: .module).sectionHeading()
+        } footer: {
+            Text(
+                "Everybody already here keeps what they have, and can still tell them what was said.",
+                bundle: .module)
+        }
+        .groupedRowSurface()
     }
 
     @ViewBuilder
@@ -327,6 +362,8 @@ public struct StartInviteView: View {
                 }
                 .groupedRowSurface()
 
+                historySection
+
                 lifetimeSection
 
                 pickedDaySection
@@ -334,7 +371,7 @@ public struct StartInviteView: View {
                 Section {
                     Button {
                         Task {
-                            failed = !(await onIssue(code, lifetime))
+                            failed = !(await onIssue(code, lifetime, sharesHistory))
                             if !failed { dismiss() }
                         }
                     } label: {
@@ -361,7 +398,7 @@ public struct StartInviteView: View {
 }
 
 #Preview("Start an invite") {
-    StartInviteView(roomName: "Hangar 7", onIssue: { _, _ in false })
+    StartInviteView(roomName: "Hangar 7", onIssue: { _, _, _ in false })
         .themed(.default)
 }
 

@@ -4127,6 +4127,47 @@ unaffected — with nobody else to ask, the inviter is still the one who agrees.
 holds every case including both fallbacks, and six older tests that had encoded the old behaviour were
 rewritten rather than deleted.
 
+### An invitation says whether it carries the history, and a room can be joined from today
+
+`RULED` — Griff, 2026-09-19: rooms should offer what an Outpost already offered, "sharing all
+history, or only forward history, when invites are issued." The mechanism is `PROPOSED` by Claude the
+same day.
+
+**The invitation carries the terms.** `MembershipAttestation.sharesHistory` is signed with the rest of
+it, so the joiner and every member read the same answer and no single member can change it afterwards.
+It is appended to the signing bytes **only when it is false**, so every invitation written before today
+produces the bytes it was signed over and still verifies — the fields are length-prefixed, which is the
+rule that trap in `CLAUDE.md` exists for. A decoder that does not find it reads `true`.
+
+**The floor is a key, not a filter.** When the joiner is established, the room's key turns and their
+grant carries only the links above that epoch, so the old ones cannot be unwound. It is the same
+`floor` the wall has used since 2026-09-07; `grantsOwed` now reads it for ordinary rooms from
+`RoomRoster.everyHistoryFloor` rather than only for walls.
+
+**One member turns the key.** Two members advancing the same epoch would write two different secrets
+for it and split the room, so the *inviter* does it, in a round chore (`settleHistoryFloors`) that is
+derived from the log rather than remembered: if somebody I invited without history is now a member and
+has no floor yet, turn the key, write the admission that records the floor, and restate the room.
+Until that floor exists, **every member withholds the room's keys from them** — otherwise the first
+round after admission would hand over the links the floor is meant to keep.
+
+**The room has to be restated, because the roster is a fold.** `RoomRoster` is built from entries a
+member can open, so somebody who starts from today would otherwise see a room with no members, no
+name and no rule — a wall never had this problem because a wall has no roster. `roomState` is a new
+payload naming the members, the founder, the name and the access rule at the new epoch. Any member can
+contradict it with the entries they hold; for the newcomer it is the room as the person who let them in
+describes it, which is the honest limit of a bootstrap.
+
+**What it costs.** The old entries still reach the newcomer's device as ciphertext they cannot open —
+the fold drops what it cannot read, so nothing draws, and no repair is raised for them, but the bytes
+are on their disk. Nobody else's copy changes: everybody already in the room keeps the history and can
+simply tell them what was said. And unlike a wall, where one person holds the keys, this is a promise
+every member's build keeps.
+
+`JoiningFromTodayTests` holds the four cases: what was said before stays sealed, what comes after
+arrives, a full-history invitation is unchanged, and an invitation from an older build still verifies
+and still shares everything.
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.

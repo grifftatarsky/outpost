@@ -95,13 +95,15 @@ extension AppSession {
 
     public func attest(
         code: JoinerCode, joining room: RoomID,
-        lasting lifetime: InvitationLifetime = .aDay
+        lasting lifetime: InvitationLifetime = .aDay,
+        sharingHistory: Bool = true
     ) async throws -> MembershipAttestation {
         guard let enrolment else { throw AppSessionError.noIdentity }
 
         let attestation = try MembershipAttestation.issue(
             joining: room, code: code, by: enrolment.identity, at: clock.now,
-            lasting: lifetime, requiring: phraseLengthThisMemberRequires)
+            lasting: lifetime, requiring: phraseLengthThisMemberRequires,
+            sharesHistory: sharingHistory)
 
         try await append(try Payload.joinRequest(attestation), to: room)
         return attestation
@@ -157,7 +159,8 @@ extension AppSession {
 
     public func invite(
         joinerCode: String, joining room: RoomID, mailbox: URL?,
-        lasting lifetime: InvitationLifetime = .aDay
+        lasting lifetime: InvitationLifetime = .aDay,
+        sharingHistory: Bool = true
     ) async throws -> Invite {
         let code = try JoinerCode.decoded(from: joinerCode)
 
@@ -165,7 +168,8 @@ extension AppSession {
             throw AppSessionError.thatIsYou
         }
 
-        let attestation = try await attest(code: code, joining: room, lasting: lifetime)
+        let attestation = try await attest(
+            code: code, joining: room, lasting: lifetime, sharingHistory: sharingHistory)
         return Invite(attestation: attestation, mailbox: mailbox)
     }
 
@@ -560,6 +564,55 @@ extension AppSession {
         {
             try await advanceEpoch(of: attestation.room)
         }
+    }
+
+    func settleHistoryFloors() async {
+        guard let me = enrolment?.identity.id else { return }
+        for room in persisted.knownRooms {
+            let roster = roster(of: room)
+            for person in roster.members {
+                guard let attestation = roster.invitation(of: person),
+                    !attestation.sharesHistory,
+                    attestation.inviter == me,
+                    roster.historyFloor(of: person) == nil
+                else { continue }
+                do {
+                    try await closeHistoryTo(person, invitedOn: attestation, in: room)
+                    Diagnostics.sync.notice(
+                        "membership: a new member starts from today; the key turned and the room was restated")
+                } catch {
+                    Diagnostics.sync.error(
+                        "membership: could not close history to a new member (\(String(describing: error), privacy: .public))")
+                }
+            }
+        }
+    }
+
+    private func closeHistoryTo(
+        _ person: ParticipantID, invitedOn attestation: MembershipAttestation, in room: RoomID
+    ) async throws {
+        try await advanceEpoch(of: room)
+        guard let epoch = chains[room]?.highestKnownEpoch else { throw AppSessionError.unknownRoom }
+
+        try await append(
+            try Payload.admission(
+                of: person, admitted: true, invitation: attestation.signature,
+                sinceEpoch: epoch.rawValue),
+            to: room)
+
+        let roster = roster(of: room)
+        try await append(
+            try Payload.roomState(
+                RoomStateBody(
+                    name: rooms.first { $0.id == room }?.name,
+                    kind: (rooms.first { $0.id == room }?.isDirect ?? false) ? .solo : .room,
+                    access: roster.access,
+                    founder: roster.founder,
+                    members: roster.members.sorted {
+                        $0.rawValue.lexicographicallyPrecedes($1.rawValue)
+                    },
+                    statedAt: clock.now)),
+            to: room)
     }
 
     public func advanceEpoch(of room: RoomID) async throws {

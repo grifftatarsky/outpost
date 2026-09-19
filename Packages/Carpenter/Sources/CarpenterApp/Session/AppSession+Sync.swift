@@ -262,6 +262,8 @@ extension AppSession {
 
         if mode == .full { await settleOwedEpochTurns() }
 
+        if mode == .full { await settleHistoryFloors() }
+
         if mode == .full { await publishCommentTallies() }
 
         forks = replica.forks

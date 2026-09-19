@@ -166,8 +166,9 @@ extension RootView {
             .sizedSheet(item: $starting) { room in
                 StartInviteView(
                     roomName: rooms.first { $0.id == room }?.name ?? "",
-                    onIssue: { code, lifetime in
-                        guard let issued = await onInvite(room, code, lifetime) else {
+                    onIssue: { code, lifetime, sharesHistory in
+                        guard let issued = await onInvite(room, code, lifetime, sharesHistory)
+                        else {
                             return false
                         }
                         invite = PresentedInvite(

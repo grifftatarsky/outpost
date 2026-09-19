@@ -14,6 +14,8 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
     public var joinerRequires: PhraseLength
     public var inviterRequires: PhraseLength
 
+    public var sharesHistory: Bool
+
     public var signature: Data
 
     public static let defaultLifetime: TimeInterval = 24 * 60 * 60
@@ -29,6 +31,7 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
         joinerCommitment: Data = Data(),
         joinerRequires: PhraseLength = .standard,
         inviterRequires: PhraseLength = .standard,
+        sharesHistory: Bool = true,
         signature: Data
     ) {
         self.room = room
@@ -41,7 +44,31 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
         self.joinerCommitment = joinerCommitment
         self.joinerRequires = joinerRequires
         self.inviterRequires = inviterRequires
+        self.sharesHistory = sharesHistory
         self.signature = signature
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case room, joiner, joinerKeys, inviter, inviterKeys, issuedAt, expiresAt
+        case joinerCommitment, joinerRequires, inviterRequires, sharesHistory, signature
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        room = try container.decode(RoomID.self, forKey: .room)
+        joiner = try container.decode(ParticipantID.self, forKey: .joiner)
+        joinerKeys = try container.decode(IdentityPublicKeys.self, forKey: .joinerKeys)
+        inviter = try container.decode(ParticipantID.self, forKey: .inviter)
+        inviterKeys = try container.decode(IdentityPublicKeys.self, forKey: .inviterKeys)
+        issuedAt = try container.decode(Date.self, forKey: .issuedAt)
+        expiresAt = try container.decode(Date.self, forKey: .expiresAt)
+        joinerCommitment = try container.decodeIfPresent(Data.self, forKey: .joinerCommitment) ?? Data()
+        joinerRequires =
+            try container.decodeIfPresent(PhraseLength.self, forKey: .joinerRequires) ?? .standard
+        inviterRequires =
+            try container.decodeIfPresent(PhraseLength.self, forKey: .inviterRequires) ?? .standard
+        sharesHistory = try container.decodeIfPresent(Bool.self, forKey: .sharesHistory) ?? true
+        signature = try container.decode(Data.self, forKey: .signature)
     }
 
     public var phraseLength: PhraseLength {
@@ -56,7 +83,8 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
         lifetime: TimeInterval = defaultLifetime,
         joinerCommitment: Data = Data(),
         joinerRequires: PhraseLength = .standard,
-        inviterRequires: PhraseLength = .standard
+        inviterRequires: PhraseLength = .standard,
+        sharesHistory: Bool = true
     ) throws -> MembershipAttestation {
         var attestation = MembershipAttestation(
             room: room,
@@ -69,6 +97,7 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
             joinerCommitment: joinerCommitment,
             joinerRequires: joinerRequires,
             inviterRequires: inviterRequires,
+            sharesHistory: sharesHistory,
             signature: Data()
         )
         attestation.signature = try identity.sign(attestation.signingPayload)
@@ -81,12 +110,13 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
         by identity: Identity,
         at issuedAt: Date,
         lifetime: TimeInterval = defaultLifetime,
-        requiring mine: PhraseLength = .standard
+        requiring mine: PhraseLength = .standard,
+        sharesHistory: Bool = true
     ) throws -> MembershipAttestation {
         try issue(
             joining: room, joinerKeys: code.keys, by: identity, at: issuedAt, lifetime: lifetime,
             joinerCommitment: code.commitment, joinerRequires: code.requires,
-            inviterRequires: mine)
+            inviterRequires: mine, sharesHistory: sharesHistory)
     }
 
     var signingPayload: Data {
@@ -105,7 +135,7 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
                 joinerCommitment,
                 joinerRequires.canonicalBytes,
                 inviterRequires.canonicalBytes,
-            ]
+            ] + (sharesHistory ? [] : [Data([0])])
         )
     }
 

@@ -39,7 +39,13 @@ public struct RoomRoster: Hashable, Sendable {
 
     private var rescinded: Set<Data> = []
 
+    private var sawAccessEntry = false
+
     private var spent: Set<Data> = []
+
+    private var floorsByInvitation: [Data: UInt64] = [:]
+
+    public private(set) var statedName: String?
 
     public struct Removal: Hashable, Sendable {
         public let removed: ParticipantID
@@ -209,6 +215,28 @@ public struct RoomRoster: Hashable, Sendable {
     public mutating func set(access newAccess: RoomAccess, by author: ParticipantID) {
         guard author == founder else { return }
         access = newAccess
+        sawAccessEntry = true
+    }
+
+    public func invitation(of person: ParticipantID) -> MembershipAttestation? {
+        requests[person]
+    }
+
+    public func historyFloor(of person: ParticipantID) -> EpochNumber? {
+        guard let attestation = requests[person],
+            let floor = floorsByInvitation[attestation.signature]
+        else { return nil }
+        return EpochNumber(rawValue: floor)
+    }
+
+    public var everyHistoryFloor: [ParticipantID: EpochNumber] {
+        var found: [ParticipantID: EpochNumber] = [:]
+        for (person, attestation) in requests {
+            if let floor = floorsByInvitation[attestation.signature] {
+                found[person] = EpochNumber(rawValue: floor)
+            }
+        }
+        return found
     }
 
     public func mayDecide(_ viewer: ParticipantID, on attestation: MembershipAttestation) -> Bool {
@@ -339,6 +367,10 @@ public struct RoomRoster: Hashable, Sendable {
             if decision.admitted {
                 admissionsByInvitation[invitation, default: []].insert(entry.author)
                 refusalsByInvitation[invitation]?.remove(entry.author)
+                if let floor = decision.sinceEpoch {
+                    floorsByInvitation[invitation] = Swift.max(
+                        floorsByInvitation[invitation] ?? floor, floor)
+                }
             } else {
                 refusalsByInvitation[invitation, default: []].insert(entry.author)
                 admissionsByInvitation[invitation]?.remove(entry.author)
@@ -346,6 +378,17 @@ public struct RoomRoster: Hashable, Sendable {
 
             guard requests[decision.joiner] != nil else { return }
             if isAdmitted(decision.joiner) { establish(decision.joiner) }
+
+        case .roomState:
+            guard let stated = try? body.decode(RoomStateBody.self),
+                established.contains(entry.author) || established.isEmpty
+            else { return }
+            if founder == nil { founder = stated.founder }
+            if statedName == nil { statedName = stated.name }
+            for person in stated.members where removals[person] == nil && departures[person] == nil {
+                established.insert(person)
+            }
+            if !sawAccessEntry { access = stated.access }
 
         case .removal:
             guard let body = try? body.decode(RemovalBody.self) else { return }

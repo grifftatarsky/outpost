@@ -202,12 +202,12 @@ extension AppRootView {
                 }
                 return waiting + unchecked
             },
-            onInvite: { room, joinerCode, lifetime in
+            onInvite: { room, joinerCode, lifetime, sharesHistory in
                 let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
                 do {
                     let issued = try await session.invite(
                         joinerCode: joinerCode, joining: room, mailbox: url,
-                        lasting: lifetime)
+                        lasting: lifetime, sharingHistory: sharesHistory)
                     #if DEBUG
                         if RigCodes.directory != nil, let code = try? issued.encoded() {
                             RigCodes.leave(code, as: "\(session.viewer.displayName).invite")

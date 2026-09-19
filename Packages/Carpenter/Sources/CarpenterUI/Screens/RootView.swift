@@ -133,7 +133,7 @@ public struct RootView: View {
     let connections: [Connection]
     let onOrganisationChange: ((inout RoomsListOrganisation) -> Void) -> Void
     let pendingJoins: (RoomID) -> [PendingJoin]
-    let onInvite: (RoomID, String, InvitationLifetime) async -> Invite?
+    let onInvite: (RoomID, String, InvitationLifetime, Bool) async -> Invite?
     let onOutstandingInvite: (RoomID) async -> Invite?
     let onDecideJoin: (RoomID, PendingJoin, Bool) async -> Void
     let identityCode: String
@@ -299,7 +299,7 @@ public struct RootView: View {
         onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)? = nil,
         onOrganisationChange: @escaping ((inout RoomsListOrganisation) -> Void) -> Void = { _ in },
         pendingJoins: @escaping (RoomID) -> [PendingJoin] = { _ in [] },
-        onInvite: @escaping (RoomID, String, InvitationLifetime) async -> Invite? = { _, _, _ in nil },
+        onInvite: @escaping (RoomID, String, InvitationLifetime, Bool) async -> Invite? = { _, _, _, _ in nil },
         onOutstandingInvite: @escaping (RoomID) async -> Invite? = { _ in nil },
         onDecideJoin: @escaping (RoomID, PendingJoin, Bool) async -> Void = { _, _, _ in },
         identityCode: String = "",

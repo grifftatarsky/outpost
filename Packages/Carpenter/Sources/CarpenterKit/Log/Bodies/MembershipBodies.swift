@@ -108,19 +108,60 @@ public struct AdmissionBody: Hashable, Sendable, Codable {
 
     public let invitation: Data?
 
-    public init(joiner: ParticipantID, admitted: Bool, invitation: Data? = nil) {
+    public let sinceEpoch: UInt64?
+
+    public init(
+        joiner: ParticipantID, admitted: Bool, invitation: Data? = nil, sinceEpoch: UInt64? = nil
+    ) {
         self.joiner = joiner
         self.admitted = admitted
         self.invitation = invitation
+        self.sinceEpoch = sinceEpoch
     }
 
-    private enum CodingKeys: String, CodingKey { case joiner, admitted, invitation }
+    private enum CodingKeys: String, CodingKey { case joiner, admitted, invitation, sinceEpoch }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         joiner = try container.decode(ParticipantID.self, forKey: .joiner)
         admitted = try container.decode(Bool.self, forKey: .admitted)
         invitation = try container.decodeIfPresent(Data.self, forKey: .invitation)
+        sinceEpoch = try container.decodeIfPresent(UInt64.self, forKey: .sinceEpoch)
+    }
+}
+
+public struct RoomStateBody: Hashable, Sendable, Codable {
+    public let name: String?
+    public let kind: RoomKind
+    public let access: RoomAccess
+    public let founder: ParticipantID?
+    public let members: [ParticipantID]
+    public let statedAt: Date
+
+    public init(
+        name: String?, kind: RoomKind, access: RoomAccess, founder: ParticipantID?,
+        members: [ParticipantID], statedAt: Date
+    ) {
+        self.name = name
+        self.kind = kind
+        self.access = access
+        self.founder = founder
+        self.members = members
+        self.statedAt = statedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, kind, access, founder, members, statedAt
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        kind = try container.decodeIfPresent(RoomKind.self, forKey: .kind) ?? .room
+        access = try container.decodeIfPresent(RoomAccess.self, forKey: .access) ?? .open
+        founder = try container.decodeIfPresent(ParticipantID.self, forKey: .founder)
+        members = try container.decodeIfPresent([ParticipantID].self, forKey: .members) ?? []
+        statedAt = try container.decodeIfPresent(Date.self, forKey: .statedAt) ?? .distantPast
     }
 }
 
