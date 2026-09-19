@@ -64,18 +64,16 @@ Everything below was left because it can only be settled by looking at a window,
 content into an occluded window, so the sidebar and every list rendered blank. None of it was guessed
 at instead.
 
-- **Look at the wide layout on a Mac.** It was walked on an iPad in both orientations, in dark, with
-  Increase Contrast and at large text sizes, and not on a Mac: during the pass of 2026-09-18 the
-  screen was locked, and a locked Mac draws no list into a window. The areas sidebar, the rooms list
-  as the middle column, a room, Outposts with the inspector, Search, and You with a page open in the
-  detail column.
+- **The wide layout on a Mac — seen 2026-09-18**, in a real window on screen in both appearances:
+  rooms with a room open, an empty detail, Outposts, your Outpost with the inspector, Search and You.
+  It found one defect, now fixed: a sidebar row carrying a badge showed no selection on the Mac.
+  Not seen: the window as the key window, so the focused selection color and a keyboard path.
 - **The menus against a window.** Their structure was dumped from a windowless probe; with a window
   in front, New Room, the Conversation menu's items, ⌘1 onward and ⌘F should all enable and act.
-- **Escape on a sheet.** Every cancel button declares the Escape shortcut; on the Mac it should leave
-  the sheet.
-- **Return and Shift-Return.** The field already calls `.onSubmit(send)`. What a vertical `TextField`
-  does with Return on macOS — submit or insert a line — has to be measured, not assumed; CLAUDE.md
-  records one keyboard change made blind that had to be reverted.
+- **Escape on a sheet — measured.** It leaves *New room* on the Mac, cursor in the field or not.
+- **Return and Shift-Return — measured 2026-09-18.** Keys sent to the real field on the Mac: Return
+  sends, Shift-Return sends, Option-Return writes a second line, as Messages does. Left as it is; a
+  person who expects Shift-Return to break a line will send instead, which is the one thing to watch.
 - **Sheets.** Every sheet goes through `sizedSheet`, which gives it a form size on the Mac: macOS
   sizes a sheet to its content, and a `List`, a `ScrollView` or a `TextEditor` has no natural height.
   Seen on Griff's Mac 2026-09-18 as the notifications explainer arriving as a lone *Continue* bar.

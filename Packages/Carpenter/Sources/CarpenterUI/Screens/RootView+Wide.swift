@@ -145,6 +145,7 @@ extension RootView {
                         }
                     }
                     .badge(unreadCount(.direct))
+                    .tag(WideArea.messages(.direct))
                     NavigationLink(value: WideArea.messages(.groups)) {
                         Label {
                             Text("Rooms", bundle: .module)
@@ -153,6 +154,7 @@ extension RootView {
                         }
                     }
                     .badge(unreadCount(.groups))
+                    .tag(WideArea.messages(.groups))
                 } else {
                     NavigationLink(value: WideArea.messages(.everything)) {
                         Label {
@@ -162,6 +164,7 @@ extension RootView {
                         }
                     }
                     .badge(unreadCount(.everything))
+                    .tag(WideArea.messages(.everything))
                 }
                 if showsOutposts {
                     NavigationLink(value: WideArea.outposts) {
@@ -172,6 +175,7 @@ extension RootView {
                         }
                     }
                     .badge(unseenOutpostCount)
+                    .tag(WideArea.outposts)
                 }
                 NavigationLink(value: WideArea.search) {
                     Label {
@@ -190,6 +194,7 @@ extension RootView {
                     }
                 }
                 .badge(youNeedsAttention ? Text(verbatim: "!") : nil)
+                .tag(WideArea.you)
             }
         }
         .listStyle(.sidebar)

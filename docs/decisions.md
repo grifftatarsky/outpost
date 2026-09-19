@@ -3756,8 +3756,10 @@ were real and are fixed: the *3 comments* link and the *Post to your Outpost* pr
 points tall, on every platform. What remains is the known Dynamic Type and avatar-initial findings, the
 system's own search clear button and keyboard suggestion cells, and *Text clipped* on the Liquid Glass
 sidebar's labels, whose text draws whole — the audit measures the label's frame from the icon's edge.
-**Not seen on a Mac**: the screen was locked while this was built, and a Mac draws no list content into
-an occluded window.
+**Seen on a Mac afterwards**, in a real window on screen, captured from the process that owned it:
+rooms with a room open, an empty detail, Outposts, your Outpost with its inspector, Search and You, in
+both appearances. One defect, fixed: on a Mac a sidebar row carrying `.badge` — even an empty one —
+lost its selection value and never showed as chosen, so each row now carries an explicit `.tag`.
 
 ### Copy names the device, says click on a Mac, and a hint never names a gesture
 
@@ -3788,12 +3790,16 @@ iPad simulator by `WideLayoutTests.testTheKeyboardReachesTheMenuCommands`: ⌘N 
 opens *New solo*, and ⌘4 and ⌘5 open Search and You, from a keyboard, through the same commands the
 Mac's menu bar shows.
 
-Every sheet's cancel button now declares `.keyboardShortcut(.cancelAction)`, and
-`Scripts/lint/cancel-shortcut.py` fails a cancellation item without it. **What that was measured to
-do is less than it sounds**: on the iPad, ⌘. leaves a sheet with or without it — the system does that
-— and an Escape injected by XCUITest leaves one with neither. The shortcut is SwiftUI's documented
-binding for Escape, and the Mac is where Escape is how a sheet is left; that was not measured, because
-the screen was locked.
+Every sheet's cancel button declares `.keyboardShortcut(.cancelAction)`, SwiftUI's documented
+binding for Escape. **Measured, it changes nothing today**: on the Mac, Escape leaves *New room* with
+or without it, even with the cursor in the name field, and on the iPad ⌘. does the same — the system
+handles both. A lint that required it was written the same day and removed once the Mac was measured,
+because a rule that fails a build must stand for a difference somebody can see.
+
+The Mac's composer was measured the same way, by sending keys to the real field: **Return sends,
+Shift-Return also sends, Option-Return writes a second line.** That is the system field's own
+behavior and what Apple documents for Messages on the Mac, where Option-Return is the line break, so
+it is left as it is.
 
 ⌘F opens Search on the Mac, from the Edit menu, as *Keyboards* lists it. On the iPad it was measured
 not to reach the command — the system keeps ⌘F — so there Search is ⌘4 with the other areas. The
