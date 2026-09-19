@@ -7,6 +7,7 @@ public final class PushArrivals {
 
     private var handler: (() async -> Void)?
     private var opener: ((String) -> Void)?
+    private var answerer: ((NotificationAnswer) async -> Void)?
 
     public init() {}
 
@@ -16,6 +17,16 @@ public final class PushArrivals {
 
     public func onOpenRoom(_ opener: @escaping (String) -> Void) {
         self.opener = opener
+    }
+
+    public func onAnswer(_ answerer: @escaping (NotificationAnswer) async -> Void) {
+        self.answerer = answerer
+    }
+
+    public func answer(_ answer: NotificationAnswer) async -> Bool {
+        guard let answerer else { return false }
+        await answerer(answer)
+        return true
     }
 
     public func open(thread: String) {

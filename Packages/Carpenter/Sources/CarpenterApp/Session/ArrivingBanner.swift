@@ -26,11 +26,13 @@ public struct ArrivingBanner: Hashable, Sendable {
     public let copy: NotificationCopy
     public let sender: BannerSender?
     public let quietly: Bool
+    public let room: RoomID?
 
-    public init(copy: NotificationCopy, sender: BannerSender?, quietly: Bool) {
+    public init(copy: NotificationCopy, sender: BannerSender?, quietly: Bool, room: RoomID? = nil) {
         self.copy = copy
         self.sender = sender
         self.quietly = quietly
+        self.room = room
     }
 }
 
@@ -117,6 +119,7 @@ public enum WhatArrived {
         }
 
         return ArrivingBanner(
-            copy: copy, sender: sender, quietly: !world.filter.allows(message.room))
+            copy: copy, sender: sender, quietly: !world.filter.allows(message.room),
+            room: message.room)
     }
 }

@@ -8,6 +8,14 @@ extension AppSession {
     // MARK: Lifecycle
 
     public func load() async {
+        if let loadInFlight { return await loadInFlight.value }
+        let loading = Task { await loadFromStorage() }
+        loadInFlight = loading
+        await loading.value
+        loadInFlight = nil
+    }
+
+    private func loadFromStorage() async {
         do {
             let store = IdentityStore(keychain: storage.keychain)
             guard try await store.loadIdentity() != nil else {

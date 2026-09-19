@@ -136,12 +136,7 @@ struct AppRootView: View {
         nonmutating set { shell.badgesAllowed = newValue }
     }
 
-    var mailbox: any Mailbox {
-        #if DEBUG
-            if let rig { return rig }
-        #endif
-        return cloud
-    }
+    var mailbox: any Mailbox { shell.mailbox }
 
     var accountRegistry: any AccountRegistry {
         #if DEBUG
@@ -153,12 +148,7 @@ struct AppRootView: View {
             stateStore: FileDocumentStore(url: Self.registrationProbeURL))
     }
 
-    var media: any MediaMailbox {
-        #if DEBUG
-            if let rig { return rig }
-        #endif
-        return cloud
-    }
+    var media: any MediaMailbox { shell.media }
 
     @State var privacyNote = false
     @AppStorage("explained.notifications") var notificationsExplained = false
@@ -449,6 +439,12 @@ struct AppRootView: View {
         .onChange(of: session.state) { _, _ in startDeviceSync() }
         .task(id: session.state) { await settleDistribution() }
         .task { PushArrivals.shared.onArrival { await syncNow() } }
+        .task {
+            PushArrivals.shared.onAnswer { answer in
+                await answering(answer)
+                await syncNow()
+            }
+        }
         .task {
             PushArrivals.shared.onOpenRoom { thread in
                 switch session.tapping(thread, whileViewing: openRoom) {

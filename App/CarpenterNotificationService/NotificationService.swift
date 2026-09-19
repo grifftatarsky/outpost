@@ -30,7 +30,8 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
 
         Task {
             let rich = await NotificationService.richCopy()
-            await self.deliver(rich.copy, badge: rich.badge, sender: rich.sender, quietly: rich.quietly)
+            await self.deliver(
+                rich.copy, badge: rich.badge, sender: rich.sender, quietly: rich.quietly, room: rich.room)
         }
     }
 
@@ -48,13 +49,16 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
         let badge: Int?
         let sender: Sender?
         let quietly: Bool
+        var room: RoomID?
     }
 
     override func serviceExtensionTimeWillExpire() {
-        Task { await deliver(MessageNotification.generic, badge: nil, sender: nil, quietly: false) }
+        Task { await deliver(MessageNotification.generic, badge: nil, sender: nil, quietly: false, room: nil) }
     }
 
-    private func deliver(_ copy: NotificationCopy, badge: Int?, sender: Sender?, quietly: Bool) async {
+    private func deliver(
+        _ copy: NotificationCopy, badge: Int?, sender: Sender?, quietly: Bool, room: RoomID?
+    ) async {
         let taken: ((UNNotificationContent) -> Void, UNMutableNotificationContent)? = lock.withLock {
             guard let handler = contentHandler, let content = bestAttempt else { return nil }
             contentHandler = nil
@@ -67,6 +71,10 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
             content.subtitle = copy.subtitle
             content.body = copy.body
             content.threadIdentifier = copy.threadID
+            if let room {
+                content.categoryIdentifier = NotificationAnswer.messageCategory
+                content.userInfo.merge(NotificationAnswer.userInfo(for: room)) { _, new in new }
+            }
         }
         if let badge { content.badge = NSNumber(value: badge) }
 
@@ -162,7 +170,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
             }
             return Rich(
                 copy: banner.copy, badge: session.badgeNumber, sender: sender,
-                quietly: banner.quietly)
+                quietly: banner.quietly, room: banner.room)
         }
 
         for attempt in 0..<Self.attempts {

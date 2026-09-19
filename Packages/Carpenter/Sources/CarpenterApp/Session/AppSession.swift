@@ -96,6 +96,7 @@ public final class AppSession {
 
     var head: EntryLink?
     var accountRegistry: (any AccountRegistry)?
+    var loadInFlight: Task<Void, Never>?
 
     var issuedGrants: Set<String> = []
 

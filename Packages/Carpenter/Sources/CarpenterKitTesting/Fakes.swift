@@ -121,6 +121,16 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     }
 
     public var storedPacketCount: Int { stored.count }
+
+    public var storedWireBytes: [Data] {
+        order.compactMap { stored[$0] }.flatMap(\.fields.values).flatMap { field -> [Data] in
+            switch field {
+            case .string(let text): [Data(text.utf8)]
+            case .data(let data): [data]
+            case .dataList(let list): list
+            }
+        }
+    }
     public var storedAttachmentCount: Int { attachments.count }
 
     public var serverWrites: Int {

@@ -9,6 +9,8 @@ import SwiftUI
 @MainActor
 @Observable
 final class AppShell {
+    static let shared = AppShell()
+
     let cloud = CloudKitMailbox(
         container: .default(),
         directory: PeerZoneDirectory(store: AppRootView.mailboxDirectoryStore()))
@@ -42,4 +44,18 @@ final class AppShell {
     var screening: ScreeningAvailability = .unsupported
     var notificationsAllowed: Bool?
     var badgesAllowed: Bool?
+
+    var mailbox: any Mailbox {
+        #if DEBUG
+            if let rig { return rig }
+        #endif
+        return cloud
+    }
+
+    var media: any MediaMailbox {
+        #if DEBUG
+            if let rig { return rig }
+        #endif
+        return cloud
+    }
 }

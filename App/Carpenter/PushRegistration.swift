@@ -67,11 +67,24 @@ class PushDesk: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        let thread = response.notification.request.content.threadIdentifier
-        Diagnostics.sync.notice(
-            "push: opened from a notification (thread \(thread.isEmpty ? "none" : thread, privacy: .public))")
-        PushArrivals.shared.open(thread: thread)
-        await PushArrivals.shared.arrived()
+        let content = response.notification.request.content
+        let answer = NotificationAnswer.from(
+            action: response.actionIdentifier, userInfo: content.userInfo,
+            text: (response as? UNTextInputNotificationResponse)?.userText)
+        switch answer {
+        case .open:
+            let thread = content.threadIdentifier
+            Diagnostics.sync.notice(
+                "push: opened from a notification (thread \(thread.isEmpty ? "none" : thread, privacy: .public))")
+            PushArrivals.shared.open(thread: thread)
+            await PushArrivals.shared.arrived()
+        case .nothing:
+            Diagnostics.sync.notice("push: a notification action carried nothing to do")
+        case .reply, .markRead:
+            Diagnostics.sync.notice("push: answered from a notification (\(answer.kind, privacy: .public))")
+            if await PushArrivals.shared.answer(answer) { return }
+            await AppShell.shared.answerWithoutAWindow(answer)
+        }
     }
 
     fileprivate func handleBackgroundPush() async {
@@ -81,6 +94,7 @@ class PushDesk: NSObject, UNUserNotificationCenterDelegate {
 
     fileprivate func adopt() {
         UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().setNotificationCategories(NotificationAnswer.categories)
         PushRegistration.request()
     }
 }

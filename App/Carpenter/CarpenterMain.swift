@@ -9,7 +9,7 @@ struct CarpenterMain: App {
         @NSApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
     #endif
 
-    @State private var shell = AppShell()
+    @State private var shell = AppShell.shared
 
     @ViewBuilder private var root: some View {
         #if DEBUG

@@ -69,6 +69,23 @@ struct ArrivingBannerTests {
         #expect(banner?.copy.body == "are you coming")
     }
 
+    @Test("A message's banner names its room, so Reply and Mark as Read know where they go")
+    func aMessageNamesItsRoom() {
+        let banner = WhatArrived.since(
+            nothingSeenYet, post: nil, ask: nil, message: message(in: other), in: world())
+        #expect(banner?.room == other)
+    }
+
+    @Test("A post or a restore ask names no room, so it offers no answer")
+    func onlyAMessageNamesARoom() {
+        let fromAPost = WhatArrived.since(
+            nothingSeenYet, post: post(), ask: nil, message: nil, in: world())
+        let fromAnAsk = WhatArrived.since(
+            nothingSeenYet, post: nil, ask: ask(), message: nil, in: world())
+        #expect(fromAPost != nil && fromAPost?.room == nil)
+        #expect(fromAnAsk != nil && fromAnAsk?.room == nil)
+    }
+
     // MARK: Which one wins when two arrive in the same round
 
     @Test("A post is announced ahead of a message")
