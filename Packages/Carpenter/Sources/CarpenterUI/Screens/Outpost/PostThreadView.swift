@@ -7,6 +7,7 @@ public struct PostThreadView: View {
     @Environment(\.clock) private var clock
 
     @State private var draft = ""
+    @State private var draftSelection: TextSelection?
     @State private var explaining = false
 
     private let post: OutpostPost
@@ -148,7 +149,7 @@ public struct PostThreadView: View {
 
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 4) {
-            TextField(text: $draft, axis: .vertical) {
+            TextField(text: $draft, selection: $draftSelection, axis: .vertical) {
                 Text("Add a comment", bundle: .module)
             }
             .textFieldStyle(.plain)
@@ -163,6 +164,7 @@ public struct PostThreadView: View {
                 draft = ""
                 Task { await onComment(outgoing) }
             }
+            .shiftReturnBreaksLine($draft, selection: $draftSelection)
 
             if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button {

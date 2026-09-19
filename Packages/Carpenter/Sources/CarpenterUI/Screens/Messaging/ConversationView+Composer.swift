@@ -204,7 +204,7 @@ extension ConversationView {
             VStack(alignment: .leading, spacing: 0) {
             if !staged.isEmpty { stagedStrip }
             HStack(alignment: .bottom, spacing: 4) {
-                TextField(text: $draft, axis: .vertical) {
+                TextField(text: $draft, selection: $draftSelection, axis: .vertical) {
                     Text("Message", bundle: .module)
                 }
                 .textFieldStyle(.plain)
@@ -214,6 +214,7 @@ extension ConversationView {
                 .padding(.vertical, 8)
                 .lineLimit(1...6)
                 .onSubmit(send)
+                .shiftReturnBreaksLine($draft, selection: $draftSelection)
 
                 if hasSomethingToSend {
                     Button(action: send) {

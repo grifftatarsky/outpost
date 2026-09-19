@@ -3796,10 +3796,9 @@ or without it, even with the cursor in the name field, and on the iPad ⌘. does
 handles both. A lint that required it was written the same day and removed once the Mac was measured,
 because a rule that fails a build must stand for a difference somebody can see.
 
-The Mac's composer was measured the same way, by sending keys to the real field: **Return sends,
-Shift-Return also sends, Option-Return writes a second line.** That is the system field's own
-behavior and what Apple documents for Messages on the Mac, where Option-Return is the line break, so
-it is left as it is.
+The Mac's composer was measured the same way, by sending keys to the real field: Return sent,
+Shift-Return also sent, Option-Return wrote a second line — the system field's behavior, and what
+Apple documents for Messages. See the next entry for what Shift-Return does now.
 
 ⌘F opens Search on the Mac, from the Edit menu, as *Keyboards* lists it. On the iPad it was measured
 not to reach the command — the system keeps ⌘F — so there Search is ⌘4 with the other areas. The
@@ -3808,6 +3807,20 @@ was.
 
 A photo in a conversation is a tap gesture rather than a button, so it had no pointer effect on an
 iPad; it takes the system's highlight when it can be opened, shown or retried.
+
+### Shift-Return writes a line on the Mac
+
+`RULED` — Griff, 2026-09-18: "shift return should add a new line."
+
+In the conversation composer and a post's comment field on the Mac, Return sends, Shift-Return and
+Option-Return write a second line at the cursor. Shift-Return is caught with `onKeyPress` and the line
+is written into the draft through the field's `TextSelection`, by `LineBreak.inserted`, rather than by
+sending the field editor an AppKit action: the first attempt at that reached a window that could not
+take it and crashed. `LineBreakTests` holds the insertion at a caret, over a selection, beside an emoji,
+and with a selection left over from a longer draft — the case that trapped before it was clamped.
+Measured on the real Mac field after the change: Return sent, Shift-Return and Option-Return each wrote
+a line. On iPhone and iPad nothing changed; Return already writes a line there, measured again on the
+iPad by `WideLayoutTests.testTheComposerStillTypesAndReturnWritesALine`.
 
 ## Superseded
 

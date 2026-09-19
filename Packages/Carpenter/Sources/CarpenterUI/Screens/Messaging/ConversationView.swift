@@ -10,6 +10,7 @@ public struct ConversationView: View {
     @Environment(\.notGoneHelp) var notGoneHelp
 
     @State var draft = ""
+    @State var draftSelection: TextSelection?
     @State var sent = 0
     @State var failures = 0
     @State var problem: String?

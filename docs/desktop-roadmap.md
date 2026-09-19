@@ -71,9 +71,8 @@ at instead.
 - **The menus against a window.** Their structure was dumped from a windowless probe; with a window
   in front, New Room, the Conversation menu's items, ⌘1 onward and ⌘F should all enable and act.
 - **Escape on a sheet — measured.** It leaves *New room* on the Mac, cursor in the field or not.
-- **Return and Shift-Return — measured 2026-09-18.** Keys sent to the real field on the Mac: Return
-  sends, Shift-Return sends, Option-Return writes a second line, as Messages does. Left as it is; a
-  person who expects Shift-Return to break a line will send instead, which is the one thing to watch.
+- **Return and Shift-Return — done 2026-09-18.** Return sends; Shift-Return and Option-Return write a
+  line, measured on the real field — [Decisions](decisions.md#shift-return-writes-a-line-on-the-mac).
 - **Sheets.** Every sheet goes through `sizedSheet`, which gives it a form size on the Mac: macOS
   sizes a sheet to its content, and a `List`, a `ScrollView` or a `TextEditor` has no natural height.
   Seen on Griff's Mac 2026-09-18 as the notifications explainer arriving as a lone *Continue* bar.

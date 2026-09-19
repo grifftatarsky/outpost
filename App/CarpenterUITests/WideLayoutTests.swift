@@ -189,6 +189,20 @@ final class WideLayoutTests: XCTestCase {
         return attachment
     }
 
+    func testTheComposerStillTypesAndReturnWritesALine() {
+        let app = launch("rooms", .landscapeLeft)
+        sleep(2)
+        XCTAssertTrue(tapRow(app, "Hangar 7"))
+        let field = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 4), "no composer")
+        field.tap()
+        field.typeText("one\ntwo")
+        sleep(1)
+        let value = (field.value as? String) ?? ""
+        XCTAssertEqual(value, "one\ntwo", "the composer lost what was typed, or Return sent it")
+        shoot("composer typed")
+    }
+
     func testPortrait() { walk(.portrait, "portrait") }
 
     func testLandscape() { walk(.landscapeLeft, "landscape") }
