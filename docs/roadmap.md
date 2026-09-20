@@ -48,21 +48,18 @@ and the test plan. [Open questions](open-questions.md) holds what is unbuilt or 
 
 ## Where everything stands
 
-Eight epics, 104 tickets, counted 2026-09-19.
+Eight epics, 104 tickets, counted 2026-09-20.
 
 | Status | Count |
 |---|---|
-| Complete (tested) | 64 |
+| Complete (tested) | 67 |
 | Complete (proved above the mailbox) | 6 |
+| Complete (QA required) | 5 |
 | Complete (hardware proof owed) | 17 |
 | Complete (operational proof owed) | 3 |
 | Incomplete | 2 |
 | Not started | 1 |
 | Pushed out or canceled | 3 |
-| The desktop, in its own words | 8 |
-
-The desktop rows still describe themselves ("built, not seen live") rather than using the statuses
-above. They came from a separate page on 2026-09-19 and have not been through a status pass.
 
 <details markdown="1">
 <summary><b>Getting a message there</b> · 11 tickets — 10 tested · 1 proved above the mailbox</summary>
@@ -241,14 +238,14 @@ It has not been drawn by a designer; the implementation decided it.
 | Ticket | Status | Evidence |
 |---|---|---|
 | The Mac window feels like a Mac app | Incomplete | Runs in three columns; invite control restored 2026-09-01. **The Mac stopped compiling the day `HardwareName` arrived** — an unconditional `import UIKit` — and builds again as of 2026-09-18. Return and Shift-Return, the flicker, the new-post sheet and the keyboard path all need measuring in a live window: see below. |
-| The app icon on macOS | Built, not seen in the Dock | An Icon Composer document with a dark appearance, scoped to the macOS SDK; checked in the compiled `.icns` at every size. The full mark does not read at 16 points. [Decisions](decisions.md#the-mac-icon-is-an-icon-composer-document-and-ios-keeps-its-own). |
-| The desktop wall | Built, not seen | An inspector beside your own Outpost holding *Who sees your Outpost*, open by default, hidden with ⌥⌘I. [Decisions](decisions.md#the-desktop-wall-is-an-inspector-open-by-default-and-hideable). |
-| A Settings window | Built; panes drawn offscreen | ⌘, opens a Settings window with a toolbar of panes — Appearance, Behavior, Notifications, Privacy & Safety, Outposts, Devices, Data — holding the same pages the iPhone pushes from You. You on the Mac keeps your name, People, Supporter, your Outpost, help, and a *Settings* row. [Decisions](decisions.md#the-mac-has-a-settings-window-built-from-the-same-pages). |
-| What's waiting, in the toolbar | Built, not seen live | The filled mailbox; a popover of unread rooms and new Outposts; a count that is the Dock's number and shows only when badges are on. Rendered offscreen at 3, 12 and 99+, unclipped. [Decisions](decisions.md#the-mac-toolbars-mailbox-carries-a-hand-drawn-count-and-only-when-badges-are-on). |
-| The wide layout, Mac and iPad | Built; iPad walked in both orientations | Areas, the iPhone's own lists, and what is open, in three columns. The Mac's sidebar had no unread marks, pins, tags, search, waiting invitations or way to start a room; it has all of them now because the list is the iPhone's. [Decisions](decisions.md#the-mac-and-an-ipad-at-full-width-share-one-layout-areas-a-list-and-what-is-open). |
-| Paste a photo | Built on the Mac; measured | ⌘V with a copied photo or media file attaches it in the composer and a new post; words paste as before. [Decisions](decisions.md#v-with-a-photo-on-the-clipboard-attaches-it-and-words-still-paste-as-words). Not on an iPad. |
-| Drag and drop | Built; drops measured on a Mac window | A photo or clip dragged onto a conversation or a new post is staged as the picker would stage it, and a path a text view inserts is turned back into the file. [Decisions](decisions.md#a-photo-or-clip-dragged-onto-a-conversation-or-a-new-post-is-attached-never-pasted-as-its-path). Not dragged by a real pointer. |
-| The menu bar | Built; menu structure measured | File, View, Go and Help carry the app's commands with standard shortcuts, and a compose button in the sidebar starts a room, a solo or joins with an invite — the Mac had no way to do any of the three. [Decisions](decisions.md#the-macs-menu-bar-carries-the-apps-commands). |
+| The app icon on macOS | Complete (QA required) | Not yet seen in the Dock. An Icon Composer document with a dark appearance, scoped to the macOS SDK; checked in the compiled `.icns` at every size. The full mark does not read at 16 points. [Decisions](decisions.md#the-mac-icon-is-an-icon-composer-document-and-ios-keeps-its-own). |
+| The desktop wall | Complete (QA required) | Not yet seen in a window. An inspector beside your own Outpost holding *Who sees your Outpost*, open by default, hidden with ⌥⌘I. [Decisions](decisions.md#the-desktop-wall-is-an-inspector-open-by-default-and-hideable). |
+| A Settings window | Complete (QA required) | Panes drawn offscreen, the real window not yet opened. ⌘, opens a Settings window with a toolbar of panes — Appearance, Behavior, Notifications, Privacy & Safety, Outposts, Devices, Data — holding the same pages the iPhone pushes from You. You on the Mac keeps your name, People, Supporter, your Outpost, help, and a *Settings* row. [Decisions](decisions.md#the-mac-has-a-settings-window-built-from-the-same-pages). |
+| What's waiting, in the toolbar | Complete (QA required) | Rendered offscreen, not yet seen live. The filled mailbox; a popover of unread rooms and new Outposts; a count that is the Dock's number and shows only when badges are on. Rendered offscreen at 3, 12 and 99+, unclipped. [Decisions](decisions.md#the-mac-toolbars-mailbox-carries-a-hand-drawn-count-and-only-when-badges-are-on). |
+| The wide layout, Mac and iPad | Complete (tested) | Areas, the iPhone's own lists, and what is open, in three columns. The Mac's sidebar had no unread marks, pins, tags, search, waiting invitations or way to start a room; it has all of them now because the list is the iPhone's. [Decisions](decisions.md#the-mac-and-an-ipad-at-full-width-share-one-layout-areas-a-list-and-what-is-open). |
+| Paste a photo | Complete (tested) | ⌘V with a copied photo or media file attaches it in the composer and a new post; words paste as before. [Decisions](decisions.md#v-with-a-photo-on-the-clipboard-attaches-it-and-words-still-paste-as-words). Not on an iPad. |
+| Drag and drop | Complete (tested) | A photo or clip dragged onto a conversation or a new post is staged as the picker would stage it, and a path a text view inserts is turned back into the file. [Decisions](decisions.md#a-photo-or-clip-dragged-onto-a-conversation-or-a-new-post-is-attached-never-pasted-as-its-path). Not dragged by a real pointer. |
+| The menu bar | Complete (QA required) | Structure dumped from a windowless probe; the menus have not been used against a window. File, View, Go and Help carry the app's commands with standard shortcuts, and a compose button in the sidebar starts a room, a solo or joins with an invite — the Mac had no way to do any of the three. [Decisions](decisions.md#the-macs-menu-bar-carries-the-apps-commands). |
 | Draw the platforms the set claims | Not started | Design work: two platforms, neither drawn. |
 
 ### What needs a person at the Mac
