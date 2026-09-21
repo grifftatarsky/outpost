@@ -18,24 +18,27 @@ Nothing here is settled. Anything settled lives in [Decisions](decisions.md).
 
 ## Why this file exists
 
-Claude wrote most of `decisions.md`, and for months wrote it in Griff's voice — entries marked
+Claude wrote most of the old decision log, and for months wrote it in Griff's voice — entries marked
 "Griff's ruling" on questions he had never been asked. Those entries were then quoted back to him in
 later sessions as constraints he had set. On 12 September 2026 that nearly stopped a feature he had
-just asked for.
+just asked for. On 20 September 2026 the log was retired for a second reason: entries in it described
+behaviour the build no longer had, including a privacy property the code did not hold. It is
+[archived](archive/decisions-2026.md) and may not be cited.
 
-`decisions.md` now marks every entry **RULED**, **PROPOSED** or **FACT**. This file is the other
-half: everything **PROPOSED** that is worth his attention, written as a question rather than a
-statement.
+[Decisions](decisions.md) starts again from what is true today and marks every entry **RULED**,
+**PROPOSED** or **FACT**. This file is the other half: everything **PROPOSED** that is worth his
+attention, written as a question rather than a statement.
 
 ## Waiting on an answer
 
-Griff worked through the rest on 2026-09-13, and three more on 2026-09-15. Everything he settled is
-in [Decisions](decisions.md), marked `RULED`.
+Griff worked through the rest on 2026-09-13, and three more on 2026-09-15. Those rulings were
+recorded in the log that is now [archived](archive/decisions-2026.md); the links below go there, and
+what they describe has not been re-checked against the build.
 
 Closed on 2026-09-15: the six-character phrase (ruled — ten characters *and* a commitment, see
-[Decisions](decisions.md#the-verification-phrase-gets-ten-characters-and-a-commitment)); *Notify
+[Decisions](archive/decisions-2026.md#the-verification-phrase-gets-ten-characters-and-a-commitment)); *Notify
 anyway* (answered out of Apple's own documentation rather than by asking Apple, see
-[Decisions](decisions.md#the-app-does-not-set-an-interruption-level-because-it-is-a-messaging-app));
+[Decisions](archive/decisions-2026.md#the-app-does-not-set-an-interruption-level-because-it-is-a-messaging-app));
 and forcing the emoji keyboard, deleted at Griff's instruction because the approach was abandoned —
 the searchable grid that replaced it is ordinary SwiftUI and needs no device to test.
 
@@ -45,7 +48,7 @@ Answered from Apple's guidance and ruled on 2026-09-15. Apple's [Alerts](https:/
 page says to avoid an alert that only informs and to "prefer finding an alternative way to communicate
 it within the relevant context". So a message deleted by consensus leaves a permanent line in the
 transcript where it was, not a notice that fades. Griff: "Yeah, I'm good with the permanent inline."
-See [Decisions](decisions.md#a-deletion-leaves-a-line-in-the-transcript-not-a-notice-that-fades). It
+See [Decisions](archive/decisions-2026.md#a-deletion-leaves-a-line-in-the-transcript-not-a-notice-that-fades). It
 applies when consensus deletion is built, which is [after TestFlight](after-testflight.md).
 
 ### Raised and answered 2026-09-16
@@ -57,20 +60,20 @@ Seven questions came out of working the ticket list; Griff answered all of them 
 2. **The notification explainer** — one button, and the no is given to Apple. It already had one
    button; it can no longer be swiped away.
 3. **The accent retint** — keep the fade, with the tab bar leading.
-   [Decisions](decisions.md#the-accent-retint-fades-and-the-tab-bar-leads-it).
+   [Decisions](archive/decisions-2026.md#the-accent-retint-fades-and-the-tab-bar-leads-it).
 4. **"A fingerprint changed"** — cannot happen here, because an identity is its keys; somebody who
    starts over is a new person who has to be invited again. Replaced by a dated notice when somebody
    you talk to **adds a device** the ordinary way. Restores already have their own notice.
 5. **The comparison sheet** — once per person, the first time a conversation with them opens after
    joining, skipped if you have already compared.
 6. **One identity per account, offline** — wait until iCloud can be checked.
-   [Decisions](decisions.md#a-first-launch-that-cannot-reach-icloud-waits).
+   [Decisions](archive/decisions-2026.md#a-first-launch-that-cannot-reach-icloud-waits).
 7. **A disabled button's label** — keep Apple's look; the record is corrected.
-   [Decisions](decisions.md#a-disabled-button-keeps-the-systems-look).
+   [Decisions](archive/decisions-2026.md#a-disabled-button-keeps-the-systems-look).
 
 ## Choices Claude made that Griff has not seen
 
-Each of these is marked **PROPOSED** in [Decisions](decisions.md). They are defaults, not
+Each of these was marked **PROPOSED** in the [archived log](archive/decisions-2026.md). They are defaults, not
 constraints, and any of them may be wrong for reasons only Griff has.
 
 **Sync and the log**
@@ -134,7 +137,7 @@ carry and the departures already agreed are in [Design](design.md).
 ### Where the app was changed away from a board without Griff seeing it
 
 **The list row names no sender.** Ruled on 2026-09-13: the board is overruled and Messages' row
-stands. See [Decisions](decisions.md#the-rooms-list-row-is-messages-and-board-53-is-overruled) for
+stands. See [Decisions](archive/decisions-2026.md#the-rooms-list-row-is-messages-and-board-53-is-overruled) for
 what that costs.
 
 **Search became a tab.** The first attempt was an inline field with

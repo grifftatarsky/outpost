@@ -1,7 +1,4 @@
 <script>
-  // A link into a collapsed ticket opens it. Tickets on the roadmap and the epic pages are
-  // <details> elements carrying the id the old headings had, so every existing anchor still lands;
-  // without this the browser scrolls to a closed summary and the reader sees nothing they were sent to.
   (function () {
     function reveal() {
       if (!location.hash) return;

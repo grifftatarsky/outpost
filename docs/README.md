@@ -36,9 +36,11 @@ as `{{ site.baseurl }}{{ site.design_board }}`.
 
 ## Adding to it
 
-- **A decision that binds** goes in `decisions.md`, under its subject, with what it costs and what
-  would change it, marked `RULED` only if Griff decided it, `PROPOSED` if Claude chose it, and `FACT`
-  if nobody chose it. A replaced decision moves to *Superseded* as one line naming its replacement.
+- **A decision that binds** goes in `decisions.md`, under its subject, with what it costs, marked
+  `RULED` only if Griff decided it, `PROPOSED` if Claude chose it, and `FACT` if nobody chose it. A
+  decision that stops being true is **deleted**, not superseded. The log was restarted on 2026-09-20
+  because the old one had grown four thousand lines of things that were no longer so; it is under
+  `archive/` and may not be cited.
 - **Something unbuilt or uncertain** goes in `open-questions.md`, written as a question.
 - **Work** goes in an epic under `epics/` as a story with acceptance criteria, and its status goes on
   `roadmap.md`, the only place a status lives.

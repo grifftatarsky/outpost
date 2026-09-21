@@ -315,7 +315,7 @@ heading trait, which `Scripts/lint/screen-headings.py` now fails the build over.
 
 Also read on the same walk, and left alone: the You tab's first stop is the animated mark, announced
 "Outpost, Image". That is deliberate — see
-[Decisions](decisions.md#the-mark-stands-where-yous-title-would-be-and-that-is-a-departure) — and
+[Decisions](archive/decisions-2026.md#the-mark-stands-where-yous-title-would-be-and-that-is-a-departure) — and
 the VoiceOver cost is recorded there.
 
 In Xcode 27, `Simulator.app` is replaced by `DeviceHub.app` in `Xcode.app/Contents/Applications`.

@@ -9,7 +9,7 @@ nav_order: 6
 {: .no_toc }
 
 What the app does about abuse, why it does it that way, and what the law asks of whoever runs it.
-Written 2026-09-04, when photos were built. The decisions are recorded in [Decisions](decisions.md);
+Written 2026-09-04, when photos were built. The decisions are recorded in the [archived log](archive/decisions-2026.md);
 this page carries the reasoning, the checklist and the procedure for handling a report.
 
 Scope: US and Canada launch, an individual developer, no server. **Nothing here is legal advice.**
@@ -36,7 +36,7 @@ without a new outbound network destination.
 
 ## Decisions
 
-Each is in [Decisions](decisions.md) with its cost; this is the short form.
+Each is in the [archived log](archive/decisions-2026.md) with its cost; this is the short form.
 
 | | Decision | Where it lives |
 |---|---|---|

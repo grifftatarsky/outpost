@@ -26,7 +26,7 @@ shared figure, and every route from a comment to a name goes through `Projection
 that cannot reach is the envelope: an entry's author, device, room, sequence number and time sit
 outside the seal. So somebody reading their own database can group an Outpost's anonymous comments by
 author and count how many strangers read it. They cannot learn who. Sealing the author does not help;
-see [Decisions](decisions.md#identity-stays-in-the-envelope-and-the-seal-is-the-wrong-place-for-it).
+see [Decisions](archive/decisions-2026.md#identity-stays-in-the-envelope-and-the-seal-is-the-wrong-place-for-it).
 
 **Entries sealed before 2026-09-07 are not bound to their writer.** New seals carry the author and
 device in the associated data, and `SealedPayload.opened` falls back to the old two-field context for

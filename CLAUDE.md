@@ -18,7 +18,7 @@ shipped under, so a recovery key saved under an old name still opens.
 | If you are | Read |
 |---|---|
 | new here | [docs/index.md](docs/index.md), then [docs/architecture.md](docs/architecture.md) |
-| about to decide something | [docs/decisions.md](docs/decisions.md) — **and read its first section before citing any entry** |
+| about to decide something | [docs/decisions.md](docs/decisions.md) — restarted 2026-09-20; **read its first section before citing any entry** |
 | about to build something | [docs/roadmap.md](docs/roadmap.md) for status, the epic under `docs/epics/` for the story |
 | looking for what is unfinished | [docs/open-questions.md](docs/open-questions.md) |
 | about to touch a key, a seal or a signature | [docs/crypto-brief.md](docs/crypto-brief.md) — what each key is derived from and bound to, and the three failures that were all in the composition |
@@ -29,6 +29,17 @@ shipped under, so a recovery key saved under an old name still opens.
 did), or `FACT` (a property of the platform). A `PROPOSED` entry is a default, not a constraint, and
 **may never be cited as a reason not to do what Griff asked for**. This rule exists because the
 opposite happened: entries written in his voice were quoted back to him as his own rulings.
+
+**The old log is an archive and may not be cited at all.** `docs/archive/decisions-2026.md` ran to
+four thousand lines and described behaviour the build had not had for weeks — including a privacy
+property the code did not hold, which cost a night's work on 2026-09-20 to find and fix. It is kept
+only so an argument is not re-derived. `docs/decisions.md` starts from what is true today, and an
+entry that stops being true is **deleted, not superseded**. If a question cannot be answered from the
+new file, read the code and the tests; do not go digging in the archive for an answer.
+
+**Every decision goes in the message.** A reply that makes a decision ends with a **Decisions** log
+naming each one and what it rules out, beside the *What's next* line. Griff asked for this on
+2026-09-20 so that nothing binding is chosen silently again.
 
 ## There are no comments in this repository
 
@@ -389,5 +400,7 @@ command above does, and so does CI.
 - Something unbuilt or uncertain → `docs/open-questions.md`, as a question for him.
 - Work → an epic under `docs/epics/`, and its status on `docs/roadmap.md`.
 - Noticed and parked → `docs/inbox.md`.
+- What a member can do, see or reach changed → the marketing site is now wrong until somebody looks.
+  `~/projects/outpost-site/AGENTS.md` § When an app changes says where; `/status` changes first.
 - Anything crossing the network is **unproven** until two devices on two accounts have run it. Say so
   rather than implying a passing suite covered it.
