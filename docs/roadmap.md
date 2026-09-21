@@ -48,11 +48,11 @@ and the test plan. [Open questions](open-questions.md) holds what is unbuilt or 
 
 ## Where everything stands
 
-Eight epics, 104 tickets, counted 2026-09-20.
+Eight epics, 106 tickets, counted 2026-09-20.
 
 | Status | Count |
 |---|---|
-| Complete (tested) | 67 |
+| Complete (tested) | 69 |
 | Complete (proved above the mailbox) | 6 |
 | Complete (QA required) | 5 |
 | Complete (hardware proof owed) | 17 |
@@ -62,7 +62,7 @@ Eight epics, 104 tickets, counted 2026-09-20.
 | Pushed out or canceled | 3 |
 
 <details markdown="1">
-<summary><b>Getting a message there</b> · 11 tickets — 10 tested · 1 proved above the mailbox</summary>
+<summary><b>Getting a message there</b> · 13 tickets — 12 tested · 1 proved above the mailbox</summary>
 
 | Ticket | Status | Evidence |
 |---|---|---|
@@ -76,6 +76,8 @@ Eight epics, 104 tickets, counted 2026-09-20.
 | Per-room read reporting | Complete (tested) | A room can report while the rest do not, or never report while the rest do; each change writes that room's own `readPolicy` entry (`PerRoomReportingTests`). Proved over real CloudKit 2026-09-14: a reader reported a message shown and the sender's mark moved (`LiveRoundTests`). |
 | The read-by detail view | Complete (tested) | A section on message detail, reached from the message's own actions and never from the marks, in the marks' own words (`WhoHasReadItTests`). The observation it draws proved over real cloudkit 2026-09-14. |
 | Repairing a history with holes in it | Complete (tested) | Gaps named from an index kept where entries enter, chased after two minutes, answered with what a peer holds (`HistoryRepairTests`). Proved over real CloudKit 2026-09-14: a packet was deleted off the server, the reader named exactly one missing entry, asked, and **got the words back** (`LiveRoundTests`). This row said a hole recovered over the network had never been seen. |
+| A packet carries only what its reader may read | Complete (tested) | 2026-09-20. The round used to seal every unsent entry — across every room and solo — into one body and wrap its key for every peer, so a member of any one room held every entry their peers wrote everywhere else. History repair did it a second way: a named author's log was served whole, ignoring the room asked for, and the answer never checked the asker's history floor. Measured before the change: a second room's entries on a device never in it, and nine sealed entries on a forward-only joiner from before they were let in. `AppSession.mayReceive` now answers who may have each entry, `addressed(_:)` groups peers by identical audience, and a sender states the positions it is withholding so nobody asks forever (`RepairScopeTests`, three cases). Over the network, unproven. |
+| The envelope names only its own conversation | Complete (tested) | 2026-09-20, on Griff's ruling. An entry carried `replica.frontier` — every log the device held, everywhere — in the clear and inside the signature, so one message drew its writer's social graph. Every peer was also handed the keys and device certificates of everyone this device had met, and the list of whose Outposts this member follows. Repair heads were taken across every conversation. All four are scoped now, with no change to anything on disk or on the wire (`EnvelopeLeakTests`, five cases, each red with its fix reverted). What is still legible is a position number, and it is in the inbox. Over the network, unproven. |
 | A draft that survives | Complete (tested) | One per conversation, one for a new post, one per comment, back after a relaunch; a conversation's shows in the rooms list as *Draft*, cleared by sending; Outpost settings deletes the Outpost's. Sealed on disk under a key kept in this device's keychain (`DraftTests`); walked on gamma 2026-09-19 (`RigChecks.testDraftSurvives`). A failed reply from a banner joins it — [epic](epics/messaging.md#a-draft-that-survives). |
 
 </details>
