@@ -219,7 +219,9 @@ extension AppSession {
         }
         let request = RepairRequest(
             authors: [inviterKeys.participantID, enrolment.identity.id],
-            heads: replica.heads(of: [inviterKeys.participantID, enrolment.identity.id]),
+            heads: replica.heads(
+                of: [inviterKeys.participantID, enrolment.identity.id],
+                inRoom: attestation.room, onWallOf: nil),
             gaps: [], room: attestation.room)
         persisted.repairs.removeAll { $0.room == attestation.room && $0.quiet }
         persisted.repairs.append(

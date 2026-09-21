@@ -235,12 +235,16 @@ extension Replica {
     }
 
     public func heads(inScopeOf request: RepairRequest) -> VectorClock {
-        let authors = Set(request.authors)
-        let wantsWall = request.wallOf
+        heads(of: Set(request.authors), inRoom: request.room, onWallOf: request.wallOf)
+    }
+
+    public func heads(
+        of authors: Set<ParticipantID>, inRoom room: RoomID?, onWallOf wantsWall: ParticipantID?
+    ) -> VectorClock {
         var clock = VectorClock()
         for entry in allEntries where authors.contains(entry.feedKey.author) {
             let asked: Bool
-            if let room = request.room {
+            if let room {
                 asked = entry.room == room
             } else if let wantsWall {
                 asked =

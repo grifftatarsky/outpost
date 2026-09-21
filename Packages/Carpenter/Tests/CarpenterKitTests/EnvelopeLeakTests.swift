@@ -165,6 +165,47 @@ struct EnvelopeLeakTests {
             "Bob was told that Alice follows Carol's Outpost")
     }
 
+    @Test("A repair says how far this conversation has got, not how far its writer has")
+    func repairHeadsAreScoped() async throws {
+        let mailbox = InMemoryMailbox()
+        let alice = TestSession.make()
+        let bob = TestSession.make()
+        let carol = TestSession.make()
+        for session in [alice, bob, carol] { await session.load() }
+        try await alice.createIdentity(displayName: "Alice")
+        try await bob.createIdentity(displayName: "Bob")
+        try await carol.createIdentity(displayName: "Carol")
+
+        let withBob = try await alice.createRoom(named: "Hangar 7")
+        let withCarol = try await alice.createRoom(named: "Somewhere else")
+        let toBob = try await alice.invite(joinerCode: bob.identityCode(), joining: withBob, mailbox: nil)
+        try await bob.redeem(inviteCode: try toBob.encoded())
+        let toCarol = try await alice.invite(
+            joinerCode: carol.identityCode(), joining: withCarol, mailbox: nil)
+        try await carol.redeem(inviteCode: try toCarol.encoded())
+        try await settle([alice, bob, carol], mailbox)
+
+        try await alice.send("here", to: withBob)
+        for index in 1...5 { try await alice.send("elsewhere \(index)", to: withCarol) }
+        try await settle([alice, bob, carol], mailbox)
+
+        await alice.startRepair(in: withBob)
+        let repair = try #require(alice.persisted.repairs.first { $0.room == withBob })
+
+        var checked = 0
+        for feed in repair.request.heads.keys {
+            let topHere =
+                alice.replica.allEntries
+                .filter { $0.feedKey == feed && $0.room == withBob }
+                .map(\.seq).max() ?? 0
+            checked += 1
+            #expect(
+                repair.request.heads[feed] <= topHere,
+                "the repair told a peer how far a log had got in another conversation")
+        }
+        #expect(checked > 0, "this test asserted nothing")
+    }
+
     private struct Position: Hashable {
         let feed: FeedKey
         let seq: UInt64

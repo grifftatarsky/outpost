@@ -36,7 +36,7 @@ extension AppSession {
 
         let request = RepairRequest(
             authors: authors.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
-            heads: replica.heads(of: authors),
+            heads: replica.heads(of: authors, inRoom: room, onWallOf: nil),
             gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
                 .subtracting(persisted.elsewhere),
             room: room, reason: reason)
@@ -243,7 +243,8 @@ extension AppSession {
             let authors = Set(repair.request.authors)
             let request = RepairRequest(
                 id: repair.request.id, authors: repair.request.authors,
-                heads: replica.heads(of: authors),
+                heads: replica.heads(
+                    of: authors, inRoom: repair.request.room, onWallOf: repair.request.wallOf),
                 gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
                 .subtracting(persisted.elsewhere),
                 room: repair.request.room, wallOf: repair.request.wallOf,
