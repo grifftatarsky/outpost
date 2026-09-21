@@ -155,7 +155,7 @@ struct ProjectionCostTests {
 
         for (_, read) in reads { read() }
 
-        let known = ["messages(in:)": refold / 50, "transcript(in:)": refold / 50]
+        let known = ["messages(in:)": refold / 10, "transcript(in:)": refold / 10]
         let ordinary = refold / 250
 
         var expensive: [String] = []

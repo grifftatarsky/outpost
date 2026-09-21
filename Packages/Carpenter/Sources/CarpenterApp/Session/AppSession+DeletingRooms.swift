@@ -9,9 +9,9 @@ extension AppSession {
         guard !replica.knownParticipants.contains(where: { outpostRoom(for: $0) == room }) else {
             return .stillIn
         }
-        let feed = FeedKey(author: enrolment.identity.id, device: enrolment.device.id)
+        let feed = FeedKey(author: enrolment.identity.id, device: enrolment.device.id, conversation: room)
         let sent = persisted.syncedFrontier[feed]
-        let unsent = replica.allEntries.contains { $0.conversation == room && $0.feedKey == feed && $0.seq > sent }
+        let unsent = replica.allEntries.contains { $0.feedKey == feed && $0.seq > sent }
         return unsent ? .departureNotSent : .allowed
     }
 
@@ -108,6 +108,15 @@ extension AppSession {
                 Diagnostics.sync.error(
                     "media: could not drop a photo from a deleted conversation (\(String(describing: error), privacy: .public))")
             }
+        }
+
+        for room in rooms {
+            if let own = heads[room], own.seq > persisted.ownHeads[room]?.seq ?? 0 {
+                persisted.ownHeads[room] = own
+            }
+        }
+        await persistOrReport("where this device's numbering stands in a deleted conversation") {
+            try await saveState()
         }
 
         do {

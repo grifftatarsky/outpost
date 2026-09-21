@@ -168,6 +168,8 @@ public struct Replica: Sendable {
         }
     }
 
+    public var spentFeeds: [FeedKey] { Array(spent.keys) }
+
     public func spentLink(atTopOf feed: FeedKey) -> EntryLink? {
         guard let top = highest[feed] else { return nil }
         return spent[feed]?[top]?.link
@@ -303,9 +305,12 @@ public struct Replica: Sendable {
         return clock
     }
 
-    public func gaps(from authors: Set<ParticipantID>? = nil) -> [FeedGap] {
+    public func gaps(
+        from authors: Set<ParticipantID>? = nil, in conversation: ConversationID? = nil
+    ) -> [FeedGap] {
         let keys = Set(highest.keys).union(claimed.keys).filter { key in
             registries[key.author] != nil && (authors?.contains(key.author) ?? true)
+                && (conversation.map { key.conversation == $0 } ?? true)
         }
         var found: [FeedGap] = []
         for key in keys.sorted(by: { $0.canonicalBytes.lexicographicallyPrecedes($1.canonicalBytes) }) {

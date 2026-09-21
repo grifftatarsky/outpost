@@ -50,7 +50,7 @@ extension AppSession {
         case .room, .solo:
             roomsWithUnsentMessages.insert(room)
         case .outpost:
-            if let head { unsentWallPosts.insert(head.hash) }
+            if let head = heads[room] { unsentWallPosts.insert(head.hash) }
         }
     }
 
@@ -109,7 +109,7 @@ extension AppSession {
                     height: first.height, preview: first.preview, caption: first.caption,
                     duration: first.duration, extras: Array(bodies.dropFirst()))),
             to: wall)
-        if let head { unsentWallPosts.insert(head.hash) }
+        if let head = heads[wall] { unsentWallPosts.insert(head.hash) }
     }
 
     private func discard(_ id: AttachmentID, through mailbox: any MediaMailbox) async {

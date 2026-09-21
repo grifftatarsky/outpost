@@ -145,6 +145,53 @@ struct DeletingARoomTests {
         #expect(rig.alice.forks.isEmpty)
     }
 
+    @Test("Let back into a room you deleted, your next message follows your old ones")
+    func comingBackDoesNotReuseANumber() async throws {
+        let rig = try await rig()
+        try await rig.bob.send("one more before I go", to: rig.hangar)
+        try await rounds(rig.alice, rig.bob, rig.mailbox)
+        func bobsTop(in session: AppSession) -> UInt64 {
+            session.replica.allEntries
+                .filter { $0.conversation == rig.hangar && $0.author == rig.bobID }
+                .map(\.seq).max() ?? 0
+        }
+        let lastBefore = bobsTop(in: rig.bob)
+        try #require(lastBefore >= 2, "Bob needs more than one position for this to mean anything")
+
+        try await removed(rig)
+        try await rig.bob.deleteRoom(rig.hangar)
+
+        let afterDeleting = TestSession.make(
+            keychain: rig.keychain, at: rig.directory, media: rig.media, clock: rig.clock)
+        await afterDeleting.load()
+        let invite = try await rig.alice.invite(
+            joinerCode: afterDeleting.identityCode(), joining: rig.hangar, mailbox: nil)
+        try await afterDeleting.redeem(inviteCode: try invite.encoded())
+        #expect(
+            afterDeleting.replica.spentEntries.allSatisfy { $0.room != rig.hangar },
+            "accepting did not reopen the room, so this test is not reaching the window it is for")
+
+        let afterAccepting = TestSession.make(
+            keychain: rig.keychain, at: rig.directory, media: rig.media, clock: rig.clock)
+        await afterAccepting.load()
+        try await rounds(rig.alice, afterAccepting, through: rig.mailbox, count: 5)
+        try await afterAccepting.send("back again", to: rig.hangar)
+        try await rounds(rig.alice, afterAccepting, rig.mailbox)
+
+        let backAgain = try #require(
+            afterAccepting.replica.allEntries
+                .filter { $0.conversation == rig.hangar && $0.author == rig.bobID }
+                .max { $0.seq < $1.seq })
+        #expect(
+            backAgain.seq > lastBefore,
+            "Bob's device came back to the room and counted from \(backAgain.seq), under \(lastBefore)")
+        #expect(rig.alice.forks.isEmpty, "Alice now holds two different entries at one of Bob's positions")
+        #expect(rig.alice.integrity.rejectedFromPeers == 0, "Alice refused an entry from Bob")
+        #expect(
+            rig.alice.messages(in: rig.hangar).contains { $0.body == "back again" },
+            "Bob's message after coming back never reached Alice")
+    }
+
     @Test("Something said before the removal that arrives after the deletion is not kept")
     func aLateArrivalIsNotKept() async throws {
         let rig = try await rig()

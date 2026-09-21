@@ -157,11 +157,18 @@ extension AppSession {
         if let cachedWithheld { return cachedWithheld }
         let everyone = peers()
         guard !everyone.isEmpty else { return [:] }
-        var out: [ParticipantID: [FeedGap]] = [:]
+        var audience: [EntryHash: Set<ParticipantID>] = [:]
+        var sharedWith: [ConversationID: Set<ParticipantID>] = [:]
         for entry in replica.allEntries {
             let allowed = Set(mayReceive(entry, among: everyone).map(\.them))
-            guard allowed.count < everyone.count else { continue }
-            for peer in everyone where !allowed.contains(peer.them) {
+            audience[entry.hash] = allowed
+            sharedWith[entry.conversation, default: []].formUnion(allowed)
+        }
+        var out: [ParticipantID: [FeedGap]] = [:]
+        for entry in replica.allEntries {
+            let allowed = audience[entry.hash] ?? []
+            let inIt = sharedWith[entry.conversation] ?? []
+            for peer in everyone where inIt.contains(peer.them) && !allowed.contains(peer.them) {
                 out[peer.them, default: []].insert(entry.feedKey, entry.seq)
             }
         }

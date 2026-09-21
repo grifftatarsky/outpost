@@ -125,7 +125,8 @@ struct RepairWireTests {
             secret: try PairwiseSecret.derive(mine: a, theirs: b.publicKeys), them: b.id, me: a.id)
         let theirs = Peer(
             secret: try PairwiseSecret.derive(mine: b, theirs: a.publicKeys), them: a.id, me: b.id)
-        let feed = FeedKey(author: a.id, device: DeviceID(rawValue: WideID.of([1])))
+        let feed = FeedKey(
+            author: a.id, device: DeviceID(rawValue: WideID.of([1])), conversation: ConversationID.room(UUID(uuidString: "00000000-0000-4000-8000-00000000C0DE")!))
         var heads = VectorClock()
         heads[feed] = 3
         let request = RepairRequest(
@@ -516,7 +517,8 @@ struct FinalRefusalTests {
     func recordedPositionsAreLeftOut() {
         let feed = FeedKey(
             author: ParticipantID(rawValue: Data(repeating: 5, count: 32)),
-            device: DeviceID(rawValue: WideID.of([1])))
+            device: DeviceID(rawValue: WideID.of([1])),
+            conversation: .room(UUID()))
         var refused: [FeedGap] = []
         refused.insert(feed, 4)
         refused.insert(feed, 5)

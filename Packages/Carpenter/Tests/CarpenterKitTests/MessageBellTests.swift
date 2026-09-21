@@ -1,4 +1,4 @@
-import CarpenterApp
+@testable import CarpenterApp
 import Foundation
 import Testing
 
@@ -125,20 +125,26 @@ struct MessageBellTests {
         #expect(third.bellsRung == 1)
     }
 
-    @Test("A message rings the room's members, not everyone the packet reached")
+    @Test("A message in a room somebody is not in reaches them in no form at all")
     func ringsOnlyTheRoom() async throws {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox()
-        let (alice, _, shared) = try await pairInARoom(clock, mailbox)
+        let (alice, bob, shared) = try await pairInARoom(clock, mailbox)
 
         let private_ = try await alice.createRoom(named: "Just Me")
         try await alice.sync(through: mailbox)
 
         try await alice.send("talking to myself", to: private_)
         let alone = try await alice.sync(through: mailbox)
-        #expect(
-            alone.packetsWritten > 0, "precondition: the entry went out in a packet Bob receives")
+        #expect(alone.packetsWritten == 0, "a packet went out about a room only Alice is in")
         #expect(alone.bellsRung == 0, "a member outside the room was notified about it")
+        _ = try await bob.sync(through: mailbox)
+        #expect(
+            !bob.replica.allEntries.contains { $0.conversation == private_ },
+            "Bob holds an entry from a room he is not in")
+        #expect(
+            !bob.persisted.elsewhere.contains { $0.feed.conversation == private_ },
+            "Bob was told positions exist in a room he is not in")
 
         try await alice.send("talking to you", to: shared)
         let together = try await alice.sync(through: mailbox)

@@ -76,18 +76,34 @@ struct IdentifierWidthTests {
         var seen: Set<Data> = []
         var keys: [FeedKey] = []
 
-        for _ in 0..<40 {
-            let key = FeedKey(author: Identity.generate().id, device: DeviceKeys.generate().id)
+        let kinds: [() -> ConversationID] = [
+            { .room(UUID()) }, { .solo(UUID()) }, { .outpost(Identity.generate().id) },
+        ]
+        for index in 0..<42 {
+            let key = FeedKey(
+                author: Identity.generate().id, device: DeviceKeys.generate().id,
+                conversation: kinds[index % kinds.count]())
             keys.append(key)
-            #expect(key.canonicalBytes.count == ParticipantID.width + DeviceID.width)
+            let tail = key.conversation.canonicalBytes
+            #expect(key.canonicalBytes.count == ParticipantID.width + DeviceID.width + tail.count)
             seen.insert(key.canonicalBytes)
         }
 
         #expect(seen.count == keys.count, "two distinct feeds produced the same canonical bytes")
 
         for key in keys {
-            #expect(key.canonicalBytes.prefix(ParticipantID.width) == key.author.rawValue)
-            #expect(key.canonicalBytes.suffix(DeviceID.width) == key.device.rawValue)
+            let bytes = key.canonicalBytes
+            #expect(bytes.prefix(ParticipantID.width) == key.author.rawValue)
+            #expect(
+                bytes.dropFirst(ParticipantID.width).prefix(DeviceID.width) == key.device.rawValue)
+            #expect(bytes.suffix(key.conversation.canonicalBytes.count) == key.conversation.canonicalBytes)
         }
+
+        let author = Identity.generate().id
+        let device = DeviceKeys.generate().id
+        let here = FeedKey(author: author, device: device, conversation: .room(UUID()))
+        let there = FeedKey(author: author, device: device, conversation: .room(UUID()))
+        #expect(here != there, "one device's logs in two rooms were the same log")
+        #expect(here.canonicalBytes != there.canonicalBytes)
     }
 }

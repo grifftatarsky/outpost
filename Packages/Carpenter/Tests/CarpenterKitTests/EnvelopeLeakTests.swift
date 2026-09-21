@@ -206,6 +206,43 @@ struct EnvelopeLeakTests {
         #expect(checked > 0, "this test asserted nothing")
     }
 
+    @Test("The numbers on a writer's entries say nothing about what they wrote anywhere else")
+    func positionsCountOnlyThisConversation() async throws {
+        let mailbox = InMemoryMailbox()
+        let alice = TestSession.make()
+        let bob = TestSession.make()
+        let carol = TestSession.make()
+        for session in [alice, bob, carol] { await session.load() }
+        try await alice.createIdentity(displayName: "Alice")
+        try await bob.createIdentity(displayName: "Bob")
+        try await carol.createIdentity(displayName: "Carol")
+
+        let withBob = try await alice.createRoom(named: "Hangar 7")
+        let withCarol = try await alice.createRoom(named: "Somewhere else")
+        let toBob = try await alice.invite(joinerCode: bob.identityCode(), joining: withBob, mailbox: nil)
+        try await bob.redeem(inviteCode: try toBob.encoded())
+        let toCarol = try await alice.invite(
+            joinerCode: carol.identityCode(), joining: withCarol, mailbox: nil)
+        try await carol.redeem(inviteCode: try toCarol.encoded())
+        try await settle([alice, bob, carol], mailbox)
+
+        for index in 1...12 { try await alice.send("elsewhere \(index)", to: withCarol) }
+        try await alice.send("here", to: withBob)
+        try await settle([alice, bob, carol], mailbox)
+
+        let aliceID = try #require(alice.enrolment?.identity.id)
+        let seen = bob.replica.allEntries.filter { $0.author == aliceID }
+        let inRoom = alice.replica.allEntries.filter { $0.author == aliceID && $0.conversation == withBob }
+        #expect(!seen.isEmpty, "this test asserted nothing")
+        #expect(
+            seen.map(\.seq).max() == UInt64(inRoom.count),
+            "Bob can read off that Alice wrote \((seen.map(\.seq).max() ?? 0) - UInt64(inRoom.count)) entries he was never shown")
+        #expect(
+            Set(seen.map(\.seq)) == Set(1...UInt64(inRoom.count)),
+            "the positions Bob holds for Alice are not one unbroken run")
+        #expect(bob.missingHistory(in: withBob).isEmpty, "Bob reads another room's positions as missing")
+    }
+
     private struct Position: Hashable {
         let feed: FeedKey
         let seq: UInt64

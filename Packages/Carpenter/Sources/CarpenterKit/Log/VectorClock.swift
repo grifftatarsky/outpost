@@ -3,13 +3,15 @@ import Foundation
 public struct FeedKey: Hashable, Sendable, Codable {
     public let author: ParticipantID
     public let device: DeviceID
+    public let conversation: ConversationID
 
-    public init(author: ParticipantID, device: DeviceID) {
+    public init(author: ParticipantID, device: DeviceID, conversation: ConversationID) {
         self.author = author
         self.device = device
+        self.conversation = conversation
     }
 
-    var canonicalBytes: Data { author.rawValue + device.rawValue }
+    var canonicalBytes: Data { author.rawValue + device.rawValue + conversation.canonicalBytes }
 }
 
 public struct VectorClock: Hashable, Sendable, Codable {

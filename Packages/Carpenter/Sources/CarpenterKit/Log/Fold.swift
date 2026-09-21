@@ -41,7 +41,9 @@ public struct RenderedEntry: Identifiable, Hashable, Sendable {
     public var seq: UInt64 = 0
     public var clock: VectorClock = VectorClock()
 
-    public var feedKey: FeedKey { FeedKey(author: author, device: device) }
+    public var feedKey: FeedKey {
+        FeedKey(author: author, device: device, conversation: conversation)
+    }
 
     public var isEdited: Bool { editedAt != nil }
 }

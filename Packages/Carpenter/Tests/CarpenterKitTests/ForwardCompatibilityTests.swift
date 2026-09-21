@@ -67,12 +67,16 @@ extension ForwardCompatibilityTests {
         state.answeredDepartures = [entry]
         state.epochs = [room: [0, 1]]
         state.syncedFrontier[
-            FeedKey(author: ParticipantID(rawValue: WideID.of([9])), device: DeviceID(rawValue: WideID.of([7])))
+            FeedKey(
+                author: ParticipantID(rawValue: WideID.of([9])), device: DeviceID(rawValue: WideID.of([7])),
+                conversation: room)
         ] = 4
         state.publishedEntryCount = 3
         state.knownSiblings = [DeviceID(rawValue: WideID.of([7]))]
         state.outstandingPackets = [PacketID(): [entry]]
-        let feed = FeedKey(author: ParticipantID(rawValue: WideID.of([9])), device: DeviceID(rawValue: WideID.of([7])))
+        let feed = FeedKey(
+                author: ParticipantID(rawValue: WideID.of([9])), device: DeviceID(rawValue: WideID.of([7])),
+                conversation: room)
         var heads = VectorClock()
         heads[feed] = 4
         let request = RepairRequest(
@@ -92,6 +96,7 @@ extension ForwardCompatibilityTests {
         state.repairDuties = [RepairDuty(request: request, from: ParticipantID(rawValue: WideID.of([9])))]
         state.unverifiable = [FeedGap(feed: feed, spans: [SequenceSpan(7, 7)])]
         state.elsewhere = [FeedGap(feed: feed, spans: [SequenceSpan(11, 11)])]
+        state.ownHeads = [room: EntryLink(seq: 17, hash: entry)]
         state.withheldTold = [
             ParticipantID(rawValue: WideID.of([9])): [
                 FeedGap(feed: feed, spans: [SequenceSpan(13, 13)])

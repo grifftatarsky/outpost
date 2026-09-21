@@ -8,7 +8,8 @@ struct SealBindingTests {
     private func feed(_ byte: UInt8) -> FeedKey {
         FeedKey(
             author: ParticipantID(rawValue: Data([byte, byte, byte])),
-            device: DeviceID(rawValue: Data([byte, 0x0F])))
+            device: DeviceID(rawValue: Data([byte, 0x0F])),
+            conversation: ConversationID.room(UUID(uuidString: "00000000-0000-4000-8000-00000000C0DE")!))
     }
 
     @Test("One member cannot re-sign another's sealed words as their own")

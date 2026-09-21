@@ -8,7 +8,7 @@ extension AppSession {
     // MARK: History repair
 
     public func missingHistory(in room: ConversationID) -> [FeedGap] {
-        replica.gaps(from: membersToCheck(in: room)).subtracting(persisted.unverifiable)
+        replica.gaps(from: membersToCheck(in: room), in: room).subtracting(persisted.unverifiable)
             .subtracting(persisted.elsewhere)
     }
 
@@ -37,7 +37,7 @@ extension AppSession {
         let request = RepairRequest(
             authors: authors.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
             heads: replica.heads(of: authors, in: room),
-            gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
+            gaps: replica.gaps(from: authors, in: room).subtracting(persisted.unverifiable)
                 .subtracting(persisted.elsewhere),
             room: room, reason: reason)
         persisted.repairs.removeAll { $0.room == room }
@@ -185,7 +185,7 @@ extension AppSession {
         guard let repair = persisted.repairs.first(where: { $0.room == room && !$0.quiet })
         else { return nil }
         let authors = Set(repair.request.authors)
-        let open = replica.gaps(from: authors).subtracting(persisted.unverifiable)
+        let open = replica.gaps(from: authors, in: repair.room).subtracting(persisted.unverifiable)
             .subtracting(persisted.elsewhere)
         let named = open.intersecting(repair.request.gaps)
         let refused = persisted.unverifiable.stillMissing(of: repair.request.gaps)
@@ -244,7 +244,8 @@ extension AppSession {
             let request = RepairRequest(
                 id: repair.request.id, authors: repair.request.authors,
                 heads: replica.heads(of: authors, in: repair.request.room),
-                gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
+                gaps: replica.gaps(from: authors, in: repair.request.room)
+                    .subtracting(persisted.unverifiable)
                 .subtracting(persisted.elsewhere),
                 room: repair.request.room, reason: repair.request.reason)
             do {

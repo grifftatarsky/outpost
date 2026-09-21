@@ -96,7 +96,7 @@ public final class AppSession {
 
     var entriesNotWrittenDown: [Entry] = []
 
-    var head: EntryLink?
+    var heads: [ConversationID: EntryLink] = [:]
     var accountRegistry: (any AccountRegistry)?
     var loadInFlight: Task<Void, Never>?
     public internal(set) var drafts: [DraftPlace: String] = [:]
@@ -294,7 +294,7 @@ public final class AppSession {
         guard let chain = chains[room] else { throw AppSessionError.noIdentity }
 
         let entry = try Entry.append(
-            after: head,
+            after: heads[room],
             author: enrolment.identity.id,
             device: enrolment.device,
             clock: replica.frontier(in: room),
@@ -307,7 +307,8 @@ public final class AppSession {
         )
 
         if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
-        head = entry.link
+        heads[room] = entry.link
+        persisted.ownHeads[room] = entry.link
         try await storage.log.append([entry])
         refresh()
     }
@@ -336,8 +337,12 @@ public final class AppSession {
         integrity.lastLoad = loaded.termination
         integrity.discardedBytes = loaded.discardedTrailingBytes
 
-        let ownFeed = enrolment.map { FeedKey(author: $0.identity.id, device: $0.device.id) }
+        let own = enrolment.map { (author: $0.identity.id, device: $0.device.id) }
+        func isOwn(_ feed: FeedKey) -> Bool {
+            own.map { feed.author == $0.author && feed.device == $0.device } ?? false
+        }
         var stillOnDisk: [Entry] = []
+        heads = persisted.ownHeads
         for entry in loaded.entries {
             let outcome: IntegrationResult
             do {
@@ -349,17 +354,18 @@ public final class AppSession {
             if case .forked(let fork) = outcome {
                 forks.append(fork)
             }
-            if entry.feedKey == ownFeed {
-                head = entry.link
+            if isOwn(entry.feedKey), entry.seq > heads[entry.conversation]?.seq ?? 0 {
+                heads[entry.conversation] = entry.link
             }
             if replica.closedRooms.contains(entry.conversation) {
                 stillOnDisk.append(entry)
             }
         }
-        if let ownFeed, let spentTop = replica.spentLink(atTopOf: ownFeed),
-            spentTop.seq > head?.seq ?? 0
-        {
-            head = spentTop
+        for feed in replica.spentFeeds where isOwn(feed) {
+            guard let spentTop = replica.spentLink(atTopOf: feed),
+                spentTop.seq > heads[feed.conversation]?.seq ?? 0
+            else { continue }
+            heads[feed.conversation] = spentTop
         }
         persisted.spentEntries = replica.spentEntries
 

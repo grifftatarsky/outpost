@@ -262,7 +262,8 @@ private func divergedFixture() -> IntegrityReport {
     report.forks = [
         Fork(
             feed: FeedKey(
-                author: ParticipantID(rawValue: Data([1])), device: DeviceID(rawValue: Data([2]))),
+                author: ParticipantID(rawValue: Data([1])), device: DeviceID(rawValue: Data([2])),
+                conversation: .room(UUID())),
             seq: 42,
             hashes: [EntryHash(rawValue: Data([1])), EntryHash(rawValue: Data([2]))])
     ]

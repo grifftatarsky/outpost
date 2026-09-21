@@ -5,8 +5,10 @@ import Testing
 
 @Suite("Vector clocks")
 struct VectorClockTests {
-    private let alice = FeedKey(author: Identity.generate().id, device: DeviceKeys.generate().id)
-    private let bob = FeedKey(author: Identity.generate().id, device: DeviceKeys.generate().id)
+    private let alice = FeedKey(
+        author: Identity.generate().id, device: DeviceKeys.generate().id, conversation: ConversationID.room(UUID(uuidString: "00000000-0000-4000-8000-00000000C0DE")!))
+    private let bob = FeedKey(
+        author: Identity.generate().id, device: DeviceKeys.generate().id, conversation: ConversationID.room(UUID(uuidString: "00000000-0000-4000-8000-00000000C0DE")!))
 
     @Test("A feed nobody has heard from is at zero, not absent")
     func defaultsToZero() {

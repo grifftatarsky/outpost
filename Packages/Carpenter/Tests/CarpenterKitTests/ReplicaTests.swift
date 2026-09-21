@@ -8,7 +8,8 @@ struct Author {
     let device: DeviceKeys
     let certificate: DeviceCertificate
     let chain: EpochChain
-    private(set) var head: Entry?
+    private(set) var heads: [ConversationID: Entry] = [:]
+    var head: Entry? { heads[chain.room] }
 
     init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil) {
         identity = Identity.generate()
@@ -18,18 +19,24 @@ struct Author {
         self.chain = chain ?? EpochChain.create(room: ConversationID.room(UUID())).chain
     }
 
-    var feedKey: FeedKey { FeedKey(author: identity.id, device: device.id) }
+    var feedKey: FeedKey { feedKey(in: chain.room) }
+
+    func feedKey(in conversation: ConversationID) -> FeedKey {
+        FeedKey(author: identity.id, device: device.id, conversation: conversation)
+    }
 
     mutating func append(
         _ payload: Payload, clock: VectorClock = VectorClock(), at wallTime: Date,
         room: ConversationID? = nil
     ) throws -> Entry {
+        let conversation = room ?? chain.room
+        let previous = heads[conversation]
         let entry = try Entry.append(
-            to: head, author: identity.id, device: device,
-            clock: clock.merging(head?.clock ?? VectorClock()),
-            wallTime: wallTime, conversation: room ?? chain.room, payload: payload, at: .initial,
+            to: previous, author: identity.id, device: device,
+            clock: clock.merging(previous?.clock ?? VectorClock()),
+            wallTime: wallTime, conversation: conversation, payload: payload, at: .initial,
             sealedWith: chain)
-        head = entry
+        heads[conversation] = entry
         return entry
     }
 

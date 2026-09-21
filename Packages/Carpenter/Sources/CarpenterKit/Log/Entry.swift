@@ -33,7 +33,9 @@ public struct Entry: Hashable, Sendable, Codable {
     public let payload: SealedPayload
     public let signature: Data
 
-    public var feedKey: FeedKey { FeedKey(author: author, device: device) }
+    public var feedKey: FeedKey {
+        FeedKey(author: author, device: device, conversation: conversation)
+    }
 
     public var hash: EntryHash {
         let digest = SHA256.hash(
@@ -89,7 +91,8 @@ public struct Entry: Hashable, Sendable, Codable {
         let seq = (previous?.seq).map { $0 + 1 } ?? firstSequence
 
         var clock = clock
-        clock.observe(FeedKey(author: author, device: device.id), seq: seq)
+        clock.observe(
+            FeedKey(author: author, device: device.id, conversation: conversation), seq: seq)
 
         var entry = Entry(
             author: author,
@@ -140,7 +143,8 @@ public struct Entry: Hashable, Sendable, Codable {
             after: previous, author: author, device: device, clock: clock, wallTime: wallTime,
             conversation: conversation,
             payload: try payload.sealed(
-                at: epoch, using: chain, by: FeedKey(author: author, device: device.id),
+                at: epoch, using: chain,
+                by: FeedKey(author: author, device: device.id, conversation: conversation),
                 alsoFor: extra))
     }
 

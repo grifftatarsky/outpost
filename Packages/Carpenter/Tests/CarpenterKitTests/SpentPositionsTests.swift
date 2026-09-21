@@ -27,7 +27,7 @@ struct SpentPositionsTests {
         return (replica, author, kept, deleted, entries)
     }
 
-    @Test("Closing a room takes its entries out and leaves no hole in a feed it shared")
+    @Test("Closing a room takes its entries out and leaves no hole anywhere")
     func closingLeavesNoHole() throws {
         var (replica, author, kept, deleted, entries) = try interleaved()
 
@@ -39,7 +39,10 @@ struct SpentPositionsTests {
         #expect(
             replica.gaps(from: [author.identity.id]).isEmpty,
             "the positions a deleted room held read as missing, so repair would ask for them back")
-        #expect(replica.frontier[author.feedKey] == 6)
+        #expect(replica.frontier[author.feedKey(in: kept)] == 3)
+        #expect(
+            entries.filter { $0.conversation == kept }.map(\.seq) == [1, 2, 3],
+            "a room's numbering was shared with another room")
     }
 
     @Test("A deleted room's entry offered again is not kept, whether this device had it or not")
@@ -62,19 +65,22 @@ struct SpentPositionsTests {
         #expect(replica.spentEntries.map(\.seq) == [1, 2], "the late arrival's position was not recorded")
     }
 
-    @Test("The next entry this device writes follows the spent one, rather than reusing its number")
+    @Test("Coming back to a deleted room, the next entry follows the spent one, not position one")
     func theNextEntryFollowsTheSpentOne() throws {
         var (replica, author, _, deleted, entries) = try interleaved()
         replica.close(deleted)
 
-        let top = try #require(replica.spentLink(atTopOf: author.feedKey))
-        #expect(top == entries[5].link)
+        let feed = author.feedKey(in: deleted)
+        let top = try #require(replica.spentLink(atTopOf: feed))
+        #expect(top == entries.last { $0.conversation == deleted }?.link)
 
+        replica.reopen(deleted)
         let next = try Entry.append(
             after: top, author: author.identity.id, device: author.device,
-            clock: replica.frontier, wallTime: start.addingTimeInterval(10), conversation: ConversationID.room(UUID()),
-            payload: try Payload.post("after"), at: .initial, sealedWith: author.chain)
-        #expect(next.seq == 7)
+            clock: replica.frontier(in: deleted), wallTime: start.addingTimeInterval(10),
+            conversation: deleted, payload: try Payload.post("after"), at: .initial,
+            sealedWith: author.chain)
+        #expect(next.seq == 4, "a device coming back to a room reused a number it had spent")
         #expect(try replica.integrate(next) == .accepted)
         #expect(replica.forks.isEmpty)
     }
