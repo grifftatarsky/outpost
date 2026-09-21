@@ -538,7 +538,8 @@ struct IntegrityReportingTests {
             try Entry.append(
                 to: nil, author: alice.identity.id, device: alice.device, clock: VectorClock(),
                 wallTime: Date(timeIntervalSince1970: 1), conversation: chain.room,
-                payload: try Payload.post(text).sealed(at: .initial, using: chain))
+                payload: try Payload.post(text).sealed(
+                    at: .initial, using: chain, by: alice.feedKey))
         }
 
         _ = try replica.integrate(try entry("one version"))

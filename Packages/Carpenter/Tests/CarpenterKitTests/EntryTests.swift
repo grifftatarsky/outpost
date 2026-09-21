@@ -10,9 +10,10 @@ struct EntryTests {
     private let wallTime = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = ConversationID.room(UUID())
     private let chain = EpochChain.create(room: ConversationID.room(UUID())).chain
+    private var writer: FeedKey { FeedKey(author: identity.id, device: device.id, conversation: room) }
 
     private func seal(_ text: String) throws -> SealedPayload {
-        try Payload.post(text).sealed(at: .initial, using: chain)
+        try Payload.post(text).sealed(at: .initial, using: chain, by: writer)
     }
 
     private func append(to previous: Entry?, text: String = "hello") throws -> Entry {
@@ -142,7 +143,7 @@ struct EntryTests {
         let entry = try Entry.append(
             to: nil, author: identity.id, device: device, clock: VectorClock(),
             wallTime: wallTime, conversation: room,
-            payload: try unknown.sealed(at: .initial, using: chain))
+            payload: try unknown.sealed(at: .initial, using: chain, by: writer))
 
         #expect(try entry.hasValidSignature(from: device.publicKey))
         #expect(entry.opened(using: chain)?.fallbackText == "Nora posted a poll")
@@ -154,13 +155,13 @@ struct EntryTests {
             to: nil, author: identity.id, device: device, clock: VectorClock(),
             wallTime: wallTime, conversation: room,
             payload: try Payload(type: .post, body: Data([1]), fallbackText: "honest")
-                .sealed(at: .initial, using: chain))
+                .sealed(at: .initial, using: chain, by: writer))
 
         let swapped = Entry(
             author: entry.author, device: entry.device, seq: entry.seq, previous: entry.previous,
             clock: entry.clock, wallTime: entry.wallTime, conversation: entry.conversation,
             payload: try Payload(type: .post, body: Data([1]), fallbackText: "misleading")
-                .sealed(at: .initial, using: chain),
+                .sealed(at: .initial, using: chain, by: writer),
             signature: entry.signature)
 
         #expect(try !swapped.hasValidSignature(from: device.publicKey))

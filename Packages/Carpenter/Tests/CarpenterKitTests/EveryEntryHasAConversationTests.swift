@@ -96,6 +96,30 @@ struct EveryEntryHasAConversationTests {
         }
     }
 
+    @Test("An entry sealed for one conversation does not open in another")
+    func theSealDecidesWhereItCanBeRead() async throws {
+        let alice = TestSession.make()
+        await alice.load()
+        try await alice.createIdentity(displayName: "Alice")
+        let enrolment = try #require(alice.enrolment)
+
+        let sealedFor = try await alice.createRoom(named: "Where it was sealed")
+        let claimed = try await alice.createRoom(named: "Where it says it is")
+        let chain = try #require(alice.chains[sealedFor])
+        let claimedFeed = FeedKey(
+            author: enrolment.identity.id, device: enrolment.device.id, conversation: claimed)
+
+        let smuggled = try Entry.append(
+            after: alice.heads[claimed], author: enrolment.identity.id, device: enrolment.device,
+            clock: VectorClock(), wallTime: TestSession.now, conversation: claimed,
+            payload: try Payload.post("slipped in from elsewhere").sealed(
+                at: .initial, using: chain, by: claimedFeed))
+
+        #expect(
+            alice.entryOpener()(smuggled) == nil,
+            "an entry opened under a key other than the one for the conversation it names")
+    }
+
     @Test("A solo is named a solo from the moment it exists")
     func aSoloKnowsItIsASolo() async throws {
         let alice = TestSession.make()

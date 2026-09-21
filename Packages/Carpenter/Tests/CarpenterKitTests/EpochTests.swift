@@ -272,8 +272,8 @@ struct SealedPayloadTests {
         let (chain, _) = try chainAt(0)
         let payload = try Payload.post("hydrogen, obviously")
 
-        let sealed = try payload.sealed(at: .initial, using: chain)
-        #expect(try sealed.opened(using: chain) == payload)
+        let sealed = try payload.sealed(at: .initial, using: chain, by: testWriter(in: chain.room))
+        #expect(try sealed.opened(using: chain, by: testWriter(in: chain.room)) == payload)
     }
 
     @Test("Nothing about the payload is readable without the key")
@@ -284,7 +284,7 @@ struct SealedPayloadTests {
             body: Data("the mooring mast drawings".utf8),
             fallbackText: "Cassilda posted a poll")
 
-        let sealed = try payload.sealed(at: .initial, using: chain)
+        let sealed = try payload.sealed(at: .initial, using: chain, by: testWriter(in: chain.room))
 
         #expect(!sealed.ciphertext.contains(Data("mooring".utf8)))
         #expect(!sealed.ciphertext.contains(Data("Cassilda".utf8)))
@@ -294,32 +294,37 @@ struct SealedPayloadTests {
     @Test("A ciphertext lifted into another room does not open")
     func roomIsBound() throws {
         let (chain, _) = try chainAt(0)
-        let sealed = try Payload.post("private").sealed(at: .initial, using: chain)
+        let sealed = try Payload.post("private").sealed(at: .initial, using: chain, by: testWriter(in: chain.room))
 
         var elsewhere = EpochChain(room: ConversationID.room(UUID()))
         elsewhere.adopt(try chain.secret(for: .initial), at: .initial)
 
-        #expect(throws: CryptoError.openFailed) { try sealed.opened(using: elsewhere) }
+        #expect(throws: CryptoError.openFailed) {
+            try sealed.opened(using: elsewhere, by: testWriter(in: chain.room))
+        }
     }
 
     @Test("A ciphertext relabelled with another epoch does not open")
     func epochIsBound() throws {
         let (chain, _) = try chainAt(2)
-        let sealed = try Payload.post("private").sealed(at: .initial, using: chain)
+        let sealed = try Payload.post("private").sealed(at: .initial, using: chain, by: testWriter(in: chain.room))
         let relabelled = SealedPayload(
             epoch: EpochNumber(rawValue: 1), ciphertext: sealed.ciphertext)
 
-        #expect(throws: CryptoError.openFailed) { try relabelled.opened(using: chain) }
+        #expect(throws: CryptoError.openFailed) {
+            try relabelled.opened(using: chain, by: testWriter(in: chain.room))
+        }
     }
 
     @Test("A tampered ciphertext does not open")
     func tamperIsDetected() throws {
         let (chain, _) = try chainAt(0)
-        var bytes = try Payload.post("private").sealed(at: .initial, using: chain).ciphertext
+        var bytes = try Payload.post("private").sealed(at: .initial, using: chain, by: testWriter(in: chain.room)).ciphertext
         bytes[bytes.count / 2] ^= 0xFF
 
         #expect(throws: CryptoError.openFailed) {
-            try SealedPayload(epoch: .initial, ciphertext: bytes).opened(using: chain)
+            try SealedPayload(epoch: .initial, ciphertext: bytes).opened(
+                using: chain, by: testWriter(in: chain.room))
         }
     }
 
@@ -329,14 +334,14 @@ struct SealedPayloadTests {
 
         var founder = EpochChain(room: room)
         founder.adopt(first, at: .initial)
-        let old = try Payload.post("said in epoch zero").sealed(at: .initial, using: founder)
+        let old = try Payload.post("said in epoch zero").sealed(at: .initial, using: founder, by: testWriter(in: founder.room))
 
         let advanced = try EpochChain.advance(from: first, at: .initial, room: room)
         var current = EpochChain(room: room)
         current.adopt(advanced.secret, at: .initial.next)
         try current.record(advanced.link)
         let new = try Payload.post("said in epoch one").sealed(
-            at: .initial.next, using: current)
+            at: .initial.next, using: current, by: testWriter(in: current.room))
 
         var joiner = EpochChain(room: room)
         joiner.adopt(advanced.secret, at: .initial.next)
@@ -354,7 +359,7 @@ struct SealedPayloadTests {
 
 extension EpochChain {
     fileprivate func opened(_ sealed: SealedPayload) throws -> String {
-        let payload = try sealed.opened(using: self)
+        let payload = try sealed.opened(using: self, by: testWriter(in: room))
         return try payload.decode(PostBody.self).text
     }
 }

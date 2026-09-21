@@ -19,10 +19,10 @@ public struct SealedPayload: Hashable, Sendable, Codable {
         return CanonicalBytes.payload(domain: Domain.sealedPayload, fields: fields)
     }
 
-    static func context(room: ConversationID, epoch: EpochNumber, by writer: FeedKey?) -> Data {
-        var fields = [room.canonicalBytes, epoch.canonicalBytes]
-        if let writer { fields.append(writer.canonicalBytes) }
-        return CanonicalBytes.payload(domain: Domain.sealedPayload, fields: fields)
+    static func context(room: ConversationID, epoch: EpochNumber, by writer: FeedKey) -> Data {
+        CanonicalBytes.payload(
+            domain: Domain.sealedPayload,
+            fields: [room.canonicalBytes, epoch.canonicalBytes, writer.canonicalBytes])
     }
 }
 
@@ -34,7 +34,7 @@ extension Payload {
     }
 
     public func sealed(
-        at epoch: EpochNumber, using chain: EpochChain, by writer: FeedKey? = nil,
+        at epoch: EpochNumber, using chain: EpochChain, by writer: FeedKey,
         alsoFor extra: PairwiseSecret? = nil
     ) throws -> SealedPayload {
         let plaintext = try plaintext()
@@ -54,21 +54,12 @@ extension Payload {
 }
 
 extension SealedPayload {
-    public func opened(using chain: EpochChain, by writer: FeedKey? = nil) throws -> Payload {
+    public func opened(using chain: EpochChain, by writer: FeedKey) throws -> Payload {
         let key = try chain.sealingKey(for: epoch)
-        guard let box = try? ChaChaPoly.SealedBox(combined: ciphertext) else {
-            throw CryptoError.openFailed
-        }
-        if let writer,
+        guard let box = try? ChaChaPoly.SealedBox(combined: ciphertext),
             let plaintext = try? ChaChaPoly.open(
                 box, using: key,
                 authenticating: SealedPayload.context(room: chain.room, epoch: epoch, by: writer))
-        {
-            return try JSONDecoder().decode(Payload.self, from: plaintext)
-        }
-        guard let plaintext = try? ChaChaPoly.open(
-            box, using: key,
-            authenticating: SealedPayload.context(room: chain.room, epoch: epoch, by: nil))
         else {
             throw CryptoError.openFailed
         }
@@ -76,7 +67,7 @@ extension SealedPayload {
     }
 
     public func opened(
-        pairwise secret: PairwiseSecret, room: ConversationID, by writer: FeedKey?
+        pairwise secret: PairwiseSecret, room: ConversationID, by writer: FeedKey
     ) throws -> Payload {
         guard let alsoFor,
             let box = try? ChaChaPoly.SealedBox(combined: alsoFor),

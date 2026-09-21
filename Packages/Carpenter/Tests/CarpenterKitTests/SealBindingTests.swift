@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 
@@ -39,41 +40,49 @@ struct SealBindingTests {
         #expect((try? sealed.opened(using: elsewhere, by: carol)) == nil)
     }
 
-    @Test("A payload sealed before the binding still opens")
-    func oldSealsStillOpen() throws {
+    @Test("A payload not bound to its writer does not open, for anybody")
+    func anUnboundSealIsRefused() throws {
         let (chain, _) = EpochChain.create(room: ConversationID.room(UUID()))
-        let unbound = try Payload.post("written last year").sealed(
-            at: .initial, using: chain, by: nil)
+        let unboundContext = CanonicalBytes.payload(
+            domain: Domain.sealedPayload,
+            fields: [chain.room.canonicalBytes, EpochNumber.initial.canonicalBytes])
+        let box = try ChaChaPoly.seal(
+            try Payload.post("with nobody's name on it").plaintext(),
+            using: try chain.sealingKey(for: .initial), authenticating: unboundContext)
+        let unbound = SealedPayload(epoch: .initial, ciphertext: box.combined)
 
-        let opened = try unbound.opened(using: chain, by: feed(0xC0))
-        #expect((try? opened.decode(PostBody.self))?.text == "written last year")
+        for writer in [feed(0xC0), feed(0xDA)] {
+            #expect(
+                (try? unbound.opened(using: chain, by: writer)) == nil,
+                "a seal with no writer in it opened as though somebody had written it")
+        }
     }
 
-    @Test("With nothing new to say, the bytes are the old bytes")
-    func theAbsentFieldsAreAbsentBytes() {
+    @Test("The bytes a seal is bound to are pinned: room, epoch and writer, in that order")
+    func theContextIsPinned() {
         let room = ConversationID.room(UUID())
         let epoch = EpochNumber.initial
+        let carol = feed(0xC0)
 
-        let contextAsItAlwaysWas = CanonicalBytes.payload(
-            domain: Domain.sealedPayload, fields: [room.canonicalBytes, epoch.canonicalBytes])
-        #expect(
-            SealedPayload.context(room: room, epoch: epoch, by: nil) == contextAsItAlwaysWas,
-            "a payload sealed before the writer binding can no longer be opened")
+        let byHand = CanonicalBytes.payload(
+            domain: Domain.sealedPayload,
+            fields: [room.canonicalBytes, epoch.canonicalBytes, carol.canonicalBytes])
+        #expect(SealedPayload.context(room: room, epoch: epoch, by: carol) == byHand)
 
         let sealed = SealedPayload(epoch: epoch, ciphertext: Data([0xAB, 0xCD]))
         let bytesAsTheyAlwaysWere = CanonicalBytes.payload(
             domain: Domain.sealedPayload, fields: [epoch.canonicalBytes, Data([0xAB, 0xCD])])
         #expect(
             sealed.canonicalBytes == bytesAsTheyAlwaysWere,
-            "every signature over an entry written before the second reader stopped matching")
+            "a payload with no second reader gained bytes it does not have")
     }
 
-    @Test("With something new to say, the bytes differ")
+    @Test("A different writer, or a second reader, changes the bytes")
     func thePresentFieldsChangeTheBytes() {
         let room = ConversationID.room(UUID())
         #expect(
             SealedPayload.context(room: room, epoch: .initial, by: feed(0xC0))
-                != SealedPayload.context(room: room, epoch: .initial, by: nil))
+                != SealedPayload.context(room: room, epoch: .initial, by: feed(0xDA)))
         #expect(
             SealedPayload(epoch: .initial, ciphertext: Data([1]), alsoFor: Data([2])).canonicalBytes
                 != SealedPayload(epoch: .initial, ciphertext: Data([1])).canonicalBytes)

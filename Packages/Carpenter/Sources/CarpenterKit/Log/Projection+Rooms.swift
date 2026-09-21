@@ -22,7 +22,10 @@ extension Projection {
     }
 
     public func kind(of room: ConversationID) -> RoomKind {
-        rendered.first { $0.conversation == room && $0.type == .roomProfile }?.roomKind ?? .room
+        switch room {
+        case .solo: .solo
+        case .room, .outpost: .room
+        }
     }
 
     public func roster(of room: ConversationID, opening: (RenderedEntry) -> Payload?) -> RoomRoster {

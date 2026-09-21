@@ -39,9 +39,6 @@ extension AppSession {
             {
                 return opened
             }
-            if let opened = chains.values.lazy.compactMap(entry.opened(using:)).first {
-                return opened
-            }
             guard entry.hasSecondReader, let identity,
                 let keys = replica.registry(for: entry.author)?.identity,
                 let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)

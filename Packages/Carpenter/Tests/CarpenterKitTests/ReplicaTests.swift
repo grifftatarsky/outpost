@@ -59,7 +59,7 @@ struct ReplicaTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func seal(_ text: String, as author: Author) throws -> SealedPayload {
-        try Payload.post(text).sealed(at: .initial, using: author.chain)
+        try Payload.post(text).sealed(at: .initial, using: author.chain, by: author.feedKey)
     }
 
     @Test("An entry from a known member on a certified device is accepted")

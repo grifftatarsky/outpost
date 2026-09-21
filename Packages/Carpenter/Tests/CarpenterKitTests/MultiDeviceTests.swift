@@ -9,7 +9,7 @@ struct MultiDeviceTests {
     private let chain = EpochChain.create(room: ConversationID.room(UUID())).chain
 
     private func seal(_ text: String) throws -> SealedPayload {
-        try Payload.post(text).sealed(at: .initial, using: chain)
+        try Payload.post(text).sealed(at: .initial, using: chain, by: testWriter(in: chain.room))
     }
 
     @Test("Both of a member's devices write their own feed, and a third member verifies both")

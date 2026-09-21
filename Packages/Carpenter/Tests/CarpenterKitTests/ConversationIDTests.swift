@@ -65,3 +65,38 @@ struct ConversationIDTests {
         }
     }
 }
+
+@Suite("A conversation's kind comes from its name, not from what is said in it")
+struct KindFromTheNameTests {
+    private func profile(in room: ConversationID, saying kind: RoomKind) -> RenderedEntry {
+        var made = RenderedEntry(
+            id: EntryHash(rawValue: Data(repeating: 7, count: 32)),
+            type: .roomProfile,
+            author: ParticipantID(rawValue: Data(repeating: 1, count: 32)),
+            device: DeviceID(rawValue: Data(repeating: 2, count: 32)),
+            wallTime: Date(timeIntervalSince1970: 1_786_635_000),
+            conversation: room,
+            content: .text("Hangar 7"),
+            editedAt: nil,
+            replyingTo: nil,
+            reactions: [:])
+        made.roomKind = kind
+        return made
+    }
+
+    @Test("A room whose profile claims to be a solo is still a room")
+    func aProfileCannotRelabelARoom() {
+        let room = ConversationID.room(UUID())
+        let viewer = ParticipantID(rawValue: Data(repeating: 1, count: 32))
+        let projected = Projection(viewer: viewer, rendered: [profile(in: room, saying: .solo)])
+        #expect(projected.kind(of: room) == .room, "a profile entry turned a room into a solo")
+    }
+
+    @Test("A solo whose profile claims to be a room is still a solo")
+    func aProfileCannotRelabelASolo() {
+        let solo = ConversationID.solo(UUID())
+        let viewer = ParticipantID(rawValue: Data(repeating: 1, count: 32))
+        let projected = Projection(viewer: viewer, rendered: [profile(in: solo, saying: .room)])
+        #expect(projected.kind(of: solo) == .solo, "a profile entry turned a solo into a room")
+    }
+}
