@@ -19,6 +19,21 @@ is in `CLAUDE.md` under the traps, and what happened is in git. Checked against 
 1. TOC
 {:toc}
 
+## The suite
+
+**One test holds a ten-second wall clock, and the suite's load moves it.**
+`DeviceEnrolmentTests.historySurvivesARelaunch` rebuilds an `AppSession` in a loop until the
+sibling's history is there, giving up after ten seconds of real time. A whole fold is about 1.4
+seconds at three hundred entries, so the loop gets roughly seven attempts — and when the rest of the
+suite is busy it gets fewer. Adding seven ordinary tests on 2026-09-20 was enough to make it fail
+about half the time, while it passed eight times out of eight on its own. Nothing was wrong with the
+code. If it goes red again, check the machine's load before looking for a defect, and consider giving
+it a budget in folds rather than in seconds.
+
+**A fold costs 1.4 seconds at three hundred entries**, measured 2026-09-20, and a sync round is
+almost entirely that one fold. `ProjectionCostTests` guards the shape of the work but not this
+number. Nothing has been done about it.
+
 ## Privacy, on the wire
 
 **The anonymity is in the app, not on the wire.** Everybody a member has not met is drawn as one
