@@ -22,12 +22,13 @@ It is recommended to read Outpost's [Cryptography Brief](crypto-brief.md), which
 The Log is the basis of how group messaging (and Solo messaging, and Outposts) function securely and privately.  
 Everything a member does is a log **entry**: a message, a reaction, a room rename, an admission, a read
 receipt. Each log entry is signed by the writing device, linked by hash to the one before it in
-that device's log, and stamped with a vector clock naming only the conversation it was written in.
+that device's log **for that conversation**, and stamped with a vector clock naming only that conversation.
+A device keeps one log per conversation—every room, every solo, and every Outpost—each numbered from one.
 Any two devices holding the same entries fold them into the same result without talking to each other.
 
 Importantly, a log entry's payload is sealed under the room's **epoch key**. The payload's type, version, and text are
 inside the ciphertext; **only** the epoch number sits beside it. The log entry's author, device, position,
-clock, time, and room are outside that seal, and the whole entry, when sent, travels inside a packet resealed for its recipients.  
+clock, time, and conversation are outside that seal, and the whole entry, when sent, travels inside a packet resealed for its recipients.  
 
 So, the transport cannot tell a message from a reaction. That's an important quality; as this travels through iCloud, Outpost's philosophy demands iCloud can't tell what kind of comm is being sent.
 
@@ -156,36 +157,51 @@ It never hands over an entry from somewhere else, and never one sealed below the
 
 This same mechanism is used for history backfill for new members by rooms which allow it.
 
-There is a wrinkle, and it is worth understanding, because it shapes the answer.
-A device keeps **one** log, not one per room.
-Every entry it writes goes into that single log, numbered 1, 2, 3, forever.
-The room is a label on the entry.
-That is what makes the numbering unbroken, and an unbroken chain is what makes tampering visible.
+Every log is one conversation's worth of one device's writing, so a gap is always a gap in *that*
+conversation. Nobody's numbers say anything about what they wrote anywhere else—there is no count
+of the rest of their life in any number you can see.
 
-The price is that positions are shared out among every room that person is in.
-Your view of somebody's log might hold 5, 9 and 12.
-You will never be given 6, 7, 8, 10 or 11—they belong to conversations you are not in—
-but a gap is a gap, and nothing in the numbers says which.
-
-So a repairer states, in the same packet, the positions it is **withholding**.
-The asker writes them down and stops asking.
-Without that, every member would ask every hour, forever,
-for history nobody will ever hand over.
+One case still leaves a gap nobody will fill: a member invited with forward history only. Their
+view of an existing member's log starts partway through. So a sender states, in the same packet,
+the positions it is **withholding**, and the asker writes them down and stops asking. Without that,
+a new member would ask every hour, forever, for history the room decided not to hand over.
 
 ### A deleted room leaves its numbers spent
 
-A member's log is shared across every room they are in. Deleting a conversation they are no
-longer part of removes entries from the middle of that log, and the repair above would read the
-gaps as holes and ask for them back. So `Replica.close(_:)` records each removed entry as a
-`SpentEntry` (feed, number, hash and room). The gap index counts a spent entry as held, the frontier
-includes it, and `integrate` answers a copy of it with `.alreadyPresent`. An entry for a closed room
-that arrives later is spent the same way and not kept.
+Deleting a conversation a member is no longer part of removes that conversation's logs from their
+device. `Replica.close(_:)` records each removed entry as a `SpentEntry`, so an entry for that
+conversation that arrives later is spent the same way and not kept, and repair never asks for it back.
+
+The one thing a deletion must never lose is **where this device had got to**. Each conversation's
+numbering is its own, so a device that deleted a room, relaunched, was invited back, and relaunched
+again would otherwise start counting from one where its old position one still stands—and its
+message would sit below its own record of what it had already sent, and never leave. So this device's
+own head in every conversation is saved (`PersistedState.ownHeads`) and never goes backward, and a
+device that sees its own writing come back from anywhere moves its place to match.
 
 The closed rooms and the spent positions are saved before anything is removed. The rooms ride
-`MemberPreferences.deletedRooms`, so the member's other devices close them too; the positions are in
-`PersistedState.spentEntries`. A launch finishes a deletion that was cut off. A device whose newest
-entry was spent continues its feed from that entry's link instead of reusing the number. Accepting a
-new invitation to a closed room reopens it, so its history can be asked for again.
+`MemberPreferences.deletedRooms`, so the member's other devices close them too. A launch finishes a
+deletion that was cut off. Accepting a new invitation to a closed room reopens it, so its history
+can be asked for again.
+
+### Members Vouch for Each Other's Logs
+
+A device forwards somebody's log only past what it has already sent. That leaves one gap: if Carol
+already passed Alice's message at position 8 along to Bob, and *then* receives a different message
+from Alice at position 8, she knows Alice showed two people two things—and Bob never would.
+
+So every packet that carries entries also carries **attestations**: for each log in those rooms, the
+position and hash of its newest entry. "I hold Alice's log in this room up to 8, and 8 is this."
+An attestation only ever goes to somebody who may already have that entry, so it can never tell
+anybody something they could not read. It carries no time, and no signature—the packet is already
+authenticated to whoever sent it, and the proof of a lie is an entry signed by the liar, not a claim
+about one.
+
+When an attestation doesn't match what this device holds, that is a **contradiction**, and it is
+recorded—never shown as a fork, because it is a claim and not proof. This device then asks the
+attester for their copy of exactly that position. If it arrives signed by the author, the ordinary
+fork machinery records a fork, which *is* proof. A contradiction about a member who recently asked
+to be restored is kept, and not raised. The rest show on the Integrity screen, and nobody is accused.
 
 ## Device sync
 

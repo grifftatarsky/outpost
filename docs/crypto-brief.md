@@ -318,8 +318,10 @@ the time, the room, a single character of the sealed text — and the signature 
 is no way to put words in somebody's mouth.
 
 **What actually happens.** `Entry.signingPayload` is canonical bytes over
-`(author, device, seq, previous?, clock, wallTime, room?, payload)`, signed with the **device's**
-Ed25519 key. Two things about this are worth stating precisely because they are the questions a
+`(author, device, seq, previous?, clock, wallTime, conversation, payload)`, signed with the **device's**
+Ed25519 key. `seq` and `previous` are counted within the conversation, not across the device: since
+2026-09-21 a device keeps one log per conversation, so no number on an entry says anything about its
+writer's other conversations. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
 
 - **It signs the ciphertext, not the plaintext** — encrypt-then-sign. On its own that would leave a

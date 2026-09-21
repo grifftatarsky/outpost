@@ -21,24 +21,11 @@ is in `CLAUDE.md` under the traps, and what happened is in git. Checked against 
 
 ## The suite
 
-**A fold costs 1.4 seconds at three hundred entries**, measured 2026-09-20, and a sync round is
-almost entirely that one fold. `ProjectionCostTests` guards the shape of the work but not this
-number. Nothing has been done about it.
+**A fold costs about 390 milliseconds at three hundred entries across four rooms**, measured
+2026-09-21 — down from 1.4 seconds, because the sorter no longer follows dependencies between
+conversations. A sync round is still almost entirely that one fold.
 
 ## Privacy, on the wire
-
-**A position number still counts across every conversation.** A device keeps one log, numbered from
-one without gaps, which is what makes tampering visible. The number is in the clear on every entry, so
-somebody holding one of your entries can read off roughly how much you write in total, even after the
-clock was scoped on 2026-09-20. Closing it means a separate hash chain per conversation, and a device
-with one chain per conversation can drop or reorder its own history without anyone being able to tell.
-Not obviously the right trade; nothing has been decided.
-
-**A repair can still name a position that belongs to somewhere else.** The asker cannot tell which
-room a position it does not hold belongs to — that is the whole shape of the problem — so the first
-request after a hole appears may name a few foreign positions. The answer settles them and they are
-never asked for again, so it converges, but the first ask is wider than it needs to be. It would take
-the answerer volunteering the boundaries before being asked.
 
 **The anonymity is in the app, not on the wire.** Everybody a member has not met is drawn as one
 shared figure, and every route from a comment to a name goes through `Projection.member(_:)`. What
@@ -46,11 +33,6 @@ that cannot reach is the envelope: an entry's author, device, room, sequence num
 outside the seal. So somebody reading their own database can group an Outpost's anonymous comments by
 author and count how many strangers read it. They cannot learn who. Sealing the author does not help;
 see [Decisions](archive/decisions-2026.md#identity-stays-in-the-envelope-and-the-seal-is-the-wrong-place-for-it).
-
-**Entries sealed before 2026-09-07 are not bound to their writer.** New seals carry the author and
-device in the associated data, and `SealedPayload.opened` falls back to the old two-field context for
-entries written before that. The fallback is permanent, so anything sealed before the fix can still be
-lifted into another member's entry in the same room and epoch.
 
 **An Outpost's room ID is half its owner's identity.** `RoomID.outpost(of:)` is the first 16 bytes of
 the owner's `ParticipantID`, in the clear on every entry. It has to stay derivable so two devices

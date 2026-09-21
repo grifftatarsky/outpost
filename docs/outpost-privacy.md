@@ -52,11 +52,14 @@ directions across the whole app. **That was fixed on 2026-09-20**: a clock now n
 conversation its entry was written in, so nothing links an Outpost to a room any more.
 
 What remains is narrower and still enough. Inside one Outpost, a clock names the logs writing there,
-so a throwaway name and a real one posting on the same wall are still tied together. And a position
-number is counted per device across every conversation, so the numbers alone say how much their
-writer writes. Closing both needs a separate chain per conversation, which would let a device drop or
-reorder its own history without anyone being able to tell. For an app whose claim is that its record
-can be trusted, that is the wrong trade.
+so a throwaway name and a real one posting on the same wall are still tied together.
+
+The position numbers no longer say anything. Since 2026-09-21 each device keeps one log per
+conversation, numbered from one there, so no number on any entry counts what its writer does
+elsewhere. This page used to say that splitting the log would let a device drop or reorder its own
+history undetected. It doesn't: within a conversation the chain is exactly as strict as before, and
+members now vouch for each other's logs, which catches more than the old single chain did. See
+[Architecture](architecture.md#members-vouch-for-each-others-logs).
 
 **You cannot block what you cannot recognize.** Blocking and the list of known abusers both work on
 the return address, including on entries the phone cannot open. A throwaway name is a different
@@ -121,10 +124,10 @@ other's replies.
 
 All three of these, not any one. The first is now done.
 
-1. ~~A separate clock per conversation, so an entry stops listing everywhere its writer has been.~~
-   **Done 2026-09-20.** A clock names only the conversation its entry was written in. What is left is
-   narrower: inside one Outpost a clock still ties a throwaway name to a real one, and a position
-   number is still counted per device across every conversation.
+1. ~~A separate clock and log per conversation, so an entry stops listing everywhere its writer has
+   been.~~ **Done 2026-09-20 and 2026-09-21.** A clock names only its own conversation, and positions
+   count only there. What is left: inside one Outpost, a clock still ties a throwaway name to a real
+   one writing on the same wall.
 2. A way to block and to enforce the abuse list without a stable return address, or a written
    decision that unlinkability wins and blocking gets weaker.
 3. A third Apple Account, because the three-person case cannot be observed with two.
@@ -134,7 +137,7 @@ All three of these, not any one. The first is now done.
 **A sealed letter was not bound to its writer.** Anybody holding a room's key could lift another
 member's ciphertext into an entry of their own and sign it, and every phone would show it as theirs.
 Fixed the same evening: the author and device are now part of what the seal authenticates, so a
-lifted ciphertext does not open. Entries sealed before the fix still open under the old binding.
+lifted ciphertext does not open. Since 2026-09-21 there is no fallback for older seals: a payload not bound to its writer opens for nobody.
 
 **An Outpost's address is half its owner's identifier.** The room ID of somebody's Outpost is the
 first 16 bytes of their participant ID, visible on every entry on it. It has to be derivable, so that

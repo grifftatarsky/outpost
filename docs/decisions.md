@@ -102,3 +102,73 @@ turns out to belong to another room, because the asker genuinely cannot tell whi
 does not hold belongs to. Both are in [the inbox](inbox.md).
 
 `EnvelopeLeakTests` holds five cases, and each one fails with its fix reverted.
+
+## The log
+
+### A device keeps one log per conversation
+
+**RULED 2026-09-21 by Griff**, after asking what a device-wide log bought: *"If we do per room, why does
+that scope matter?"* It didn't — see below — and he answered *"I do believe that is enough."*
+
+**What it was.** A device kept one hash-linked log across every room, solo and Outpost, numbered from
+one forever. The position was in the clear on every entry, so one message told its reader roughly how
+much its writer wrote everywhere else.
+
+**What it bought, measured.** Scoping the sorter's dependencies per room and running the whole suite:
+nothing reads order across conversations — no fold, no screen, no rule. The only thing lost is that
+somebody sharing two rooms with a writer can no longer cross-check the two numberings, which attestations
+replace with every member of the room.
+
+**How it works.** `FeedKey` names author, device and conversation. `Entry.seq` counts within that, and
+`Entry.previous` links to the entry before it there. The fold got three and a half times faster at three
+hundred entries across four rooms, because the sorter no longer chases dependencies between conversations.
+
+**What it costs.** A count per conversation can go backwards where a count per device could not. A device
+that deleted a room, relaunched, was invited back and relaunched again would count from one below its own
+record of what it had sent, and the message would never leave. Its own head in each conversation is
+therefore saved and never goes backward (`PersistedState.ownHeads`). A reinstall — keys kept, data lost —
+still reaches the same place if it writes before its history comes back; that is in
+[open questions](open-questions.md).
+
+`EnvelopeLeakTests.positionsCountOnlyThisConversation` fails on the commit before the change.
+`DeletingARoomTests.comingBackDoesNotReuseANumber` fails five times in five without the saved head.
+
+### A conversation is named by what kind it is
+
+**RULED 2026-09-21 by Griff:** *"yes. I love an enum."*
+
+`ConversationID` is `.room(UUID)`, `.solo(UUID)` or `.outpost(ParticipantID)`, and every entry carries
+one — never nil. A post on your own Outpost used to have no room at all while a comment on it named the
+Outpost, so one conversation had two spellings; that is gone, and so is `wallOf`. A conversation's kind is
+read from its id, never from a profile entry written into it. Every switch over it is exhaustive, so a kind
+left out is a compile error. Its bytes are pinned by hand in `ConversationIDTests`.
+
+**What it costs.** The address used to tell a post (no room) from wall machinery (the wall's id), so a
+future plumbing type stayed hidden from an older build. An unknown type on an Outpost now draws, as it
+always has in a room.
+
+**Two refusals it made necessary.** Posting straight onto somebody else's Outpost is refused, and so is
+making a key for an Outpost this member does not own — without the second, a post aimed at another
+Outpost minted a fresh key for it.
+
+### Members vouch for each other's logs
+
+**RULED 2026-09-21 by Griff**, on three questions: attestations carry **no time** (*"No timestamp"*); a
+contradiction is **recorded, not an accusation**; and a contradiction about a member who has asked to be
+restored is kept quiet, because *"if somehow someone fakes a recovery, it's still there, and has the hold."*
+
+A packet with entries carries, for each log in those rooms, the position and hash of its newest entry,
+only where every recipient may already have that entry. A mismatch is recorded as a contradiction, never
+as a fork, and this device asks the attester for their copy; an entry signed by the author is the proof,
+and the fork machinery records it.
+
+**PROPOSED** within that: attestations carry no signature, because the packet is already authenticated to
+its sender and the proof of a lie is the author's signed entry, not a claim about one.
+
+### A seal is always bound to its writer
+
+**PROPOSED 2026-09-21.** The fallback that opened a payload sealed without its writer's feed key is
+deleted, and the writer is required at every seam. It existed so entries sealed before 7 September still
+opened; after the wipe no honest client makes one. The fallback that tried every key this device held
+when an entry's own conversation's key failed is deleted too — it let an entry's envelope name one
+conversation while its payload was sealed for another.
