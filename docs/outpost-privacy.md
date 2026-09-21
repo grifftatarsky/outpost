@@ -43,13 +43,20 @@ carries a return address: who wrote this, from which device. There are two ways 
 
 All three designs were versions of the second. It is blocked three ways.
 
-**Every entry lists everywhere its writer has been.** An entry's vector clock names every feed its
-author has seen, as person and device, which is what lets two phones work out what the other is
-missing. A comment under a throwaway name would carry the writer's real address in its own clock, and
-the writer's next ordinary message would carry the throwaway name in its clock, linking the two in
-both directions. Fixing that needs a separate clock and chain per conversation, which would let a
-device drop or reorder its own history without anyone being able to tell. For an app whose claim is
-that its record can be trusted, that is the wrong trade.
+**An entry still lists where its writer has been in *this* conversation.** An entry's vector clock
+names the logs its author has seen, as person and device, which is what lets two phones work out what
+the other is missing. It used to name every conversation its writer kept, anywhere — a comment under
+a throwaway name would have carried the writer's real address in its own clock, and their next
+ordinary message would have carried the throwaway name in its clock, linking the two in both
+directions across the whole app. **That was fixed on 2026-09-20**: a clock now names only the
+conversation its entry was written in, so nothing links an Outpost to a room any more.
+
+What remains is narrower and still enough. Inside one Outpost, a clock names the logs writing there,
+so a throwaway name and a real one posting on the same wall are still tied together. And a position
+number is counted per device across every conversation, so the numbers alone say how much their
+writer writes. Closing both needs a separate chain per conversation, which would let a device drop or
+reorder its own history without anyone being able to tell. For an app whose claim is that its record
+can be trusted, that is the wrong trade.
 
 **You cannot block what you cannot recognize.** Blocking and the list of known abusers both work on
 the return address, including on entries the phone cannot open. A throwaway name is a different
@@ -76,13 +83,18 @@ is unchanged. The limit: a stranger can still tell *that* somebody commented. Cl
 not the fact. Built and proved on three devices on 2026-09-09
 ([the ticket](epics/rooms-and-membership.md#open-or-closed-on-other-peoples-outposts)).
 
-**Who is offered an entry at all.** A friend of a friend stores and forwards entries for rooms they
-are not in. They cannot read them, but they can see that the room exists and who writes in it.
-Narrowing what a device is offered was designed twice on 2026-09-07 and declined: both designs lost
-messages. A phone tracks what it is missing per person, as one numbered run, while any narrowing
-decides per room, so a skipped entry becomes a permanent gap nobody is allowed to fill and nobody can
-tell from a real loss. A way to tell *withheld* from *lost* has to exist first. How much is carried
-this way is counted under History check, *Carried for other people*.
+**Who is offered an entry at all.** A friend of a friend used to store and forward entries for rooms
+they were not in. They could not read them, but they could see that the room existed and who wrote in
+it. Narrowing that was designed twice on 2026-09-07 and declined both times, because a phone tracks
+what it is missing as one numbered run per person while any narrowing decides per room: a skipped
+entry becomes a permanent gap nobody is allowed to fill and nobody can tell from a real loss. A way to
+tell *withheld* from *lost* had to exist first.
+
+**It exists now, and the narrowing is built.** A sender states, in the same packet, the positions it
+is withholding; the reader writes them down and stops asking. So a device is no longer offered a
+conversation it is not in, and no longer holds one. How much is still carried for somebody else —
+posts on a shared Outpost, mostly — is counted under History check, *Carried for other people*, and
+that number should now be small. Done 2026-09-20.
 
 ## The promise
 
@@ -107,10 +119,12 @@ other's replies.
 
 ## What would reopen it
 
-All three of these, not any one:
+All three of these, not any one. The first is now done.
 
-1. A separate clock per conversation, so an entry stops listing everywhere its writer has been. This
-   is a re-architecture.
+1. ~~A separate clock per conversation, so an entry stops listing everywhere its writer has been.~~
+   **Done 2026-09-20.** A clock names only the conversation its entry was written in. What is left is
+   narrower: inside one Outpost a clock still ties a throwaway name to a real one, and a position
+   number is still counted per device across every conversation.
 2. A way to block and to enforce the abuse list without a stable return address, or a written
    decision that unlinkability wins and blocking gets weaker.
 3. A third Apple Account, because the three-person case cannot be observed with two.

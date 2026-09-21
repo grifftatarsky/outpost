@@ -174,11 +174,6 @@ outbox grows, and laying out a long transcript are unmeasured.
 
 ## Cost and scale
 
-**Every packet is addressed to every peer.** A message in one room goes in a packet addressed to
-everyone the sender holds keys for; the room key keeps non-members out. Traffic grows with a member's
-whole circle rather than with the room, and the notification path has to narrow the audience back to
-the room before ringing.
-
 **A fetch reads whole zones.** `everything(in:of:)` pages a zone's change feed from the start every
 round, with no change token. Correct, since a packet must be re-readable until acknowledged, but the
 cost grows with what is in flight rather than what is new. Logs have shown 89 records scanned to find

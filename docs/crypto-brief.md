@@ -496,6 +496,15 @@ values. **What that leaks, stated plainly:**
   each one acknowledges, so the relay watches the fan-out drain.
 - That a set of packets share a recipient *within one day*.
 
+**This changed on 2026-09-20, and it is a trade rather than a pure win.** A round used to write one
+packet addressed to every peer, so a single record carried the whole of a member's circle for that
+day, correlated in one place. A round now writes one packet per audience — the people owed exactly
+the same entries — so no record names more people than one conversation holds. The relay sees less
+correlation and more structure: instead of one fan-out it sees several, and their sizes are the sizes
+of a member's rooms. The audiences are still only rotating tags, and two audiences cannot be told
+apart across a day boundary, but a member who talks in four rooms now writes four records where they
+wrote one.
+
 It does not leak any participant identifier, any room identifier, any device identifier, or any
 plaintext. **Nothing is ever written with `record[key]` unsealed** — the rule in `CLAUDE.md` exists
 because it was broken once, and that is the next section.
