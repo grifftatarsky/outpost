@@ -20,7 +20,9 @@ extension AppSession {
 
         let (reference, ciphertext) = try SealedAttachment.seal(jpeg, kind: .image)
         let window = SyncSession.window(at: clock.now)
-        let recipients = Set(peers().map { $0.outgoingTag(window: window) })
+        let readers = outpostReaders()
+        let recipients = Set(
+            peers().filter { readers.contains($0.them) }.map { $0.outgoingTag(window: window) })
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
         try await mailbox.upload(

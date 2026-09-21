@@ -75,6 +75,7 @@ public final class AppSession {
     var cachedComparisonHalves: [ParticipantID: String] = [:]
 
     var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
+    var cachedWithheld: [ParticipantID: [FeedGap]]?
 
     public internal(set) var codeForSharing = ""
 
@@ -89,6 +90,7 @@ public final class AppSession {
         cachedReporting = [:]
         cachedOutpostAccess = nil
         cachedDevicesAdded = [:]
+        cachedWithheld = nil
     }
     var viewMayBeStale = false
 

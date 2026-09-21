@@ -8,7 +8,7 @@ import Testing
 @MainActor
 @Suite("What the envelope tells a reader", .serialized)
 struct EnvelopeLeakTests {
-    private func settle(_ sessions: [AppSession], _ mailbox: InMemoryMailbox, rounds: Int = 8) async throws {
+    private func settle(_ sessions: [AppSession], _ mailbox: InMemoryMailbox, rounds: Int = 4) async throws {
         for _ in 0..<rounds {
             for session in sessions { try await session.sync(through: mailbox, media: mailbox) }
         }

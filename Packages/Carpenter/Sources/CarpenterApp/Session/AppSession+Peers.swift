@@ -12,9 +12,7 @@ extension AppSession {
         return replica.knownParticipants
             .filter { $0 != enrolment.identity.id && reachable.contains($0) }
             .compactMap { participant -> Peer? in
-                guard let keys = replica.registry(for: participant)?.identity,
-                    let secret = try? PairwiseSecret.derive(mine: enrolment.identity, theirs: keys)
-                else { return nil }
+                guard let secret = pairwiseSecret(with: participant) else { return nil }
                 return Peer(secret: secret, them: participant, me: enrolment.identity.id)
             }
     }
@@ -156,15 +154,18 @@ extension AppSession {
     }
 
     func withheldFromEveryone() -> [ParticipantID: [FeedGap]] {
+        if let cachedWithheld { return cachedWithheld }
         let everyone = peers()
         guard !everyone.isEmpty else { return [:] }
         var out: [ParticipantID: [FeedGap]] = [:]
         for entry in replica.allEntries {
             let allowed = Set(mayReceive(entry, among: everyone).map(\.them))
+            guard allowed.count < everyone.count else { continue }
             for peer in everyone where !allowed.contains(peer.them) {
                 out[peer.them, default: []].insert(entry.feedKey, entry.seq)
             }
         }
+        cachedWithheld = out
         return out
     }
 
