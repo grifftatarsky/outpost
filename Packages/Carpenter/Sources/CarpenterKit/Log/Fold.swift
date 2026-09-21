@@ -20,7 +20,7 @@ public struct RenderedEntry: Identifiable, Hashable, Sendable {
     public let author: ParticipantID
     public let device: DeviceID
     public let wallTime: Date
-    public let room: ConversationID?
+    public let conversation: ConversationID
     public var content: RenderedContent
     public var editedAt: Date?
 
@@ -73,7 +73,7 @@ public enum Fold {
                 order.append(entry.hash)
                 rendered[entry.hash] = RenderedEntry(
                     id: entry.hash, type: .post, author: entry.author, device: entry.device,
-                    wallTime: entry.wallTime, room: entry.room, content: .sealed,
+                    wallTime: entry.wallTime, conversation: entry.conversation, content: .sealed,
                     editedAt: nil, replyingTo: nil, reactions: [:],
                     seq: entry.seq, clock: entry.clock)
                 continue
@@ -89,7 +89,7 @@ public enum Fold {
                     author: entry.author,
                     device: entry.device,
                     wallTime: entry.wallTime,
-                    room: entry.room,
+                    conversation: entry.conversation,
                     content: content(of: payload),
                     editedAt: nil,
                     replyingTo: (try? payload.decode(CommentBody.self))?.target,
@@ -163,7 +163,7 @@ public enum Fold {
                     author: entry.author,
                     device: entry.device,
                     wallTime: entry.wallTime,
-                    room: entry.room,
+                    conversation: entry.conversation,
                     content: .unrenderable(type: payload.type, fallback: payload.fallbackText),
                     editedAt: nil,
                     replyingTo: nil,

@@ -61,21 +61,25 @@ struct FeedGapTests {
         var held = Replica()
         try held.meet(bob)
         try held.meet(carol)
-        let post = try bob.append(Payload.post("the kite is up"), at: start)
+        let post = try bob.append(Payload.post("the kite is up"), at: start, room: wall)
         let comment = try carol.append(
             Payload.comment(on: post.hash, text: "it is holding well"), at: start, room: wall)
+        let elsewhere = try bob.append(
+            Payload.post("in a room"), at: start, room: .room(UUID()))
         try held.integrate(post)
         try held.integrate(comment)
+        try held.integrate(elsewhere)
 
         let (served, _, _) = held.fill(
-            RepairRequest(
-                authors: [], heads: VectorClock(), gaps: [], room: nil,
-                wallOf: bob.identity.id))
+            RepairRequest(authors: [], heads: VectorClock(), gaps: [], room: wall))
 
         #expect(served.contains { $0.hash == post.hash }, "the post itself did not come back")
         #expect(
             served.contains { $0.hash == comment.hash },
             "a wall repair returned the posts and nothing anybody wrote under them")
+        #expect(
+            !served.contains { $0.hash == elsewhere.hash },
+            "a wall repair handed over something its owner wrote in a room")
     }
 
     @Test("A peer that lacks part of it says which, and sends what lies past the asker's head")

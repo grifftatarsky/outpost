@@ -239,27 +239,29 @@ struct PayloadTypeClassificationTests {
 struct WallPlumbingRoutingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
-    private func feed(of author: Author, room: ConversationID?) throws -> [OutpostPost] {
+    private func feed(of author: Author, type: PayloadType) throws -> [OutpostPost] {
         var writing = author
         let entry = try writing.append(
-            Payload(type: PayloadType(rawValue: 31_337), body: Data([1])), at: start, room: room)
+            Payload(type: type, body: Data([1])), at: start,
+            room: .outpost(writing.identity.id))
         let rendered = Fold.render([entry], using: writing.chain)
         return Projection(viewer: writing.identity.id, rendered: rendered).feed()
     }
 
-    @Test("A payload this build cannot read, with no room, is drawn as a post")
-    func roomlessUnknownBecomesAPost() throws {
+    @Test("A payload this build cannot read, on its author's Outpost, is drawn as a post")
+    func unknownOnAnOutpostIsAPost() throws {
         let alice = Author()
         #expect(
-            try feed(of: alice, room: nil).count == 1,
-            "the premise: an entry with no room is a post, whatever is inside it")
+            try feed(of: alice, type: PayloadType(rawValue: 31_337)).count == 1,
+            "an entry this build has never heard of was silently dropped from an Outpost")
     }
 
-    @Test("The same payload addressed to the wall is drawn nowhere")
-    func addressedToTheWallItIsNot() throws {
+    @Test("A wall's own machinery on an Outpost is drawn nowhere")
+    func knownMachineryIsNot() throws {
         let alice = Author()
-        let wall = ConversationID.outpost(of: alice.identity.id)
-        #expect(try feed(of: alice, room: wall).isEmpty, "a wall's machinery reached the feed")
+        for type in [PayloadType.commentTally, .memberPhoto, .outpostAccess, .memberProfile] {
+            #expect(try feed(of: alice, type: type).isEmpty, "\(type.rawValue) reached the feed")
+        }
     }
 
     @Test("A member's wall is the same room wherever it is worked out")

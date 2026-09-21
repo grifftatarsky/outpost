@@ -38,7 +38,7 @@ struct OutpostAudienceTests {
     @Test("Sharing a room does not hand anybody your Outpost")
     func nothingIsGrantedImplicitly() async throws {
         let (alice, bob, mailbox) = try await acquainted()
-        try await alice.send("on my own wall", to: nil)
+        try await alice.send("on my own wall", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         #expect(alice.outpostReaders().isEmpty)
@@ -48,7 +48,7 @@ struct OutpostAudienceTests {
     @Test("Somebody let in can read what was already there")
     func everythingOpensTheHistory() async throws {
         let (alice, bob, mailbox) = try await acquainted()
-        try await alice.send("said before you arrived", to: nil)
+        try await alice.send("said before you arrived", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let bobID = try #require(bob.enrolment?.identity.id)
@@ -62,12 +62,12 @@ struct OutpostAudienceTests {
     @Test("Somebody let in from now cannot read what came before")
     func fromNowSealsTheHistory() async throws {
         let (alice, bob, mailbox) = try await acquainted()
-        try await alice.send("before Bob", to: nil)
+        try await alice.send("before Bob", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let bobID = try #require(bob.enrolment?.identity.id)
         try await alice.allowOutpost(bobID, everything: false)
-        try await alice.send("after Bob", to: nil)
+        try await alice.send("after Bob", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let read = bob.feed().map(\.body)
@@ -84,13 +84,13 @@ struct OutpostAudienceTests {
 
         let bobID = try #require(bob.enrolment?.identity.id)
         try await alice.allowOutpost(bobID, everything: false)
-        try await alice.send("Bob can read this", to: nil)
+        try await alice.send("Bob can read this", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
         #expect(bob.feed().map(\.body).contains("Bob can read this"))
 
         let carolID = try #require(carol.enrolment?.identity.id)
         try await alice.allowOutpost(carolID, everything: false)
-        try await alice.send("and this", to: nil)
+        try await alice.send("and this", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let read = bob.feed().map(\.body)
@@ -103,12 +103,12 @@ struct OutpostAudienceTests {
         let (alice, bob, mailbox) = try await acquainted()
         let bobID = try #require(bob.enrolment?.identity.id)
         try await alice.allowOutpost(bobID, everything: true)
-        try await alice.send("while Bob could read", to: nil)
+        try await alice.send("while Bob could read", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
         #expect(bob.feed().map(\.body).contains("while Bob could read"))
 
         try await alice.revokeOutpost(bobID)
-        try await alice.send("after Bob was shut out", to: nil)
+        try await alice.send("after Bob was shut out", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         #expect(alice.outpostReaders().isEmpty)
@@ -278,7 +278,7 @@ struct OutpostKeyTurnTests {
 
         let bobID = try #require(bob.enrolment?.identity.id)
         try await alice.allowOutpost(bobID, everything: true)
-        try await alice.send("while Bob could read", to: nil)
+        try await alice.send("while Bob could read", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
         #expect(bob.feed().map(\.body).contains("while Bob could read"))
 
@@ -292,7 +292,7 @@ struct OutpostKeyTurnTests {
         try await settle([alice, bob], through: mailbox)
         #expect(!alice.outpostKeyTurnPending, "the turn was never retried")
 
-        try await alice.send("after the door shut", to: nil)
+        try await alice.send("after the door shut", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let read = bob.feed().map(\.body)
@@ -330,7 +330,7 @@ struct OutpostBackfillTests {
         try await bob.accept(toBob.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
         try await settle([alice, bob], through: mailbox)
 
-        try await alice.send("posted long before Carol", to: nil)
+        try await alice.send("posted long before Carol", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let toCarol = try await bob.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
@@ -368,12 +368,12 @@ struct OutpostBackfillTests {
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
         try await settle([alice, bob], through: mailbox)
 
-        try await alice.send("before Bob", to: nil)
+        try await alice.send("before Bob", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let bobID = try #require(bob.enrolment?.identity.id)
         try await alice.allowOutpost(bobID, everything: false)
-        try await alice.send("after Bob", to: nil)
+        try await alice.send("after Bob", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
         #expect(
             !bob.feed().map(\.body).contains("before Bob"),

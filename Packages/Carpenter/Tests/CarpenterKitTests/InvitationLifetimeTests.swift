@@ -118,7 +118,7 @@ struct PendingInvitationTests {
     ) -> RenderedEntry {
         RenderedEntry(
             id: EntryHash(rawValue: Data(repeating: hash, count: 32)), type: type, author: author,
-            device: DeviceID(rawValue: WideID.of([])), wallTime: start, room: room, content: .text(""),
+            device: DeviceID(rawValue: WideID.of([])), wallTime: start, conversation: room, content: .text(""),
             editedAt: nil, replyingTo: nil, reactions: [:])
     }
 

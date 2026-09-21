@@ -39,7 +39,7 @@ public struct SpentEntry: Hashable, Sendable, Codable {
     }
 
     public init(_ entry: Entry) {
-        self.init(feed: entry.feedKey, seq: entry.seq, hash: entry.hash, room: entry.room)
+        self.init(feed: entry.feedKey, seq: entry.seq, hash: entry.hash, room: entry.conversation)
     }
 
     public var link: EntryLink { EntryLink(seq: seq, hash: hash) }
@@ -116,14 +116,14 @@ public struct Replica: Sendable {
 
         try validateLink(of: entry)
 
-        if let room = entry.room, closedRooms.contains(room) {
+        if closedRooms.contains(entry.conversation) {
             if existingAtSeq.isEmpty { spend(SpentEntry(entry)) }
             return .alreadyPresent
         }
 
         feeds[entry.feedKey, default: [:]][entry.seq, default: [:]][entry.hash] = entry
-        if entry.seq > (highestInRoom[entry.room]?[entry.feedKey] ?? 0) {
-            highestInRoom[entry.room, default: [:]][entry.feedKey] = entry.seq
+        if entry.seq > (highestInRoom[entry.conversation]?[entry.feedKey] ?? 0) {
+            highestInRoom[entry.conversation, default: [:]][entry.feedKey] = entry.seq
         }
         claimed = claimed.merging(entry.clock)
         if existingAtSeq.isEmpty { occupy(entry.seq, in: entry.feedKey) }
@@ -186,10 +186,10 @@ public struct Replica: Sendable {
         for (feed, bySeq) in feeds {
             var kept = bySeq
             for (seq, atSeq) in bySeq {
-                let inRoom = atSeq.values.filter { $0.room == room }
+                let inRoom = atSeq.values.filter { $0.conversation == room }
                 guard !inRoom.isEmpty else { continue }
                 taken.append(contentsOf: inRoom)
-                let remaining = atSeq.filter { $0.value.room != room }
+                let remaining = atSeq.filter { $0.value.conversation != room }
                 if remaining.isEmpty {
                     kept[seq] = nil
                     let first = inRoom.min {
@@ -254,17 +254,17 @@ public struct Replica: Sendable {
         }
     }
 
-    public func entries(in room: ConversationID?) -> [Entry] {
-        CausalOrder.sorted(allEntries.filter { $0.room == room })
+    public func entries(in room: ConversationID) -> [Entry] {
+        CausalOrder.sorted(allEntries.filter { $0.conversation == room })
     }
 
     public func ordered() -> [Entry] {
         CausalOrder.sorted(allEntries)
     }
 
-    private var highestInRoom: [ConversationID?: [FeedKey: UInt64]] = [:]
+    private var highestInRoom: [ConversationID: [FeedKey: UInt64]] = [:]
 
-    public func frontier(in room: ConversationID?) -> VectorClock {
+    public func frontier(in room: ConversationID) -> VectorClock {
         var clock = VectorClock()
         for (key, top) in highestInRoom[room] ?? [:] { clock.observe(key, seq: top) }
         return clock

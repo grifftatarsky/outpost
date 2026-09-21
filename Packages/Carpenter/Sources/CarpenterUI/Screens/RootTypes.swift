@@ -13,3 +13,8 @@ struct PresentedInvite: Identifiable {
 extension ConversationID: Identifiable {
     public var id: ConversationID { self }
 }
+
+public enum SendDestination: Hashable, Sendable {
+    case conversation(ConversationID)
+    case ownOutpost
+}

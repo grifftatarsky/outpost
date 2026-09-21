@@ -36,7 +36,7 @@ extension Projection {
         let wall = ConversationID.outpost(of: owner)
         var changes: [(OutpostAccessBody, Date, DeviceID)] = []
         for entry in rendered
-        where (entry.room == nil || entry.room == wall) && entry.author == owner
+        where (entry.conversation == .outpost(entry.author) || entry.conversation == wall) && entry.author == owner
             && entry.type == .outpostAccess {
             guard let payload = opening(entry),
                 let body = try? payload.decode(OutpostAccessBody.self)
@@ -64,7 +64,7 @@ extension Projection {
     }
 
     private var outpostEntries: [RenderedEntry] {
-        rendered.filter { $0.room == nil && $0.isConversation && $0.isReadable }.reversed()
+        rendered.filter { $0.conversation == .outpost($0.author) && $0.isConversation && $0.isReadable }.reversed()
     }
 
     private func post(_ entry: RenderedEntry) -> OutpostPost {

@@ -143,7 +143,7 @@ struct AcknowledgementTests {
 
         let entry = try Entry.append(
             to: nil, author: stranger.id, device: device, clock: VectorClock(),
-            wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
+            wallTime: TestSession.now, conversation: chain.chain.room, payload: try Payload.post("hello"),
             at: .initial, sealedWith: chain.chain)
 
         let packet = SyncSession.CollectedPackets(
@@ -172,7 +172,7 @@ struct AcknowledgementTests {
 
         let entry = try Entry.append(
             to: nil, author: author.id, device: device, clock: VectorClock(),
-            wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
+            wallTime: TestSession.now, conversation: chain.chain.room, payload: try Payload.post("hello"),
             at: .initial, sealedWith: chain.chain)
 
         let packet = SyncSession.CollectedPackets(
@@ -200,7 +200,7 @@ struct AcknowledgementTests {
 
         let entry = try Entry.append(
             to: nil, author: known.id, device: knownDevice, clock: VectorClock(),
-            wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
+            wallTime: TestSession.now, conversation: chain.chain.room, payload: try Payload.post("hello"),
             at: .initial, sealedWith: chain.chain)
 
         let stranger = try Identity.generate()
@@ -242,7 +242,7 @@ struct AcknowledgementTests {
 
         let entry = try Entry.append(
             to: nil, author: known.id, device: device, clock: VectorClock(),
-            wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
+            wallTime: TestSession.now, conversation: chain.chain.room, payload: try Payload.post("hello"),
             at: .initial, sealedWith: chain.chain)
 
         let packet = SyncSession.CollectedPackets(

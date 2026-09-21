@@ -11,7 +11,7 @@ extension AppSession {
         }
         let feed = FeedKey(author: enrolment.identity.id, device: enrolment.device.id)
         let sent = persisted.syncedFrontier[feed]
-        let unsent = replica.allEntries.contains { $0.room == room && $0.feedKey == feed && $0.seq > sent }
+        let unsent = replica.allEntries.contains { $0.conversation == room && $0.feedKey == feed && $0.seq > sent }
         return unsent ? .departureNotSent : .allowed
     }
 
@@ -111,7 +111,7 @@ extension AppSession {
         }
 
         do {
-            try await storage.log.removeEntries { entry in entry.room.map(rooms.contains) ?? false }
+            try await storage.log.removeEntries { entry in rooms.contains(entry.conversation) }
         } catch {
             integrity.writesFailed += 1
             Diagnostics.sync.error(

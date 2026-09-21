@@ -245,27 +245,30 @@ public final class AppSession {
 
     func appendToWall(of owner: ParticipantID, _ payload: Payload) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
-        guard owner != enrolment.identity.id else { return try await append(payload, to: nil) }
+        let mine = ConversationID.outpost(enrolment.identity.id)
+        guard owner != enrolment.identity.id else { return try await append(payload, to: mine) }
 
         if !(persisted.preferences.outpostStanding ?? .open).reachesThePostsReaders {
             guard let theirs = pairwiseSecret(with: owner) else {
                 throw AppSessionError.cannotWriteThere
             }
-            return try await append(payload, to: nil, alsoFor: theirs)
+            return try await append(payload, to: mine, alsoFor: theirs)
         }
 
         let wall = outpostRoom(for: owner)
         guard chains[wall] != nil else { throw AppSessionError.cannotWriteThere }
-        try await append(payload, to: wall, isWall: true)
+        try await append(payload, to: wall)
     }
 
     func append(
-        _ payload: Payload, to room: ConversationID?, isWall: Bool = false,
-        alsoFor extra: PairwiseSecret? = nil
+        _ payload: Payload, to room: ConversationID, alsoFor extra: PairwiseSecret? = nil
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
 
-        if let room, !isWall {
+        switch room {
+        case .outpost:
+            break
+        case .room, .solo:
             let roster = roster(of: room)
             if roster.departure(of: enrolment.identity.id) != nil {
                 throw MembershipError.leftThisRoom
@@ -280,13 +283,15 @@ public final class AppSession {
 
         defer { sendOwnEntries() }
 
-        let chainRoom = room ?? outpostRoom(for: enrolment.identity.id)
-        if chains[chainRoom] == nil {
-            let (chain, secret) = EpochChain.create(room: chainRoom)
-            chains[chainRoom] = chain
-            try await persistEpoch(secret, at: .initial, for: chainRoom)
+        if chains[room] == nil {
+            if case .outpost(let owner) = room, owner != enrolment.identity.id {
+                throw AppSessionError.cannotWriteThere
+            }
+            let (chain, secret) = EpochChain.create(room: room)
+            chains[room] = chain
+            try await persistEpoch(secret, at: .initial, for: room)
         }
-        guard let chain = chains[chainRoom] else { throw AppSessionError.noIdentity }
+        guard let chain = chains[room] else { throw AppSessionError.noIdentity }
 
         let entry = try Entry.append(
             after: head,
@@ -294,7 +299,7 @@ public final class AppSession {
             device: enrolment.device,
             clock: replica.frontier(in: room),
             wallTime: clock.now,
-            room: room,
+            conversation: room,
             payload: payload,
             at: chain.highestKnownEpoch ?? .initial,
             sealedWith: chain,
@@ -347,7 +352,7 @@ public final class AppSession {
             if entry.feedKey == ownFeed {
                 head = entry.link
             }
-            if let room = entry.room, replica.closedRooms.contains(room) {
+            if replica.closedRooms.contains(entry.conversation) {
                 stillOnDisk.append(entry)
             }
         }
@@ -363,7 +368,7 @@ public final class AppSession {
         let unfinished = replica.closedRooms.filter {
             persisted.knownRooms.contains($0) || persisted.epochs[$0] != nil
         }
-        await finishDeleting(unfinished.union(stillOnDisk.compactMap(\.room)), removing: stillOnDisk)
+        await finishDeleting(unfinished.union(stillOnDisk.filter { !$0.isOnOwnOutpost }.map(\.conversation)), removing: stillOnDisk)
 
         for room in persisted.knownRooms where chains[room] != nil {
             try await unwindEpochs(in: room, bounded: walkStopsShort(in: room))
@@ -479,7 +484,7 @@ public final class AppSession {
     }
 
     func chain(sealing entry: Entry) -> EpochChain? {
-        chains[entry.room ?? outpostRoom(for: entry.author)]
+        chains[entry.conversation]
     }
 
 }

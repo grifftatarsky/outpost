@@ -83,7 +83,7 @@ struct OutpostReviewTests {
     @Test("Saying no to somebody who was never let in does not turn the wall's key")
     func refusingCostsNoKeyTurn() async throws {
         let (alice, joiners, _, mailbox) = try await room(with: ["Hastur", "Camilla"])
-        try await alice.send("before any of it", to: nil)
+        try await alice.send("before any of it", to: try #require(alice.ownOutpost))
         try await settle([alice] + joiners, through: mailbox)
 
         let camilla = try #require(joiners[1].enrolment?.identity.id)

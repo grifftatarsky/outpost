@@ -25,7 +25,7 @@ struct SoloCheckPresentationTests {
         check.apply(
             RenderedEntry(
                 id: ask, type: .soloCheck, author: asker, device: DeviceID(rawValue: WideID.of([])),
-                wallTime: start, room: ConversationID.room(UUID()), content: .text(""), editedAt: nil,
+                wallTime: start, conversation: ConversationID.room(UUID()), content: .text(""), editedAt: nil,
                 replyingTo: nil, reactions: [:]),
             body: try Payload.soloCheck(SoloCheckBody(move: .asked, answering: nil)))
         if let answerer {
@@ -33,7 +33,7 @@ struct SoloCheckPresentationTests {
                 RenderedEntry(
                     id: EntryHash(rawValue: Data(repeating: 2, count: 32)), type: .soloCheck,
                     author: answerer, device: DeviceID(rawValue: WideID.of([])),
-                    wallTime: start.addingTimeInterval(10), room: ConversationID.room(UUID()), content: .text(""),
+                    wallTime: start.addingTimeInterval(10), conversation: ConversationID.room(UUID()), content: .text(""),
                     editedAt: nil, replyingTo: nil, reactions: [:]),
                 body: try Payload.soloCheck(
                     SoloCheckBody(move: matched ? .confirmed : .refused, answering: ask)))
@@ -178,7 +178,7 @@ struct SoloCheckPresentationTests {
     private func ask(_ id: EntryHash, by author: ParticipantID, at: Date) -> RenderedEntry {
         RenderedEntry(
             id: id, type: .soloCheck, author: author, device: DeviceID(rawValue: WideID.of([])),
-            wallTime: at, room: ConversationID.room(UUID()), content: .text(""), editedAt: nil, replyingTo: nil,
+            wallTime: at, conversation: ConversationID.room(UUID()), content: .text(""), editedAt: nil, replyingTo: nil,
             reactions: [:])
     }
 

@@ -105,7 +105,7 @@ struct DeletingARoomTests {
         #expect(rig.bob.messages(in: rig.hangar).isEmpty)
         #expect(rig.bob.replica.entries(in: rig.hangar).isEmpty)
         let onDisk = try await rig.bob.storage.log.loadAll().entries
-        #expect(!onDisk.contains { $0.room == rig.hangar }, "the log on disk still holds the room")
+        #expect(!onDisk.contains { $0.conversation == rig.hangar }, "the log on disk still holds the room")
         for raw in epochs {
             #expect(
                 try await rig.keychain.data(for: AppSession.epochKey(rig.hangar, EpochNumber(rawValue: raw)))
@@ -167,7 +167,7 @@ struct DeletingARoomTests {
         #expect(!rig.bob.rooms.contains { $0.id == rig.hangar }, "a late message brought the room back")
         #expect(rig.bob.replica.entries(in: rig.hangar).isEmpty)
         #expect(rig.bob.replica.gaps().isEmpty)
-        #expect(!(try await rig.bob.storage.log.loadAll().entries.contains { $0.room == rig.hangar }))
+        #expect(!(try await rig.bob.storage.log.loadAll().entries.contains { $0.conversation == rig.hangar }))
     }
 
     @Test("Leaving and deleting at once waits for the leaving to be sent")
@@ -252,7 +252,7 @@ struct DeletingARoomTests {
         await refusing.load()
         try await refusing.deleteRoom(rig.hangar)
         #expect(
-            try await FileLogStore(url: logURL).loadAll().entries.contains { $0.room == rig.hangar },
+            try await FileLogStore(url: logURL).loadAll().entries.contains { $0.conversation == rig.hangar },
             "the refusing log did not refuse, so this test proves nothing")
 
         let relaunched = TestSession.make(
@@ -260,7 +260,7 @@ struct DeletingARoomTests {
         await relaunched.load()
 
         #expect(!relaunched.rooms.contains { $0.id == rig.hangar }, "the half-deleted room came back")
-        #expect(!(try await FileLogStore(url: logURL).loadAll().entries.contains { $0.room == rig.hangar }))
+        #expect(!(try await FileLogStore(url: logURL).loadAll().entries.contains { $0.conversation == rig.hangar }))
         #expect(relaunched.replica.gaps().isEmpty)
     }
 

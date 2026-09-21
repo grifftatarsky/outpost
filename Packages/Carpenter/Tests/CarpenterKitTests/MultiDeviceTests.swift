@@ -31,14 +31,14 @@ struct MultiDeviceTests {
         let room = ConversationID.room(UUID())
         let fromPhone = try Entry.append(
             to: nil, author: identity.id, device: phone, clock: VectorClock(),
-            wallTime: start.addingTimeInterval(120), room: room,
+            wallTime: start.addingTimeInterval(120), conversation: room,
             payload: try seal("posted from the phone"))
 
         var seen = VectorClock()
         seen.observe(fromPhone.feedKey, seq: fromPhone.seq)
         let fromMac = try Entry.append(
             to: nil, author: identity.id, device: mac, clock: seen,
-            wallTime: start.addingTimeInterval(180), room: room,
+            wallTime: start.addingTimeInterval(180), conversation: room,
             payload: try seal("and from the Mac"))
 
         #expect(try hastur.integrate(fromPhone) == .accepted)
@@ -67,7 +67,7 @@ struct MultiDeviceTests {
             try replica.integrate(
                 Entry.append(
                     to: nil, author: identity.id, device: device, clock: VectorClock(),
-                    wallTime: start.addingTimeInterval(60), room: nil,
+                    wallTime: start.addingTimeInterval(60), conversation: .outpost(identity.id),
                     payload: try seal("written offline")))
         }
 
@@ -89,7 +89,7 @@ struct MultiDeviceTests {
         let room = ConversationID.room(UUID())
         let beforeLoss = try Entry.append(
             to: nil, author: identity.id, device: lost, clock: VectorClock(),
-            wallTime: start.addingTimeInterval(60), room: room,
+            wallTime: start.addingTimeInterval(60), conversation: room,
             payload: try seal("said before the phone was lost"))
         try replica.integrate(beforeLoss)
 
@@ -98,13 +98,13 @@ struct MultiDeviceTests {
 
         let afterLoss = try Entry.append(
             to: beforeLoss, author: identity.id, device: lost, clock: beforeLoss.clock,
-            wallTime: revokedAt.addingTimeInterval(60), room: room,
+            wallTime: revokedAt.addingTimeInterval(60), conversation: room,
             payload: try seal("posted by a thief"))
         #expect(throws: LogError.unauthorizedDevice) { try replica.integrate(afterLoss) }
 
         let carryOn = try Entry.append(
             to: nil, author: identity.id, device: kept, clock: VectorClock(),
-            wallTime: revokedAt.addingTimeInterval(120), room: room,
+            wallTime: revokedAt.addingTimeInterval(120), conversation: room,
             payload: try seal("replacement phone"))
         #expect(try replica.integrate(carryOn) == .accepted)
 

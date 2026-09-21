@@ -299,7 +299,7 @@ struct MailboxConvergenceTests {
         let genuine = try alice.author.post("also real", at: start.addingTimeInterval(1))
         let forged = Entry(
             author: honest.author, device: honest.device, seq: 99, previous: honest.previous,
-            clock: honest.clock, wallTime: honest.wallTime, room: honest.room,
+            clock: honest.clock, wallTime: honest.wallTime, conversation: honest.conversation,
             payload: honest.payload, signature: honest.signature)
 
         _ = try await session.send([honest, forged, genuine], to: [alice.peer], at: start)

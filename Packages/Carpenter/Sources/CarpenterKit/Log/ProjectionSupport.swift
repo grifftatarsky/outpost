@@ -34,3 +34,7 @@ extension ParticipantID {
             .joined(separator: " · ")
     }
 }
+
+extension RenderedEntry {
+    public var isOnOwnOutpost: Bool { conversation == .outpost(author) }
+}

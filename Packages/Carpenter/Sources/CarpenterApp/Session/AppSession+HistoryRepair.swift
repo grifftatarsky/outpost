@@ -36,7 +36,7 @@ extension AppSession {
 
         let request = RepairRequest(
             authors: authors.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
-            heads: replica.heads(of: authors, inRoom: room, onWallOf: nil),
+            heads: replica.heads(of: authors, in: room),
             gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
                 .subtracting(persisted.elsewhere),
             room: room, reason: reason)
@@ -158,7 +158,7 @@ extension AppSession {
         persisted.repairs.removeAll { $0.room == wall }
 
         let request = RepairRequest(
-            authors: [], heads: VectorClock(), gaps: [], room: nil, wallOf: owner)
+            authors: [], heads: VectorClock(), gaps: [], room: wall)
         persisted.repairs.append(
             HistoryRepair(
                 id: request.id, room: wall, startedAt: clock.now, request: request, asked: [owner],
@@ -243,12 +243,10 @@ extension AppSession {
             let authors = Set(repair.request.authors)
             let request = RepairRequest(
                 id: repair.request.id, authors: repair.request.authors,
-                heads: replica.heads(
-                    of: authors, inRoom: repair.request.room, onWallOf: repair.request.wallOf),
+                heads: replica.heads(of: authors, in: repair.request.room),
                 gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
                 .subtracting(persisted.elsewhere),
-                room: repair.request.room, wallOf: repair.request.wallOf,
-                reason: repair.request.reason)
+                room: repair.request.room, reason: repair.request.reason)
             do {
                 let sent = try await session.send(
                     [], to: unsent, at: clock.now,

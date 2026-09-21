@@ -63,7 +63,7 @@ struct WireFormTests {
 
         #expect(
             keys == [
-                "author", "device", "seq", "previous", "clock", "wallTime", "room", "payload",
+                "author", "device", "seq", "previous", "clock", "wallTime", "conversation", "payload",
                 "signature",
             ])
 
@@ -107,7 +107,7 @@ struct WireFormTests {
         bytes[bytes.count / 2] ^= 0xFF
         let tampered = Entry(
             author: entry.author, device: entry.device, seq: entry.seq, previous: entry.previous,
-            clock: entry.clock, wallTime: entry.wallTime, room: entry.room,
+            clock: entry.clock, wallTime: entry.wallTime, conversation: entry.conversation,
             payload: SealedPayload(epoch: entry.payload.epoch, ciphertext: bytes),
             signature: entry.signature)
 

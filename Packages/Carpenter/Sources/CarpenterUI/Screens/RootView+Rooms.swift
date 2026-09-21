@@ -77,7 +77,7 @@ extension RootView {
                     ? transcript(id) : conversation.map(TranscriptEntry.message),
                 pendingJoinCount: pendingJoins(id).count { !$0.isAlreadyIn },
                 uncheckedCount: pendingJoins(id).count(where: \.isAlreadyIn),
-                onSend: { await onSend($0, id) },
+                onSend: { await onSend($0, .conversation(id)) },
                 onAttach: onAttach.map { attach in { picked, caption in await attach(picked, caption, id) } },
                 onHide: onHideMessage,
                 hiddenCount: hiddenInRoom(id),

@@ -176,7 +176,7 @@ struct AppSessionTests {
         let app = session(storage)
         await app.load()
         try await app.createIdentity(displayName: "Cassilda")
-        try await app.send("Naotalba is wrong about blimps.", to: nil)
+        try await app.send("Naotalba is wrong about blimps.", to: try #require(app.ownOutpost))
 
         let posts = app.outpost()
 
@@ -192,7 +192,7 @@ struct AppSessionTests {
         let app = session(storage)
         await app.load()
         try await app.createIdentity(displayName: "Cassilda")
-        try await app.send("The word dirigible just means steerable.", to: nil)
+        try await app.send("The word dirigible just means steerable.", to: try #require(app.ownOutpost))
 
         let post = try #require(app.feed().first)
         try await app.comment(on: post, text: "a balloon that made a decision")
@@ -213,7 +213,7 @@ struct AppSessionTests {
         let app = session(storage)
         await app.load()
         try await app.createIdentity(displayName: "Cassilda")
-        try await app.send("hydrogen, obviously", to: nil)
+        try await app.send("hydrogen, obviously", to: try #require(app.ownOutpost))
 
         let post = try #require(app.feed().first)
         try await app.react(to: post, emoji: "🔥")
@@ -233,7 +233,7 @@ struct AppSessionTests {
         let first = session(storage)
         await first.load()
         try await first.createIdentity(displayName: "Cassilda")
-        try await first.send("Naotalba is wrong about blimps.", to: nil)
+        try await first.send("Naotalba is wrong about blimps.", to: try #require(first.ownOutpost))
         try await first.comment(on: try #require(first.feed().first), text: "he is not")
 
         let second = session(storage)
@@ -537,7 +537,7 @@ struct IntegrityReportingTests {
         func entry(_ text: String) throws -> Entry {
             try Entry.append(
                 to: nil, author: alice.identity.id, device: alice.device, clock: VectorClock(),
-                wallTime: Date(timeIntervalSince1970: 1), room: nil,
+                wallTime: Date(timeIntervalSince1970: 1), conversation: chain.room,
                 payload: try Payload.post(text).sealed(at: .initial, using: chain))
         }
 

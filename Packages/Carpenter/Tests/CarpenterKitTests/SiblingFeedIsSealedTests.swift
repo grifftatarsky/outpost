@@ -27,7 +27,7 @@ struct SiblingFeedIsSealedTests {
 
         let entry = Entry(
             author: identity.id, device: device, seq: 1, previous: nil, clock: VectorClock(),
-            wallTime: Date(timeIntervalSince1970: 2_000), room: room,
+            wallTime: Date(timeIntervalSince1970: 2_000), conversation: room,
             payload: SealedPayload(epoch: .initial, ciphertext: Data(repeating: 0x0C, count: 16)),
             signature: Data(repeating: 0x0D, count: 64))
 

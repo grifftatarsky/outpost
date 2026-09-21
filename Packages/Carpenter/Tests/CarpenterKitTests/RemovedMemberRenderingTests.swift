@@ -209,7 +209,7 @@ struct RemovedMemberRenderingTests {
                 at: start.addingTimeInterval(30), room: room))
         entries.append(
             try sam.append(try Payload.post("two"), at: start.addingTimeInterval(40), room: room))
-        #expect(entries.filter { $0.room == room }.count == 6)
+        #expect(entries.filter { $0.conversation == room }.count == 6)
 
         func verdict(_ order: [Entry]) -> Set<EntryHash> {
             let projected = Projection(

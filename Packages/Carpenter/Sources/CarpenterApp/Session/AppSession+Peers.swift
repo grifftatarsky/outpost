@@ -40,7 +40,7 @@ extension AppSession {
     }
 
     func peersToRingForWall(carrying sending: [Entry]) -> [Peer] {
-        let posts = Set(sending.filter { $0.room == nil }.map(\.hash))
+        let posts = Set(sending.filter(\.isOnOwnOutpost).map(\.hash))
         let carryingOwnPost = !posts.isDisjoint(with: unsentWallPosts)
         guard carryingOwnPost || !wallsWrittenOn.isEmpty else { return [] }
 
@@ -54,37 +54,37 @@ extension AppSession {
 
     func mayReceive(_ entry: Entry, among everyone: [Peer]) -> [Peer] {
         guard let me = enrolment?.identity.id else { return [] }
-
-        guard let room = entry.room else {
-            guard entry.author == me else { return [] }
-            let opened = entryOpener()(entry)
-            if entry.payload.alsoFor != nil {
-                guard let named = wallOwnerAddressed(by: opened) else { return [] }
-                return everyone.filter { $0.them == named }
-            }
-            let readers = outpostReaders()
-            if opened?.type == .outpostAccess,
-                let body = try? opened?.decode(OutpostAccessBody.self)
-            {
-                return everyone.filter { readers.contains($0.them) || $0.them == body.person }
-            }
-            return everyone.filter { readers.contains($0.them) }
+        switch entry.conversation {
+        case .outpost(let owner):
+            return outpostAudience(of: entry, owner: owner, me: me, among: everyone)
+        case .room, .solo:
+            return roomAudience(of: entry, among: everyone)
         }
+    }
 
-        if room == ConversationID.outpost(of: me) {
-            let readers = outpostReaders()
-            var named: ParticipantID?
-            if let opened = entryOpener()(entry), opened.type == .outpostAccess {
-                named = (try? opened.decode(OutpostAccessBody.self))?.person
-            }
-            return everyone.filter {
-                readers.contains($0.them) || $0.them == entry.author || $0.them == named
-            }
+    private func outpostAudience(
+        of entry: Entry, owner: ParticipantID, me: ParticipantID, among everyone: [Peer]
+    ) -> [Peer] {
+        guard owner == me else {
+            guard entry.author != owner else { return [] }
+            return everyone.filter { $0.them == owner }
         }
-        if let owner = everyone.first(where: { room == ConversationID.outpost(of: $0.them) }) {
-            return [owner]
+        let opened = entryOpener()(entry)
+        if entry.payload.alsoFor != nil {
+            guard let named = wallOwnerAddressed(by: opened) else { return [] }
+            return everyone.filter { $0.them == named }
         }
+        let readers = outpostReaders()
+        let subject =
+            opened?.type == .outpostAccess
+            ? (try? opened?.decode(OutpostAccessBody.self))?.person : nil
+        return everyone.filter {
+            readers.contains($0.them) || $0.them == entry.author || $0.them == subject
+        }
+    }
 
+    private func roomAudience(of entry: Entry, among everyone: [Peer]) -> [Peer] {
+        let room = entry.conversation
         let roster = roster(of: room)
         if roster.members.isEmpty, roster.founder == nil {
             let letMeIn = Set(
@@ -144,7 +144,7 @@ extension AppSession {
         var who = Set(entries.map(\.author))
         who.formUnion(audience.map(\.them))
         if let me = enrolment?.identity.id { who.insert(me) }
-        for room in Set(entries.compactMap(\.room)) {
+        for room in Set(entries.filter { !$0.isOnOwnOutpost }.map(\.conversation)) {
             let roster = roster(of: room)
             who.formUnion(roster.members)
             who.formUnion(roster.requests.keys)

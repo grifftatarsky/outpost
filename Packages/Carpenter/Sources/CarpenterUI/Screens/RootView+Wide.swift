@@ -370,7 +370,7 @@ extension RootView {
                     guard !DemoOutpost.isDemo(post) else { return }
                     await onReact(post, emoji)
                 },
-                onPost: { await onSend($0, nil) },
+                onPost: { await onSend($0, .ownOutpost) },
                 onAttach: onAttachPost,
                 postActions: postActions,
                 unseen: unseenOutposts,

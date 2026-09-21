@@ -81,17 +81,17 @@ struct ConcurrentStorageTests {
             group.addTask {
                 let store = FileLogStore(url: url)
                 for _ in 0..<20 {
-                    _ = try? await store.removeEntries { $0.room == deleted }
+                    _ = try? await store.removeEntries { $0.conversation == deleted }
                 }
             }
         }
 
         let loaded = try await FileLogStore(url: url).loadAll()
         #expect(loaded.termination == .complete, "the log tore: \(loaded.termination)")
-        #expect(!loaded.entries.contains { $0.room == deleted })
+        #expect(!loaded.entries.contains { $0.conversation == deleted })
         #expect(
-            loaded.entries.count { $0.room == kept } == writers * perWriter,
-            "\(writers * perWriter - loaded.entries.count { $0.room == kept }) appended entries were lost to a rewrite")
+            loaded.entries.count { $0.conversation == kept } == writers * perWriter,
+            "\(writers * perWriter - loaded.entries.count { $0.conversation == kept }) appended entries were lost to a rewrite")
     }
 
     @Test("Concurrent saves leave one whole readable document")

@@ -55,7 +55,7 @@ struct AnonymousCommentTests {
     @Test("Carol's comment reaches Alice without introducing Carol")
     func theCommentTravelsAndTheNameDoesNot() async throws {
         let (alice, bob, carol, mailbox) = try await triangle()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
 
         let post = try #require(carol.feed().first { $0.body == "the kite is up" })
@@ -79,7 +79,7 @@ struct AnonymousCommentTests {
         let (alice, bob, carol, mailbox) = try await triangle()
         await alice.setShowsOthersNames(true)
         await bob.setSharesName(true)
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
 
         let post = try #require(alice.feed().first { $0.body == "the kite is up" })
@@ -102,7 +102,7 @@ struct AnonymousCommentTests {
         try await bob.allowOutpost(try #require(dave.enrolment?.identity.id), everything: true)
         try await settle([alice, bob, carol, dave], through: mailbox)
 
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol, dave], through: mailbox)
         for (index, stranger) in [carol, dave].enumerated() {
             let post = try #require(stranger.feed().first { $0.body == "the kite is up" })
@@ -120,7 +120,7 @@ struct AnonymousCommentTests {
     @Test("Meeting them afterwards names what they already wrote")
     func meetingResolvesTheOldComment() async throws {
         let (alice, bob, carol, mailbox) = try await triangle()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
 
         let post = try #require(carol.feed().first { $0.body == "the kite is up" })
@@ -143,7 +143,7 @@ struct AnonymousCommentTests {
     @Test("Somebody let in afterwards gets the comments too, not only the posts")
     func aLateReaderGetsTheWholeThread() async throws {
         let (alice, bob, carol, mailbox) = try await triangle(lettingAliceIn: false)
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
 
         let post = try #require(carol.feed().first { $0.body == "the kite is up" })
@@ -163,7 +163,7 @@ struct AnonymousCommentTests {
     @Test("A closed comment is not there at all for a co-reader who is not your reader")
     func closedIsInvisibleToTheRest() async throws {
         let (alice, bob, carol, mailbox) = try await triangle()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
 
         await carol.setOutpostConsent(.closed)
@@ -185,7 +185,7 @@ struct AnonymousCommentTests {
     @Test("The post's owner says how many comments are missing")
     func theOwnerPublishesTheCount() async throws {
         let (alice, bob, carol, mailbox) = try await triangle()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
 
         await carol.setOutpostConsent(.closed)
@@ -207,7 +207,7 @@ struct AnonymousCommentTests {
     @Test("Nothing is published when nobody is closed")
     func noTallyWhenNothingIsHidden() async throws {
         let (alice, bob, carol, mailbox) = try await triangle()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
 
         let hers = try #require(carol.feed().first { $0.body == "the kite is up" })
@@ -231,7 +231,7 @@ struct AnonymousCommentTests {
         try await erin.createIdentity(displayName: "Erin")
         try await introduce(bob, to: erin, named: "Ropes", through: mailbox)
 
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob, carol, erin], through: mailbox)
         let post = try #require(carol.feed().first { $0.body == "the kite is up" })
         try await carol.comment(on: post, text: "it is holding well")
@@ -272,7 +272,7 @@ struct OutpostConsentTests {
     func closedReachesOnlyYourOwnReaders() async throws {
         let (alice, bob, mailbox) = try await pair()
         try await alice.allowOutpost(try #require(bob.enrolment?.identity.id), everything: true)
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         await alice.setOutpostConsent(.closed)
@@ -287,7 +287,7 @@ struct OutpostConsentTests {
     @Test("Closed reaches the post's author without letting them in")
     func closedReachesTheAuthorRegardless() async throws {
         let (alice, bob, mailbox) = try await pair()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         await alice.setOutpostConsent(.closed)
@@ -309,7 +309,7 @@ struct OutpostConsentTests {
     @Test("Open reaches the post's readers and closed does not")
     func theTwoAnswersDiffer() async throws {
         let (alice, bob, mailbox) = try await pair()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         try await settle([alice, bob], through: mailbox)
         let post = try #require(alice.feed().first { $0.body == "the kite is up" })
 
@@ -331,7 +331,7 @@ struct OutpostConsentTests {
     @Test("Read only refuses a comment on somebody else's post")
     func readOnlyRefusesTheComment() async throws {
         let (alice, bob, mailbox) = try await pair()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         for _ in 0..<6 {
             for session in [alice, bob] { try await session.sync(through: mailbox, media: mailbox) }
         }
@@ -350,7 +350,7 @@ struct OutpostConsentTests {
     func yourOwnPostsAreUntouched() async throws {
         let (alice, _, _) = try await pair()
         await alice.setOutpostConsent(.quiet)
-        try await alice.send("on my own wall", to: nil)
+        try await alice.send("on my own wall", to: try #require(alice.ownOutpost))
         let mine = try #require(alice.feed().first { $0.isMine })
         try await alice.comment(on: mine, text: "and a note under it")
         try await alice.react(to: mine, emoji: "🎈")
@@ -360,7 +360,7 @@ struct OutpostConsentTests {
     @Test("Accepting lets it through again")
     func acceptingRestoresIt() async throws {
         let (alice, bob, mailbox) = try await pair()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         for _ in 0..<6 {
             for session in [alice, bob] { try await session.sync(through: mailbox, media: mailbox) }
         }
@@ -375,7 +375,7 @@ struct OutpostConsentTests {
     @Test("Nobody is muted before they have been asked")
     func unaskedIsNotRefused() async throws {
         let (alice, bob, mailbox) = try await pair()
-        try await bob.send("the kite is up", to: nil)
+        try await bob.send("the kite is up", to: try #require(bob.ownOutpost))
         for _ in 0..<6 {
             for session in [alice, bob] { try await session.sync(through: mailbox, media: mailbox) }
         }

@@ -51,22 +51,22 @@ struct AccessWindowSessionTests {
         try await settle([alice, bob], through: mailbox)
 
         let bobID = try #require(bob.enrolment?.identity.id)
-        try await alice.send("one, before anything", to: nil)
+        try await alice.send("one, before anything", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         clock.advance(by: 60)
         try await alice.allowOutpost(bobID, everything: false)
-        try await alice.send("two, first stretch", to: nil)
+        try await alice.send("two, first stretch", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         clock.advance(by: 60)
         try await alice.revokeOutpost(bobID)
-        try await alice.send("three, in the gap", to: nil)
+        try await alice.send("three, in the gap", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         clock.advance(by: 60)
         try await alice.allowOutpost(bobID, everything: false)
-        try await alice.send("four, second stretch", to: nil)
+        try await alice.send("four, second stretch", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         let read = bob.feed().map(\.body)

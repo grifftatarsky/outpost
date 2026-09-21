@@ -19,7 +19,7 @@ struct OutpostEditingTests {
     @Test("A post can be rewritten, and every copy is told that it was")
     func rewriting() async throws {
         let (alice, _) = try await member()
-        try await alice.send("teh wrong word", to: nil)
+        try await alice.send("teh wrong word", to: try #require(alice.ownOutpost))
         let post = try #require(alice.feed().first)
         #expect(post.editedAt == nil)
 
@@ -35,7 +35,7 @@ struct OutpostEditingTests {
     @Test("An edit after the window is refused, and the control is not offered first")
     func afterTheWindow() async throws {
         let (alice, clock) = try await member()
-        try await alice.send("as it stands", to: nil)
+        try await alice.send("as it stands", to: try #require(alice.ownOutpost))
         let post = try #require(alice.feed().first)
         #expect(alice.timeLeft(toEdit: post.id) != nil)
 
@@ -50,7 +50,7 @@ struct OutpostEditingTests {
     @Test("A withdrawn post says withdrawn, in its own words, and is not called deleted")
     func withdrawing() async throws {
         let (alice, _) = try await member()
-        try await alice.send("said too fast", to: nil)
+        try await alice.send("said too fast", to: try #require(alice.ownOutpost))
         let post = try #require(alice.feed().first)
 
         try await alice.withdraw(post.id)
@@ -95,7 +95,7 @@ struct OutpostEditingTests {
     @Test("A comment can be rewritten and withdrawn, and says which it was")
     func comments() async throws {
         let (alice, _) = try await member()
-        try await alice.send("the thing itself", to: nil)
+        try await alice.send("the thing itself", to: try #require(alice.ownOutpost))
         let post = try #require(alice.feed().first)
         try await alice.comment(on: post, text: "frist")
 
@@ -128,7 +128,7 @@ struct OutpostEditingTests {
 
         let bobID = try #require(bob.enrolment?.identity.id)
         try await alice.allowOutpost(bobID, everything: true)
-        try await alice.send("mine", to: nil)
+        try await alice.send("mine", to: try #require(alice.ownOutpost))
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
             try await bob.sync(through: mailbox)

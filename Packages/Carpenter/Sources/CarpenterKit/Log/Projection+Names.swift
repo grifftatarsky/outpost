@@ -43,9 +43,12 @@ extension Projection {
     public func peopleInRooms(opening: (RenderedEntry) -> Payload?) -> Set<ParticipantID> {
         var rosters: [ConversationID: RoomRoster] = [:]
         for entry in rendered {
-            guard let room = entry.room, RoomRoster.rosterShaping.contains(entry.type) else {
+            guard entry.conversation != .outpost(entry.author),
+                RoomRoster.rosterShaping.contains(entry.type)
+            else {
                 continue
             }
+            let room = entry.conversation
             guard let payload = opening(entry) else { continue }
             rosters[room, default: RoomRoster(room: room)].apply(entry, body: payload)
         }
@@ -72,7 +75,7 @@ extension Projection {
 
     public func announcedName(of author: ParticipantID, in room: ConversationID) -> String? {
         let last = rendered.last {
-            $0.room == room && $0.type == .memberProfile && $0.author == author
+            $0.conversation == room && $0.type == .memberProfile && $0.author == author
         }
         if case .text(let name) = last?.content, !name.isEmpty { return name }
         return nil
@@ -84,7 +87,7 @@ extension Projection {
         let wall = ConversationID.outpost(of: owner)
         let last = rendered.last { entry in
             guard entry.type == .commentTally, entry.author == owner,
-                entry.room == nil || entry.room == wall
+                entry.conversation == .outpost(entry.author) || entry.conversation == wall
             else { return false }
             guard let payload = opening(entry),
                 let body = try? payload.decode(CommentTallyBody.self)
@@ -104,7 +107,7 @@ extension Projection {
     public func blurb(of author: ParticipantID, opening: (RenderedEntry) -> Payload?) -> String? {
         let wall = ConversationID.outpost(of: author)
         let last = rendered.last {
-            $0.type == .memberProfile && $0.author == author && $0.room == wall
+            $0.type == .memberProfile && $0.author == author && $0.conversation == wall
         }
         guard let last, let payload = opening(last),
             let body = try? payload.decode(MemberProfileBody.self),
@@ -116,18 +119,18 @@ extension Projection {
 
     public func photoReference(of author: ParticipantID) -> AttachmentReference? {
         let wall = ConversationID.outpost(of: author)
-        return rendered.last { $0.type == .memberPhoto && $0.author == author && $0.room != wall }?
+        return rendered.last { $0.type == .memberPhoto && $0.author == author && $0.conversation != wall }?
             .memberPhoto?.reference
     }
 
     public func outpostPhotoReference(of author: ParticipantID) -> AttachmentReference? {
         let wall = ConversationID.outpost(of: author)
-        return rendered.last { $0.type == .memberPhoto && $0.author == author && $0.room == wall }?
+        return rendered.last { $0.type == .memberPhoto && $0.author == author && $0.conversation == wall }?
             .memberPhoto?.reference
     }
 
     public func announcedPhoto(of author: ParticipantID, in room: ConversationID) -> AttachmentReference?? {
-        rendered.last { $0.room == room && $0.type == .memberPhoto && $0.author == author }?.memberPhoto
+        rendered.last { $0.conversation == room && $0.type == .memberPhoto && $0.author == author }?.memberPhoto
             .map(\.reference)
     }
 
@@ -136,7 +139,7 @@ extension Projection {
     }
 
     public func lastFocusStatus(of author: ParticipantID, in room: ConversationID) -> FocusStatusBody? {
-        rendered.last { $0.room == room && $0.type == .focusStatus && $0.author == author }?.focusStatus
+        rendered.last { $0.conversation == room && $0.type == .focusStatus && $0.author == author }?.focusStatus
     }
 
     public var supporterBadges: Set<ParticipantID> {
@@ -149,6 +152,6 @@ extension Projection {
     }
 
     public func lastSupporterBadge(of author: ParticipantID, in room: ConversationID) -> SupporterBadgeBody? {
-        rendered.last { $0.room == room && $0.type == .supporterBadge && $0.author == author }?.supporterBadge
+        rendered.last { $0.conversation == room && $0.type == .supporterBadge && $0.author == author }?.supporterBadge
     }
 }

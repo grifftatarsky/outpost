@@ -18,7 +18,7 @@ struct WhoMayApproveTests {
             author: author,
             device: DeviceID(rawValue: WideID.of([])),
             wallTime: start,
-            room: room,
+            conversation: room,
             content: .text(""),
             editedAt: nil,
             replyingTo: nil,

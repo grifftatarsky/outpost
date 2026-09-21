@@ -15,7 +15,7 @@ struct RepairScopeTests {
     }
 
     private func heldRooms(_ session: AppSession) -> Set<ConversationID> {
-        Set(session.replica.allEntries.compactMap(\.room))
+        Set(session.replica.allEntries.compactMap(\.conversation))
     }
 
     @Test("A member never receives entries from a room they are not in")
@@ -67,7 +67,7 @@ struct RepairScopeTests {
 
         let bobID = try #require(bob.enrolment?.identity.id)
         let floor = try #require(alice.roster(of: room).historyFloor(of: bobID))
-        let early = bob.replica.allEntries.filter { $0.room == room && $0.payload.epoch < floor }
+        let early = bob.replica.allEntries.filter { $0.conversation == room && $0.payload.epoch < floor }
         #expect(early.isEmpty, "bob holds \(early.count) sealed entr(ies) from before he was let in")
     }
 

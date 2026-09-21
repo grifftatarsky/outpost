@@ -150,9 +150,15 @@ extension AppRootView {
             onRoomNotificationLevelChange: { room, level in
                 await session.setNotificationLevel(level, for: room)
             },
-            onSend: { text, room in
+            onSend: { text, destination in
                 do {
-                    try await session.send(text, to: room)
+                    switch destination {
+                    case .conversation(let room):
+                        try await session.send(text, to: room)
+                    case .ownOutpost:
+                        guard let wall = session.ownOutpost else { throw AppSessionError.noIdentity }
+                        try await session.send(text, to: wall)
+                    }
                     return nil
                 } catch {
                     Diagnostics.sync.error(

@@ -42,7 +42,7 @@ extension AppSession {
                     """)
             }
 
-            ringingRooms = roomsWithUnsentMessages.intersection(Set(sending.compactMap(\.room)))
+            ringingRooms = roomsWithUnsentMessages.intersection(Set(sending.map(\.conversation)))
 
             let ringingWall = peersToRingForWall(carrying: sending)
 
@@ -120,7 +120,7 @@ extension AppSession {
             }
             if report.packetsWritten > 0, report.sendFailure == nil {
                 roomsWithUnsentMessages.subtract(ringingRooms)
-                unsentWallPosts.subtract(sending.filter { $0.room == nil }.map(\.hash))
+                unsentWallPosts.subtract(sending.filter(\.isOnOwnOutpost).map(\.hash))
                 wallsWrittenOn.removeAll()
                 for person in wishesTold { notifyWallsSent[person] = wishes.contains(person) }
             }
@@ -282,7 +282,7 @@ extension AppSession {
                 """)
         }
 
-        for room in Set(report.integrated.compactMap(\.room))
+        for room in Set(report.integrated.filter { !$0.isOnOwnOutpost }.map(\.conversation))
         where chains[room].map({ !$0.knownEpochs.contains(.initial) }) ?? false {
             try await unwindEpochs(in: room, bounded: walkStopsShort(in: room))
         }

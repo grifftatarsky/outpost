@@ -35,14 +35,22 @@ extension AppSession {
         return room
     }
 
-    public func send(_ text: String, to room: ConversationID?) async throws {
+    public var ownOutpost: ConversationID? {
+        enrolment.map { .outpost($0.identity.id) }
+    }
+
+    public func send(_ text: String, to room: ConversationID) async throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        if case .outpost(let owner) = room, owner != enrolment?.identity.id {
+            throw AppSessionError.cannotWriteThere
+        }
         try await append(try Payload.post(trimmed), to: room)
-        if let room {
+        switch room {
+        case .room, .solo:
             roomsWithUnsentMessages.insert(room)
-        } else if let head {
-            unsentWallPosts.insert(head.hash)
+        case .outpost:
+            if let head { unsentWallPosts.insert(head.hash) }
         }
     }
 
@@ -78,6 +86,7 @@ extension AppSession {
     }
 
     public func post(_ media: [PreparedMedia], through mailbox: any MediaMailbox) async throws {
+        guard let wall = ownOutpost else { throw AppSessionError.noIdentity }
         guard !media.isEmpty else { return }
         guard media.count <= MediaBody.galleryLimit else { throw AppSessionError.tooManyPictures }
 
@@ -99,7 +108,7 @@ extension AppSession {
                     attachment: first.attachment, kind: first.kind, width: first.width,
                     height: first.height, preview: first.preview, caption: first.caption,
                     duration: first.duration, extras: Array(bodies.dropFirst()))),
-            to: nil)
+            to: wall)
         if let head { unsentWallPosts.insert(head.hash) }
     }
 
@@ -122,7 +131,7 @@ extension AppSession {
             at: clock.now, for: original.wallTime, within: Editing.editWindow)
         else { throw AppSessionError.tooLateToEdit }
 
-        try await append(try Payload.edit(message.entry, to: trimmed), to: original.room)
+        try await append(try Payload.edit(message.entry, to: trimmed), to: original.conversation)
     }
 
     public func withdraw(_ message: MessageID) async throws {
@@ -131,7 +140,7 @@ extension AppSession {
             at: clock.now, for: original.wallTime, within: Editing.withdrawWindow)
         else { throw AppSessionError.tooLateToWithdraw }
 
-        try await append(try Payload.tombstone(message.entry), to: original.room)
+        try await append(try Payload.tombstone(message.entry), to: original.conversation)
     }
 
     public func timeLeft(toEdit message: MessageID) -> TimeInterval? {

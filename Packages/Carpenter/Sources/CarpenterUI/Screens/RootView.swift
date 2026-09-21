@@ -109,7 +109,7 @@ public struct RootView: View {
     let onReactToComment: (OutpostComment, String?) async -> Void
     let messages: (ConversationID) -> [Message]
     let transcript: (ConversationID) -> [TranscriptEntry]
-    let onSend: (String, ConversationID?) async -> String?
+    let onSend: (String, SendDestination) async -> String?
     let onCreateRoom: (String, RoomAccess, Set<ParticipantID>) async -> Void
     let onStartSolo: (ParticipantID) async -> Invite?
     let onRenameMember: ((String) async -> String?)?
@@ -281,7 +281,7 @@ public struct RootView: View {
         roomNotificationLevel: @escaping (ConversationID) -> NotificationLevel = { _ in .default },
         roomFollowsDefaultNotifications: @escaping (ConversationID) -> Bool = { _ in true },
         onRoomNotificationLevelChange: @escaping (ConversationID, NotificationLevel) async -> Void = { _, _ in },
-        onSend: @escaping (String, ConversationID?) async -> String? = { _, _ in nil },
+        onSend: @escaping (String, SendDestination) async -> String? = { _, _ in nil },
         connections: [Connection] = [],
         onCreateRoom: @escaping (String, RoomAccess, Set<ParticipantID>) async -> Void = { _, _, _ in },
         onStartSolo: @escaping (ParticipantID) async -> Invite? = { _ in nil },

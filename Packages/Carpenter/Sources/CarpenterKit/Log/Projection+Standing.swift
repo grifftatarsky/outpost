@@ -14,7 +14,7 @@ extension Projection {
         var roster = RoomRoster(room: room)
         var windows: [ParticipantID: [AbsenceWindow]] = [:]
 
-        for entry in rendered where entry.room == room {
+        for entry in rendered where entry.conversation == room {
             guard let payload = opening(entry) else { continue }
             let before = roster.absent
             roster.apply(entry, body: payload)
@@ -52,7 +52,7 @@ extension Projection {
         guard !windows.isEmpty else { return [] }
 
         var out: Set<EntryHash> = []
-        for entry in rendered where entry.room == room {
+        for entry in rendered where entry.conversation == room {
             guard let theirs = windows[entry.author] else { continue }
             let isOut = theirs.contains { window in
                 entry.id != window.opened.id
@@ -76,7 +76,7 @@ extension Projection {
         readThrough: EntryHash? = nil,
         undrawn: Set<EntryHash> = []
     ) -> RoomSummary? {
-        let inRoom = rendered.filter { $0.room == room }
+        let inRoom = rendered.filter { $0.conversation == room }
         guard let stored = name(of: room) else { return nil }
         let kind = kind(of: room)
 

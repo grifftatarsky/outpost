@@ -33,7 +33,7 @@ struct SpentPositionsTests {
 
         let taken = replica.close(deleted)
 
-        #expect(Set(taken.map(\.hash)) == Set(entries.filter { $0.room == deleted }.map(\.hash)))
+        #expect(Set(taken.map(\.hash)) == Set(entries.filter { $0.conversation == deleted }.map(\.hash)))
         #expect(replica.entries(in: deleted).isEmpty)
         #expect(replica.entries(in: kept).count == 3, "closing one room took entries from another")
         #expect(
@@ -72,7 +72,7 @@ struct SpentPositionsTests {
 
         let next = try Entry.append(
             after: top, author: author.identity.id, device: author.device,
-            clock: replica.frontier, wallTime: start.addingTimeInterval(10), room: ConversationID.room(UUID()),
+            clock: replica.frontier, wallTime: start.addingTimeInterval(10), conversation: ConversationID.room(UUID()),
             payload: try Payload.post("after"), at: .initial, sealedWith: author.chain)
         #expect(next.seq == 7)
         #expect(try replica.integrate(next) == .accepted)
@@ -87,12 +87,12 @@ struct SpentPositionsTests {
         var relaunched = Replica()
         try relaunched.meet(author)
         relaunched.restore(spent: replica.spentEntries, closing: replica.closedRooms)
-        for entry in entries where entry.room == kept { try relaunched.integrate(entry) }
+        for entry in entries where entry.conversation == kept { try relaunched.integrate(entry) }
 
         #expect(relaunched.gaps().isEmpty)
         #expect(relaunched.frontier == replica.frontier)
         #expect(relaunched.closedRooms == [deleted])
-        for entry in entries where entry.room == deleted {
+        for entry in entries where entry.conversation == deleted {
             #expect(try relaunched.integrate(entry) == .alreadyPresent)
         }
         #expect(relaunched.entries(in: deleted).isEmpty)
@@ -107,7 +107,7 @@ struct SpentPositionsTests {
 
         let missing = replica.gaps(from: [author.identity.id])
         #expect(missing.total == 3, "a reopened room's history cannot be asked for")
-        for entry in entries where entry.room == deleted {
+        for entry in entries where entry.conversation == deleted {
             #expect(try replica.integrate(entry) == .accepted)
         }
         #expect(replica.gaps().isEmpty)
@@ -133,12 +133,12 @@ struct LogRemovalTests {
         }
         try await store.append(entries)
 
-        let removed = try await store.removeEntries { $0.room == deleted }
+        let removed = try await store.removeEntries { $0.conversation == deleted }
 
         #expect(removed == 2)
         let reloaded = try await FileLogStore(url: url).loadAll()
         #expect(reloaded.termination == .complete)
-        #expect(reloaded.entries.map(\.hash) == entries.filter { $0.room == kept }.map(\.hash))
+        #expect(reloaded.entries.map(\.hash) == entries.filter { $0.conversation == kept }.map(\.hash))
 
         let appended = try author.append(
             try Payload.post("after"), at: Date(timeIntervalSince1970: 10), room: kept)

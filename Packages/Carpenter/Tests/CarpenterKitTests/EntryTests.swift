@@ -22,7 +22,7 @@ struct EntryTests {
             device: device,
             clock: previous?.clock ?? VectorClock(),
             wallTime: wallTime,
-            room: room,
+            conversation: room,
             payload: try seal(text)
         )
     }
@@ -76,28 +76,28 @@ struct EntryTests {
             try !mutated {
                 Entry(
                     author: $0.author, device: $0.device, seq: 99, previous: $0.previous,
-                    clock: $0.clock, wallTime: $0.wallTime, room: $0.room, payload: $0.payload,
+                    clock: $0.clock, wallTime: $0.wallTime, conversation: $0.conversation, payload: $0.payload,
                     signature: $0.signature)
             })
         #expect(
             try !mutated {
                 Entry(
                     author: $0.author, device: $0.device, seq: $0.seq, previous: $0.previous,
-                    clock: $0.clock, wallTime: $0.wallTime.addingTimeInterval(1), room: $0.room,
+                    clock: $0.clock, wallTime: $0.wallTime.addingTimeInterval(1), conversation: $0.conversation,
                     payload: $0.payload, signature: $0.signature)
             })
         #expect(
             try !mutated {
                 Entry(
                     author: $0.author, device: $0.device, seq: $0.seq, previous: $0.previous,
-                    clock: $0.clock, wallTime: $0.wallTime, room: ConversationID.room(UUID()), payload: $0.payload,
+                    clock: $0.clock, wallTime: $0.wallTime, conversation: ConversationID.room(UUID()), payload: $0.payload,
                     signature: $0.signature)
             })
         #expect(
             try !mutated {
                 Entry(
                     author: $0.author, device: $0.device, seq: $0.seq, previous: $0.previous,
-                    clock: $0.clock, wallTime: $0.wallTime, room: $0.room,
+                    clock: $0.clock, wallTime: $0.wallTime, conversation: $0.conversation,
                     payload: try! seal("tampered"), signature: $0.signature)
             })
     }
@@ -106,7 +106,7 @@ struct EntryTests {
     func roomIsPartOfIdentity() throws {
         let onWall = try Entry.append(
             to: nil, author: identity.id, device: device, clock: VectorClock(),
-            wallTime: wallTime, room: nil, payload: try seal("hello"))
+            wallTime: wallTime, conversation: .outpost(identity.id), payload: try seal("hello"))
         let inRoom = try append(to: nil)
 
         #expect(onWall.hash != inRoom.hash)
@@ -117,7 +117,7 @@ struct EntryTests {
         let entry = try append(to: nil)
         let forged = Entry(
             author: entry.author, device: entry.device, seq: entry.seq, previous: entry.previous,
-            clock: entry.clock, wallTime: entry.wallTime, room: entry.room, payload: entry.payload,
+            clock: entry.clock, wallTime: entry.wallTime, conversation: entry.conversation, payload: entry.payload,
             signature: Data(repeating: 0, count: 64))
 
         #expect(forged.hash != entry.hash)
@@ -141,7 +141,7 @@ struct EntryTests {
 
         let entry = try Entry.append(
             to: nil, author: identity.id, device: device, clock: VectorClock(),
-            wallTime: wallTime, room: room,
+            wallTime: wallTime, conversation: room,
             payload: try unknown.sealed(at: .initial, using: chain))
 
         #expect(try entry.hasValidSignature(from: device.publicKey))
@@ -152,13 +152,13 @@ struct EntryTests {
     func fallbackIsSigned() throws {
         let entry = try Entry.append(
             to: nil, author: identity.id, device: device, clock: VectorClock(),
-            wallTime: wallTime, room: room,
+            wallTime: wallTime, conversation: room,
             payload: try Payload(type: .post, body: Data([1]), fallbackText: "honest")
                 .sealed(at: .initial, using: chain))
 
         let swapped = Entry(
             author: entry.author, device: entry.device, seq: entry.seq, previous: entry.previous,
-            clock: entry.clock, wallTime: entry.wallTime, room: entry.room,
+            clock: entry.clock, wallTime: entry.wallTime, conversation: entry.conversation,
             payload: try Payload(type: .post, body: Data([1]), fallbackText: "misleading")
                 .sealed(at: .initial, using: chain),
             signature: entry.signature)

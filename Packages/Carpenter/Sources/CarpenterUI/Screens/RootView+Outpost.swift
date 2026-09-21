@@ -49,7 +49,7 @@ extension RootView {
             posts: id == owner.id ? visibleFeed.filter(\.isMine) : visibleFeed.filter { $0.author.id == id },
             audiencePeople: audiencePeople,
             isViewer: id == owner.id,
-            onPost: { await onSend($0, nil) },
+            onPost: { await onSend($0, .ownOutpost) },
             onAttach: onAttachPost,
             postActions: postActions,
             audience: outpostAudience,

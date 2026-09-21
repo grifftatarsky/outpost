@@ -231,7 +231,7 @@ extension AppSession {
             let comments = projected.comments(on: post.id.entry)
             let anyClosed = comments.contains { comment in
                 guard let entry = held[comment.id.entry] else { return false }
-                return entry.room != wall
+                return entry.conversation != wall
             }
             guard anyClosed else { continue }
             let total = comments.count
@@ -239,8 +239,7 @@ extension AppSession {
             else { continue }
             await announceOrReport("how many comments your post has") {
                 try await append(
-                    try Payload.commentTally(post: post.id.entry, total: total), to: wall,
-                    isWall: true)
+                    try Payload.commentTally(post: post.id.entry, total: total), to: wall)
             }
         }
     }
@@ -392,7 +391,7 @@ extension AppSession {
         var offered = 0
         var gone = 0
         for entry in replica.allEntries
-        where entry.author == enrolment.identity.id && (entry.room == nil || entry.room == wall) {
+        where entry.author == enrolment.identity.id && entry.conversation == wall {
             guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain),
                 payload.type == .media, let body = try? payload.decode(MediaBody.self)
             else { continue }
@@ -562,18 +561,7 @@ extension AppSession {
     }
 
     private func wallOwner(of entry: EntryHash) -> ParticipantID? {
-        guard let held = entriesByHash[entry] else { return nil }
-        guard let room = held.room else { return held.author }
-        return outpostOwners[room]
-    }
-
-    private var outpostOwners: [ConversationID: ParticipantID] {
-        var owners: [ConversationID: ParticipantID] = [:]
-        for author in projection.outpostAuthors() {
-            owners[outpostRoom(for: author.id)] = author.id
-        }
-        if let me = enrolment?.identity.id { owners[outpostRoom(for: me)] = me }
-        return owners
+        entriesByHash[entry]?.conversation.owner
     }
 
     private func requireJoiningIn(unless mine: Bool) throws {

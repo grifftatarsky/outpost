@@ -28,7 +28,7 @@ public struct Entry: Hashable, Sendable, Codable {
 
     public let wallTime: Date
 
-    public let room: ConversationID?
+    public let conversation: ConversationID
 
     public let payload: SealedPayload
     public let signature: Data
@@ -55,8 +55,7 @@ public struct Entry: Hashable, Sendable, Codable {
                     clock.canonicalBytes,
                     CanonicalBytes.timestamp(wallTime),
                 ]
-                + CanonicalBytes.optional(room?.canonicalBytes)
-                + [payload.canonicalBytes]
+                + [conversation.canonicalBytes, payload.canonicalBytes]
         )
     }
 
@@ -70,12 +69,12 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: ConversationID?,
+        conversation: ConversationID,
         payload: SealedPayload
     ) throws -> Entry {
         try append(
             after: previous?.link, author: author, device: device, clock: clock,
-            wallTime: wallTime, room: room, payload: payload)
+            wallTime: wallTime, conversation: conversation, payload: payload)
     }
 
     public static func append(
@@ -84,7 +83,7 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: ConversationID?,
+        conversation: ConversationID,
         payload: SealedPayload
     ) throws -> Entry {
         let seq = (previous?.seq).map { $0 + 1 } ?? firstSequence
@@ -99,7 +98,7 @@ public struct Entry: Hashable, Sendable, Codable {
             previous: previous?.hash,
             clock: clock,
             wallTime: wallTime,
-            room: room,
+            conversation: conversation,
             payload: payload,
             signature: Data()
         )
@@ -113,7 +112,7 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: ConversationID?,
+        conversation: ConversationID,
         payload: Payload,
         at epoch: EpochNumber,
         sealedWith chain: EpochChain,
@@ -121,7 +120,7 @@ public struct Entry: Hashable, Sendable, Codable {
     ) throws -> Entry {
         try append(
             after: previous?.link, author: author, device: device, clock: clock,
-            wallTime: wallTime, room: room, payload: payload, at: epoch, sealedWith: chain,
+            wallTime: wallTime, conversation: conversation, payload: payload, at: epoch, sealedWith: chain,
             alsoFor: extra)
     }
 
@@ -131,7 +130,7 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: ConversationID?,
+        conversation: ConversationID,
         payload: Payload,
         at epoch: EpochNumber,
         sealedWith chain: EpochChain,
@@ -139,7 +138,7 @@ public struct Entry: Hashable, Sendable, Codable {
     ) throws -> Entry {
         try append(
             after: previous, author: author, device: device, clock: clock, wallTime: wallTime,
-            room: room,
+            conversation: conversation,
             payload: try payload.sealed(
                 at: epoch, using: chain, by: FeedKey(author: author, device: device.id),
                 alsoFor: extra))
@@ -149,9 +148,9 @@ public struct Entry: Hashable, Sendable, Codable {
         try? payload.opened(using: chain, by: feedKey)
     }
 
-    public func opened(pairwise secret: PairwiseSecret, wall: ConversationID) -> Payload? {
+    public func opened(pairwise secret: PairwiseSecret) -> Payload? {
         guard payload.alsoFor != nil else { return nil }
-        return try? payload.opened(pairwise: secret, room: room ?? wall, by: feedKey)
+        return try? payload.opened(pairwise: secret, room: conversation, by: feedKey)
     }
 
     public var hasSecondReader: Bool { payload.alsoFor != nil }
@@ -163,7 +162,7 @@ public struct Entry: Hashable, Sendable, Codable {
         previous = entry.previous
         clock = entry.clock
         wallTime = entry.wallTime
-        room = entry.room
+        conversation = entry.conversation
         payload = entry.payload
         self.signature = signature
     }
@@ -175,7 +174,7 @@ public struct Entry: Hashable, Sendable, Codable {
         previous: EntryHash?,
         clock: VectorClock,
         wallTime: Date,
-        room: ConversationID?,
+        conversation: ConversationID,
         payload: SealedPayload,
         signature: Data
     ) {
@@ -185,7 +184,7 @@ public struct Entry: Hashable, Sendable, Codable {
         self.previous = previous
         self.clock = clock
         self.wallTime = wallTime
-        self.room = room
+        self.conversation = conversation
         self.payload = payload
         self.signature = signature
     }
@@ -195,3 +194,7 @@ public struct Entry: Hashable, Sendable, Codable {
     }
 }
 
+
+extension Entry {
+    public var isOnOwnOutpost: Bool { conversation == .outpost(author) }
+}

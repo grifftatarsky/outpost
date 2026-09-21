@@ -82,13 +82,13 @@ struct EnvelopeLeakTests {
         try await settle([alice, bob, carol], mailbox)
 
         let here = Set(
-            alice.replica.allEntries.filter { $0.room == withBob }
+            alice.replica.allEntries.filter { $0.conversation == withBob }
                 .map { Position(feed: $0.feedKey, seq: $0.seq) })
         let feedsHere = Set(here.map(\.feed))
 
         var checked = 0
         for entry in alice.replica.allEntries
-        where entry.room == withBob && entry.author == alice.enrolment?.identity.id {
+        where entry.conversation == withBob && entry.author == alice.enrolment?.identity.id {
             for feed in entry.clock.keys {
                 checked += 1
                 #expect(
@@ -196,7 +196,7 @@ struct EnvelopeLeakTests {
         for feed in repair.request.heads.keys {
             let topHere =
                 alice.replica.allEntries
-                .filter { $0.feedKey == feed && $0.room == withBob }
+                .filter { $0.feedKey == feed && $0.conversation == withBob }
                 .map(\.seq).max() ?? 0
             checked += 1
             #expect(

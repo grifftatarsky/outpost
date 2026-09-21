@@ -15,7 +15,7 @@ struct JoinsFoldedBeforeTheRuleTests {
         RenderedEntry(
             id: EntryHash(rawValue: Data(repeating: hash, count: 32)), type: type, author: author,
             device: DeviceID(rawValue: WideID.of([])), wallTime: start.addingTimeInterval(offset),
-            room: room, content: .text(""), editedAt: nil, replyingTo: nil, reactions: [:])
+            conversation: room, content: .text(""), editedAt: nil, replyingTo: nil, reactions: [:])
     }
 
     private func asTheOldBuildWroteIt(

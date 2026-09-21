@@ -70,8 +70,8 @@ struct LiveOutpostTests {
         defer { Task { await LiveRig.tearDown(rig.zone) } }
         try await withAudience(rig)
 
-        try await rig.alice.send("frist light", to: nil)
-        try await rig.alice.send("this one goes", to: nil)
+        try await rig.alice.send("frist light", to: try #require(rig.alice.ownOutpost))
+        try await rig.alice.send("this one goes", to: try #require(rig.alice.ownOutpost))
         try await LiveRig.settle([rig.alice, rig.bob], through: rig.mailbox, rounds: 6)
 
         let typo = try #require(rig.alice.outpost().first { $0.body == "frist light" })

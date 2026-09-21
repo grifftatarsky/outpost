@@ -249,9 +249,9 @@ extension AppSession {
 
     private func shareNameEverywhere(_ name: String) async throws {
         let current = enrolment.flatMap { projection.members[$0.identity.id]?.displayName }
-        guard current != name else { return }
+        guard current != name, let wall = ownOutpost else { return }
 
-        try await append(try Payload.memberProfile(displayName: name), to: nil)
+        try await append(try Payload.memberProfile(displayName: name), to: wall)
 
         if enrolment?.identity.id != nil {
             for room in roomsToTell() {

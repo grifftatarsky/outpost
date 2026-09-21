@@ -141,7 +141,7 @@ struct SearchTests {
     @Test("A post is found on its words and on who wrote it")
     func aPostIsFoundOnItsWordsAndOnWhoWroteIt() async throws {
         let (mine, _, _, _) = try await pair()
-        try await mine.send("ice plants in bloom along the path", to: nil)
+        try await mine.send("ice plants in bloom along the path", to: try #require(mine.ownOutpost))
 
         #expect(!mine.search("ice plants").posts.isEmpty, "a post was not searched")
         #expect(!mine.search("Griff").posts.isEmpty, "a post was not found by its author")
@@ -199,7 +199,7 @@ struct SearchTests {
         let theirsID = try #require(theirs.enrolment?.identity.id)
         try await theirs.allowOutpost(mineID, everything: true)
         try await settle([mine, theirs], through: mailbox)
-        try await theirs.send("a wall post from somebody you will block", to: nil)
+        try await theirs.send("a wall post from somebody you will block", to: try #require(theirs.ownOutpost))
         try await settle([mine, theirs], through: mailbox)
 
         #expect(!mine.feed().isEmpty, "the fixture never arrived")

@@ -113,24 +113,22 @@ public struct RepairRequest: Hashable, Sendable, Codable {
     public let heads: VectorClock
     public let gaps: [FeedGap]
     public let room: ConversationID?
-    public let wallOf: ParticipantID?
     public let reason: RepairReason
 
     public init(
         id: RepairID = RepairID(), authors: [ParticipantID], heads: VectorClock, gaps: [FeedGap],
-        room: ConversationID? = nil, wallOf: ParticipantID? = nil, reason: RepairReason = .gap
+        room: ConversationID? = nil, reason: RepairReason = .gap
     ) {
         self.id = id
         self.authors = authors
         self.heads = heads
         self.gaps = gaps
         self.room = room
-        self.wallOf = wallOf
         self.reason = reason
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, authors, heads, gaps, room, wallOf, reason
+        case id, authors, heads, gaps, room, reason
     }
 
     public init(from decoder: any Decoder) throws {
@@ -140,7 +138,6 @@ public struct RepairRequest: Hashable, Sendable, Codable {
         heads = try container.decodeIfPresent(VectorClock.self, forKey: .heads) ?? VectorClock()
         gaps = try container.decodeIfPresent([FeedGap].self, forKey: .gaps) ?? []
         room = try container.decodeIfPresent(ConversationID.self, forKey: .room)
-        wallOf = try container.decodeIfPresent(ParticipantID.self, forKey: .wallOf)
         reason = try container.decodeIfPresent(RepairReason.self, forKey: .reason) ?? .gap
     }
 
@@ -184,13 +181,8 @@ extension Replica {
         }
 
         let authors = Set(request.authors)
-        let wantsWall = request.wallOf
         func wasAskedFor(_ entry: Entry) -> Bool {
-            if let room = request.room { return entry.room == room }
-            if let wantsWall {
-                if entry.room == nil { return entry.author == wantsWall }
-                return entry.room == ConversationID.outpost(of: wantsWall)
-            }
+            if let room = request.room { return entry.conversation == room }
             return authors.contains(entry.author)
         }
 
@@ -235,25 +227,14 @@ extension Replica {
     }
 
     public func heads(inScopeOf request: RepairRequest) -> VectorClock {
-        heads(of: Set(request.authors), inRoom: request.room, onWallOf: request.wallOf)
+        heads(of: Set(request.authors), in: request.room)
     }
 
-    public func heads(
-        of authors: Set<ParticipantID>, inRoom room: ConversationID?, onWallOf wantsWall: ParticipantID?
-    ) -> VectorClock {
+    public func heads(of authors: Set<ParticipantID>, in room: ConversationID?) -> VectorClock {
         var clock = VectorClock()
         for entry in allEntries where authors.contains(entry.feedKey.author) {
-            let asked: Bool
-            if let room {
-                asked = entry.room == room
-            } else if let wantsWall {
-                asked =
-                    entry.room == nil
-                    ? entry.author == wantsWall : entry.room == ConversationID.outpost(of: wantsWall)
-            } else {
-                asked = true
-            }
-            guard asked, entry.seq > clock[entry.feedKey] else { continue }
+            if let room, entry.conversation != room { continue }
+            guard entry.seq > clock[entry.feedKey] else { continue }
             clock.observe(entry.feedKey, seq: entry.seq)
         }
         return clock

@@ -8,26 +8,26 @@ extension Projection {
     }
 
     public func roomIDs() -> Set<ConversationID> {
-        Set(rendered.compactMap(\.room))
+        Set(rendered.filter { $0.conversation != .outpost($0.author) }.map(\.conversation))
     }
 
     public func entries(by authors: Set<ParticipantID>, in room: ConversationID) -> Set<EntryHash> {
         guard !authors.isEmpty else { return [] }
-        return Set(rendered.lazy.filter { $0.room == room && authors.contains($0.author) }.map(\.id))
+        return Set(rendered.lazy.filter { $0.conversation == room && authors.contains($0.author) }.map(\.id))
     }
 
     public func name(of room: ConversationID) -> String? {
-        rendered.last { $0.room == room && $0.type == .roomProfile }
+        rendered.last { $0.conversation == room && $0.type == .roomProfile }
             .flatMap { if case .text(let name) = $0.content { name } else { nil } }
     }
 
     public func kind(of room: ConversationID) -> RoomKind {
-        rendered.first { $0.room == room && $0.type == .roomProfile }?.roomKind ?? .room
+        rendered.first { $0.conversation == room && $0.type == .roomProfile }?.roomKind ?? .room
     }
 
     public func roster(of room: ConversationID, opening: (RenderedEntry) -> Payload?) -> RoomRoster {
         var roster = RoomRoster(room: room)
-        for entry in rendered where entry.room == room {
+        for entry in rendered where entry.conversation == room {
             if let payload = opening(entry) { roster.apply(entry, body: payload) }
         }
         return roster
@@ -36,7 +36,7 @@ extension Projection {
     public func soloCheck(in room: ConversationID, opening: (RenderedEntry) -> Payload?) -> SoloCheck {
         var check = SoloCheck()
         for entry in rendered
-        where entry.room == room && SoloCheck.shaping.contains(entry.type) {
+        where entry.conversation == room && SoloCheck.shaping.contains(entry.type) {
             if let payload = opening(entry) { check.apply(entry, body: payload) }
         }
         return check
@@ -48,7 +48,7 @@ extension Projection {
         var open: [EntryHash: (ParticipantID, Date)] = [:]
         var answered: Set<EntryHash> = []
         for entry in rendered
-        where entry.room == room && SoloCheck.shaping.contains(entry.type) {
+        where entry.conversation == room && SoloCheck.shaping.contains(entry.type) {
             guard let body = try? opening(entry)?.decode(SoloCheckBody.self) else { continue }
             switch body.move {
             case .asked: open[entry.id] = (entry.author, entry.wallTime)

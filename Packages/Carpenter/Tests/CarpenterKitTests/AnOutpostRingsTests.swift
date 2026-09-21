@@ -46,7 +46,7 @@ struct AnOutpostRingsTests {
         }
 
         try await alice.allowOutpost(bob.viewer.id, everything: true)
-        try await alice.send("first light", to: nil)
+        try await alice.send("first light", to: try #require(alice.ownOutpost))
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
             try await bob.sync(through: mailbox)

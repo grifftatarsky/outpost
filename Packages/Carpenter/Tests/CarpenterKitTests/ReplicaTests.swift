@@ -27,7 +27,8 @@ struct Author {
         let entry = try Entry.append(
             to: head, author: identity.id, device: device,
             clock: clock.merging(head?.clock ?? VectorClock()),
-            wallTime: wallTime, room: room, payload: payload, at: .initial, sealedWith: chain)
+            wallTime: wallTime, conversation: room ?? chain.room, payload: payload, at: .initial,
+            sealedWith: chain)
         head = entry
         return entry
     }
@@ -85,7 +86,7 @@ struct ReplicaTests {
         let rogue = DeviceKeys.generate()
         let entry = try Entry.append(
             to: nil, author: alice.identity.id, device: rogue, clock: VectorClock(),
-            wallTime: start, room: nil, payload: try seal("not me", as: alice))
+            wallTime: start, conversation: alice.chain.room, payload: try seal("not me", as: alice))
 
         #expect(throws: LogError.unauthorizedDevice) { try replica.integrate(entry) }
     }
@@ -100,7 +101,7 @@ struct ReplicaTests {
         let tampered = Entry(
             author: genuine.author, device: genuine.device, seq: genuine.seq,
             previous: genuine.previous, clock: genuine.clock, wallTime: genuine.wallTime,
-            room: genuine.room, payload: try seal("not what she said", as: alice),
+            conversation: genuine.conversation, payload: try seal("not what she said", as: alice),
             signature: genuine.signature)
 
         #expect(throws: LogError.badSignature) { try replica.integrate(tampered) }
@@ -142,11 +143,11 @@ struct ReplicaTests {
 
         let forged = try Entry.append(
             to: nil, author: alice.identity.id, device: alice.device, clock: VectorClock(),
-            wallTime: start, room: nil, payload: try seal("second", as: alice))
+            wallTime: start, conversation: alice.chain.room, payload: try seal("second", as: alice))
         let relabelled = Entry(
             author: forged.author, device: forged.device, seq: 2,
             previous: EntryHash(rawValue: Data(repeating: 0, count: 32)), clock: forged.clock,
-            wallTime: forged.wallTime, room: forged.room, payload: forged.payload,
+            wallTime: forged.wallTime, conversation: forged.conversation, payload: forged.payload,
             signature: forged.signature)
 
         #expect(throws: LogError.self) { try replica.integrate(relabelled) }
@@ -162,7 +163,7 @@ struct ReplicaTests {
         let forged = Entry(
             author: genuine.author, device: genuine.device, seq: Entry.firstSequence,
             previous: EntryHash(rawValue: Data(repeating: 1, count: 32)), clock: genuine.clock,
-            wallTime: genuine.wallTime, room: genuine.room, payload: genuine.payload,
+            wallTime: genuine.wallTime, conversation: genuine.conversation, payload: genuine.payload,
             signature: genuine.signature)
 
         #expect(throws: LogError.self) { try replica.integrate(forged) }
@@ -176,10 +177,10 @@ struct ReplicaTests {
 
         let left = try Entry.append(
             to: nil, author: alice.identity.id, device: alice.device, clock: VectorClock(),
-            wallTime: start, room: nil, payload: try seal("one story", as: alice))
+            wallTime: start, conversation: alice.chain.room, payload: try seal("one story", as: alice))
         let right = try Entry.append(
             to: nil, author: alice.identity.id, device: alice.device, clock: VectorClock(),
-            wallTime: start, room: nil, payload: try seal("another story", as: alice))
+            wallTime: start, conversation: alice.chain.room, payload: try seal("another story", as: alice))
 
         try replica.integrate(left)
         let result = try replica.integrate(right)
@@ -203,10 +204,10 @@ struct ReplicaTests {
 
         let left = try Entry.append(
             to: nil, author: alice.identity.id, device: alice.device, clock: VectorClock(),
-            wallTime: start, room: nil, payload: try seal("one", as: alice))
+            wallTime: start, conversation: alice.chain.room, payload: try seal("one", as: alice))
         let right = try Entry.append(
             to: nil, author: alice.identity.id, device: alice.device, clock: VectorClock(),
-            wallTime: start, room: nil, payload: try seal("two", as: alice))
+            wallTime: start, conversation: alice.chain.room, payload: try seal("two", as: alice))
 
         try replica.integrate(left)
         try replica.integrate(right)
@@ -234,20 +235,23 @@ struct ReplicaTests {
         #expect(replica.entryCount == 1)
     }
 
-    @Test("Entries are filtered by room, and an Outpost is just the feed with no room")
-    func filtersByRoom() throws {
+    @Test("Entries are filtered by conversation, and an Outpost is a conversation like any other")
+    func filtersByConversation() throws {
         var alice = Author()
         var replica = Replica()
         try replica.meet(alice)
 
         let room = ConversationID.room(UUID())
-        try replica.integrate(try alice.append(Payload.post("on my Outpost"), at: start, room: nil))
+        let outpost = ConversationID.outpost(alice.identity.id)
+        try replica.integrate(
+            try alice.append(Payload.post("on my Outpost"), at: start, room: outpost))
         try replica.integrate(
             try alice.append(
                 Payload.post("in the room"), at: start.addingTimeInterval(1), room: room))
 
-        #expect(replica.entries(in: nil).count == 1)
+        #expect(replica.entries(in: outpost).count == 1)
         #expect(replica.entries(in: room).count == 1)
+        #expect(replica.entries(in: .room(UUID())).isEmpty)
     }
 
     @Test("The frontier reports how far each feed has been seen, ready for the next append")

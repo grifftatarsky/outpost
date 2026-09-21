@@ -34,7 +34,7 @@ extension AppSession {
         let identity = enrolment?.identity
         let replica = replica
         return { entry in
-            if let room = entry.room, let chain = chains[room],
+            if let chain = chains[entry.conversation],
                 let opened = entry.opened(using: chain)
             {
                 return opened
@@ -46,7 +46,7 @@ extension AppSession {
                 let keys = replica.registry(for: entry.author)?.identity,
                 let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)
             else { return nil }
-            return entry.opened(pairwise: secret, wall: ConversationID.outpost(of: entry.author))
+            return entry.opened(pairwise: secret)
         }
     }
 
@@ -220,8 +220,7 @@ extension AppSession {
         let request = RepairRequest(
             authors: [inviterKeys.participantID, enrolment.identity.id],
             heads: replica.heads(
-                of: [inviterKeys.participantID, enrolment.identity.id],
-                inRoom: attestation.room, onWallOf: nil),
+                of: [inviterKeys.participantID, enrolment.identity.id], in: attestation.room),
             gaps: [], room: attestation.room)
         persisted.repairs.removeAll { $0.room == attestation.room && $0.quiet }
         persisted.repairs.append(

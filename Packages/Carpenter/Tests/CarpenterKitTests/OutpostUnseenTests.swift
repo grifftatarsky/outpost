@@ -44,7 +44,7 @@ struct OutpostUnseenTests {
         let aliceID = try #require(alice.enrolment?.identity.id)
 
         for word in ["one", "two", "three"] {
-            try await alice.send(word, to: nil)
+            try await alice.send(word, to: try #require(alice.ownOutpost))
             clock.advance(by: 60)
         }
         try await alice.allowOutpost(bobID, everything: true)
@@ -66,7 +66,7 @@ struct OutpostUnseenTests {
         try await settle([alice, bob], through: mailbox)
 
         clock.advance(by: 60)
-        try await alice.send("said after he arrived", to: nil)
+        try await alice.send("said after he arrived", to: try #require(alice.ownOutpost))
         try await settle([alice, bob], through: mailbox)
 
         #expect(bob.unseenPosts(from: aliceID) == 1)
@@ -83,7 +83,7 @@ struct OutpostUnseenTests {
         let (alice, _, _) = try await acquainted(clock)
         let aliceID = try #require(alice.enrolment?.identity.id)
 
-        try await alice.send("mine", to: nil)
+        try await alice.send("mine", to: try #require(alice.ownOutpost))
         #expect(alice.unseenPosts(from: aliceID) == 0)
         #expect(alice.outpostAuthorsWithUnseen().isEmpty)
     }
@@ -119,8 +119,8 @@ struct OutpostUnseenTests {
         try await settle([alice, bob, carol], through: mailbox)
 
         clock.advance(by: 60)
-        try await alice.send("from Alice", to: nil)
-        try await carol.send("from Carol", to: nil)
+        try await alice.send("from Alice", to: try #require(alice.ownOutpost))
+        try await carol.send("from Carol", to: try #require(carol.ownOutpost))
         try await settle([alice, bob, carol], through: mailbox)
         #expect(bob.outpostAuthorsWithUnseen() == [aliceID, carolID])
 
@@ -231,7 +231,7 @@ struct OutpostNotifyTests {
 
         clock.advance(by: 60)
         let before = await mailbox.bells.count
-        try await alice.send("worth telling one of them about", to: nil)
+        try await alice.send("worth telling one of them about", to: try #require(alice.ownOutpost))
         try await alice.sync(through: mailbox, media: mailbox)
 
         let rung = await mailbox.bells.dropFirst(before)

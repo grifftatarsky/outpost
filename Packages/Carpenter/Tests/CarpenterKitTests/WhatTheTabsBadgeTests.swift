@@ -59,7 +59,7 @@ struct WhatTheTabsBadgeTests {
         let mailbox = InMemoryMailbox()
         let (alice, bob, _) = try await aWallBobCanRead(clock, mailbox)
 
-        try await alice.send("first light", to: nil)
+        try await alice.send("first light", to: try #require(alice.ownOutpost))
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
             try await bob.sync(through: mailbox)
@@ -83,9 +83,9 @@ struct WhatTheTabsBadgeTests {
         let mailbox = InMemoryMailbox()
         let (alice, bob, _) = try await aWallBobCanRead(clock, mailbox)
 
-        try await alice.send("older", to: nil)
+        try await alice.send("older", to: try #require(alice.ownOutpost))
         clock.advance(by: 60)
-        try await alice.send("newer", to: nil)
+        try await alice.send("newer", to: try #require(alice.ownOutpost))
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
             try await bob.sync(through: mailbox)
@@ -107,9 +107,9 @@ struct WhatTheTabsBadgeTests {
         let mailbox = InMemoryMailbox()
         let (alice, bob, _) = try await aWallBobCanRead(clock, mailbox)
 
-        try await alice.send("older", to: nil)
+        try await alice.send("older", to: try #require(alice.ownOutpost))
         clock.advance(by: 60)
-        try await alice.send("newer", to: nil)
+        try await alice.send("newer", to: try #require(alice.ownOutpost))
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
             try await bob.sync(through: mailbox)
@@ -134,7 +134,7 @@ struct WhatTheTabsBadgeTests {
         let mailbox = InMemoryMailbox()
         let (alice, _, _) = try await aWallBobCanRead(clock, mailbox)
 
-        try await alice.send("talking to myself", to: nil)
+        try await alice.send("talking to myself", to: try #require(alice.ownOutpost))
         try await alice.sync(through: mailbox)
 
         #expect(alice.unseenPosts(from: alice.viewer.id) == 0)

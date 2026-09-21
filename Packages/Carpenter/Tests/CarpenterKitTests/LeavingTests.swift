@@ -32,7 +32,7 @@ struct LeavingTests {
 
     private func roster(_ entries: [Entry], _ chain: EpochChain, in room: ConversationID) -> RoomRoster {
         var roster = RoomRoster(room: room)
-        for rendered in Fold.render(entries, using: chain) where rendered.room == room {
+        for rendered in Fold.render(entries, using: chain) where rendered.conversation == room {
             guard let payload = entries.first(where: { $0.hash == rendered.id })?.opened(using: chain)
             else { continue }
             roster.apply(rendered, body: payload)
