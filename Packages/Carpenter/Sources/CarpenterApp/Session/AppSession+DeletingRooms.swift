@@ -62,6 +62,17 @@ extension AppSession {
         refresh()
     }
 
+    func adoptOwnHeads(from entries: [Entry]) {
+        guard let enrolment else { return }
+        for entry in entries
+        where entry.author == enrolment.identity.id && entry.device == enrolment.device.id
+            && entry.seq > heads[entry.conversation]?.seq ?? 0
+        {
+            heads[entry.conversation] = entry.link
+            persisted.ownHeads[entry.conversation] = entry.link
+        }
+    }
+
     func reopen(_ room: ConversationID) {
         guard replica.closedRooms.contains(room) || persisted.preferences.roomsDeleted.contains(room)
         else { return }

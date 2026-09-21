@@ -31,6 +31,26 @@ attention, written as a question rather than a statement.
 
 ## Waiting on an answer
 
+### Should a device that has lost its data become a new device?
+
+Found 2026-09-21. iOS keeps keychain items across a reinstall, so a reinstalled app comes back with
+its **old device key and none of its log or state**. Every log is now numbered per conversation, so
+if peers hand that device a room's keys again it starts counting from one in that room — where its
+old position one already stands. A peer then refuses the new entry for not linking to the old one,
+and the message is silently lost. This was true under the old device-wide count too.
+
+What is built: a device that sees its own writing come back, from any source, moves its place to
+match (`adoptOwnHeads`), and its place in each conversation is saved and never goes backward
+(`PersistedState.ownHeads`). That closes it whenever the history comes back first. It does not close
+it when the device writes before anything comes back.
+
+The fix that closes it outright: a device that finds its identity but no state takes a **new device
+key** and a fresh certificate, and is a new device from then on. It can never reuse a position,
+because none of its positions exist yet. The cost is what a member sees — a reinstall shows up as a
+second device in their device list, and the old one sits there until they revoke it.
+
+**The question:** is a reinstall a new device? PROPOSED: yes.
+
 Griff worked through the rest on 2026-09-13, and three more on 2026-09-15. Those rulings were
 recorded in the log that is now [archived](archive/decisions-2026.md); the links below go there, and
 what they describe has not been re-checked against the build.

@@ -138,6 +138,7 @@ extension AppSession {
                 _ = id
             }
             let (received, settled) = SyncSession.integrate(collected, into: &replica)
+            adoptOwnHeads(from: received.integrated)
             report = report.adding(received)
 
             for request in received.repairRequests

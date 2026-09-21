@@ -108,6 +108,7 @@ extension AppSession {
             taken.append(entry)
         }
 
+        adoptOwnHeads(from: taken)
         persisted.spentEntries = replica.spentEntries
         guard !taken.isEmpty else {
             if Set(knownCertificates()) != certificatesBefore {

@@ -394,3 +394,45 @@ struct DeletingARoomTests {
         }
     }
 }
+
+@MainActor
+@Suite("A device learns its own place from anywhere it sees its own writing", .serialized)
+struct OwnHeadTests {
+    @Test("An entry of this device's own, arriving from elsewhere, moves where it writes next")
+    func ownEntriesFromElsewhereMoveTheHead() async throws {
+        let keychain = InMemoryKeychainStore()
+        let first = TestSession.make(keychain: keychain)
+        await first.load()
+        try await first.createIdentity(displayName: "Bob")
+        let room = try await first.createRoom(named: "Hangar 7")
+        for index in 1...4 { try await first.send("line \(index)", to: room) }
+        let written = first.replica.allEntries.filter { $0.conversation == room }
+        let top = try #require(written.max { $0.seq < $1.seq })
+
+        let reinstalled = TestSession.make(keychain: keychain)
+        await reinstalled.load()
+        #expect(reinstalled.heads[room] == nil, "precondition: nothing on disk")
+        #expect(reinstalled.enrolment?.device.id == first.enrolment?.device.id, "precondition: same device")
+
+        for entry in written { try reinstalled.replica.integrate(entry) }
+        reinstalled.adoptOwnHeads(from: written)
+
+        #expect(reinstalled.heads[room] == top.link, "its own writing came back and it did not notice")
+        #expect(reinstalled.persisted.ownHeads[room] == top.link)
+    }
+
+    @Test("Somebody else's entries never move this device's place")
+    func othersDoNotMoveIt() async throws {
+        let alice = TestSession.make()
+        let bob = TestSession.make()
+        await alice.load()
+        await bob.load()
+        try await alice.createIdentity(displayName: "Alice")
+        try await bob.createIdentity(displayName: "Bob")
+        let room = try await alice.createRoom(named: "Hangar 7")
+        for index in 1...3 { try await alice.send("line \(index)", to: room) }
+
+        bob.adoptOwnHeads(from: alice.replica.allEntries)
+        #expect(bob.heads.isEmpty, "Bob's device took Alice's position as its own")
+    }
+}
