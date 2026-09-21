@@ -36,6 +36,19 @@ number. Nothing has been done about it.
 
 ## Privacy, on the wire
 
+**A position number still counts across every conversation.** A device keeps one log, numbered from
+one without gaps, which is what makes tampering visible. The number is in the clear on every entry, so
+somebody holding one of your entries can read off roughly how much you write in total, even after the
+clock was scoped on 2026-09-20. Closing it means a separate hash chain per conversation, and a device
+with one chain per conversation can drop or reorder its own history without anyone being able to tell.
+Not obviously the right trade; nothing has been decided.
+
+**A repair can still name a position that belongs to somewhere else.** The asker cannot tell which
+room a position it does not hold belongs to — that is the whole shape of the problem — so the first
+request after a hole appears may name a few foreign positions. The answer settles them and they are
+never asked for again, so it converges, but the first ask is wider than it needs to be. It would take
+the answerer volunteering the boundaries before being asked.
+
 **The anonymity is in the app, not on the wire.** Everybody a member has not met is drawn as one
 shared figure, and every route from a comment to a name goes through `Projection.member(_:)`. What
 that cannot reach is the envelope: an entry's author, device, room, sequence number and time sit

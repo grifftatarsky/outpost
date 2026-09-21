@@ -66,3 +66,39 @@ is not a reason to widen an audience.
 
 `RepairScopeTests` holds the three cases: no entry from a room the reader is not in, nothing below a
 joiner's floor, and no permanent phantom hole afterwards.
+
+### The envelope names only the conversation it belongs to
+
+**RULED 2026-09-20 by Griff:** *"I'd like you to fix the problem where the whole count/existence is
+legible."*
+
+**What was wrong.** An entry's payload was sealed, but the envelope around it was not, and it said
+too much. `AppSession.append` stamped `replica.frontier` — every log the writing device held, across
+every room and Outpost, as person and device. One message from a room you share told you how many
+other conversations its writer keeps, who is in them, and how far each had got. A single entry was
+enough to draw its writer's social graph. Three other things went to every peer for the same reason:
+the public keys of everyone this device had ever met, their device certificates, and the list of
+whose Outposts this member follows. A repair request and its answer carried heads taken across every
+conversation, so asking one peer to fill a hole told them the top position of every log involved,
+everywhere.
+
+**How it works.** A clock is the frontier of its own entry's room. Keys, certificates and revocations
+are cut to the people the packet itself names — the authors of the entries inside it and the members
+of the rooms those entries belong to. A wall wish is written to the one peer it is about, so it says
+"I want yours" and never names a third party. Repair heads are taken inside the room or the Outpost
+the request names. Peers owed nothing in a round no longer share a packet, because sharing one was
+itself an introduction.
+
+**What it costs.** Nothing on disk or on the wire changed shape, so an older entry still decodes and
+still verifies. The relay sees less correlation and more structure: a member who talks in four rooms
+writes four records where they wrote one, and the sizes of those records are the sizes of their
+rooms. That trade is stated in [the crypto brief](crypto-brief.md#what-the-relay-is-actually-handed).
+
+**What is still legible.** A position number is counted per device across every conversation, so the
+numbers alone still say roughly how much their writer writes — closing that needs a separate hash
+chain per conversation, which would let a device drop or reorder its own history without anyone being
+able to tell. And until a peer has settled what it is owed, a repair request can name a position that
+turns out to belong to another room, because the asker genuinely cannot tell which room a position it
+does not hold belongs to. Both are in [the inbox](inbox.md).
+
+`EnvelopeLeakTests` holds five cases, and each one fails with its fix reverted.
