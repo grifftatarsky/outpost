@@ -43,23 +43,12 @@ carries a return address: who wrote this, from which device. There are two ways 
 
 All three designs were versions of the second. It is blocked three ways.
 
-**An entry still lists where its writer has been in *this* conversation.** An entry's vector clock
-names the logs its author has seen, as person and device, which is what lets two phones work out what
-the other is missing. It used to name every conversation its writer kept, anywhere — a comment under
-a throwaway name would have carried the writer's real address in its own clock, and their next
-ordinary message would have carried the throwaway name in its clock, linking the two in both
-directions across the whole app. **That was fixed on 2026-09-20**: a clock now names only the
-conversation its entry was written in, so nothing links an Outpost to a room any more.
-
-What remains is narrower and still enough. Inside one Outpost, a clock names the logs writing there,
-so a throwaway name and a real one posting on the same wall are still tied together.
-
-The position numbers no longer say anything. Since 2026-09-21 each device keeps one log per
-conversation, numbered from one there, so no number on any entry counts what its writer does
-elsewhere. This page used to say that splitting the log would let a device drop or reorder its own
-history undetected. It doesn't: within a conversation the chain is exactly as strict as before, and
-members now vouch for each other's logs, which catches more than the old single chain did. See
-[Architecture](architecture.md#members-vouch-for-each-others-logs).
+**An entry lists where its writer has been in this conversation.** An entry's vector clock names
+the logs its author has seen in the conversation it was written in, as person and device, which is
+what lets two phones work out what the other is missing. Inside one Outpost, a clock names the logs
+writing there, so a throwaway name and a real one posting on the same wall would be tied together
+in both directions. A clock names nothing outside its own conversation, and a position counts only
+within it, so nothing on an entry says what its writer does anywhere else.
 
 **You cannot block what you cannot recognize.** Blocking and the list of known abusers both work on
 the return address, including on entries the phone cannot open. A throwaway name is a different
@@ -86,18 +75,12 @@ is unchanged. The limit: a stranger can still tell *that* somebody commented. Cl
 not the fact. Built and proved on three devices on 2026-09-09
 ([the ticket](epics/rooms-and-membership.md#open-or-closed-on-other-peoples-outposts)).
 
-**Who is offered an entry at all.** A friend of a friend used to store and forward entries for rooms
-they were not in. They could not read them, but they could see that the room existed and who wrote in
-it. Narrowing that was designed twice on 2026-09-07 and declined both times, because a phone tracks
-what it is missing as one numbered run per person while any narrowing decides per room: a skipped
-entry becomes a permanent gap nobody is allowed to fill and nobody can tell from a real loss. A way to
-tell *withheld* from *lost* had to exist first.
-
-**It exists now, and the narrowing is built.** A sender states, in the same packet, the positions it
-is withholding; the reader writes them down and stops asking. So a device is no longer offered a
-conversation it is not in, and no longer holds one. How much is still carried for somebody else —
-posts on a shared Outpost, mostly — is counted under History check, *Carried for other people*, and
-that number should now be small. Done 2026-09-20.
+**Who is offered an entry at all.** A device hands over an entry only to somebody allowed to read
+it: a room's members, an Outpost's readers, and nobody past a history floor. Where that leaves a
+reader with a gap — a member invited from today, looking at a log that started before them — the
+sender says which positions it is withholding, and the reader stops asking for them. What a device
+still carries for somebody else, posts on a shared Outpost mostly, is counted under History check,
+*Carried for other people*.
 
 ## The promise
 
@@ -122,12 +105,10 @@ other's replies.
 
 ## What would reopen it
 
-All three of these, not any one. The first is now done.
+All three of these, not any one.
 
-1. ~~A separate clock and log per conversation, so an entry stops listing everywhere its writer has
-   been.~~ **Done 2026-09-20 and 2026-09-21.** A clock names only its own conversation, and positions
-   count only there. What is left: inside one Outpost, a clock still ties a throwaway name to a real
-   one writing on the same wall.
+1. A clock inside one Outpost that does not tie a throwaway name to a real one writing on the same
+   wall.
 2. A way to block and to enforce the abuse list without a stable return address, or a written
    decision that unlinkability wins and blocking gets weaker.
 3. A third Apple Account, because the three-person case cannot be observed with two.
@@ -137,11 +118,12 @@ All three of these, not any one. The first is now done.
 **A sealed letter was not bound to its writer.** Anybody holding a room's key could lift another
 member's ciphertext into an entry of their own and sign it, and every phone would show it as theirs.
 Fixed the same evening: the author and device are now part of what the seal authenticates, so a
-lifted ciphertext does not open. Since 2026-09-21 there is no fallback for older seals: a payload not bound to its writer opens for nobody.
+lifted ciphertext does not open. A payload not bound to its writer opens for nobody.
 
-**An Outpost's address is half its owner's identifier.** The room ID of somebody's Outpost is the
-first 16 bytes of their participant ID, visible on every entry on it. It has to be derivable, so that
-every device works it out the same way instead of being told, which is also why it cannot be hidden.
+**An Outpost is named by its owner.** Every entry on somebody's Outpost names their participant ID as
+its conversation. That is visible to everybody holding the entry — the people let in, who already
+know whose Outpost it is — and never to the relay, which sees only sealed packets. It has to be the
+owner, so every device names the Outpost the same way without being told.
 
 One review finding claimed that somebody let into an Outpost later receives its posts but not the
 comments already under them. It was tested and does not reproduce; the test was kept.

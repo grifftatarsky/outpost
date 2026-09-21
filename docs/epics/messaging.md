@@ -21,9 +21,9 @@ through the mailbox, surviving relaunch, with marks derived from what actually h
 proven between two Apple Accounts. A device also notices history it is missing and asks for it, and
 a message that has not gone says so where it was sent.
 
-Since 2026-09-20 a round hands each reader only what they are allowed to read, and an entry's
-envelope names only the conversation it belongs to. Both are held by the suite and neither has run
-between two accounts.
+A round hands each reader only what they are allowed to read. Every device keeps one log per
+conversation, an entry's envelope names only its own conversation, and members vouch for each other's
+logs. All of it has crossed two Apple Accounts.
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
@@ -550,58 +550,71 @@ after its revocation would be asked for and refused forever, and is not handled.
 <details markdown="1">
 <summary><b>A packet carries only what its reader may read</b> · Complete (tested)</summary>
 
-**The story.** A device should hand over only what its reader is allowed to read. Not seal it and
-trust the app not to draw it — not send it.
-
-**What it was.** A round collected every entry this device had not yet sent, across every room and
-solo, sealed them into one body, and wrapped that body's key for every peer. The addressing was per
-recipient and correct; the contents were global. History repair leaked the same history a second way:
-`Replica.fill` served a named author's log whole, ignoring the room the request named, and the answer
-never consulted the asker's history floor.
-
-**Measured before any change**, 2026-09-20: a three-member fixture put a second room's entries on a
-device that was never in it, and a member invited from today held nine sealed entries from before
-they were let in.
+**The story.** A device hands over only what its reader is allowed to read — it does not seal
+something and trust the other app not to draw it.
 
 **Acceptance.**
 - No entry reaches a peer for a conversation they are not in.
-- Nothing at or below a joiner's history floor reaches them.
-- Somebody removed or gone gets nothing sealed after the key turned on them.
-- A member never ends up asking, forever, for history nobody will hand over.
+- Nothing below a joiner's history floor reaches them.
+- A removed or departed member gets nothing sealed after the key turned on them.
+- A reader shown only part of a log is told which positions are withheld, and stops asking.
 
-**What holds it.** `RepairScopeTests`, three cases, each red before the fix.
-
-**What is owed.** Two Apple Accounts on the rig. Nothing crossing the network is proven by the suite.
+**What holds it.** `RepairScopeTests`.
 
 </details>
 
 <details markdown="1">
 <summary><b>The envelope names only its own conversation</b> · Complete (tested)</summary>
 
-**The story.** An entry's payload is sealed. The envelope around it is not, because that is how an
-entry moves with no server in the middle. So the envelope must say as little as it can.
-
-**What it was.** `AppSession.append` stamped `replica.frontier` — every log the device held, across
-every room and Outpost, as person and device — in the clear and inside the signature. One message
-from a room you share told you how many other conversations its writer keeps, who is in them, and how
-far each had got. Three other things went to every peer: the public keys of everyone this device had
-met, their device certificates, and the list of whose Outposts this member follows. Repair heads were
-taken across every conversation.
+**The story.** An entry's payload is sealed; its envelope cannot be, because that is how an entry
+moves with no server in the middle. So the envelope says as little as it can.
 
 **Acceptance.**
 - A clock names only the conversation its entry was written in.
 - A packet names only people its reader already shares something with.
 - A wish to be told about an Outpost names only the person whose Outpost it is.
-- Repair heads stop at the edge of the conversation asked about.
-- Nothing on disk or on the wire changes shape.
+- Repair heads, gaps and attestations stay inside the conversation they are about.
 
-**What holds it.** `EnvelopeLeakTests`, five cases, each red with its own fix reverted.
+**What holds it.** `EnvelopeLeakTests`, each case red with its rule removed.
 
-**What is still legible.** A position number is counted per device across every conversation. Closing
-that needs a separate hash chain per conversation, which would let a device drop or reorder its own
-history without anyone being able to tell. In [the inbox](../inbox.md), undecided.
+</details>
 
-**What is owed.** Two Apple Accounts on the rig.
+<details markdown="1">
+<summary><b>A log per conversation</b> · Complete (tested)</summary>
+
+**The story.** Nothing about what somebody writes in one conversation shows in another — not even how
+much.
+
+**Acceptance.**
+- A device's positions in a conversation count from one there, and link only to each other.
+- Every entry names its conversation: a room, a solo, or an Outpost.
+- A device never writes at a position it has already used, even after deleting the conversation,
+  being let back in and relaunching.
+- Nobody posts onto somebody else's Outpost, and no device makes a key for an Outpost it does not own.
+
+**What holds it.** `EnvelopeLeakTests.positionsCountOnlyThisConversation`, `ConversationIDTests`,
+`EveryEntryHasAConversationTests`, `DeletingARoomTests.comingBackDoesNotReuseANumber`.
+
+**Owed.** A reinstall: [ruled](../decisions.md#a-reinstall-is-the-same-device-if-it-is-still-correctly-identified),
+not built.
+
+</details>
+
+<details markdown="1">
+<summary><b>Members vouch for each other's logs</b> · Complete (tested)</summary>
+
+**The story.** If somebody shows two members two different versions of the same moment, the room finds
+out — and nobody is accused on a claim alone.
+
+**Acceptance.**
+- Every packet with entries says where each log in its rooms has got to, to recipients who may
+  already have that entry.
+- A mismatch is recorded and never called a fork; this device asks for the other copy, and the
+  author's signed entry, if it comes, is recorded as a fork.
+- A mismatch about somebody who recently asked to be restored is kept quiet.
+- Unexplained mismatches show on the Integrity screen and survive a relaunch.
+
+**What holds it.** `AttestationTests`, every case mutation-checked.
 
 </details>
 
@@ -615,8 +628,8 @@ Accounts, two simulators, against the live container.
 <details markdown="1">
 <summary>2026-09-21 — a log per conversation, across two accounts</summary>
 
-Alpha on account A as Trig, beta on account B as Quad, both accounts cleared first. Every step on
-the build that splits the log per conversation and adds attestations.
+Alpha on account A as Trig, beta on account B as Quad, both accounts cleared first, on the build with a
+log per conversation and vouching.
 
 | Step | Result |
 |---|---|

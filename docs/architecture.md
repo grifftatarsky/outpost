@@ -24,6 +24,12 @@ Everything a member does is a log **entry**: a message, a reaction, a room renam
 receipt. Each log entry is signed by the writing device, linked by hash to the one before it in
 that device's log **for that conversation**, and stamped with a vector clock naming only that conversation.
 A device keeps one log per conversation—every room, every solo, and every Outpost—each numbered from one.
+So nothing about what you write in one conversation shows in another, not even how much.
+
+Every entry names its conversation, and a conversation is exactly one of three kinds:
+a room, a solo, or an Outpost, which is named by its owner.
+There is no entry without one.
+
 Any two devices holding the same entries fold them into the same result without talking to each other.
 
 Importantly, a log entry's payload is sealed under the room's **epoch key**. The payload's type, version, and text are
@@ -172,12 +178,11 @@ Deleting a conversation a member is no longer part of removes that conversation'
 device. `Replica.close(_:)` records each removed entry as a `SpentEntry`, so an entry for that
 conversation that arrives later is spent the same way and not kept, and repair never asks for it back.
 
-The one thing a deletion must never lose is **where this device had got to**. Each conversation's
-numbering is its own, so a device that deleted a room, relaunched, was invited back, and relaunched
-again would otherwise start counting from one where its old position one still stands—and its
-message would sit below its own record of what it had already sent, and never leave. So this device's
-own head in every conversation is saved (`PersistedState.ownHeads`) and never goes backward, and a
-device that sees its own writing come back from anywhere moves its place to match.
+The one thing a deletion never loses is **where this device had got to**. A device's position in a
+conversation only ever goes forward: writing at a position it has already used would put its message
+below its own record of what it has sent, and the message would never leave. So this device's own head
+in every conversation is saved (`PersistedState.ownHeads`) and outlives deleting the conversation, and
+a device that sees its own writing come back from anywhere moves its place to match.
 
 The closed rooms and the spent positions are saved before anything is removed. The rooms ride
 `MemberPreferences.deletedRooms`, so the member's other devices close them too. A launch finishes a

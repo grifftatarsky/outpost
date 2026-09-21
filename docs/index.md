@@ -71,6 +71,10 @@ First-class support for the iPhone Duo is an upcoming roadmap item.
 - A device sends only what its reader is allowed to read. Nobody is handed another conversation's
   messages, even sealed, and nobody is handed a copy of who you talk to. An entry's envelope names
   only the conversation it was written in.
+- Every device keeps a separate log for each conversation, so nothing about what you write in one
+  conversation shows in another — not even how much.
+- Members vouch for each other's logs, so somebody shown a different version of a conversation than
+  everyone else is found out.
 - Photos and clips are sealed under their own key, separately from the message carrying them.
 - Drafts are sealed on disk, under a key that never leaves the device, bound to the conversation
   they were written in.

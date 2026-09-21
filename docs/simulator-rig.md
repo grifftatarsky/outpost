@@ -193,7 +193,7 @@ xcrun simctl terminate <udid> com.microgpt.carpenter
 **Run the live CloudKit suite before a reset, never after.** `TEST_RUNNER_CARPENTER_CLOUDKIT_TESTS=1`
 publishes real feeds into the signed-in account and leaves them there, so an account cleared and then
 used for the live suite reads as occupied again — *This Apple Account already has a member* — and the
-rig cannot onboard on it. Found 2026-09-21, which cost a second reset.
+rig cannot onboard on it.
 
 Terminate the app as soon as the erase finishes. If it keeps running, the change of session state
 starts device sync again, which republishes a feed and makes the account occupied again.

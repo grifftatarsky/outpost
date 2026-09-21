@@ -319,9 +319,8 @@ is no way to put words in somebody's mouth.
 
 **What actually happens.** `Entry.signingPayload` is canonical bytes over
 `(author, device, seq, previous?, clock, wallTime, conversation, payload)`, signed with the **device's**
-Ed25519 key. `seq` and `previous` are counted within the conversation, not across the device: since
-2026-09-21 a device keeps one log per conversation, so no number on an entry says anything about its
-writer's other conversations. Two things about this are worth stating precisely because they are the questions a
+Ed25519 key. A device keeps one log per conversation, so `seq` and `previous` count within that
+conversation, and no number on an entry says anything about its writer's other conversations. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
 
 - **It signs the ciphertext, not the plaintext** — encrypt-then-sign. On its own that would leave a
@@ -405,27 +404,22 @@ if let alsoFor { fields.append(alsoFor) }
 
 **The rule that follows, and it binds anything added later:** in a canonical form that already has
 values in the wild, an optional field is **absent**, never marked-absent. A round-trip test proves
-nothing here, because it seals and opens with the same build — `SealBindingTests` pins the old
-layout by writing it out by hand, and that is the only kind of test that can catch this.
+nothing here, because it seals and opens with the same build — `SealBindingTests` and
+`ConversationIDTests` pin the layout by writing it out by hand, and that is the only kind of test that
+can catch this.
 
-**Closed 2026-09-15, and worth reading for how rather than that.** `FeedKey.canonicalBytes` is a bare
-concatenation with **no length prefixes**:
+**`FeedKey` is three fixed parts, concatenated.**
 
 ```swift
-var canonicalBytes: Data { author.rawValue + device.rawValue }
+var canonicalBytes: Data { author.rawValue + device.rawValue + conversation.canonicalBytes }
 ```
 
-This is currently unambiguous only because both are SHA256 digests and therefore always 32 bytes.
-But `ParticipantID(rawValue:)` and `DeviceID(rawValue:)` are **public initializers taking arbitrary
-`Data`**, so the fixed width is a convention rather than an invariant. Nothing in the shipping path
-constructs one at another length; nothing prevents it either. Since `FeedKey.canonicalBytes` feeds
-the vector clock's canonical bytes and the sealed payload's associated data, a variable-length
-`ParticipantID` would open an encoding-ambiguity gap. Closed by **validating on decode** rather than by changing the encoding. Decoding is where bytes this
-process did not write arrive, and it costs nothing — whereas length-prefixing `FeedKey` would
-invalidate every signature and every seal in existence for no additional guarantee, which is exactly
-the class of change that broke the whole app once before. `ParticipantID` and `DeviceID` now refuse
-anything other than 32 bytes at the boundary, the container shape is unchanged, and a test pins that
-shape so the encoding side cannot drift away from it silently (`IdentifierWidthTests`).
+`author` and `device` are SHA-256 digests, and `ParticipantID` and `DeviceID` refuse anything other
+than 32 bytes when they are decoded, which is where bytes this process did not write arrive. A
+conversation's bytes open with a tag that fixes their length — a room or a solo is the tag and a
+16-byte UUID, an Outpost is the tag and its owner's 32-byte id. So a feed key has exactly one
+reading. `FeedKey.canonicalBytes` feeds the vector clock's canonical bytes and the sealed payload's
+associated data, and `IdentifierWidthTests` holds all three parts, for every kind of conversation.
 
 ---
 
@@ -498,14 +492,15 @@ values. **What that leaks, stated plainly:**
   each one acknowledges, so the relay watches the fan-out drain.
 - That a set of packets share a recipient *within one day*.
 
-**This changed on 2026-09-20, and it is a trade rather than a pure win.** A round used to write one
-packet addressed to every peer, so a single record carried the whole of a member's circle for that
-day, correlated in one place. A round now writes one packet per audience — the people owed exactly
-the same entries — so no record names more people than one conversation holds. The relay sees less
-correlation and more structure: instead of one fan-out it sees several, and their sizes are the sizes
-of a member's rooms. The audiences are still only rotating tags, and two audiences cannot be told
-apart across a day boundary, but a member who talks in four rooms now writes four records where they
-wrote one.
+**The shape of a round is a trade, stated.** A round writes one packet per audience — the people
+owed exactly the same entries — so no record names more people than one conversation holds. The
+relay sees several fan-outs rather than one, and their sizes are the sizes of a member's rooms. The
+audiences are rotating tags, and two cannot be told apart across a day boundary, but a member who
+talks in four rooms writes four records in a round.
+
+Inside the sealed body, beside the entries, a packet can carry the positions it is withholding from
+its reader and the newest position of each log in its rooms — attestations. Neither is visible to
+the relay, and neither is sent to anybody who could not already read the entry it describes.
 
 It does not leak any participant identifier, any room identifier, any device identifier, or any
 plaintext. **Nothing is ever written with `record[key]` unsealed** — the rule in `CLAUDE.md` exists

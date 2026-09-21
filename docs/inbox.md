@@ -22,8 +22,7 @@ is in `CLAUDE.md` under the traps, and what happened is in git. Checked against 
 ## The suite
 
 **A fold costs about 390 milliseconds at three hundred entries across four rooms**, measured
-2026-09-21 — down from 1.4 seconds, because the sorter no longer follows dependencies between
-conversations. A sync round is still almost entirely that one fold.
+2026-09-21, and a sync round is almost entirely that one fold.
 
 ## Privacy, on the wire
 
