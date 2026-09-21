@@ -97,6 +97,12 @@ extension ForwardCompatibilityTests {
         state.unverifiable = [FeedGap(feed: feed, spans: [SequenceSpan(7, 7)])]
         state.elsewhere = [FeedGap(feed: feed, spans: [SequenceSpan(11, 11)])]
         state.ownHeads = [room: EntryLink(seq: 17, hash: entry)]
+        state.attestedHeads = [feed: [ParticipantID(rawValue: WideID.of([9])): EntryLink(seq: 19, hash: entry)]]
+        let contradiction = Contradiction(
+            feed: feed, seq: 19, held: entry, attested: EntryHash(rawValue: Data([4, 5, 6])),
+            by: ParticipantID(rawValue: WideID.of([9])))
+        state.contradictions = [RecordedContradiction(contradiction: contradiction, explainedByRestore: true)]
+        state.contradictionAsks = [contradiction]
         state.withheldTold = [
             ParticipantID(rawValue: WideID.of([9])): [
                 FeedGap(feed: feed, spans: [SequenceSpan(13, 13)])

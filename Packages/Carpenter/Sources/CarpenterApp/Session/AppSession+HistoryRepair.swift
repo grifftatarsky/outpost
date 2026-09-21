@@ -266,6 +266,24 @@ extension AppSession {
             }
         }
 
+        var asked: [Contradiction] = []
+        for contradiction in persisted.contradictionAsks {
+            guard let peer = byID[contradiction.by] else { continue }
+            let request = RepairRequest(
+                authors: [contradiction.feed.author], heads: VectorClock(),
+                gaps: [FeedGap(feed: contradiction.feed, spans: [SequenceSpan(contradiction.seq, contradiction.seq)])],
+                room: contradiction.feed.conversation)
+            do {
+                let sent = try await session.send([], to: [peer], at: clock.now, requests: [request])
+                if sent.packetsWritten > 0 { asked.append(contradiction) }
+                report = report.adding(sent)
+            } catch {
+                Diagnostics.sync.error(
+                    "attestation: could not ask a peer for their copy (\(String(describing: error), privacy: .public))")
+            }
+        }
+        if !asked.isEmpty { persisted.contradictionAsks.removeAll { asked.contains($0) } }
+
         var answered: Set<RepairDuty> = []
         for duty in persisted.repairDuties {
             if duty.request.reason == .recovery, isHoldingBack(duty.from) { continue }

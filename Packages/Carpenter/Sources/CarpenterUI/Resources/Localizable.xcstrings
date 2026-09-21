@@ -525,6 +525,9 @@
     "^[%lld room](inflect: true) together" : {
 
     },
+    "^[%lld time](inflect: true), another member said they hold a different message at a place in someone's history than this device does. A reinstalled device can cause it, and so can someone being shown two versions. Nobody is accused, and nothing here is changed." : {
+
+    },
     "^[In %lld room](inflect: true) with you" : {
 
     },
@@ -2950,6 +2953,9 @@
 
     },
     "Some readers are people you have not met" : {
+
+    },
+    "Somebody else saw a different message" : {
 
     },
     "Somebody invited, not yet in" : {

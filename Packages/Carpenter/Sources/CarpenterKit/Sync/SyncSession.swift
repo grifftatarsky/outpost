@@ -78,6 +78,7 @@ public struct SyncReport: Hashable, Sendable {
     public var repairRequests: [RepairRequest] = []
     public var repairAnswers: [RepairAnswer] = []
     public var withheld: [FeedGap] = []
+    public var attestations: [HeadAttestation] = []
     public var notifyWalls: [ParticipantID]?
     public var confirmations: [JoinConfirmedBody] = []
 
@@ -105,6 +106,7 @@ public struct SyncReport: Hashable, Sendable {
         merged.repairRequests.append(contentsOf: other.repairRequests)
         merged.repairAnswers.append(contentsOf: other.repairAnswers)
         merged.withheld.append(contentsOf: other.withheld)
+        merged.attestations.append(contentsOf: other.attestations)
         if let theirs = other.notifyWalls { merged.notifyWalls = theirs }
         merged.confirmations.append(contentsOf: other.confirmations)
         return merged
@@ -154,12 +156,14 @@ public struct SyncSession: Sendable {
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
         confirming: [JoinConfirmedBody] = [],
-        withholding: [FeedGap] = []
+        withholding: [FeedGap] = [],
+        attesting: [HeadAttestation] = []
     ) async throws -> SyncReport {
         var report = SyncReport()
         guard !peers.isEmpty,
             !entries.isEmpty || !granting.isEmpty || !requests.isEmpty || !answers.isEmpty
                 || notifyWalls != nil || !confirming.isEmpty || !withholding.isEmpty
+                || !attesting.isEmpty
         else { return report }
 
         let now = instant ?? clock.now
@@ -179,7 +183,8 @@ public struct SyncSession: Sendable {
                 identities: first ? identities : [],
                 notifyWalls: first ? notifyWalls : nil,
                 confirmations: first ? confirming : [],
-                withheld: first ? withholding : [])
+                withheld: first ? withholding : [],
+                attestations: first ? attesting : [])
             do {
                 try await mailbox.put(packet)
             } catch {
@@ -326,6 +331,7 @@ public struct SyncSession: Sendable {
             report.repairRequests.append(contentsOf: delivery.requests)
             report.repairAnswers.append(contentsOf: delivery.answers)
             report.withheld.append(contentsOf: delivery.withheld)
+            report.attestations.append(contentsOf: delivery.attestations)
             if let wishes = delivery.notifyWalls { report.notifyWalls = wishes }
             report.confirmations.append(contentsOf: delivery.confirmations)
 

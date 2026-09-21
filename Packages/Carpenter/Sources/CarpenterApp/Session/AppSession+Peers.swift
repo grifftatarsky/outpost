@@ -153,6 +153,71 @@ extension AppSession {
         return who
     }
 
+    func attestations(for leg: (peers: [Peer], entries: [Entry])) -> [HeadAttestation] {
+        guard !leg.entries.isEmpty else { return [] }
+        let everyone = peers()
+        let wanted = Set(leg.peers.map(\.them))
+        var found: [HeadAttestation] = []
+        for conversation in Set(leg.entries.map(\.conversation)) {
+            for (feed, atTop) in replica.tops(in: conversation) {
+                for top in atTop {
+                    let allowed = Set(mayReceive(top, among: everyone).map(\.them))
+                    guard wanted.isSubset(of: allowed) else { continue }
+                    found.append(HeadAttestation(feed: feed, head: top.link))
+                }
+            }
+        }
+        return found.sorted {
+            if $0.feed != $1.feed {
+                return $0.feed.canonicalBytes.lexicographicallyPrecedes($1.feed.canonicalBytes)
+            }
+            return $0.head.hash.rawValue.lexicographicallyPrecedes($1.head.hash.rawValue)
+        }
+    }
+
+    func weigh(_ attestations: [HeadAttestation], from observer: ParticipantID) {
+        for attestation in attestations {
+            let current = persisted.attestedHeads[attestation.feed]?[observer]?.seq ?? 0
+            guard attestation.head.seq >= current else { continue }
+            persisted.attestedHeads[attestation.feed, default: [:]][observer] = attestation.head
+        }
+        record(replica.contradictions(in: attestations, from: observer))
+    }
+
+    func weighArrivals(_ entries: [Entry]) {
+        var found: [Contradiction] = []
+        for entry in entries {
+            for (observer, link) in persisted.attestedHeads[entry.feedKey] ?? [:]
+            where link.seq == entry.seq && link.hash != entry.hash {
+                found.append(
+                    Contradiction(
+                        feed: entry.feedKey, seq: entry.seq, held: entry.hash, attested: link.hash,
+                        by: observer))
+            }
+        }
+        record(found)
+    }
+
+    private func record(_ found: [Contradiction]) {
+        for contradiction in found
+        where !persisted.contradictions.contains(where: { $0.contradiction == contradiction }) {
+            let explained = persisted.restoreAsks.contains { $0.from == contradiction.feed.author }
+            persisted.contradictions.append(
+                RecordedContradiction(contradiction: contradiction, explainedByRestore: explained))
+            if !persisted.contradictionAsks.contains(contradiction) {
+                persisted.contradictionAsks.append(contradiction)
+            }
+            Diagnostics.sync.notice(
+                """
+                attestation: a peer saw a different entry at a position this device holds\
+                \(explained ? "; that member recently restored" : "", privacy: .public)
+                """)
+        }
+        integrity.unexplainedContradictions = persisted.contradictions.filter {
+            !$0.explainedByRestore
+        }.count
+    }
+
     func withheldFromEveryone() -> [ParticipantID: [FeedGap]] {
         if let cachedWithheld { return cachedWithheld }
         let everyone = peers()

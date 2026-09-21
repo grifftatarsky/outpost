@@ -38,14 +38,17 @@ public enum SyncEngine {
         public let notifyWalls: [ParticipantID]?
         public let confirmations: [JoinConfirmedBody]
         public let withheld: [FeedGap]
+        public let attestations: [HeadAttestation]
 
         public init(
             entries: [Entry], certificates: [DeviceCertificate], revocations: [DeviceRevocation],
             grants: [EpochGrant], requests: [RepairRequest] = [], answers: [RepairAnswer] = [],
             identities: [IdentityPublicKeys] = [], notifyWalls: [ParticipantID]? = nil,
-            confirmations: [JoinConfirmedBody] = [], withheld: [FeedGap] = []
+            confirmations: [JoinConfirmedBody] = [], withheld: [FeedGap] = [],
+            attestations: [HeadAttestation] = []
         ) {
             self.withheld = withheld
+            self.attestations = attestations
             self.entries = entries
             self.identities = identities
             self.certificates = certificates
@@ -68,15 +71,17 @@ public enum SyncEngine {
         var notifyWalls: [ParticipantID]?
         var confirmations: [JoinConfirmedBody] = []
         var withheld: [FeedGap] = []
+        var attestations: [HeadAttestation] = []
 
         init(
             entries: [Entry] = [], certificates: [DeviceCertificate] = [],
             revocations: [DeviceRevocation] = [], requests: [RepairRequest] = [],
             answers: [RepairAnswer] = [], identities: [IdentityPublicKeys] = [],
             notifyWalls: [ParticipantID]? = nil, confirmations: [JoinConfirmedBody] = [],
-            withheld: [FeedGap] = []
+            withheld: [FeedGap] = [], attestations: [HeadAttestation] = []
         ) {
             self.withheld = withheld
+            self.attestations = attestations
             self.entries = entries
             self.identities = identities
             self.certificates = certificates
@@ -102,6 +107,8 @@ public enum SyncEngine {
             confirmations =
                 try container.decodeIfPresent([JoinConfirmedBody].self, forKey: .confirmations) ?? []
             withheld = try container.decodeIfPresent([FeedGap].self, forKey: .withheld) ?? []
+            attestations =
+                try container.decodeIfPresent([HeadAttestation].self, forKey: .attestations) ?? []
         }
     }
 
@@ -118,7 +125,8 @@ public enum SyncEngine {
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
         confirmations: [JoinConfirmedBody] = [],
-        withheld: [FeedGap] = []
+        withheld: [FeedGap] = [],
+        attestations: [HeadAttestation] = []
     ) throws -> SyncPacket {
         let contentKey = SymmetricKey(size: .bits256)
         let context = wrapContext(id: id)
@@ -126,7 +134,8 @@ public enum SyncEngine {
         let body = Body(
             entries: entries, certificates: certificates, revocations: revocations,
             requests: requests, answers: answers, identities: identities,
-            notifyWalls: notifyWalls, confirmations: confirmations, withheld: withheld)
+            notifyWalls: notifyWalls, confirmations: confirmations, withheld: withheld,
+            attestations: attestations)
         let sealed = try ChaChaPoly.seal(
             try JSONEncoder().encode(body), using: contentKey, authenticating: context)
 
@@ -172,7 +181,8 @@ public enum SyncEngine {
             entries: body.entries, certificates: body.certificates,
             revocations: body.revocations, grants: grants, requests: body.requests,
             answers: body.answers, identities: body.identities, notifyWalls: body.notifyWalls,
-            confirmations: body.confirmations, withheld: body.withheld)
+            confirmations: body.confirmations, withheld: body.withheld,
+            attestations: body.attestations)
     }
 
     private static func wrapContext(id: PacketID) -> Data {

@@ -25,6 +25,9 @@ struct PersistedState: Codable, Sendable {
     var unverifiable: [FeedGap] = []
     var elsewhere: [FeedGap] = []
     var ownHeads: [ConversationID: EntryLink] = [:]
+    var attestedHeads: [FeedKey: [ParticipantID: EntryLink]] = [:]
+    var contradictions: [RecordedContradiction] = []
+    var contradictionAsks: [Contradiction] = []
     var withheldTold: [ParticipantID: [FeedGap]] = [:]
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
@@ -110,6 +113,13 @@ struct PersistedState: Codable, Sendable {
         elsewhere = try container.decodeIfPresent([FeedGap].self, forKey: .elsewhere) ?? []
         ownHeads =
             try container.decodeIfPresent([ConversationID: EntryLink].self, forKey: .ownHeads) ?? [:]
+        attestedHeads =
+            try container.decodeIfPresent(
+                [FeedKey: [ParticipantID: EntryLink]].self, forKey: .attestedHeads) ?? [:]
+        contradictions =
+            try container.decodeIfPresent([RecordedContradiction].self, forKey: .contradictions) ?? []
+        contradictionAsks =
+            try container.decodeIfPresent([Contradiction].self, forKey: .contradictionAsks) ?? []
         withheldTold =
             try container.decodeIfPresent([ParticipantID: [FeedGap]].self, forKey: .withheldTold) ?? [:]
         spentEntries = try container.decodeIfPresent([SpentEntry].self, forKey: .spentEntries) ?? []

@@ -101,3 +101,8 @@ struct RestoreAskRecord: Hashable, Sendable, Codable {
         hold = try container.decodeIfPresent(RestoreHold.self, forKey: .hold) ?? .allowed
     }
 }
+
+struct RecordedContradiction: Hashable, Sendable, Codable {
+    var contradiction: Contradiction
+    var explainedByRestore: Bool
+}

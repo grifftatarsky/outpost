@@ -11,7 +11,7 @@ public struct FeedKey: Hashable, Sendable, Codable {
         self.conversation = conversation
     }
 
-    var canonicalBytes: Data { author.rawValue + device.rawValue + conversation.canonicalBytes }
+    public var canonicalBytes: Data { author.rawValue + device.rawValue + conversation.canonicalBytes }
 }
 
 public struct VectorClock: Hashable, Sendable, Codable {

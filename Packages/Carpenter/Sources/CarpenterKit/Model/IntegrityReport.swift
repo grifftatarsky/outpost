@@ -27,6 +27,8 @@ public struct IntegrityReport: Hashable, Sendable {
 
     public var writesFailed: Int = 0
 
+    public var unexplainedContradictions: Int = 0
+
     public init() {}
 
     public var isClean: Bool {
@@ -34,7 +36,7 @@ public struct IntegrityReport: Hashable, Sendable {
             && unverifiableOnDisk == 0 && rejectedFromPeers == 0
             && feedsFromOtherMembers == 0 && writesFailed == 0
             && unverifiableFromOwnDevices == 0 && certificatesRefused == 0
-            && unreadableSiblingFeeds == 0
+            && unreadableSiblingFeeds == 0 && unexplainedContradictions == 0
     }
 
     public var hasDiverged: Bool { !forks.isEmpty }

@@ -92,7 +92,8 @@ extension AppSession {
                         identities: knownIdentities(of: needed),
                         confirming: owedConfirmations.filter { owningIDs.contains($0.to) }
                             .map(\.body),
-                        withholding: saying)
+                        withholding: saying,
+                        attesting: attestations(for: leg))
                     report = report.adding(legReport)
                 }
 
@@ -139,6 +140,8 @@ extension AppSession {
             }
             let (received, settled) = SyncSession.integrate(collected, into: &replica)
             adoptOwnHeads(from: received.integrated)
+            weighArrivals(received.integrated)
+            weigh(received.attestations, from: peer.them)
             report = report.adding(received)
 
             for request in received.repairRequests

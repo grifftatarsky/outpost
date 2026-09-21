@@ -22,6 +22,7 @@ public struct IntegrityView: View {
                     if report.lastLoad != .complete || report.discardedBytes > 0 { storage }
                     if report.unverifiableOnDisk > 0 { unverifiable }
                     if report.rejectedFromPeers > 0 { rejected }
+                    if report.unexplainedContradictions > 0 { contradicted }
                     if report.writesFailed > 0 { unwritten }
                     if report.feedsFromOtherMembers > 0 { foreignFeeds }
                 }
@@ -133,6 +134,26 @@ public struct IntegrityView: View {
             )
             .font(CarpenterFont.footnote)
             .foregroundStyle(palette.secondaryText)
+        }
+    }
+
+    private var contradicted: some View {
+        card {
+            Label {
+                Text("Somebody else saw a different message", bundle: .module)
+                    .font(CarpenterFont.rowTitle)
+            } icon: {
+                Image(systemName: "exclamationmark.bubble")
+            }
+            .foregroundStyle(palette.primaryText)
+
+            Text(
+                "^[\(report.unexplainedContradictions) time](inflect: true), another member said they hold a different message at a place in someone's history than this device does. A reinstalled device can cause it, and so can someone being shown two versions. Nobody is accused, and nothing here is changed.",
+                bundle: .module
+            )
+            .font(CarpenterFont.footnote)
+            .foregroundStyle(palette.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
