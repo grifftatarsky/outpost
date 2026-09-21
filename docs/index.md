@@ -68,6 +68,9 @@ First-class support for the iPhone Duo is an upcoming roadmap item.
   wrapped to that secret.
 - Recipients are addressed by a tag that rotates, so the same person is never a fixed name sitting
   in iCloud.
+- A device sends only what its reader is allowed to read. Nobody is handed another conversation's
+  messages, even sealed, and nobody is handed a copy of who you talk to. An entry's envelope names
+  only the conversation it was written in.
 - Photos and clips are sealed under their own key, separately from the message carrying them.
 - Drafts are sealed on disk, under a key that never leaves the device, bound to the conversation
   they were written in.
