@@ -33,19 +33,6 @@ outside the seal. So somebody reading their own database can group an Outpost's 
 author and count how many strangers read it. They cannot learn who. Sealing the author does not help;
 see [Decisions](archive/decisions-2026.md#identity-stays-in-the-envelope-and-the-seal-is-the-wrong-place-for-it).
 
-**An Outpost's room ID is half its owner's identity.** `RoomID.outpost(of:)` is the first 16 bytes of
-the owner's `ParticipantID`, in the clear on every entry. It has to stay derivable so two devices
-never disagree, which is what stops it being blinded.
-
-**A friend of a friend stores and forwards sealed entries from a room they are not in.** Carol, who
-shares a room with Bob and has never met Alice, ends up holding Alice's entries from a room Carol is
-not in. She cannot read them; she can see that the room exists, who writes in it and how often.
-Narrowing it means deciding per recipient what to offer, and two designs for that were declined on
-2026-09-07 because both lost messages: a device tracks what it is missing per feed, and a feed
-interleaves every room its writer is in, so a withheld entry becomes a hole nobody can fill or tell
-from a real loss. `IntegrityReport` counts it as *Carried for other people* on the History check.
-Not read on the rig yet.
-
 **A clip plays from a readable file for the length of a launch.** `AVPlayer` reads files, so an opened
 clip sits in the temporary directory, under complete file protection, until the next launch clears
 it. A resource loader that decrypts ranges on demand would end it.

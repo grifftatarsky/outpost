@@ -115,7 +115,7 @@ thing I did not want to see is not waiting on my iPad.
 <summary>Record — the bug this turned up, what it unblocked, and the known cost</summary>
 
 Hiding is stored as a set of entry hashes rather than written as an entry, because an entry would
-reach every peer and so announce that you had hidden something. The way back is in the ordinary
+reach everybody else in that conversation and so announce that you had hidden something. The way back is in the ordinary
 settings list, showing a count and not a list, because naming what was hidden would undo the hiding
 for anyone reading over a shoulder.
 

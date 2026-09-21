@@ -394,8 +394,8 @@ reached a reader and the bytes came back identical (`LiveOutpostTests`).
 *This record describes the first version. Per-person access, several photos or clips on one post,
 reporting a post and withdrawing one were all built afterwards.*
 
-A post's photo is a `media` entry on the wall — `room == nil`, sealed under the member's own wall
-chain — exactly as a message's is in a room, through the one `upload(_:to:through:)` both now share:
+A post's photo is a `media` entry on the member's own Outpost — `.outpost(you)`, sealed under that
+Outpost's chain — exactly as a message's is in a room, through the one `upload(_:to:through:)` both now share:
 upload first, entry second, the sender's own copy kept sealed, nothing written if the upload fails.
 The fold gives `OutpostPost` a `media` and makes the caption its words, as it does for `Message`.
 Collecting and sweeping attachments used to assume an entry had a room and silently skipped a wall
