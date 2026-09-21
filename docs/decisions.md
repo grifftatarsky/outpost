@@ -441,6 +441,49 @@ a peer who holds nothing of what was asked is a round trip that ends in *nobody 
 asks peers on its own when a hole appears, which is a product question about how much traffic a
 quiet room should make.
 
+### A device sends only what the reader is allowed to read
+
+**RULED 2026-09-20 by Griff**, after the opposite was found in the build: "I think the ideal design
+is that a user provides only what another user is allowed to see. Ideally, they cannot retrieve
+something they will not be allowed to read."
+
+**What was wrong.** The round collected every entry this device had not yet sent — across every room
+and every solo — sealed them into one body, and wrapped that body's key for every peer. The
+addressing was per recipient and correct; the contents were global. So a member of any one room
+received every entry their peers wrote everywhere else, sealed, and kept it on disk forever. History
+repair leaked the same history a second way: `Replica.fill` served a named author's log *whole*,
+ignoring the room the request named, and the answer never consulted the asker's history floor, so a
+member invited from today was sent the entire backlog they had just been refused. Measured on
+2026-09-20 before any change: a three-member fixture put a second room's entries on a device that was
+never in it, and a forward-only joiner held nine sealed entries from before they were let in.
+
+**What it costs.** A member in four rooms writes up to four packets a round where they wrote one. The
+writes are to the member's own private database, they are small, and `acknowledge` deletes each packet
+once every addressee has it. `WriteBudget.provisionalDailyCeiling` is a number this repo invented and
+is not a reason to widen an audience.
+
+**How it works now.** `AppSession.mayReceive` answers, for one entry, which peers may have it: a room's
+members and its founder, a joiner whose invitation shares history, a former member only up to the
+epoch their removal or departure was sealed at, a wall post only to that wall's readers, and a closed
+comment only to the post's owner. `addressed(_:)` groups peers by identical audience and the round
+writes one packet per group. A device that cannot yet read a room — a joiner holding only the epoch
+they were let in at — addresses to the person who let them in, and nobody else.
+
+**Saying what will not be sent.** A member's log is one chain per device across every room, so a peer's
+clock names positions they will never be given, and gap detection reads those as holes. A sender
+therefore states the positions it is withholding in the same packet (`SyncEngine.Body.withheld`), and
+the reader records them in `PersistedState.elsewhere` and stops asking. Repair answers carry the same
+list as `RepairAnswer.elsewhere`. Without it both fixes would have left every member asking, every
+hour, for history nobody will ever hand over.
+
+**What is still open.** Every entry carries its writer's whole frontier in its signed clock, so the
+*existence and count* of a writer's other conversations is still legible to anyone holding one of
+their entries. That is the clock entry above ("Taking it out of the entry is a re-architecture"), unchanged by this work, and it is the
+remaining surface.
+
+`RepairScopeTests` holds the three cases: no entry from a room the reader is not in, nothing below a
+joiner's floor, and no permanent phantom hole afterwards.
+
 ### A grant carries every link the granter holds
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
