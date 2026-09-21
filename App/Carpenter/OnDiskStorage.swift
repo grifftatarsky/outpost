@@ -17,6 +17,7 @@ extension SessionStorage {
     static func onDisk() -> SessionStorage {
         let container = Bundle.main.bundleIdentifier ?? "app"
         let directory = StorageLocation.directory(container: container)
+        StorageLocation.retireOlderFormats(container: container)
         Diagnostics.sync.notice(
             "storage: \(directory.path, privacy: .public) appGroup=\(AppGroup.available, privacy: .public)")
 

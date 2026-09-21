@@ -54,7 +54,9 @@ public actor FileLogStore: LogStore {
         self.fileManager = fileManager
     }
 
-    public static func url(inDirectory directory: URL, named name: String = "log.carpenter") -> URL {
+    public static func url(
+        inDirectory directory: URL, named name: String = StorageLocation.logName
+    ) -> URL {
         directory.appending(path: name)
     }
 

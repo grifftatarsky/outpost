@@ -267,3 +267,46 @@ struct DocumentStoreTests {
         try await store.clear()
     }
 }
+
+@Suite("A storage format this build cannot read is retired")
+struct FormatRetirementTests {
+    private func directory() throws -> URL {
+        let made = URL.temporaryDirectory.appending(path: "carpenter-retire-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: made, withIntermediateDirectories: true)
+        return made
+    }
+
+    @Test("The current names carry the format generation")
+    func namesCarryTheGeneration() {
+        #expect(StorageLocation.logName.contains("\(StorageLocation.formatGeneration)"))
+        #expect(StorageLocation.stateName.contains("\(StorageLocation.formatGeneration)"))
+        #expect(!StorageLocation.retiredNames.contains(StorageLocation.logName))
+        #expect(!StorageLocation.retiredNames.contains(StorageLocation.stateName))
+    }
+
+    @Test("Older files are removed, and the current ones are left alone")
+    func olderFilesGo() throws {
+        let place = try directory()
+        defer { try? FileManager.default.removeItem(at: place) }
+        let manager = FileManager.default
+        for name in StorageLocation.retiredNames + [StorageLocation.logName, StorageLocation.stateName] {
+            manager.createFile(atPath: place.appending(path: name).path, contents: Data([1, 2, 3]))
+        }
+
+        StorageLocation.retire(in: place, using: manager)
+
+        for name in StorageLocation.retiredNames {
+            #expect(!manager.fileExists(atPath: place.appending(path: name).path), "\(name) survived")
+        }
+        #expect(manager.fileExists(atPath: place.appending(path: StorageLocation.logName).path))
+        #expect(manager.fileExists(atPath: place.appending(path: StorageLocation.stateName).path))
+    }
+
+    @Test("Retiring an empty directory does nothing")
+    func nothingToRetire() throws {
+        let place = try directory()
+        defer { try? FileManager.default.removeItem(at: place) }
+        StorageLocation.retire(in: place, using: .default)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: place.path).isEmpty)
+    }
+}
