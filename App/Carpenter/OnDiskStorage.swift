@@ -23,8 +23,9 @@ extension SessionStorage {
 
         return SessionStorage(
             keychain: SystemKeychainStore(service: container, accessGroup: SharedKeychain.group),
-            log: FileLogStore(url: directory.appending(path: StorageLocation.logName)),
-            documents: FileDocumentStore(url: directory.appending(path: StorageLocation.stateName)),
+            log: FileLogStore(url: directory.appending(path: StorageLocation.logName), backups: .excluded),
+            documents: FileDocumentStore(
+                url: directory.appending(path: StorageLocation.stateName), backups: .excluded),
             media: FileMediaStore(directory: FileMediaStore.url(inDirectory: directory))
         )
     }

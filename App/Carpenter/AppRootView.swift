@@ -145,7 +145,7 @@ struct AppRootView: View {
         return CloudKitEntrySync(
             container: .default(),
             device: DeviceID(rawValue: Data()),
-            stateStore: FileDocumentStore(url: Self.registrationProbeURL))
+            stateStore: FileDocumentStore(url: Self.registrationProbeURL, backups: .excluded))
     }
 
     var media: any MediaMailbox { shell.media }

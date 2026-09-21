@@ -8,15 +8,18 @@ public protocol DocumentStore: Sendable {
 
 public actor FileDocumentStore: DocumentStore {
     private let url: URL
+    private let backups: Backups
     private let fileManager: FileManager
 
-    public init(url: URL, fileManager: FileManager = .default) {
+    public init(url: URL, backups: Backups = .included, fileManager: FileManager = .default) {
         self.url = url
+        self.backups = backups
         self.fileManager = fileManager
     }
 
     public func load<Value: Decodable & Sendable>(_ type: Value.Type) throws -> Value? {
         guard fileManager.fileExists(atPath: url.path) else { return nil }
+        backups.apply(to: url)
         return try JSONDecoder().decode(Value.self, from: Data(contentsOf: url))
     }
 
@@ -35,6 +38,7 @@ public actor FileDocumentStore: DocumentStore {
         try CrossProcessLock(forDirectory: url.deletingLastPathComponent()).whileLocked {
             _ = try fileManager.replaceItemAt(url, withItemAt: scratch)
         }
+        backups.apply(to: url)
     }
 
     public func clear() throws {

@@ -32,7 +32,8 @@ extension AppRootView {
         let container = Bundle.main.bundleIdentifier ?? "app"
         return FileDocumentStore(
             url: StorageLocation.directory(container: container)
-                .appending(path: StorageLocation.mailboxDirectoryName))
+                .appending(path: StorageLocation.mailboxDirectoryName),
+            backups: .excluded)
     }
 
     static var registrationProbeURL: URL {
@@ -73,7 +74,7 @@ extension AppRootView {
             let engine = CloudKitEntrySync(
                 container: .default(),
                 device: session.enrolment?.device.id ?? DeviceID(rawValue: Data()),
-                stateStore: FileDocumentStore(url: Self.engineStateURL))
+                stateStore: FileDocumentStore(url: Self.engineStateURL, backups: .excluded))
             try await engine.eraseSharedState()
         }
         deviceSync = nil

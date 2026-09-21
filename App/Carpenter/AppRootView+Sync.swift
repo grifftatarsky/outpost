@@ -36,7 +36,8 @@ extension AppRootView {
             stateStore: FileDocumentStore(
                 url: URL.applicationSupportDirectory
                     .appending(path: Bundle.main.bundleIdentifier ?? "app", directoryHint: .isDirectory)
-                    .appending(path: "sync-engine.json")))
+                    .appending(path: "sync-engine.json"),
+                backups: .excluded))
 
         deviceSync = engine
         session.syncDevices(through: engine)

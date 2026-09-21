@@ -8,6 +8,24 @@ public enum AppGroup {
     }
 }
 
+public enum Backups: Sendable {
+    case included
+    case excluded
+
+    func apply(to url: URL) {
+        guard self == .excluded else { return }
+        var target = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        do {
+            try target.setResourceValues(values)
+        } catch {
+            Diagnostics.sync.error(
+                "storage: could not keep \(url.lastPathComponent, privacy: .public) out of backups (\(String(describing: error), privacy: .public))")
+        }
+    }
+}
+
 public enum StorageLocation {
     public static let formatGeneration = 2
     public static let logName = "log-\(formatGeneration).carpenter"

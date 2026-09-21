@@ -41,16 +41,19 @@ public actor FileLogStore: LogStore {
     private let fileManager: FileManager
 
     private let maximumRecordBytes: Int
+    private let backups: Backups
 
     public static let defaultMaximumRecordBytes = 8 * 1024 * 1024
 
     public init(
         url: URL,
         maximumRecordBytes: Int = defaultMaximumRecordBytes,
+        backups: Backups = .included,
         fileManager: FileManager = .default
     ) {
         self.url = url
         self.maximumRecordBytes = maximumRecordBytes
+        self.backups = backups
         self.fileManager = fileManager
     }
 
@@ -83,6 +86,7 @@ public actor FileLogStore: LogStore {
             defer { try? handle.close() }
             try handle.seekToEnd()
             try handle.write(contentsOf: buffer)
+            backups.apply(to: url)
         }
     }
 
@@ -90,6 +94,7 @@ public actor FileLogStore: LogStore {
         guard fileManager.fileExists(atPath: url.path) else {
             return LoadedLog(entries: [], discardedTrailingBytes: 0, termination: .complete)
         }
+        backups.apply(to: url)
 
         let data = try Data(contentsOf: url)
         let decoder = JSONDecoder()
@@ -162,6 +167,7 @@ public actor FileLogStore: LogStore {
                     attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
             else { throw CocoaError(.fileWriteUnknown) }
             _ = try fileManager.replaceItemAt(url, withItemAt: scratch)
+            backups.apply(to: url)
             return removed
         }
     }

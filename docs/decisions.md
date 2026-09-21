@@ -122,15 +122,21 @@ from iCloud.
 this device's keychain, stored so that it never moves to another device; its certificate is signed by
 the identity beside it; and no revocation names it. If any fails, it enrolls as a new device.
 
-**PROPOSED 2026-09-21:** photos stay in backups. Each is sealed, and a sender's upload is deleted once
-every recipient has collected it, so a device that loses its copy has nowhere to fetch it again.
+**PROPOSED 2026-09-21:** "state" is everything that says what the log holds or where it came from: the
+state file, both sync engines' saved state, and the learned list of other members' mailboxes. Left in
+backups, the engines' state would tell a device with an empty log that it had already fetched
+everything. Photos stay in backups: each is sealed, and a sender's upload is deleted once every
+recipient has collected it, so a device that loses its copy has nowhere to fetch it again. The
+pictures a member chose for themselves or for somebody else stay too, because nothing could bring
+them back. `BackupExclusionTests`; on a simulator on 2026-09-21 the log, the state file, the engine's
+state and the mailbox list each carried the exclusion after one launch.
 
 {: .warning }
-> **Not built.** A reinstalled device starts every conversation again at position 1, and never reads
-> its own record: it writes an empty one over it instead. It restores none of its room keys, because
-> the list of which it holds is in the state file. Its first full round deletes every upload of the
-> member's that its empty log does not name. And its device key is stored so that an encrypted backup
-> carries it to another device.
+> **Not built.** A reinstalled or restored device starts every conversation again at position 1, and
+> never reads its own record: it writes an empty one over it instead. It restores none of its room
+> keys, because the list of which it holds is in the state file. Its first full round deletes every
+> upload of the member's that its empty log does not name. And its device key is stored so that an
+> encrypted backup carries it to another device.
 
 ### A key turn a removal owes is found in the log
 

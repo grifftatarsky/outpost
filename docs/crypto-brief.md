@@ -833,7 +833,14 @@ conversation's draft with ChaChaPoly under `draft.sealing`, with the room's cano
 random rather than derived: deriving it from an identity seed would be the pattern the sibling feed
 section says should not spread. A copy of the state file without this device's keychain holds
 ciphertext. The key is not synchronized through iCloud Keychain, so a draft does not follow the member
-to their other devices. What a device backup carries of it has not been measured.
+to their other devices.
+
+**The log and the state stay out of backups.** iCloud Backup is end-to-end only with Advanced Data
+Protection on, and neither file is sealed on disk: the log holds every envelope — who wrote, in which
+conversation, when — and the state file holds the member's name, their conversations and the people
+they have blocked or checked. Both are marked to be left out of every backup, with the two sync
+engines' saved state and the list of other members' mailboxes, each time they are read or written
+(`BackupExclusionTests`). Photos stay in backups, because they are sealed.
 
 **Two consequences, named.** `afterFirstUnlock` means that on a phone which has been unlocked once
 since boot, the keys are available to the operating system even while the screen is locked. That is
