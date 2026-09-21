@@ -28,7 +28,7 @@ struct ReadReceiptTests {
 
     private func pair(
         _ clock: TestClock, _ mailbox: InMemoryMailbox
-    ) async throws -> (alice: AppSession, bob: AppSession, room: RoomID) {
+    ) async throws -> (alice: AppSession, bob: AppSession, room: ConversationID) {
         let alice = session(clock)
         let bob = session(clock)
         await alice.load()
@@ -46,11 +46,11 @@ struct ReadReceiptTests {
         return (alice, bob, room)
     }
 
-    private func state(_ session: AppSession, _ room: RoomID, _ body: String) -> DeliveryState? {
+    private func state(_ session: AppSession, _ room: ConversationID, _ body: String) -> DeliveryState? {
         session.messages(in: room).first { $0.body == body }?.delivery
     }
 
-    private func newest(_ session: AppSession, _ room: RoomID) -> MessageID {
+    private func newest(_ session: AppSession, _ room: ConversationID) -> MessageID {
         session.messages(in: room).last { !$0.isMine }?.id
             ?? MessageID(entry: EntryHash(rawValue: Data()))
     }

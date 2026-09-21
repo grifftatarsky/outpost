@@ -58,7 +58,7 @@ struct PastedCodeTests {
         let inviter = identity()
         let joiner = keys()
         let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner, by: inviter, at: Date(timeIntervalSince1970: 0))
+            joining: ConversationID.room(UUID()), joinerKeys: joiner, by: inviter, at: Date(timeIntervalSince1970: 0))
         let invite = Invite(attestation: attestation, mailbox: nil)
 
         let shared = try InviteLink.url(inviting: invite, scheme: scheme).absoluteString

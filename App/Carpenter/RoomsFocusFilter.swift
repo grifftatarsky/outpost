@@ -13,7 +13,7 @@ struct RoomEntity: AppEntity {
     }
 
     init(_ entry: FocusFilterStore.RoomEntry) {
-        id = entry.id.rawValue.uuidString
+        id = entry.id.stableName
         name = entry.name
     }
 }
@@ -52,7 +52,7 @@ struct RoomsFocusFilter: SetFocusFilterIntent {
 
     func perform() async throws -> some IntentResult {
         let allowed = Set(
-            (rooms ?? []).compactMap { UUID(uuidString: $0.id).map(RoomID.init(rawValue:)) })
+            (rooms ?? []).compactMap { ConversationID(stableName: $0.id) })
         FocusFilterStore.shared.write(FocusFilter(rooms: allowed, showsPreviews: showsPreviews))
         return .result()
     }

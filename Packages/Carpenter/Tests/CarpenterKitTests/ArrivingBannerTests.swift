@@ -5,11 +5,11 @@ import Testing
 
 @Suite("What the extension decides a banner is")
 struct ArrivingBannerTests {
-    private let room = RoomID()
-    private let other = RoomID()
+    private let room = ConversationID.room(UUID())
+    private let other = ConversationID.room(UUID())
     private let alice = ParticipantID(rawValue: Data([0xA1]))
 
-    private func message(_ seed: UInt8 = 1, in room: RoomID? = nil) -> IncomingMessage {
+    private func message(_ seed: UInt8 = 1, in room: ConversationID? = nil) -> IncomingMessage {
         IncomingMessage(
             id: MessageID(entry: EntryHash(rawValue: Data(repeating: seed, count: 32))),
             room: room ?? self.room, roomName: "Hangar 7", author: "Alice",

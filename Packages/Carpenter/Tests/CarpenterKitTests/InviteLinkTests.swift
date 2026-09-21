@@ -18,7 +18,7 @@ struct InviteLinkTests {
         let joiner = try Identity.generate()
         return Invite(
             attestation: try TestInvite.issue(
-                joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter,
+                joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter,
                 at: TestSession.now),
             mailbox: URL(string: "https://www.icloud.com/share/example"))
     }

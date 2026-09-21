@@ -123,7 +123,7 @@ public struct JoinPromptView: View {
     #Preview("Brought into a room") {
         JoinPromptView(
             greeting: RoomGreeting(
-                id: RoomID(),
+                id: .room(UUID()),
                 name: "Hangar 7",
                 invitedBy: Member(id: ParticipantID(rawValue: Data([1])), displayName: "Ada"),
                 members: [

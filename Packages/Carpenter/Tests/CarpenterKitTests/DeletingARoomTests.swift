@@ -26,8 +26,8 @@ struct DeletingARoomTests {
         let alice: AppSession
         let bob: AppSession
         let mailbox: InMemoryMailbox
-        let hangar: RoomID
-        let kitchen: RoomID
+        let hangar: ConversationID
+        let kitchen: ConversationID
         let bobID: ParticipantID
         let keychain: InMemoryKeychainStore
         let directory: URL
@@ -282,8 +282,8 @@ struct DeletingARoomTests {
     @Test("An Outpost is not a conversation that can be deleted")
     func outpostsAreNotDeletable() async throws {
         let rig = try await rig()
-        #expect(rig.bob.deletion(of: RoomID.outpost(of: rig.bobID)) == .stillIn)
-        #expect(rig.bob.deletion(of: RoomID.outpost(of: try #require(rig.alice.enrolment?.identity.id))) == .stillIn)
+        #expect(rig.bob.deletion(of: ConversationID.outpost(of: rig.bobID)) == .stillIn)
+        #expect(rig.bob.deletion(of: ConversationID.outpost(of: try #require(rig.alice.enrolment?.identity.id))) == .stillIn)
     }
 
     @Test("Deleting on one device deletes on the member's other device, and the key does not come back")

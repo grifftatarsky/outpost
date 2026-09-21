@@ -71,7 +71,7 @@ extension AppSession {
             return everyone.filter { readers.contains($0.them) }
         }
 
-        if room == RoomID.outpost(of: me) {
+        if room == ConversationID.outpost(of: me) {
             let readers = outpostReaders()
             var named: ParticipantID?
             if let opened = entryOpener()(entry), opened.type == .outpostAccess {
@@ -81,7 +81,7 @@ extension AppSession {
                 readers.contains($0.them) || $0.them == entry.author || $0.them == named
             }
         }
-        if let owner = everyone.first(where: { room == RoomID.outpost(of: $0.them) }) {
+        if let owner = everyone.first(where: { room == ConversationID.outpost(of: $0.them) }) {
             return [owner]
         }
 
@@ -269,11 +269,11 @@ extension AppSession {
     }
 
     private static func grantReceipt(
-        room: RoomID, epoch: EpochNumber, target: ParticipantID, floor: EpochNumber?
+        room: ConversationID, epoch: EpochNumber, target: ParticipantID, floor: EpochNumber?
     ) -> String {
         let since = floor.map { String($0.rawValue) } ?? "all"
         return
-            "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(target.rawValue.base64EncodedString())|\(since)"
+            "\(room.stableName)|\(epoch.rawValue)|\(target.rawValue.base64EncodedString())|\(since)"
     }
 
     func adopt(_ grant: EpochGrant, from peer: Peer) async throws {

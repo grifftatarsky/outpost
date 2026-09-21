@@ -14,7 +14,7 @@ struct JoinConfirmationWireTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: now)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: now)
         return (attestation, inviter, joiner)
     }
 
@@ -79,7 +79,7 @@ struct JoinConfirmationWireTests {
 
         let inviter = Identity.generate()
         let second = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: now)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: now)
 
         #expect(throws: MembershipError.self) { try body.verify(confirming: second) }
     }

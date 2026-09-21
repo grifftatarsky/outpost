@@ -13,13 +13,13 @@ struct ProjectionCostTests {
     }
 
     private func populated(rooms roomCount: Int, messagesEach: Int) async throws -> (
-        AppSession, [RoomID]
+        AppSession, [ConversationID]
     ) {
         let alice = session()
         await alice.load()
         try await alice.createIdentity(displayName: "Alice")
 
-        var rooms: [RoomID] = []
+        var rooms: [ConversationID] = []
         for index in 0..<roomCount {
             let room = try await alice.createRoom(named: "Room \(index)")
             rooms.append(room)

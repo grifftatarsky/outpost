@@ -50,8 +50,8 @@ struct ConcurrentStorageTests {
     func removalDuringAppendsLosesNothing() async throws {
         let directory = scratch()
         let url = directory.appending(path: "log.carpenter")
-        let deleted = RoomID()
-        let kept = RoomID()
+        let deleted = ConversationID.room(UUID())
+        let kept = ConversationID.room(UUID())
 
         var seed = Author()
         try await FileLogStore(url: url).append(

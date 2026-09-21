@@ -39,7 +39,7 @@ extension RootView {
                 NavigationStack(path: roomPath) {
                     roomsList(isSplitInbox ? .direct : .everything)
                         .refreshable { await onSync() }
-                        .navigationDestination(for: RoomID.self) { id in
+                        .navigationDestination(for: ConversationID.self) { id in
                             roomDestination(id)
                         }
                         .navigationDestination(for: PersonRoute.self) { route in
@@ -64,7 +64,7 @@ extension RootView {
                     NavigationStack(path: roomPath) {
                         roomsList(.groups)
                             .refreshable { await onSync() }
-                            .navigationDestination(for: RoomID.self) { id in
+                            .navigationDestination(for: ConversationID.self) { id in
                                 roomDestination(id)
                             }
                             .navigationDestination(for: PersonRoute.self) { route in

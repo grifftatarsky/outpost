@@ -1,9 +1,10 @@
 import CarpenterKit
+import Foundation
 import Testing
 
 @Suite("Message notification copy")
 struct MessageNotificationTests {
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     @Test("A full message names the room, the author and the text")
     func fullMessage() {
@@ -38,7 +39,7 @@ struct MessageNotificationTests {
 
     @Test("Each room gets its own thread, stably")
     func threadsArePerRoom() {
-        let other = RoomID()
+        let other = ConversationID.room(UUID())
         #expect(MessageNotification.thread(for: room) != MessageNotification.thread(for: other))
         #expect(MessageNotification.thread(for: room) == MessageNotification.thread(for: room))
         #expect(!MessageNotification.thread(for: room).isEmpty)

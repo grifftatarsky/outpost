@@ -26,9 +26,9 @@ public struct ArrivingBanner: Hashable, Sendable {
     public let copy: NotificationCopy
     public let sender: BannerSender?
     public let quietly: Bool
-    public let room: RoomID?
+    public let room: ConversationID?
 
-    public init(copy: NotificationCopy, sender: BannerSender?, quietly: Bool, room: RoomID? = nil) {
+    public init(copy: NotificationCopy, sender: BannerSender?, quietly: Bool, room: ConversationID? = nil) {
         self.copy = copy
         self.sender = sender
         self.quietly = quietly
@@ -52,16 +52,16 @@ public enum WhatArrived {
     public struct Surroundings: Sendable {
         public let filter: FocusFilter
         public let defaultLevel: NotificationLevel
-        public let levelForRoom: @Sendable (RoomID) -> NotificationLevel
-        public let isDirect: @Sendable (RoomID) -> Bool
-        public let authorOfMessage: @Sendable (RoomID, MessageID) -> Member?
+        public let levelForRoom: @Sendable (ConversationID) -> NotificationLevel
+        public let isDirect: @Sendable (ConversationID) -> Bool
+        public let authorOfMessage: @Sendable (ConversationID, MessageID) -> Member?
 
         public init(
             filter: FocusFilter,
             defaultLevel: NotificationLevel,
-            levelForRoom: @escaping @Sendable (RoomID) -> NotificationLevel,
-            isDirect: @escaping @Sendable (RoomID) -> Bool = { _ in false },
-            authorOfMessage: @escaping @Sendable (RoomID, MessageID) -> Member? = { _, _ in nil }
+            levelForRoom: @escaping @Sendable (ConversationID) -> NotificationLevel,
+            isDirect: @escaping @Sendable (ConversationID) -> Bool = { _ in false },
+            authorOfMessage: @escaping @Sendable (ConversationID, MessageID) -> Member? = { _, _ in nil }
         ) {
             self.filter = filter
             self.defaultLevel = defaultLevel

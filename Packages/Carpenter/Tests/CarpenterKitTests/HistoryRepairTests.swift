@@ -55,7 +55,7 @@ struct FeedGapTests {
     @Test("A wall repair answers with what people wrote under the posts")
     func wallRepairIncludesTheThread() throws {
         var bob = Author()
-        let wall = RoomID.outpost(of: bob.identity.id)
+        let wall = ConversationID.outpost(of: bob.identity.id)
         var carol = Author(chain: bob.chain)
 
         var held = Replica()
@@ -144,7 +144,7 @@ struct RepairWireTests {
 @Suite("Repairing a history with holes in it", .serialized)
 struct HistoryRepairTests {
     private func joined() async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
@@ -153,7 +153,7 @@ struct HistoryRepairTests {
     }
 
     private func join(alice: AppSession, bob: AppSession, through mailbox: InMemoryMailbox)
-        async throws -> (alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox)
+        async throws -> (alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox)
     {
         await alice.load()
         await bob.load()
@@ -172,7 +172,7 @@ struct HistoryRepairTests {
     }
 
     private func withAHole() async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let (alice, bob, room, mailbox) = try await joined()
         for word in ["first", "second", "third"] {
@@ -532,7 +532,7 @@ struct FinalRefusalTests {
 @Suite("Repairing without being asked", .serialized)
 struct AutomaticRepairTests {
     private func joined(_ clock: TestClock) async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
         let alice = AppSession(storage: TestSession.storage(), clock: clock)
@@ -554,7 +554,7 @@ struct AutomaticRepairTests {
     }
 
     private func withAHole(_ clock: TestClock) async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let (alice, bob, room, mailbox) = try await joined(clock)
         for word in ["first", "second", "third"] {

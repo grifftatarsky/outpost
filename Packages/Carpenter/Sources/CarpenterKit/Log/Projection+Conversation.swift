@@ -7,14 +7,14 @@ extension Projection {
         !out.contains(entry.id) || entry.author == viewer
     }
 
-    public func messages(in room: RoomID, outOfRoom out: Set<EntryHash> = []) -> [Message] {
+    public func messages(in room: ConversationID, outOfRoom out: Set<EntryHash> = []) -> [Message] {
         rendered
             .filter { $0.room == room && $0.isConversation && draws($0, notIn: out) }
             .map(message)
     }
 
     public func transcript(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = []
+        in room: ConversationID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = []
     ) -> [TranscriptEntry] {
         var items: [TranscriptEntry] = []
         var founder: ParticipantID?
@@ -95,7 +95,7 @@ extension Projection {
     }
 
     public func readEvidence(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?
+        in room: ConversationID, opening: (RenderedEntry) -> Payload?
     ) -> ReadEvidence {
         var positionOfEntry: [EntryHash: Int] = [:]
         for (position, entry) in rendered.enumerated() where entry.room == room {
@@ -115,7 +115,7 @@ extension Projection {
     }
 
     public func readEvidence(
-        in room: RoomID, byEachMember opening: (RenderedEntry) -> Payload?
+        in room: ConversationID, byEachMember opening: (RenderedEntry) -> Payload?
     ) -> [ParticipantID: ReadEvidence] {
         var positionOfEntry: [EntryHash: Int] = [:]
         for (position, entry) in rendered.enumerated() where entry.room == room {
@@ -136,7 +136,7 @@ extension Projection {
     }
 
     public func reportingMembers(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?
+        in room: ConversationID, opening: (RenderedEntry) -> Payload?
     ) -> Set<ParticipantID> {
         var reports: [ParticipantID: Bool] = [:]
         for entry in rendered where entry.room == room && entry.type == .readPolicy {
@@ -148,7 +148,7 @@ extension Projection {
         return Set(reports.filter(\.value).keys)
     }
 
-    public func positions(in room: RoomID) -> [MessageID: Int] {
+    public func positions(in room: ConversationID) -> [MessageID: Int] {
         var found: [MessageID: Int] = [:]
         for (position, entry) in rendered.enumerated()
         where entry.room == room && entry.isConversation {

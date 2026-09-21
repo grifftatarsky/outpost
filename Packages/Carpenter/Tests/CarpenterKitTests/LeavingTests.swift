@@ -8,8 +8,8 @@ import Testing
 struct LeavingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
-    private func room() throws -> (alice: Author, sam: Author, room: RoomID, entries: [Entry]) {
-        let chain = EpochChain.create(room: RoomID())
+    private func room() throws -> (alice: Author, sam: Author, room: ConversationID, entries: [Entry]) {
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
         var alice = Author(chain: chain.chain)
         let sam = Author(chain: chain.chain)
         let room = chain.chain.room
@@ -30,7 +30,7 @@ struct LeavingTests {
         return (alice, sam, room, entries)
     }
 
-    private func roster(_ entries: [Entry], _ chain: EpochChain, in room: RoomID) -> RoomRoster {
+    private func roster(_ entries: [Entry], _ chain: EpochChain, in room: ConversationID) -> RoomRoster {
         var roster = RoomRoster(room: room)
         for rendered in Fold.render(entries, using: chain) where rendered.room == room {
             guard let payload = entries.first(where: { $0.hash == rendered.id })?.opened(using: chain)
@@ -253,7 +253,7 @@ struct LeavingTests {
 @Suite("Leaving a room, from the app", .serialized)
 struct SessionLeavingTests {
     private func joined() async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()

@@ -477,7 +477,7 @@ extension AppSession {
             turns once
             """)
 
-        var notTurned: [RoomID] = []
+        var notTurned: [ConversationID] = []
         for room in persisted.knownRooms where chains[room] != nil {
             do {
                 try await advanceEpoch(of: room)

@@ -6,7 +6,7 @@ import Testing
 
 @MainActor
 func join(
-    _ joiner: AppSession, into room: RoomID, of host: AppSession,
+    _ joiner: AppSession, into room: ConversationID, of host: AppSession,
     through mailbox: InMemoryMailbox, media: (any MediaMailbox)? = nil, rounds: Int = 5
 ) async throws {
     let invite = try await host.invite(

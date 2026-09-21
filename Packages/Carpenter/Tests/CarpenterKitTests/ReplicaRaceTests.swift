@@ -49,7 +49,7 @@ struct ReplicaRaceTests {
     }
 
     private func pair(_ clock: TestClock, _ mailbox: any Mailbox, aliceAt: URL? = nil) async throws
-        -> (alice: AppSession, bob: AppSession, room: RoomID)
+        -> (alice: AppSession, bob: AppSession, room: ConversationID)
     {
         let alice = session(clock, at: aliceAt)
         let bob = session(clock)
@@ -139,7 +139,7 @@ struct AcknowledgementTests {
     func rejectedEntriesHoldThePacket() throws {
         let stranger = try Identity.generate()
         let device = DeviceKeys.generate()
-        let chain = EpochChain.create(room: RoomID())
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
 
         let entry = try Entry.append(
             to: nil, author: stranger.id, device: device, clock: VectorClock(),
@@ -166,7 +166,7 @@ struct AcknowledgementTests {
     func acceptedEntriesSettleThePacket() throws {
         let author = try Identity.generate()
         let device = DeviceKeys.generate()
-        let chain = EpochChain.create(room: RoomID())
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
         let certificate = try DeviceCertificate.issue(
             for: device.publicKey, by: author, at: .distantPast)
 
@@ -196,7 +196,7 @@ struct AcknowledgementTests {
     func rejectedCertificateHoldsThePacket() throws {
         let known = try Identity.generate()
         let knownDevice = DeviceKeys.generate()
-        let chain = EpochChain.create(room: RoomID())
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
 
         let entry = try Entry.append(
             to: nil, author: known.id, device: knownDevice, clock: VectorClock(),
@@ -238,7 +238,7 @@ struct AcknowledgementTests {
     func acceptedCertificatesStillSettle() throws {
         let known = try Identity.generate()
         let device = DeviceKeys.generate()
-        let chain = EpochChain.create(room: RoomID())
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
 
         let entry = try Entry.append(
             to: nil, author: known.id, device: device, clock: VectorClock(),

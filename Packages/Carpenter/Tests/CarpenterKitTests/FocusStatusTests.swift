@@ -7,7 +7,7 @@ import Testing
 @MainActor
 @Suite("Sharing Do Not Disturb", .serialized)
 struct FocusStatusTests {
-    private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
+    private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: ConversationID) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
         let bob = TestSession.make()
@@ -118,17 +118,17 @@ struct FocusFilterTests {
     func neutral() {
         let defaults = UserDefaults(suiteName: "focus-\(UUID().uuidString)")!
         let store = FocusFilterStore(defaults: defaults)
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         #expect(store.read().isNeutral)
         #expect(store.read().level(for: room, own: .everything) == .everything)
 
         store.write(FocusFilter(rooms: [room], showsPreviews: false))
         let filter = store.read()
         #expect(filter.allows(room))
-        #expect(!filter.allows(RoomID()))
+        #expect(!filter.allows(ConversationID.room(UUID())))
         #expect(filter.level(for: room, own: .everything) == .whoAndWhere, "no previews caps the level")
         #expect(filter.level(for: room, own: .whereOnly) == .whereOnly, "and leaves a quieter one alone")
-        #expect(filter.level(for: RoomID(), own: .everything) == .nothing, "a room the Focus left out says nothing")
+        #expect(filter.level(for: ConversationID.room(UUID()), own: .everything) == .nothing, "a room the Focus left out says nothing")
 
         store.write(FocusFilter())
         #expect(store.read().isNeutral, "the Focus turning off writes the defaults, which clear it")
@@ -138,7 +138,7 @@ struct FocusFilterTests {
     func directory() {
         let defaults = UserDefaults(suiteName: "focus-\(UUID().uuidString)")!
         let store = FocusFilterStore(defaults: defaults)
-        let rooms = [FocusFilterStore.RoomEntry(id: RoomID(), name: "Lanterns"), FocusFilterStore.RoomEntry(id: RoomID(), name: "Kitchen")]
+        let rooms = [FocusFilterStore.RoomEntry(id: ConversationID.room(UUID()), name: "Lanterns"), FocusFilterStore.RoomEntry(id: ConversationID.room(UUID()), name: "Kitchen")]
         store.writeRooms(rooms)
         #expect(store.rooms() == rooms)
     }

@@ -29,7 +29,7 @@ struct LiveSiblingFeedTests {
             certificates: [],
             epochs: [
                 HeldEpoch(
-                    room: RoomID(rawValue: UUID()), epoch: EpochNumber(rawValue: 3),
+                    room: ConversationID.room(UUID()), epoch: EpochNumber(rawValue: 3),
                     material: material)
             ],
             member: nil, writtenAt: Date())

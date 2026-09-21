@@ -80,7 +80,7 @@ struct OutpostReviewPrompt: View {
         VStack {
             OutpostReviewPrompt(
                 review: OutpostReview(
-                    room: RoomID(),
+                    room: .room(UUID()),
                     roomName: "Zeppelin Enthusiasts",
                     people: [
                         OutpostReview.Person(member: Fixtures.hastur, grant: nil),

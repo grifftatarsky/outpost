@@ -74,7 +74,7 @@ extension AppSession {
         }
     }
 
-    func announcePhoto(_ reference: AttachmentReference?, in room: RoomID) async throws {
+    func announcePhoto(_ reference: AttachmentReference?, in room: ConversationID) async throws {
         guard let me = enrolment?.identity.id else { return }
         let announced = projection.announcedPhoto(of: me, in: room)
         if let announced, announced == reference { return }
@@ -125,7 +125,7 @@ extension AppSession {
         notShutOut(outpostAccess.audience(at: clock.now))
     }
 
-    public func outpostAccessChosen(in room: RoomID) -> [Member] {
+    public func outpostAccessChosen(in room: ConversationID) -> [Member] {
         outpostAccess.granted
             .filter { $0.value.value.chosenIn == room && $0.value.value.isAllowed }
             .map { member($0.key) }
@@ -315,7 +315,7 @@ extension AppSession {
         }
     }
 
-    public func outpostReview(in room: RoomID) -> OutpostReview? {
+    public func outpostReview(in room: ConversationID) -> OutpostReview? {
         guard let me = enrolment?.identity.id else { return nil }
         guard persisted.preferences.isOfferingOutpostReview else { return nil }
         guard persisted.preferences.outpostStanding?.showsOutposts ?? true else { return nil }
@@ -341,7 +341,7 @@ extension AppSession {
         return review
     }
 
-    public func postponeOutpostReview(in room: RoomID) async {
+    public func postponeOutpostReview(in room: ConversationID) async {
         guard let review = outpostReview(in: room) else { return }
         persisted.reviewsPostponed[room] = review.undecided.map(\.id)
         do { try await saveState() } catch {
@@ -352,7 +352,7 @@ extension AppSession {
     }
 
     public func allowOutpost(
-        _ person: ParticipantID, everything: Bool, chosenIn: RoomID? = nil
+        _ person: ParticipantID, everything: Bool, chosenIn: ConversationID? = nil
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
         guard person != enrolment.identity.id else { throw AppSessionError.thatIsYou }
@@ -431,7 +431,7 @@ extension AppSession {
             """)
     }
 
-    public func revokeOutpost(_ person: ParticipantID, chosenIn: RoomID? = nil) async throws {
+    public func revokeOutpost(_ person: ParticipantID, chosenIn: ConversationID? = nil) async throws {
         guard enrolment != nil else { throw AppSessionError.noIdentity }
         let wall = try await outpostChain()
 
@@ -455,13 +455,13 @@ extension AppSession {
         return persisted.epochTurnsOwed.contains(outpostRoom(for: me))
     }
 
-    func oweEpochTurn(in room: RoomID) async throws {
+    func oweEpochTurn(in room: ConversationID) async throws {
         guard !persisted.epochTurnsOwed.contains(room) else { return }
         persisted.epochTurnsOwed.append(room)
         try await saveState()
     }
 
-    func turnOwedEpoch(in room: RoomID) async throws {
+    func turnOwedEpoch(in room: ConversationID) async throws {
         guard persisted.epochTurnsOwed.contains(room) else { return }
         try await advanceEpoch(of: room)
         persisted.epochTurnsOwed.removeAll { $0 == room }
@@ -485,7 +485,7 @@ extension AppSession {
     }
 
     @discardableResult
-    private func outpostChain() async throws -> RoomID {
+    private func outpostChain() async throws -> ConversationID {
         guard let enrolment else { throw AppSessionError.noIdentity }
         let wall = outpostRoom(for: enrolment.identity.id)
         guard chains[wall] == nil else { return wall }
@@ -567,8 +567,8 @@ extension AppSession {
         return outpostOwners[room]
     }
 
-    private var outpostOwners: [RoomID: ParticipantID] {
-        var owners: [RoomID: ParticipantID] = [:]
+    private var outpostOwners: [ConversationID: ParticipantID] {
+        var owners: [ConversationID: ParticipantID] = [:]
         for author in projection.outpostAuthors() {
             owners[outpostRoom(for: author.id)] = author.id
         }

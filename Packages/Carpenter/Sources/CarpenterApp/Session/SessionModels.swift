@@ -6,11 +6,11 @@ public struct RestoreAsk: Hashable, Sendable {
     public let request: RepairID
     public let person: ParticipantID
     public let personName: String
-    public let room: RoomID?
+    public let room: ConversationID?
     public let roomName: String
 
     public init(
-        request: RepairID, person: ParticipantID, personName: String, room: RoomID?,
+        request: RepairID, person: ParticipantID, personName: String, room: ConversationID?,
         roomName: String
     ) {
         self.request = request
@@ -41,14 +41,14 @@ public struct IncomingPost: Hashable, Sendable {
 
 public struct IncomingMessage: Hashable, Sendable {
     public let id: MessageID
-    public let room: RoomID
+    public let room: ConversationID
     public let roomName: String
     public let author: String
     public let body: String
     public let sentAt: Date
 
     public init(
-        id: MessageID, room: RoomID, roomName: String, author: String, body: String, sentAt: Date
+        id: MessageID, room: ConversationID, roomName: String, author: String, body: String, sentAt: Date
     ) {
         self.id = id
         self.room = room
@@ -83,7 +83,7 @@ public enum AppSessionError: Error, Hashable, Sendable {
 }
 
 extension RoomsListOrganisation {
-    mutating func forgetRoomsMissing(from present: Set<RoomID>) {
+    mutating func forgetRoomsMissing(from present: Set<ConversationID>) {
         for room in rooms.keys where !present.contains(room) {
             forget(room)
         }

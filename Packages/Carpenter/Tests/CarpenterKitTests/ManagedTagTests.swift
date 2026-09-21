@@ -9,7 +9,7 @@ struct ManagedTagTests {
     private let stamp = OrganisationStamp(
         at: Date(timeIntervalSince1970: 1_786_635_000), device: DeviceID(rawValue: WideID.of([1])))
 
-    private func summary(_ id: RoomID, _ name: String) -> RoomSummary {
+    private func summary(_ id: ConversationID, _ name: String) -> RoomSummary {
         RoomSummary(
             id: id, name: name, memberCount: 1, lastAuthor: nil, lastMessage: "",
             lastActivity: Date(timeIntervalSince1970: 1), hasUnread: false)
@@ -25,8 +25,8 @@ struct ManagedTagTests {
 
     @Test("Filtering by it shows the rooms it names, and no others")
     func filteringByAManagedTag() {
-        let waiting = RoomID()
-        let ordinary = RoomID()
+        let waiting = ConversationID.room(UUID())
+        let ordinary = ConversationID.room(UUID())
         let organisation = RoomsListOrganisation()
         let invited = ManagedTag(kind: .invited, rooms: [waiting])
 
@@ -44,14 +44,14 @@ struct ManagedTagTests {
     func anUnknownFilterShowsNothing() {
         let organisation = RoomsListOrganisation()
         let arranged = organisation.arrange(
-            [summary(RoomID(), "Hangar")], filteredBy: ManagedTagKind.invited.id)
+            [summary(ConversationID.room(UUID()), "Hangar")], filteredBy: ManagedTagKind.invited.id)
         #expect(arranged.isEmpty)
     }
 
     @Test("A member's own tag is unaffected")
     func memberTagsAreUnaffected() {
-        let room = RoomID()
-        let other = RoomID()
+        let room = ConversationID.room(UUID())
+        let other = ConversationID.room(UUID())
         var organisation = RoomsListOrganisation()
         let tag = organisation.addTag(named: "Work", stamp: stamp)
         organisation.setTag(tag, on: true, for: room, stamp: stamp)
@@ -66,7 +66,7 @@ struct ManagedTagTests {
     func itIsNotFiledWithTheirs() {
         var organisation = RoomsListOrganisation()
         _ = organisation.addTag(named: "Work", stamp: stamp)
-        _ = organisation.arrange([], managed: [ManagedTag(kind: .invited, rooms: [RoomID()])])
+        _ = organisation.arrange([], managed: [ManagedTag(kind: .invited, rooms: [ConversationID.room(UUID())])])
 
         #expect(organisation.tags.count == 1)
         #expect(organisation.orderedTags.allSatisfy { $0.id != ManagedTagKind.invited.id })
@@ -76,7 +76,7 @@ struct ManagedTagTests {
     @Test("A managed tag with no rooms is not offered")
     func anEmptyOneIsNotOffered() {
         #expect(!ManagedTag(kind: .invited, rooms: []).isWorthShowing)
-        #expect(ManagedTag(kind: .invited, rooms: [RoomID()]).isWorthShowing)
+        #expect(ManagedTag(kind: .invited, rooms: [ConversationID.room(UUID())]).isWorthShowing)
     }
 }
 

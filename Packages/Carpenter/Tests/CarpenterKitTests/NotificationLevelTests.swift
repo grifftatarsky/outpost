@@ -4,7 +4,7 @@ import Testing
 
 @Suite("Notification levels")
 struct NotificationLevelTests {
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func copy(_ level: NotificationLevel) -> NotificationCopy {
         MessageNotification.of(
@@ -71,7 +71,7 @@ extension NotificationCopy {
 }
 
 @Suite struct SilencingTests {
-    private func room() -> RoomID { RoomID() }
+    private func room() -> ConversationID { ConversationID.room(UUID()) }
     private func stamp(_ at: TimeInterval, device: UInt8 = 1) -> OrganisationStamp {
         OrganisationStamp(
             at: Date(timeIntervalSince1970: at), device: DeviceID(rawValue: Data([device])))

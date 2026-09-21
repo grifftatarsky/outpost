@@ -56,7 +56,7 @@ extension ForwardCompatibilityTests {
         let stamp = OrganisationStamp(
             at: Date(timeIntervalSince1970: 1_786_635_000),
             device: DeviceID(rawValue: WideID.of([7])))
-        let room = RoomID(rawValue: UUID(uuidString: "8B0B4B36-51F1-4C4F-9C0E-4A2E9C7D1A55")!)
+        let room = ConversationID.room(UUID(uuidString: "8B0B4B36-51F1-4C4F-9C0E-4A2E9C7D1A55")!)
         let entry = EntryHash(rawValue: Data([1, 2, 3]))
 
         var state = PersistedState()
@@ -169,7 +169,7 @@ extension ForwardCompatibilityTests {
     @Test func aStateFileFromTheBuildBeforeTheRenameStillOpens() throws {
         let inviter = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: Identity.generate().publicKeys, by: inviter,
+            joining: ConversationID.room(UUID()), joinerKeys: Identity.generate().publicKeys, by: inviter,
             at: Date(timeIntervalSince1970: 1_786_635_000))
 
         var old = try #require(

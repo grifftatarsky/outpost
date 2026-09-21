@@ -7,25 +7,25 @@ extension Projection {
         rendered.first { $0.id == hash }
     }
 
-    public func roomIDs() -> Set<RoomID> {
+    public func roomIDs() -> Set<ConversationID> {
         Set(rendered.compactMap(\.room))
     }
 
-    public func entries(by authors: Set<ParticipantID>, in room: RoomID) -> Set<EntryHash> {
+    public func entries(by authors: Set<ParticipantID>, in room: ConversationID) -> Set<EntryHash> {
         guard !authors.isEmpty else { return [] }
         return Set(rendered.lazy.filter { $0.room == room && authors.contains($0.author) }.map(\.id))
     }
 
-    public func name(of room: RoomID) -> String? {
+    public func name(of room: ConversationID) -> String? {
         rendered.last { $0.room == room && $0.type == .roomProfile }
             .flatMap { if case .text(let name) = $0.content { name } else { nil } }
     }
 
-    public func kind(of room: RoomID) -> RoomKind {
+    public func kind(of room: ConversationID) -> RoomKind {
         rendered.first { $0.room == room && $0.type == .roomProfile }?.roomKind ?? .room
     }
 
-    public func roster(of room: RoomID, opening: (RenderedEntry) -> Payload?) -> RoomRoster {
+    public func roster(of room: ConversationID, opening: (RenderedEntry) -> Payload?) -> RoomRoster {
         var roster = RoomRoster(room: room)
         for entry in rendered where entry.room == room {
             if let payload = opening(entry) { roster.apply(entry, body: payload) }
@@ -33,7 +33,7 @@ extension Projection {
         return roster
     }
 
-    public func soloCheck(in room: RoomID, opening: (RenderedEntry) -> Payload?) -> SoloCheck {
+    public func soloCheck(in room: ConversationID, opening: (RenderedEntry) -> Payload?) -> SoloCheck {
         var check = SoloCheck()
         for entry in rendered
         where entry.room == room && SoloCheck.shaping.contains(entry.type) {
@@ -43,7 +43,7 @@ extension Projection {
     }
 
     public func soloChecksAwaiting(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?
+        in room: ConversationID, opening: (RenderedEntry) -> Payload?
     ) -> [(id: EntryHash, asker: ParticipantID, at: Date)] {
         var open: [EntryHash: (ParticipantID, Date)] = [:]
         var answered: Set<EntryHash> = []

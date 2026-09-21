@@ -3,8 +3,8 @@ import Foundation
 
 @MainActor
 enum DemoConversation {
-    static let roomID = RoomID(
-        rawValue: UUID(uuidString: "DEC0DEDD-0000-4000-8000-000000001114") ?? UUID())
+    static let roomID = ConversationID.room(
+        UUID(uuidString: "DEC0DEDD-0000-4000-8000-000000001114") ?? UUID())
 
     static let cap = 2...25
 
@@ -18,8 +18,8 @@ enum DemoConversation {
             bundle: .module, comment: "Debug demo conversation")
     }
 
-    static let directRoomID = RoomID(
-        rawValue: UUID(uuidString: "DEC0DEDD-0000-4000-8000-000000002222") ?? UUID())
+    static let directRoomID = ConversationID.solo(
+        UUID(uuidString: "DEC0DEDD-0000-4000-8000-000000002222") ?? UUID())
 
     static func directRoom() -> RoomSummary {
         let script = directScript

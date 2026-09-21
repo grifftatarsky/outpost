@@ -14,7 +14,7 @@ struct CloudKitPacketRecordTests {
         let toBob = try PairwiseSecret.derive(mine: alice, theirs: bob.publicKeys)
         let peerToBob = Peer(secret: toBob, them: bob.id, me: alice.id)
 
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, secret) = EpochChain.create(room: room)
         let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: toBob)
 

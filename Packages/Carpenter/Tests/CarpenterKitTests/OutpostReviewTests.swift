@@ -18,7 +18,7 @@ struct OutpostReviewTests {
 
     private func room(
         with others: [String]
-    ) async throws -> (alice: AppSession, joiners: [AppSession], room: RoomID, mailbox: InMemoryMailbox) {
+    ) async throws -> (alice: AppSession, joiners: [AppSession], room: ConversationID, mailbox: InMemoryMailbox) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
         await alice.load()
@@ -175,7 +175,7 @@ struct OutpostReviewRowTests {
     @Test("The people with no answer come first, then the rest by name")
     func undecidedFirst() {
         let review = OutpostReview(
-            room: RoomID(), roomName: "Zeppelin Enthusiasts",
+            room: ConversationID.room(UUID()), roomName: "Zeppelin Enthusiasts",
             people: [
                 OutpostReview.Person(member: person("Camilla", 1), grant: OutpostAccess.Grant()),
                 OutpostReview.Person(member: person("Yhtill", 2), grant: nil),
@@ -200,7 +200,7 @@ struct OutpostReviewRowTests {
     @Test("A room where everybody has an answer asks nothing")
     func nothingToAsk() {
         let review = OutpostReview(
-            room: RoomID(), roomName: "Lanterns",
+            room: ConversationID.room(UUID()), roomName: "Lanterns",
             people: [
                 OutpostReview.Person(member: person("Camilla", 1), grant: OutpostAccess.Grant()),
                 OutpostReview.Person(

@@ -135,7 +135,7 @@ public struct NotificationLevelView: View {
 
     private func sample(_ rung: NotificationLevel) -> some View {
         let copy = MessageNotification.of(
-            room: RoomID(), roomName: "Hangar 7", author: "Alice", body: "are you coming",
+            room: .room(UUID()), roomName: "Hangar 7", author: "Alice", body: "are you coming",
             level: rung)
 
         return VStack(alignment: .leading, spacing: 2) {

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum DraftPlace: Hashable, Sendable {
-    case room(RoomID)
+    case room(ConversationID)
     case newPost
     case comment(PostID)
 

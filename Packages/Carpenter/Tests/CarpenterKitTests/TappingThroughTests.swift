@@ -28,7 +28,7 @@ struct TappingThroughTests {
     @Test("A banner for a room since left opens the app without navigating")
     func aBannerForARoomSinceLeftDoesNotNavigate() async throws {
         let session = try await member()
-        let gone = RoomID()
+        let gone = ConversationID.room(UUID())
 
         #expect(
             session.tapping(MessageNotification.thread(for: gone), whileViewing: nil)

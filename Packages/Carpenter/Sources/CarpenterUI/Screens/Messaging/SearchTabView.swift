@@ -18,8 +18,8 @@ public struct SearchTabView: View {
     }
 
     private let onSearch: (String) -> SearchResults
-    private let onOpenRoom: (RoomID) -> Void
-    private let onOpenMessage: (RoomID, MessageID) -> Void
+    private let onOpenRoom: (ConversationID) -> Void
+    private let onOpenMessage: (ConversationID, MessageID) -> Void
     private let onOpenPost: (OutpostPost) -> Void
 
     @State private var query = ""
@@ -29,8 +29,8 @@ public struct SearchTabView: View {
 
     public init(
         onSearch: @escaping (String) -> SearchResults,
-        onOpenRoom: @escaping (RoomID) -> Void,
-        onOpenMessage: @escaping (RoomID, MessageID) -> Void,
+        onOpenRoom: @escaping (ConversationID) -> Void,
+        onOpenMessage: @escaping (ConversationID, MessageID) -> Void,
         onOpenPost: @escaping (OutpostPost) -> Void
     ) {
         self.onSearch = onSearch

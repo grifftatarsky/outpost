@@ -497,7 +497,7 @@ extension AppRootView {
 }
 
 extension AppRootView {
-    func verifiedPerson(_ person: ParticipantID, in room: RoomID) -> VerifiedPerson {
+    func verifiedPerson(_ person: ParticipantID, in room: ConversationID) -> VerifiedPerson {
         let roster = session.roster(of: room)
         let me = session.enrolment?.identity.id
         let checkedAt = session.checkedAt(person)

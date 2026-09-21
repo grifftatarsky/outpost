@@ -8,20 +8,20 @@ public struct AddSomeoneView: View {
 
     private let rooms: () -> [RoomSummary]
     private let code: String
-    private let onAdd: (RoomID, String) async -> Invite?
+    private let onAdd: (ConversationID, String) async -> Invite?
     private let onCreateRoom: (String, RoomAccess, Set<ParticipantID>) async -> Void
     private let preferences: RoomsListPreferences
     private let connections: [Connection]
 
     @State private var issued: PresentedInvite?
-    @State private var working: RoomID?
+    @State private var working: ConversationID?
     @State private var problem: String?
     @State private var naming = false
 
     public init(
         rooms: @escaping () -> [RoomSummary],
         code: String,
-        onAdd: @escaping (RoomID, String) async -> Invite?,
+        onAdd: @escaping (ConversationID, String) async -> Invite?,
         preferences: RoomsListPreferences,
         connections: [Connection] = [],
         onCreateRoom: @escaping (String, RoomAccess, Set<ParticipantID>) async -> Void = { _, _, _ in }

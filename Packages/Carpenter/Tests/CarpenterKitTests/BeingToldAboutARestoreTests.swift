@@ -20,7 +20,7 @@ struct BeingToldAboutARestoreTests {
     private struct Rig {
         let original: AppSession
         let peer: AppSession
-        let room: RoomID
+        let room: ConversationID
         let mailbox: InMemoryMailbox
         let relay: InMemoryEntrySync.Relay
         let clock: TestClock
@@ -245,7 +245,7 @@ struct HoldingHistoryForARestoreTests {
     private struct Rig {
         let original: AppSession
         let peer: AppSession
-        let room: RoomID
+        let room: ConversationID
         let mailbox: InMemoryMailbox
         let relay: InMemoryEntrySync.Relay
         let clock: TestClock
@@ -440,7 +440,7 @@ struct NotAskingForHistoryTests {
     private struct Rig {
         let original: AppSession
         let peer: AppSession
-        let room: RoomID
+        let room: ConversationID
         let mailbox: InMemoryMailbox
         let relay: InMemoryEntrySync.Relay
         let clock: TestClock
@@ -592,8 +592,8 @@ struct TurningEveryKeyAfterALossTests {
     private struct Rig {
         let original: AppSession
         let peer: AppSession
-        let kitchen: RoomID
-        let hangar: RoomID
+        let kitchen: ConversationID
+        let hangar: ConversationID
         let mailbox: InMemoryMailbox
         let relay: InMemoryEntrySync.Relay
         let clock: TestClock
@@ -612,7 +612,7 @@ struct TurningEveryKeyAfterALossTests {
         try await original.createIdentity(displayName: "Griff")
         try await peer.createIdentity(displayName: "Outie")
 
-        var made: [RoomID] = []
+        var made: [ConversationID] = []
         for name in ["Kitchen", "Hangar"] {
             let room = try await original.createRoom(named: name)
             let invite = try await original.invite(
@@ -645,7 +645,7 @@ struct TurningEveryKeyAfterALossTests {
         return fresh
     }
 
-    private func epoch(_ session: AppSession, _ room: RoomID) -> Int {
+    private func epoch(_ session: AppSession, _ room: ConversationID) -> Int {
         session.epochsHeld(in: room)
     }
 

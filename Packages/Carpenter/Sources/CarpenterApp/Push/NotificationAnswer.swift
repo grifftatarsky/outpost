@@ -5,22 +5,23 @@ import UserNotifications
 public enum NotificationAnswer: Equatable, Sendable {
     case open
     case nothing
-    case reply(RoomID, String)
-    case markRead(RoomID)
+    case reply(ConversationID, String)
+    case markRead(ConversationID)
 
     public static let messageCategory = "outpost.message"
     public static let replyAction = "outpost.reply"
     public static let markReadAction = "outpost.mark-read"
     public static let roomKey = "outpost.room"
 
-    public static func userInfo(for room: RoomID) -> [String: String] {
-        [roomKey: room.rawValue.uuidString]
+    public static func userInfo(for room: ConversationID) -> [String: String] {
+        [roomKey: room.stableName]
     }
 
     public static func from(action: String, userInfo: [AnyHashable: Any], text: String?) -> NotificationAnswer {
         guard action == replyAction || action == markReadAction else { return .open }
-        guard let raw = userInfo[roomKey] as? String, let id = UUID(uuidString: raw) else { return .nothing }
-        let room = RoomID(rawValue: id)
+        guard let raw = userInfo[roomKey] as? String, let room = ConversationID(stableName: raw) else {
+            return .nothing
+        }
         guard action == replyAction else { return .markRead(room) }
         let words = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return words.isEmpty ? .nothing : .reply(room, words)
@@ -74,7 +75,7 @@ extension NotificationAnswer {
 
 extension NotificationAnswer {
     public static func notSent(
-        _ words: String, in room: RoomID, named name: String?, keptAsDraft: Bool, showingWords: Bool
+        _ words: String, in room: ConversationID, named name: String?, keptAsDraft: Bool, showingWords: Bool
     ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = name ?? String(localized: "Your reply", bundle: .module)

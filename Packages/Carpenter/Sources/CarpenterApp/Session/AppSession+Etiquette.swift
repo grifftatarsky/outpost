@@ -19,7 +19,7 @@ extension AppSession {
         await savePreferences()
     }
 
-    func announceProfile(in room: RoomID) async throws {
+    func announceProfile(in room: ConversationID) async throws {
         if persisted.preferences.isSharingAvatar, let me = enrolment?.identity.id,
             let reference = projection.photoReference(of: me)
         {
@@ -151,7 +151,7 @@ extension AppSession {
         return held.sorted { $0.askedAt < $1.askedAt }
     }
 
-    private func phrase(with person: ParticipantID, in room: RoomID) -> String? {
+    private func phrase(with person: ParticipantID, in room: ConversationID) -> String? {
         let roster = roster(of: room)
         if let theirs = roster.requests[person] { return phrase(for: theirs) }
         guard let me = enrolment?.identity.id, let mine = roster.requests[me],
@@ -160,7 +160,7 @@ extension AppSession {
         return phrase(for: mine)
     }
 
-    public func heldRestore(in room: RoomID) -> HeldRestore? {
+    public func heldRestore(in room: ConversationID) -> HeldRestore? {
         let here = Set(roster(of: room).members)
         return heldRestores().first { here.contains($0.person) }
     }

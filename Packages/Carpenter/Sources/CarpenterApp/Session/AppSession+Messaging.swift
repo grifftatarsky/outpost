@@ -8,8 +8,12 @@ extension AppSession {
     // MARK: Writing
 
     @discardableResult
-    public func createRoom(named name: String, kind: RoomKind = .room) async throws -> RoomID {
-        let room = RoomID()
+    public func createRoom(named name: String, kind: RoomKind = .room) async throws -> ConversationID {
+        let room: ConversationID
+        switch kind {
+        case .room: room = .room(UUID())
+        case .solo: room = .solo(UUID())
+        }
         let (chain, secret) = EpochChain.create(room: room)
         chains[room] = chain
         try await persistEpoch(secret, at: .initial, for: room)
@@ -20,18 +24,18 @@ extension AppSession {
     }
 
     @discardableResult
-    public func startSolo(with person: ParticipantID) async throws -> RoomID {
+    public func startSolo(with person: ParticipantID) async throws -> ConversationID {
         try await createRoom(named: member(person).displayName, kind: .solo)
     }
 
     @discardableResult
-    public func createRoom(named name: String, access: RoomAccess) async throws -> RoomID {
+    public func createRoom(named name: String, access: RoomAccess) async throws -> ConversationID {
         let room = try await createRoom(named: name)
         if access != .open { try await setAccess(access, in: room) }
         return room
     }
 
-    public func send(_ text: String, to room: RoomID?) async throws {
+    public func send(_ text: String, to room: ConversationID?) async throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         try await append(try Payload.post(trimmed), to: room)
@@ -55,7 +59,7 @@ extension AppSession {
     }
 
     public func send(
-        _ media: PreparedMedia, to room: RoomID, through mailbox: any MediaMailbox
+        _ media: PreparedMedia, to room: ConversationID, through mailbox: any MediaMailbox
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
         let me = enrolment.identity.id
@@ -221,7 +225,7 @@ extension AppSession {
 
     // MARK: Reading
 
-    public func messages(in room: RoomID) -> [Message] {
+    public func messages(in room: ConversationID) -> [Message] {
         let projected = projection
         let mark = deliveryMarks(in: room, of: projected)
         let marked = projected.messages(in: room, outOfRoom: outOfRoom(in: room, of: projected))
@@ -231,7 +235,7 @@ extension AppSession {
         return marked.map { $0.noting(notices[$0.id]) }
     }
 
-    public func waitingOn(in room: RoomID) -> [WaitingOnPerson] {
+    public func waitingOn(in room: ConversationID) -> [WaitingOnPerson] {
         guard let me = enrolment?.identity.id else { return [] }
         let projected = projection
         let mine = Set(
@@ -273,31 +277,30 @@ extension AppSession {
             }
     }
 
-    public func notGoneWait(in room: RoomID) -> NotGoneWait {
+    public func notGoneWait(in room: ConversationID) -> NotGoneWait {
         persisted.preferences.notGoneWait(for: room)
     }
 
-    public func setNotGoneWait(_ wait: NotGoneWait, in room: RoomID) async {
+    public func setNotGoneWait(_ wait: NotGoneWait, in room: ConversationID) async {
         persisted.preferences.setNotGoneWait(wait, for: room, stamp: stamp())
         await savePreferences()
         refresh()
     }
 
     public enum BannerDestination: Hashable, Sendable {
-        case room(RoomID)
+        case room(ConversationID)
         case theAppAsItStands
     }
 
-    public func tapping(_ thread: String, whileViewing viewing: RoomID?) -> BannerDestination {
-        guard let uuid = UUID(uuidString: thread) else { return .theAppAsItStands }
-        let room = RoomID(rawValue: uuid)
+    public func tapping(_ thread: String, whileViewing viewing: ConversationID?) -> BannerDestination {
+        guard let room = ConversationID(stableName: thread) else { return .theAppAsItStands }
 
         guard rooms.contains(where: { $0.id == room }) else { return .theAppAsItStands }
         guard viewing != room else { return .theAppAsItStands }
         return .room(room)
     }
 
-    public func readBy(_ message: MessageID, in room: RoomID) -> [ReadBy] {
+    public func readBy(_ message: MessageID, in room: ConversationID) -> [ReadBy] {
         let projected = projection
         let opening = payloadOpener()
         guard let position = projected.positions(in: room)[message] else { return [] }
@@ -334,28 +337,28 @@ extension AppSession {
             }
     }
 
-    private func outOfRoom(in room: RoomID, of projected: Projection) -> Set<EntryHash> {
+    private func outOfRoom(in room: ConversationID, of projected: Projection) -> Set<EntryHash> {
         if let known = cachedOutOfRoom[room] { return known }
         let built = projected.outOfRoom(in: room, opening: payloadOpener())
         cachedOutOfRoom[room] = built
         return built
     }
 
-    func readEvidence(in room: RoomID, of projected: Projection) -> ReadEvidence {
+    func readEvidence(in room: ConversationID, of projected: Projection) -> ReadEvidence {
         if let known = cachedReadEvidence[room] { return known }
         let built = projected.readEvidence(in: room, opening: payloadOpener())
         cachedReadEvidence[room] = built
         return built
     }
 
-    func reportingMembers(in room: RoomID, of projected: Projection) -> Set<ParticipantID> {
+    func reportingMembers(in room: ConversationID, of projected: Projection) -> Set<ParticipantID> {
         if let known = cachedReporting[room] { return known }
         let built = projected.reportingMembers(in: room, opening: payloadOpener())
         cachedReporting[room] = built
         return built
     }
 
-    public func transcript(in room: RoomID) -> [TranscriptEntry] {
+    public func transcript(in room: ConversationID) -> [TranscriptEntry] {
         let projected = projection
         let mark = deliveryMarks(in: room, of: projected)
 
@@ -384,7 +387,7 @@ extension AppSession {
         return TranscriptEntry.inserting(added, into: noted)
     }
 
-    func devicesAdded(in room: RoomID) -> [AddedDevice] {
+    func devicesAdded(in room: ConversationID) -> [AddedDevice] {
         if let known = cachedDevicesAdded[room] { return known }
         guard let me = enrolment?.identity.id else { return [] }
 
@@ -416,7 +419,7 @@ extension AppSession {
         !persisted.preferences.isHidden(message.id.entry) && !refusesToDraw(from: message.author.id)
     }
 
-    private func deliveryMarks(in room: RoomID, of projected: Projection) -> (Message) -> Message {
+    private func deliveryMarks(in room: ConversationID, of projected: Projection) -> (Message) -> Message {
         let unsent = Set(unsentEntries().map(\.hash))
 
         let hasSomebodyToReach = !peers().isEmpty
@@ -478,7 +481,7 @@ extension AppSession {
 
     // MARK: Read receipts
 
-    public func markSeen(_ message: MessageID, in room: RoomID) async {
+    public func markSeen(_ message: MessageID, in room: ConversationID) async {
         guard enrolment != nil else { return }
         let positions = projection.positions(in: room)
         guard let seen = positions[message] else { return }
@@ -500,7 +503,7 @@ extension AppSession {
     }
 
     private func advanceReadMark(
-        to message: MessageID, at position: Int, in room: RoomID, among positions: [MessageID: Int]
+        to message: MessageID, at position: Int, in room: ConversationID, among positions: [MessageID: Int]
     ) async {
         if let mark = persisted.readThrough[room],
             let previous = positions[MessageID(entry: mark)],
@@ -515,7 +518,7 @@ extension AppSession {
         refresh()
     }
 
-    public func markRoomRead(_ room: RoomID) async {
+    public func markRoomRead(_ room: ConversationID) async {
         guard enrolment != nil else { return }
         let positions = projection.positions(in: room)
         guard let last = positions.max(by: { $0.value < $1.value }) else { return }
@@ -536,7 +539,7 @@ extension AppSession {
         await savePreferences()
     }
 
-    public func revealHidden(in room: RoomID) async {
+    public func revealHidden(in room: ConversationID) async {
         let inRoom = Set(projection.messages(in: room).map(\.id.entry))
         let hidden = persisted.preferences.hiddenEntries.intersection(inRoom)
         guard !hidden.isEmpty else { return }
@@ -554,7 +557,7 @@ extension AppSession {
 
     public var hiddenMessageCount: Int { persisted.preferences.hiddenEntries.count }
 
-    public func hiddenMessageCount(in room: RoomID) -> Int {
+    public func hiddenMessageCount(in room: ConversationID) -> Int {
         let inRoom = Set(projection.messages(in: room).map(\.id.entry))
         return persisted.preferences.hiddenEntries.intersection(inRoom).count
     }
@@ -563,7 +566,7 @@ extension AppSession {
         persisted.preferences.isHidden(message.entry)
     }
 
-    public func react(to message: MessageID, in room: RoomID, with emoji: String?) async throws {
+    public func react(to message: MessageID, in room: ConversationID, with emoji: String?) async throws {
         try await append(try Payload.reaction(message.entry, emoji: emoji), to: room)
     }
 

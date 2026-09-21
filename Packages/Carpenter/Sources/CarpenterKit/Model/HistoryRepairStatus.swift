@@ -2,7 +2,7 @@ import Foundation
 
 public struct HistoryRepairStatus: Hashable, Sendable, Identifiable {
     public let id: RepairID
-    public let room: RoomID
+    public let room: ConversationID
     public let startedAt: Date
     public let asked: [Member]
     public let answered: [Member]
@@ -15,7 +15,7 @@ public struct HistoryRepairStatus: Hashable, Sendable, Identifiable {
     public let unverifiable: Int
 
     public init(
-        id: RepairID, room: RoomID, startedAt: Date, asked: [Member], answered: [Member],
+        id: RepairID, room: ConversationID, startedAt: Date, asked: [Member], answered: [Member],
         waiting: [Member], recovered: Int, stillMissing: Int, heldByNobodyAsked: Int,
         sentButNotArrived: Int, unverifiable: Int = 0
     ) {

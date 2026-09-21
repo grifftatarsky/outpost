@@ -8,7 +8,7 @@ import Testing
 @Suite("Checking who you are talking to, through the app", .serialized)
 struct SoloVerificationTests {
     private func solo() async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()

@@ -8,7 +8,7 @@ import Testing
 struct EditingAndWithdrawingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
-    private func author() -> Author { Author(chain: EpochChain.create(room: RoomID()).chain) }
+    private func author() -> Author { Author(chain: EpochChain.create(room: ConversationID.room(UUID())).chain) }
 
     private func folded(_ entries: [Entry], _ chain: EpochChain) -> [RenderedEntry] {
         Fold.render(entries, using: chain)
@@ -199,7 +199,7 @@ struct EditingAndWithdrawingTests {
 @MainActor
 @Suite("Editing and withdrawing, through the session", .serialized)
 struct SessionEditingTests {
-    private func room() async throws -> (session: AppSession, room: RoomID, clock: TestClock) {
+    private func room() async throws -> (session: AppSession, room: ConversationID, clock: TestClock) {
         let clock = TestClock(now: TestSession.now)
         let session = AppSession(storage: TestSession.storage(), clock: clock)
         await session.load()

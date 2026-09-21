@@ -16,7 +16,7 @@ import SwiftUI
 // MARK: Reacting to what was said
 
 extension AppRootView {
-    func react(to message: MessageID, in room: RoomID, with emoji: String?) async {
+    func react(to message: MessageID, in room: ConversationID, with emoji: String?) async {
         _ = await reporting("react to message") {
             try await session.react(to: message, in: room, with: emoji)
         }

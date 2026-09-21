@@ -49,7 +49,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
         let badge: Int?
         let sender: Sender?
         let quietly: Bool
-        var room: RoomID?
+        var room: ConversationID?
     }
 
     override func serviceExtensionTimeWillExpire() {
@@ -57,7 +57,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
     }
 
     private func deliver(
-        _ copy: NotificationCopy, badge: Int?, sender: Sender?, quietly: Bool, room: RoomID?
+        _ copy: NotificationCopy, badge: Int?, sender: Sender?, quietly: Bool, room: ConversationID?
     ) async {
         let taken: ((UNNotificationContent) -> Void, UNMutableNotificationContent)? = lock.withLock {
             guard let handler = contentHandler, let content = bestAttempt else { return nil }

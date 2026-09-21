@@ -14,7 +14,7 @@ extension RootView {
     }
 
     @ViewBuilder
-    private func demoConversationView(_ id: RoomID) -> some View {
+    private func demoConversationView(_ id: ConversationID) -> some View {
         if id == DemoConversation.directRoomID {
             ConversationView(
                 room: DemoConversation.directRoom(),
@@ -30,31 +30,31 @@ extension RootView {
         }
     }
 
-    private func actions(for room: RoomID) -> MessageActions {
+    private func actions(for room: ConversationID) -> MessageActions {
         var bound = messageActions
         bound.react = { message, emoji in await onReactToMessage(message, room, emoji) }
         return bound
     }
 
-    private func hasAnInviteToShow(_ room: RoomID) -> Bool {
+    private func hasAnInviteToShow(_ room: ConversationID) -> Bool {
         guard rooms.first(where: { $0.id == room })?.isDirect == true else { return false }
         return roomInvitations(room).contains { $0.isMine && !$0.hasConfirmed }
     }
 
-    func offerComparison(in room: RoomID) async {
+    func offerComparison(in room: ConversationID) async {
         let people = comparisonToOffer(room)
         guard !people.isEmpty else { return }
         offeringComparison = ComparisonOffer(room: room, people: people)
         await onComparisonOffered(people.map(\.id))
     }
 
-    func leaving(_ room: RoomID) -> LeavingThisRoom? {
+    func leaving(_ room: ConversationID) -> LeavingThisRoom? {
         guard roomStanding(room).mayWrite else { return nil }
         let leave = onLeaveRoom
         return LeavingThisRoom { await leave(room) }
     }
 
-    func notGoneHelp(for id: RoomID) -> NotGoneHelp {
+    func notGoneHelp(for id: ConversationID) -> NotGoneHelp {
         let showingWaiting = $showingWaiting
         let showWaiting: @MainActor @Sendable () -> Void = { showingWaiting.wrappedValue = id }
         guard roomNotGone != nil else {
@@ -67,7 +67,7 @@ extension RootView {
     }
 
     @ViewBuilder
-    func roomDestination(_ id: RoomID) -> some View {
+    func roomDestination(_ id: ConversationID) -> some View {
         if isDemoRoom(id) {
             demoConversationView(id)
         } else if let room = rooms.first(where: { $0.id == id }) {
@@ -243,7 +243,7 @@ extension RootView {
         }
     }
 
-    func previewMessages(_ id: RoomID) -> [Message] {
+    func previewMessages(_ id: ConversationID) -> [Message] {
         if id == DemoConversation.directRoomID { return DemoConversation.directMessages() }
         if id == DemoConversation.roomID {
             return DemoConversation.messages(participants: theme.demoParticipants)
@@ -251,11 +251,11 @@ extension RootView {
         return messages(id)
     }
 
-    private func isDemoRoom(_ id: RoomID) -> Bool {
+    private func isDemoRoom(_ id: ConversationID) -> Bool {
         id == DemoConversation.roomID || id == DemoConversation.directRoomID
     }
 
-    var roomPath: Binding<[RoomID]> {
+    var roomPath: Binding<[ConversationID]> {
         Binding(
             get: { openRoom.map { [$0] } ?? [] },
             set: { openRoom = $0.last })

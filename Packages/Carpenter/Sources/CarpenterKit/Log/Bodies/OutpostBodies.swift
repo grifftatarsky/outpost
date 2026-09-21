@@ -19,12 +19,12 @@ public struct OutpostAccessBody: Hashable, Sendable, Codable {
     public let origin: OutpostAccess.Origin
     public let sinceEpoch: UInt64?
 
-    public let chosenIn: RoomID?
+    public let chosenIn: ConversationID?
 
     public init(
         person: ParticipantID, isAllowed: Bool, from: Date? = nil,
         origin: OutpostAccess.Origin = .chosen, sinceEpoch: UInt64? = nil,
-        chosenIn: RoomID? = nil
+        chosenIn: ConversationID? = nil
     ) {
         self.person = person
         self.isAllowed = isAllowed
@@ -45,7 +45,7 @@ public struct OutpostAccessBody: Hashable, Sendable, Codable {
         from = try container.decodeIfPresent(Date.self, forKey: .from)
         origin = try container.decodeIfPresent(OutpostAccess.Origin.self, forKey: .origin) ?? .chosen
         sinceEpoch = try container.decodeIfPresent(UInt64.self, forKey: .sinceEpoch)
-        chosenIn = try container.decodeIfPresent(RoomID.self, forKey: .chosenIn)
+        chosenIn = try container.decodeIfPresent(ConversationID.self, forKey: .chosenIn)
     }
 }
 

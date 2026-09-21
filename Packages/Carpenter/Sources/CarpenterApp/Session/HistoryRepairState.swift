@@ -3,7 +3,7 @@ import Foundation
 
 struct HistoryRepair: Hashable, Sendable, Codable {
     var id: RepairID
-    var room: RoomID
+    var room: ConversationID
     var startedAt: Date
     var request: RepairRequest
     var asked: [ParticipantID]
@@ -12,7 +12,7 @@ struct HistoryRepair: Hashable, Sendable, Codable {
     var quiet = false
 
     init(
-        id: RepairID, room: RoomID, startedAt: Date, request: RepairRequest,
+        id: RepairID, room: ConversationID, startedAt: Date, request: RepairRequest,
         asked: [ParticipantID], quiet: Bool = false
     ) {
         self.id = id
@@ -38,7 +38,7 @@ struct HistoryRepair: Hashable, Sendable, Codable {
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(RepairID.self, forKey: .id)
-        room = try container.decode(RoomID.self, forKey: .room)
+        room = try container.decode(ConversationID.self, forKey: .room)
         startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt) ?? .distantPast
         request = try container.decode(RepairRequest.self, forKey: .request)
         asked = try container.decodeIfPresent([ParticipantID].self, forKey: .asked) ?? []
@@ -76,13 +76,13 @@ public enum RestoreHold: String, Hashable, Sendable, Codable {
 struct RestoreAskRecord: Hashable, Sendable, Codable {
     var request: RepairID
     var from: ParticipantID
-    var room: RoomID?
+    var room: ConversationID?
     var at: Date
     var hold: RestoreHold
 
     static let kept = 20
 
-    init(request: RepairID, from: ParticipantID, room: RoomID?, at: Date, hold: RestoreHold) {
+    init(request: RepairID, from: ParticipantID, room: ConversationID?, at: Date, hold: RestoreHold) {
         self.request = request
         self.from = from
         self.room = room
@@ -96,7 +96,7 @@ struct RestoreAskRecord: Hashable, Sendable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         request = try container.decode(RepairID.self, forKey: .request)
         from = try container.decode(ParticipantID.self, forKey: .from)
-        room = try container.decodeIfPresent(RoomID.self, forKey: .room)
+        room = try container.decodeIfPresent(ConversationID.self, forKey: .room)
         at = try container.decodeIfPresent(Date.self, forKey: .at) ?? .distantPast
         hold = try container.decodeIfPresent(RestoreHold.self, forKey: .hold) ?? .allowed
     }

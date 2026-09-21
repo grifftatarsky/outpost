@@ -11,7 +11,7 @@ enum LiveRig {
     struct Pair {
         let alice: AppSession
         let bob: AppSession
-        let room: RoomID
+        let room: ConversationID
         let mailbox: CloudKitMailbox
         let zone: CKRecordZone.ID
     }

@@ -2,7 +2,7 @@ import CarpenterKit
 import SwiftUI
 
 extension EnvironmentValues {
-    @Entry var selectedRoom: RoomID?
+    @Entry var selectedRoom: ConversationID?
 }
 
 public struct RoomsListView: View {
@@ -29,14 +29,14 @@ public struct RoomsListView: View {
     let connections: [Connection]
     let onJoinWithInvite: (() -> Void)?
     let onAppearSync: () async -> Void
-    let isSilenced: (RoomID) -> Bool
-    let onSilence: (RoomID, Bool) -> Void
-    let onMarkRead: (RoomID) -> Void
-    let onLeave: ((RoomID) -> Void)?
-    let roomDeletion: (RoomID) -> RoomDeletion
-    let onDelete: ((RoomID) -> Void)?
+    let isSilenced: (ConversationID) -> Bool
+    let onSilence: (ConversationID, Bool) -> Void
+    let onMarkRead: (ConversationID) -> Void
+    let onLeave: ((ConversationID) -> Void)?
+    let roomDeletion: (ConversationID) -> RoomDeletion
+    let onDelete: ((ConversationID) -> Void)?
     let focus: Binding<FocusSharing>?
-    let preview: (RoomID) -> [Message]
+    let preview: (ConversationID) -> [Message]
     let managedTags: [ManagedTag]
     let awaiting: [AwaitingAdmission]
 
@@ -64,14 +64,14 @@ public struct RoomsListView: View {
         showsPrivacyNote: Bool = false,
         onJoinWithInvite: (() -> Void)? = nil,
         onAppearSync: @escaping () async -> Void = {},
-        isSilenced: @escaping (RoomID) -> Bool = { _ in false },
-        onSilence: @escaping (RoomID, Bool) -> Void = { _, _ in },
-        onMarkRead: @escaping (RoomID) -> Void = { _ in },
-        onLeave: ((RoomID) -> Void)? = nil,
-        roomDeletion: @escaping (RoomID) -> RoomDeletion = { _ in .stillIn },
-        onDelete: ((RoomID) -> Void)? = nil,
+        isSilenced: @escaping (ConversationID) -> Bool = { _ in false },
+        onSilence: @escaping (ConversationID, Bool) -> Void = { _, _ in },
+        onMarkRead: @escaping (ConversationID) -> Void = { _ in },
+        onLeave: ((ConversationID) -> Void)? = nil,
+        roomDeletion: @escaping (ConversationID) -> RoomDeletion = { _ in .stillIn },
+        onDelete: ((ConversationID) -> Void)? = nil,
         focus: Binding<FocusSharing>? = nil,
-        preview: @escaping (RoomID) -> [Message] = { _ in [] }
+        preview: @escaping (ConversationID) -> [Message] = { _ in [] }
     ) {
         self.focus = focus
         self.rooms = rooms

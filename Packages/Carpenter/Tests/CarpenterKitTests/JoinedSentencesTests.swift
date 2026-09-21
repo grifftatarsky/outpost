@@ -15,7 +15,7 @@ struct JoinedSentencesTests {
         unverifiable: Int = 0
     ) -> HistoryRepairStatus {
         HistoryRepairStatus(
-            id: RepairID(), room: RoomID(), startedAt: .distantPast, asked: [ada], answered: [ada],
+            id: RepairID(), room: ConversationID.room(UUID()), startedAt: .distantPast, asked: [ada], answered: [ada],
             waiting: [], recovered: recovered, stillMissing: stillMissing, heldByNobodyAsked: nobody,
             sentButNotArrived: notArrived, unverifiable: unverifiable)
     }

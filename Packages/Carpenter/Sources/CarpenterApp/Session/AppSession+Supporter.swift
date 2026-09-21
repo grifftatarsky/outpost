@@ -84,7 +84,7 @@ extension AppSession {
         }
     }
 
-    func announceSupporterBadge(in rooms: [RoomID]) async throws {
+    func announceSupporterBadge(in rooms: [ConversationID]) async throws {
         guard let me = enrolment?.identity.id else { return }
         let shows = sharesSupporterBadge
         var told = 0

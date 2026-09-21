@@ -1,7 +1,7 @@
 import Foundation
 
 public struct RoomRoster: Hashable, Sendable {
-    public let room: RoomID
+    public let room: ConversationID
 
     public private(set) var founder: ParticipantID?
 
@@ -75,7 +75,7 @@ public struct RoomRoster: Hashable, Sendable {
         }
     }
 
-    public init(room: RoomID) {
+    public init(room: ConversationID) {
         self.room = room
     }
 

@@ -19,7 +19,7 @@ extension AppSession {
         var report = SyncReport()
         var sending: [Entry] = []
         var nobodyToSendTo: [Entry] = []
-        var ringingRooms: Set<RoomID> = []
+        var ringingRooms: Set<ConversationID> = []
         if mode == .full {
             let owedGrants = try grantsOwed()
             let owedConfirmations = confirmationsOwed()

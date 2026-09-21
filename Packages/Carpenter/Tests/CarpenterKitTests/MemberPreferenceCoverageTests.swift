@@ -7,7 +7,7 @@ import CarpenterKitTesting
 @Suite("Every preference survives the round trip")
 struct MemberPreferenceCoverageTests {
     private static let person = ParticipantID(rawValue: WideID.of([9]))
-    private static let room = RoomID()
+    private static let room = ConversationID.room(UUID())
     private static let entry = EntryHash(rawValue: Data(repeating: 3, count: 32))
 
     private static func populated() -> MemberPreferences {

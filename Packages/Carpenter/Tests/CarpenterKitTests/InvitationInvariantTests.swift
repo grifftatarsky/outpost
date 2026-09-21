@@ -7,7 +7,7 @@ import Testing
 @MainActor
 @Suite("What a join does, pinned", .serialized)
 struct InvitationInvariantTests {
-    private func paired() async throws -> (a: AppSession, b: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
+    private func paired() async throws -> (a: AppSession, b: AppSession, mailbox: InMemoryMailbox, room: ConversationID) {
         let mailbox = InMemoryMailbox()
         let a = TestSession.make()
         let b = TestSession.make()

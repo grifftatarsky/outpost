@@ -53,7 +53,7 @@ struct WireFormTests {
     @Test("What is in the clear is exactly the routing metadata, and no more")
     func metadataIsAsAdvertised() throws {
         var alice = Author()
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         _ = try alice.append(Payload.post("first"), at: start, room: room)
         let entry = try alice.append(
             Payload.post("hydrogen, obviously"), at: start.addingTimeInterval(1), room: room)
@@ -82,7 +82,7 @@ struct WireFormTests {
         #expect(try replica.integrate(entry) == .accepted)
         #expect(try entry.hasValidSignature(from: alice.device.publicKey))
 
-        let withoutKeys = EpochChain(room: RoomID())
+        let withoutKeys = EpochChain(room: ConversationID.room(UUID()))
         #expect(entry.opened(using: withoutKeys) == nil)
     }
 
@@ -91,7 +91,7 @@ struct WireFormTests {
         var alice = Author()
         let entry = try alice.post("private", at: start)
 
-        let rendered = Fold.render([entry], using: EpochChain(room: RoomID()))
+        let rendered = Fold.render([entry], using: EpochChain(room: ConversationID.room(UUID())))
 
         #expect(rendered.count == 1)
         #expect(rendered.first?.content == .sealed)

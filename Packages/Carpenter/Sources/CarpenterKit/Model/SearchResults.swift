@@ -2,12 +2,12 @@ import Foundation
 
 public struct SearchResults: Hashable, Sendable {
     public struct Conversation: Hashable, Sendable, Identifiable {
-        public let room: RoomID
+        public let room: ConversationID
         public let name: String
         public let isDirect: Bool
-        public var id: RoomID { room }
+        public var id: ConversationID { room }
 
-        public init(room: RoomID, name: String, isDirect: Bool) {
+        public init(room: ConversationID, name: String, isDirect: Bool) {
             self.room = room
             self.name = name
             self.isDirect = isDirect
@@ -16,7 +16,7 @@ public struct SearchResults: Hashable, Sendable {
 
     public struct Said: Hashable, Sendable, Identifiable {
         public let message: MessageID
-        public let room: RoomID
+        public let room: ConversationID
         public let roomName: String
         public let author: Member
         public let body: String
@@ -24,7 +24,7 @@ public struct SearchResults: Hashable, Sendable {
         public var id: MessageID { message }
 
         public init(
-            message: MessageID, room: RoomID, roomName: String, author: Member, body: String,
+            message: MessageID, room: ConversationID, roomName: String, author: Member, body: String,
             sentAt: Date
         ) {
             self.message = message
@@ -38,7 +38,7 @@ public struct SearchResults: Hashable, Sendable {
 
     public struct Picture: Hashable, Sendable, Identifiable {
         public let message: MessageID
-        public let room: RoomID
+        public let room: ConversationID
         public let roomName: String
         public let author: Member
         public let caption: String
@@ -47,7 +47,7 @@ public struct SearchResults: Hashable, Sendable {
         public var id: MessageID { message }
 
         public init(
-            message: MessageID, room: RoomID, roomName: String, author: Member, caption: String,
+            message: MessageID, room: ConversationID, roomName: String, author: Member, caption: String,
             media: MediaAttachment, sentAt: Date
         ) {
             self.message = message

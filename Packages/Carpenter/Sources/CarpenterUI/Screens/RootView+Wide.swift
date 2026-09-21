@@ -64,7 +64,7 @@ extension RootView {
         (area ?? defaultArea).normalised(splitInbox: isSplitInbox, showsOutposts: showsOutposts)
     }
 
-    func area(of room: RoomID) -> WideArea {
+    func area(of room: ConversationID) -> WideArea {
         .holding(
             isDirect: visibleRooms.first { $0.id == room }?.isDirect ?? false,
             splitInbox: isSplitInbox)
@@ -209,11 +209,11 @@ extension RootView {
         switch currentArea {
         case .messages(let scope):
             NavigationStack(
-                path: Binding(get: { [RoomID]() }, set: { if let id = $0.last { openRoom = id } })
+                path: Binding(get: { [ConversationID]() }, set: { if let id = $0.last { openRoom = id } })
             ) {
                 roomsList(scope)
                     .refreshable { await onSync() }
-                    .navigationDestination(for: RoomID.self) { _ in EmptyView() }
+                    .navigationDestination(for: ConversationID.self) { _ in EmptyView() }
             }
             .environment(\.selectedRoom, openRoom)
             .navigationSplitViewColumnWidth(min: 300, ideal: listWidth, max: max(460, listWidth))

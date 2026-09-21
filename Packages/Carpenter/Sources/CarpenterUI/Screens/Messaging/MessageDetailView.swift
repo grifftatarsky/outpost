@@ -252,7 +252,7 @@ public struct MessageActions: Sendable {
     public var react: @Sendable (MessageID, String?) async -> Void
     public var block: (@Sendable (ParticipantID) async -> Void)?
     public var member: @MainActor @Sendable (ParticipantID) -> Member?
-    public var readBy: @MainActor @Sendable (MessageID, RoomID) -> [ReadBy]
+    public var readBy: @MainActor @Sendable (MessageID, ConversationID) -> [ReadBy]
 
     public init(
         edit: @escaping @Sendable (MessageID, String) async -> String? = { _, _ in nil },
@@ -263,7 +263,7 @@ public struct MessageActions: Sendable {
         react: @escaping @Sendable (MessageID, String?) async -> Void = { _, _ in },
         block: (@Sendable (ParticipantID) async -> Void)? = nil,
         member: @escaping @MainActor @Sendable (ParticipantID) -> Member? = { _ in nil },
-        readBy: @escaping @MainActor @Sendable (MessageID, RoomID) -> [ReadBy] = { _, _ in [] }
+        readBy: @escaping @MainActor @Sendable (MessageID, ConversationID) -> [ReadBy] = { _, _ in [] }
     ) {
         self.edit = edit
         self.withdraw = withdraw

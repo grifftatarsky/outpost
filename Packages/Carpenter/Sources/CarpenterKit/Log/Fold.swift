@@ -20,7 +20,7 @@ public struct RenderedEntry: Identifiable, Hashable, Sendable {
     public let author: ParticipantID
     public let device: DeviceID
     public let wallTime: Date
-    public let room: RoomID?
+    public let room: ConversationID?
     public var content: RenderedContent
     public var editedAt: Date?
 

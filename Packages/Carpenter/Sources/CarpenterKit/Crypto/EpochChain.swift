@@ -36,11 +36,11 @@ public struct EpochSecret: Hashable, Sendable {
 }
 
 public struct EpochLink: Hashable, Sendable, Codable {
-    public let room: RoomID
+    public let room: ConversationID
     public let epoch: EpochNumber
     public let wrapped: Data
 
-    public init(room: RoomID, epoch: EpochNumber, wrapped: Data) {
+    public init(room: ConversationID, epoch: EpochNumber, wrapped: Data) {
         self.room = room
         self.epoch = epoch
         self.wrapped = wrapped
@@ -53,16 +53,16 @@ public struct EpochLink: Hashable, Sendable, Codable {
 }
 
 public struct EpochChain: Sendable {
-    public let room: RoomID
+    public let room: ConversationID
 
     private var secrets: [EpochNumber: EpochSecret] = [:]
     private var links: [EpochNumber: EpochLink] = [:]
 
-    public init(room: RoomID) {
+    public init(room: ConversationID) {
         self.room = room
     }
 
-    public static func create(room: RoomID) -> (chain: EpochChain, secret: EpochSecret) {
+    public static func create(room: ConversationID) -> (chain: EpochChain, secret: EpochSecret) {
         var chain = EpochChain(room: room)
         let secret = EpochSecret.random()
         chain.adopt(secret, at: .initial)
@@ -93,7 +93,7 @@ public struct EpochChain: Sendable {
     }
 
     public static func advance(
-        from previous: EpochSecret, at previousEpoch: EpochNumber, room: RoomID
+        from previous: EpochSecret, at previousEpoch: EpochNumber, room: ConversationID
     ) throws -> (secret: EpochSecret, link: EpochLink) {
         let epoch = previousEpoch.next
         let secret = EpochSecret.random()
@@ -157,13 +157,13 @@ public struct EpochChain: Sendable {
     }
 
     private static func wrappingKey(
-        for secret: EpochSecret, room: RoomID, epoch: EpochNumber
+        for secret: EpochSecret, room: ConversationID, epoch: EpochNumber
     ) -> SymmetricKey {
         derivedKey(from: secret, room: room, epoch: epoch, domain: Domain.epochWrapping)
     }
 
     private static func derivedKey(
-        from secret: EpochSecret, room: RoomID, epoch: EpochNumber, domain: String
+        from secret: EpochSecret, room: ConversationID, epoch: EpochNumber, domain: String
     ) -> SymmetricKey {
         SymmetricKey(
             data: HKDF<SHA256>.deriveKey(

@@ -1,19 +1,19 @@
 import Foundation
 
 public struct FocusFilter: Hashable, Sendable, Codable {
-    public var rooms: Set<RoomID>
+    public var rooms: Set<ConversationID>
     public var showsPreviews: Bool
 
-    public init(rooms: Set<RoomID> = [], showsPreviews: Bool = true) {
+    public init(rooms: Set<ConversationID> = [], showsPreviews: Bool = true) {
         self.rooms = rooms
         self.showsPreviews = showsPreviews
     }
 
     public var isNeutral: Bool { rooms.isEmpty && showsPreviews }
 
-    public func allows(_ room: RoomID) -> Bool { rooms.isEmpty || rooms.contains(room) }
+    public func allows(_ room: ConversationID) -> Bool { rooms.isEmpty || rooms.contains(room) }
 
-    public func level(for room: RoomID, own level: NotificationLevel) -> NotificationLevel {
+    public func level(for room: ConversationID, own level: NotificationLevel) -> NotificationLevel {
         guard allows(room) else { return .nothing }
         return withoutPreviews(level)
     }
@@ -30,10 +30,10 @@ public struct FocusFilter: Hashable, Sendable, Codable {
 
 public struct FocusFilterStore: @unchecked Sendable {
     public struct RoomEntry: Hashable, Sendable, Codable {
-        public let id: RoomID
+        public let id: ConversationID
         public let name: String
 
-        public init(id: RoomID, name: String) {
+        public init(id: ConversationID, name: String) {
             self.id = id
             self.name = name
         }

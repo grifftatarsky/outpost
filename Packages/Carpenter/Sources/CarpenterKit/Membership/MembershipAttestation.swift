@@ -1,7 +1,7 @@
 import Foundation
 
 public struct MembershipAttestation: Hashable, Sendable, Codable {
-    public var room: RoomID
+    public var room: ConversationID
     public var joiner: ParticipantID
     public var joinerKeys: IdentityPublicKeys
     public var inviter: ParticipantID
@@ -21,7 +21,7 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
     public static let defaultLifetime: TimeInterval = 24 * 60 * 60
 
     public init(
-        room: RoomID,
+        room: ConversationID,
         joiner: ParticipantID,
         joinerKeys: IdentityPublicKeys,
         inviter: ParticipantID,
@@ -55,7 +55,7 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        room = try container.decode(RoomID.self, forKey: .room)
+        room = try container.decode(ConversationID.self, forKey: .room)
         joiner = try container.decode(ParticipantID.self, forKey: .joiner)
         joinerKeys = try container.decode(IdentityPublicKeys.self, forKey: .joinerKeys)
         inviter = try container.decode(ParticipantID.self, forKey: .inviter)
@@ -76,7 +76,7 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
     }
 
     public static func issue(
-        joining room: RoomID,
+        joining room: ConversationID,
         joinerKeys: IdentityPublicKeys,
         by identity: Identity,
         at issuedAt: Date,
@@ -105,7 +105,7 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
     }
 
     public static func issue(
-        joining room: RoomID,
+        joining room: ConversationID,
         code: JoinerCode,
         by identity: Identity,
         at issuedAt: Date,

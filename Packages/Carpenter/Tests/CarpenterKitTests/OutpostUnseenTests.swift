@@ -294,7 +294,7 @@ struct PostNotificationCopyTests {
         let post = MessageNotification.ofPost(
             author: camilla, name: "Camilla", body: "hello", level: .everything)
         let message = MessageNotification.of(
-            room: RoomID(), roomName: "", author: "Camilla", body: "hello", level: .everything)
+            room: ConversationID.room(UUID()), roomName: "", author: "Camilla", body: "hello", level: .everything)
         #expect(post != message)
     }
 
@@ -313,7 +313,7 @@ struct PostNotificationCopyTests {
         let also = MessageNotification.ofPost(
             author: camilla, name: "Camilla", body: "two", level: .everything)
         #expect(mine.threadID == also.threadID)
-        #expect(mine.threadID != MessageNotification.thread(for: RoomID()))
+        #expect(mine.threadID != MessageNotification.thread(for: ConversationID.room(UUID())))
         #expect(!mine.threadID.isEmpty)
     }
 

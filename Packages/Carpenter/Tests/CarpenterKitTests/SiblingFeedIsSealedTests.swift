@@ -14,7 +14,7 @@ struct SiblingFeedIsSealedTests {
     private static let nickname = "Cassilda"
     private static let displayName = "Camilla"
     private static let blocked = ParticipantID(rawValue: Data(repeating: 0x77, count: 32))
-    private static let room = RoomID()
+    private static let room = ConversationID.room(UUID())
     private static let keys = DeviceKeys.generate()
 
     private static func populated() -> SiblingFeed {

@@ -10,6 +10,6 @@ struct PresentedInvite: Identifiable {
     var id: ParticipantID { invite.attestation.joiner }
 }
 
-extension RoomID: Identifiable {
-    public var id: RoomID { self }
+extension ConversationID: Identifiable {
+    public var id: ConversationID { self }
 }

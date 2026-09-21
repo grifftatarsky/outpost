@@ -7,25 +7,25 @@ import Foundation
 extension AppSession {
     // MARK: History repair
 
-    public func missingHistory(in room: RoomID) -> [FeedGap] {
+    public func missingHistory(in room: ConversationID) -> [FeedGap] {
         replica.gaps(from: membersToCheck(in: room)).subtracting(persisted.unverifiable)
             .subtracting(persisted.elsewhere)
     }
 
-    private func membersToCheck(in room: RoomID) -> Set<ParticipantID> {
+    private func membersToCheck(in room: ConversationID) -> Set<ParticipantID> {
         let roster = roster(of: room)
         return roster.members.union(roster.requests.keys)
     }
 
     @discardableResult
-    public func startRepair(in room: RoomID, asking: ParticipantID? = nil) async -> HistoryRepairStatus? {
+    public func startRepair(in room: ConversationID, asking: ParticipantID? = nil) async -> HistoryRepairStatus? {
         await beginRepair(in: room, asking: asking, quiet: false)
         return repairStatus(of: room)
     }
 
     @discardableResult
     private func beginRepair(
-        in room: RoomID, asking: ParticipantID?, quiet: Bool, reason: RepairReason = .gap
+        in room: ConversationID, asking: ParticipantID?, quiet: Bool, reason: RepairReason = .gap
     ) async -> Bool {
         guard enrolment != nil else { return false }
         let authors = membersToCheck(in: room)
@@ -170,7 +170,7 @@ extension AppSession {
         Diagnostics.sync.notice("repair: asking for an Outpost this device was just let into")
     }
 
-    public func dismissRepair(in room: RoomID) async {
+    public func dismissRepair(in room: ConversationID) async {
         guard persisted.repairs.contains(where: { $0.room == room && !$0.quiet }) else { return }
         persisted.repairs.removeAll { $0.room == room && !$0.quiet }
         do {
@@ -181,7 +181,7 @@ extension AppSession {
         }
     }
 
-    public func repairStatus(of room: RoomID) -> HistoryRepairStatus? {
+    public func repairStatus(of room: ConversationID) -> HistoryRepairStatus? {
         guard let repair = persisted.repairs.first(where: { $0.room == room && !$0.quiet })
         else { return nil }
         let authors = Set(repair.request.authors)

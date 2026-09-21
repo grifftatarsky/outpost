@@ -18,7 +18,7 @@ struct ReciprocalAccessTests {
 
     private func acquainted(
         roomNamed name: String = "Zeppelin Enthusiasts"
-    ) async throws -> (alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox) {
+    ) async throws -> (alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
         let bob = TestSession.make()

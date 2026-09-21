@@ -11,7 +11,7 @@ struct AppAndExtensionTests {
         let alice: AppSession
         let app: AppSession
         let mailbox: InMemoryMailbox
-        let room: RoomID
+        let room: ConversationID
         let keychain: InMemoryKeychainStore
         let directory: URL
         let clock: TestClock

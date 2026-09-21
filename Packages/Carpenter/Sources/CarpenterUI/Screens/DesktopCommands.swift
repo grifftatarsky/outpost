@@ -30,7 +30,7 @@ struct DesktopActions {
     let areas: [Area]
     let current: WideArea
     let show: (WideArea) -> Void
-    let rooms: [(id: RoomID, name: String)]
+    let rooms: [(id: ConversationID, name: String)]
     let openRoom: OpenRoom?
     let go: (RootView.Destination) -> Void
 

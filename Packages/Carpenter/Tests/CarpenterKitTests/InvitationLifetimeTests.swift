@@ -11,7 +11,7 @@ struct InvitationLifetimeTests {
         lasting lifetime: InvitationLifetime, at issued: Date? = nil
     ) throws -> MembershipAttestation {
         try TestInvite.issue(
-            joining: RoomID(), joinerKeys: Identity.generate().publicKeys,
+            joining: ConversationID.room(UUID()), joinerKeys: Identity.generate().publicKeys,
             by: Identity.generate(), at: issued ?? start, lasting: lifetime)
     }
 
@@ -111,7 +111,7 @@ struct InvitationLifetimeTests {
 @Suite("Invitations a room is still waiting on")
 struct PendingInvitationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func rendered(
         _ author: ParticipantID, _ type: PayloadType, hash: UInt8

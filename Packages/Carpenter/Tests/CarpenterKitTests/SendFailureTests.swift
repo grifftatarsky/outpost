@@ -79,7 +79,7 @@ struct SendFailureTests {
         await alice.load()
 
         await #expect(throws: AppSessionError.self) {
-            try await alice.send("nowhere to go", to: RoomID())
+            try await alice.send("nowhere to go", to: ConversationID.room(UUID()))
         }
     }
 }

@@ -24,7 +24,7 @@ struct PacketWireTests {
         let (mine, _) = try peers()
         var author = Author()
 
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, secret) = EpochChain.create(room: room)
         let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: mine.secret)
 
@@ -71,7 +71,7 @@ struct PacketWireTests {
     @Test("A half-written grant reads as no grant, not as a wrong one")
     func mismatchedGrantArraysAreDropped() throws {
         let (mine, _) = try peers()
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, secret) = EpochChain.create(room: room)
         let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: mine.secret)
 
@@ -94,7 +94,7 @@ struct PacketWireTests {
     @Test("The in-memory mailbox carries a grant through the wire mapping")
     func fakeMailboxSerialises() async throws {
         let (mine, theirs) = try peers()
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, secret) = EpochChain.create(room: room)
         let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: mine.secret)
 

@@ -119,12 +119,12 @@ public struct CompareCodesView: View {
 }
 
 public struct ComparisonOffer: Identifiable, Hashable, Sendable {
-    public let room: RoomID
+    public let room: ConversationID
     public let people: [VerifiedPerson]
 
-    public var id: RoomID { room }
+    public var id: ConversationID { room }
 
-    public init(room: RoomID, people: [VerifiedPerson]) {
+    public init(room: ConversationID, people: [VerifiedPerson]) {
         self.room = room
         self.people = people
     }

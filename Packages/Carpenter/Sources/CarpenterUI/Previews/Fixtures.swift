@@ -197,7 +197,7 @@
             organisation.setPinned(true, for: hangar7.id, stamp: stamp(4))
             organisation.setPinned(true, for: zeppelinEnthusiasts.id, stamp: stamp(5))
 
-            func room(_ name: String) -> RoomID { rooms.first { $0.name == name }!.id }
+            func room(_ name: String) -> ConversationID { rooms.first { $0.name == name }!.id }
 
             organisation.setTag(airships, on: true, for: room("Zeppelin Enthusiasts"), stamp: stamp(6))
             organisation.setTag(daily, on: true, for: room("Zeppelin Enthusiasts"), stamp: stamp(7))

@@ -24,7 +24,7 @@ struct MembersOverTimeTests {
     }
 
     private func admit(
-        _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
+        _ joiner: AppSession, to room: ConversationID, by inviter: AppSession,
         alongside everyone: [AppSession], through mailbox: InMemoryMailbox
     ) async throws {
         let invite = try await inviter.invite(
@@ -226,7 +226,7 @@ struct AddressedPeersTests {
     }
 
     private func joinRoom(
-        _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
+        _ joiner: AppSession, to room: ConversationID, by inviter: AppSession,
         through mailbox: InMemoryMailbox
     ) async throws {
         let invite = try await inviter.invite(

@@ -4,7 +4,7 @@ import Foundation
 // MARK: Deleting a conversation this member is no longer in
 
 extension AppSession {
-    public func deletion(of room: RoomID) -> RoomDeletion {
+    public func deletion(of room: ConversationID) -> RoomDeletion {
         guard let enrolment, standing(in: room) != .present else { return .stillIn }
         guard !replica.knownParticipants.contains(where: { outpostRoom(for: $0) == room }) else {
             return .stillIn
@@ -15,7 +15,7 @@ extension AppSession {
         return unsent ? .departureNotSent : .allowed
     }
 
-    public func deleteRoom(_ room: RoomID) async throws {
+    public func deleteRoom(_ room: ConversationID) async throws {
         switch deletion(of: room) {
         case .stillIn: throw MembershipError.stillInTheRoom
         case .departureNotSent: throw MembershipError.departureNotSent
@@ -34,7 +34,7 @@ extension AppSession {
         sendOwnEntries()
     }
 
-    func close(_ rooms: Set<RoomID>) async throws {
+    func close(_ rooms: Set<ConversationID>) async throws {
         guard !rooms.isEmpty else { return }
         var removed: [Entry] = []
         for room in rooms { removed.append(contentsOf: replica.close(room)) }
@@ -62,7 +62,7 @@ extension AppSession {
         refresh()
     }
 
-    func reopen(_ room: RoomID) {
+    func reopen(_ room: ConversationID) {
         guard replica.closedRooms.contains(room) || persisted.preferences.roomsDeleted.contains(room)
         else { return }
         persisted.preferences.setDeleted(false, room, stamp: stamp())
@@ -86,7 +86,7 @@ extension AppSession {
         }
     }
 
-    func finishDeleting(_ rooms: Set<RoomID>, removing entries: [Entry]) async {
+    func finishDeleting(_ rooms: Set<ConversationID>, removing entries: [Entry]) async {
         guard !rooms.isEmpty else { return }
 
         var named: Set<AttachmentID> = []

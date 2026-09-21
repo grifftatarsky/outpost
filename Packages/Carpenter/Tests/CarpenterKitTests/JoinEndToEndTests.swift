@@ -17,8 +17,8 @@ struct JoinEndToEndTests {
         var id: ParticipantID { author.identity.id }
     }
 
-    private func room() throws -> (RoomID, EpochSecret, EpochChain) {
-        let id = RoomID()
+    private func room() throws -> (ConversationID, EpochSecret, EpochChain) {
+        let id = ConversationID.room(UUID())
         let (chain, secret) = EpochChain.create(room: id)
         return (id, secret, chain)
     }

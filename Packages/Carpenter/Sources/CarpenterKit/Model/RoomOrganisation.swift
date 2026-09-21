@@ -56,13 +56,13 @@ public enum ManagedTagKind: String, Hashable, Sendable, Codable, CaseIterable {
 
 public struct ManagedTag: Identifiable, Hashable, Sendable {
     public let kind: ManagedTagKind
-    public let rooms: Set<RoomID>
+    public let rooms: Set<ConversationID>
 
     public var id: TagID { kind.id }
 
     public var isWorthShowing: Bool { !rooms.isEmpty }
 
-    public init(kind: ManagedTagKind, rooms: Set<RoomID>) {
+    public init(kind: ManagedTagKind, rooms: Set<ConversationID>) {
         self.kind = kind
         self.rooms = rooms
     }
@@ -116,9 +116,9 @@ public struct RoomOrganisation: Hashable, Sendable, Codable {
 
 public struct RoomsListOrganisation: Hashable, Sendable, Codable {
     public var tags: [TagID: RoomTag]
-    public var rooms: [RoomID: RoomOrganisation]
+    public var rooms: [ConversationID: RoomOrganisation]
 
-    public init(tags: [TagID: RoomTag] = [:], rooms: [RoomID: RoomOrganisation] = [:]) {
+    public init(tags: [TagID: RoomTag] = [:], rooms: [ConversationID: RoomOrganisation] = [:]) {
         self.tags = tags
         self.rooms = rooms
     }
@@ -130,11 +130,11 @@ public struct RoomsListOrganisation: Hashable, Sendable, Codable {
         }
     }
 
-    public func organisation(of room: RoomID) -> RoomOrganisation? { rooms[room] }
+    public func organisation(of room: ConversationID) -> RoomOrganisation? { rooms[room] }
 
-    public func isPinned(_ room: RoomID) -> Bool { rooms[room]?.isPinned ?? false }
+    public func isPinned(_ room: ConversationID) -> Bool { rooms[room]?.isPinned ?? false }
 
-    public func tags(of room: RoomID) -> Set<TagID> { rooms[room]?.assignedTags ?? [] }
+    public func tags(of room: ConversationID) -> Set<TagID> { rooms[room]?.assignedTags ?? [] }
 
     public func roomCount(taggedWith tag: TagID) -> Int {
         rooms.values.count { $0.assignedTags.contains(tag) }
@@ -170,14 +170,14 @@ public struct RoomsListOrganisation: Hashable, Sendable, Codable {
     // MARK: Editing
 
     public mutating func setPinned(
-        _ pinned: Bool, for room: RoomID, stamp: OrganisationStamp
+        _ pinned: Bool, for room: ConversationID, stamp: OrganisationStamp
     ) {
         let position = pinned ? (lowestPinOrder() - 1) : nil
         update(room, stamp: stamp) { $0.pin = Stamped(position, stamp: stamp) }
     }
 
     public mutating func movePin(
-        _ room: RoomID, between above: RoomID?, and below: RoomID?, stamp: OrganisationStamp
+        _ room: ConversationID, between above: ConversationID?, and below: ConversationID?, stamp: OrganisationStamp
     ) {
         let upper = above.flatMap { rooms[$0]?.pin.value } ?? (lowestPinOrder() - 2)
         let lower = below.flatMap { rooms[$0]?.pin.value } ?? (highestPinOrder() + 2)
@@ -185,7 +185,7 @@ public struct RoomsListOrganisation: Hashable, Sendable, Codable {
     }
 
     public mutating func setTag(
-        _ tag: TagID, on assigned: Bool, for room: RoomID, stamp: OrganisationStamp
+        _ tag: TagID, on assigned: Bool, for room: ConversationID, stamp: OrganisationStamp
     ) {
         update(room, stamp: stamp) { $0.tags[tag] = Stamped(assigned, stamp: stamp) }
     }
@@ -219,7 +219,7 @@ public struct RoomsListOrganisation: Hashable, Sendable, Codable {
         }
     }
 
-    public mutating func forget(_ room: RoomID) {
+    public mutating func forget(_ room: ConversationID) {
         rooms[room] = nil
     }
 
@@ -236,7 +236,7 @@ public struct RoomsListOrganisation: Hashable, Sendable, Codable {
     }
 
     private mutating func update(
-        _ room: RoomID, stamp: OrganisationStamp, _ change: (inout RoomOrganisation) -> Void
+        _ room: ConversationID, stamp: OrganisationStamp, _ change: (inout RoomOrganisation) -> Void
     ) {
         var organisation =
             rooms[room]

@@ -93,7 +93,7 @@ struct SendingPhotoTests {
     }
 
     private func joined(aliceStore: MemoryMediaStore = MemoryMediaStore()) async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make(media: aliceStore)
@@ -319,7 +319,7 @@ struct SendingPhotoTests {
 @Suite("Blocking", .serialized)
 struct BlockingTests {
     private func joined() async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()

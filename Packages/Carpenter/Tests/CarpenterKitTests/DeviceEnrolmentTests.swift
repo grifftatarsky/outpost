@@ -192,8 +192,9 @@ struct DeviceEnrolmentTests {
                 && session.messages(in: room).contains { $0.body == "door code changed" }
         }
 
-        let deadline = Date().addingTimeInterval(10)
-        while !arrived(relaunched), Date() < deadline {
+        var reloads = 0
+        while !arrived(relaunched), reloads < 200 {
+            reloads += 1
             try? await Task.sleep(for: .milliseconds(50))
             relaunched = TestSession.make(keychain: keychain, at: directory)
             await relaunched.load()

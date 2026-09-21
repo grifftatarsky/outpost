@@ -19,7 +19,7 @@ public struct SealedPayload: Hashable, Sendable, Codable {
         return CanonicalBytes.payload(domain: Domain.sealedPayload, fields: fields)
     }
 
-    static func context(room: RoomID, epoch: EpochNumber, by writer: FeedKey?) -> Data {
+    static func context(room: ConversationID, epoch: EpochNumber, by writer: FeedKey?) -> Data {
         var fields = [room.canonicalBytes, epoch.canonicalBytes]
         if let writer { fields.append(writer.canonicalBytes) }
         return CanonicalBytes.payload(domain: Domain.sealedPayload, fields: fields)
@@ -76,7 +76,7 @@ extension SealedPayload {
     }
 
     public func opened(
-        pairwise secret: PairwiseSecret, room: RoomID, by writer: FeedKey?
+        pairwise secret: PairwiseSecret, room: ConversationID, by writer: FeedKey?
     ) throws -> Payload {
         guard let alsoFor,
             let box = try? ChaChaPoly.SealedBox(combined: alsoFor),

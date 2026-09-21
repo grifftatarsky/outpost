@@ -9,7 +9,7 @@ import Testing
 struct UnreadTests {
     private func joined(
         bobAt directory: URL? = nil, bobKeychain: any KeychainStore = InMemoryKeychainStore()
-    ) async throws -> (alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox) {
+    ) async throws -> (alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
         let bob = TestSession.make(keychain: bobKeychain, at: directory)
@@ -29,12 +29,12 @@ struct UnreadTests {
         return (alice, bob, room, mailbox)
     }
 
-    private func unread(_ session: AppSession, _ room: RoomID) -> Bool {
+    private func unread(_ session: AppSession, _ room: ConversationID) -> Bool {
         session.rooms.first { $0.id == room }?.hasUnread ?? false
     }
 
     private func alicaSays(
-        _ text: String, to room: RoomID, from alice: AppSession, to bob: AppSession,
+        _ text: String, to room: ConversationID, from alice: AppSession, to bob: AppSession,
         through mailbox: InMemoryMailbox
     ) async throws {
         try await alice.send(text, to: room)
@@ -178,7 +178,7 @@ struct UnreadTests {
 
     @Test("A read mark this device cannot find reads as nothing read")
     func anUnknownMarkShowsUnread() throws {
-        let chain = EpochChain.create(room: RoomID())
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
         var alice = Author(chain: chain.chain)
         let room = chain.chain.room
         let said = try alice.append(
@@ -194,7 +194,7 @@ struct UnreadTests {
 
     @Test("With nobody reading, nothing is unread")
     func noViewerMeansNoUnread() throws {
-        let chain = EpochChain.create(room: RoomID())
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
         var alice = Author(chain: chain.chain)
         let said = try alice.append(
             try Payload.post("hello"), at: TestSession.now, room: chain.chain.room)

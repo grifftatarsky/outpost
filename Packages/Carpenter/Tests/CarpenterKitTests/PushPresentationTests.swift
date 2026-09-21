@@ -32,8 +32,8 @@ struct PushPresentationTests {
     @Test("A message for the conversation on screen shows nothing")
     func readingTheRoomSuppressesIt() {
         let bell = PushChannel.bell.subscriptionID
-        let kitchen = MessageNotification.thread(for: RoomID())
-        let hangar = MessageNotification.thread(for: RoomID())
+        let kitchen = MessageNotification.thread(for: ConversationID.room(UUID()))
+        let hangar = MessageNotification.thread(for: ConversationID.room(UUID()))
 
         #expect(
             PushPresentation.options(forSubscriptionID: bell, thread: kitchen, viewing: kitchen)

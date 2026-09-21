@@ -41,7 +41,7 @@ extension Projection {
     }
 
     public func peopleInRooms(opening: (RenderedEntry) -> Payload?) -> Set<ParticipantID> {
-        var rosters: [RoomID: RoomRoster] = [:]
+        var rosters: [ConversationID: RoomRoster] = [:]
         for entry in rendered {
             guard let room = entry.room, RoomRoster.rosterShaping.contains(entry.type) else {
                 continue
@@ -70,7 +70,7 @@ extension Projection {
         }
     }
 
-    public func announcedName(of author: ParticipantID, in room: RoomID) -> String? {
+    public func announcedName(of author: ParticipantID, in room: ConversationID) -> String? {
         let last = rendered.last {
             $0.room == room && $0.type == .memberProfile && $0.author == author
         }
@@ -81,7 +81,7 @@ extension Projection {
     public func commentTally(
         for post: EntryHash, by owner: ParticipantID, opening: (RenderedEntry) -> Payload?
     ) -> Int? {
-        let wall = RoomID.outpost(of: owner)
+        let wall = ConversationID.outpost(of: owner)
         let last = rendered.last { entry in
             guard entry.type == .commentTally, entry.author == owner,
                 entry.room == nil || entry.room == wall
@@ -102,7 +102,7 @@ extension Projection {
     }
 
     public func blurb(of author: ParticipantID, opening: (RenderedEntry) -> Payload?) -> String? {
-        let wall = RoomID.outpost(of: author)
+        let wall = ConversationID.outpost(of: author)
         let last = rendered.last {
             $0.type == .memberProfile && $0.author == author && $0.room == wall
         }
@@ -115,18 +115,18 @@ extension Projection {
     }
 
     public func photoReference(of author: ParticipantID) -> AttachmentReference? {
-        let wall = RoomID.outpost(of: author)
+        let wall = ConversationID.outpost(of: author)
         return rendered.last { $0.type == .memberPhoto && $0.author == author && $0.room != wall }?
             .memberPhoto?.reference
     }
 
     public func outpostPhotoReference(of author: ParticipantID) -> AttachmentReference? {
-        let wall = RoomID.outpost(of: author)
+        let wall = ConversationID.outpost(of: author)
         return rendered.last { $0.type == .memberPhoto && $0.author == author && $0.room == wall }?
             .memberPhoto?.reference
     }
 
-    public func announcedPhoto(of author: ParticipantID, in room: RoomID) -> AttachmentReference?? {
+    public func announcedPhoto(of author: ParticipantID, in room: ConversationID) -> AttachmentReference?? {
         rendered.last { $0.room == room && $0.type == .memberPhoto && $0.author == author }?.memberPhoto
             .map(\.reference)
     }
@@ -135,7 +135,7 @@ extension Projection {
         rendered.last { $0.type == .focusStatus && $0.author == author }?.focusStatus
     }
 
-    public func lastFocusStatus(of author: ParticipantID, in room: RoomID) -> FocusStatusBody? {
+    public func lastFocusStatus(of author: ParticipantID, in room: ConversationID) -> FocusStatusBody? {
         rendered.last { $0.room == room && $0.type == .focusStatus && $0.author == author }?.focusStatus
     }
 
@@ -148,7 +148,7 @@ extension Projection {
         return Set(latest.filter(\.value).keys)
     }
 
-    public func lastSupporterBadge(of author: ParticipantID, in room: RoomID) -> SupporterBadgeBody? {
+    public func lastSupporterBadge(of author: ParticipantID, in room: ConversationID) -> SupporterBadgeBody? {
         rendered.last { $0.room == room && $0.type == .supporterBadge && $0.author == author }?.supporterBadge
     }
 }

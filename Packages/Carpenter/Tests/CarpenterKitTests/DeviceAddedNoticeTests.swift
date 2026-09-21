@@ -7,7 +7,7 @@ import Testing
 @MainActor
 @Suite("Somebody you talk to adding a device is said in the conversation, with its date", .serialized)
 struct DeviceAddedNoticeTests {
-    private func addedDevices(_ session: AppSession, _ room: RoomID) -> [(ParticipantID, Date)] {
+    private func addedDevices(_ session: AppSession, _ room: ConversationID) -> [(ParticipantID, Date)] {
         session.transcript(in: room).compactMap { item in
             guard case .notice(let notice) = item, case .addedADevice(let who) = notice.kind
             else { return nil }

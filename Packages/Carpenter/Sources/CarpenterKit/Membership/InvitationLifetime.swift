@@ -44,7 +44,7 @@ public enum InvitationLifetime: Hashable, Sendable, CaseIterable {
 
 extension MembershipAttestation {
     public static func issue(
-        joining room: RoomID,
+        joining room: ConversationID,
         joinerKeys: IdentityPublicKeys,
         by identity: Identity,
         at issuedAt: Date,
@@ -73,7 +73,7 @@ extension MembershipAttestation {
     }
 
     public static func issue(
-        joining room: RoomID,
+        joining room: ConversationID,
         code: JoinerCode,
         by identity: Identity,
         at issuedAt: Date,

@@ -1,22 +1,81 @@
 import Foundation
 
-public struct RoomID: Hashable, Sendable, Codable {
-    public let rawValue: UUID
+public enum ConversationID: Hashable, Sendable {
+    case room(UUID)
+    case solo(UUID)
+    case outpost(ParticipantID)
 
-    public init(rawValue: UUID = UUID()) {
-        self.rawValue = rawValue
+    public enum Kind: String, Hashable, Sendable, Codable, CaseIterable {
+        case room
+        case solo
+        case outpost
     }
 
-    public static func outpost(of participant: ParticipantID) -> RoomID {
-        var bytes = Array(participant.rawValue.prefix(16))
-        bytes.append(contentsOf: Array(repeating: 0, count: Swift.max(0, 16 - bytes.count)))
-        return RoomID(
-            rawValue: UUID(
-                uuid: (
-                    bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-                    bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14],
-                    bytes[15]
-                )))
+    public var kind: Kind {
+        switch self {
+        case .room: .room
+        case .solo: .solo
+        case .outpost: .outpost
+        }
+    }
+
+    public static func outpost(of owner: ParticipantID) -> ConversationID { .outpost(owner) }
+
+    public var owner: ParticipantID? {
+        switch self {
+        case .outpost(let owner): owner
+        case .room, .solo: nil
+        }
+    }
+
+    public var stableName: String {
+        switch self {
+        case .room(let id): "room.\(id.uuidString)"
+        case .solo(let id): "solo.\(id.uuidString)"
+        case .outpost(let owner): "outpost.\(owner.rawValue.base64EncodedString())"
+        }
+    }
+
+    public init?(stableName: String) {
+        guard let dot = stableName.firstIndex(of: ".") else { return nil }
+        let rest = String(stableName[stableName.index(after: dot)...])
+        guard let kind = Kind(rawValue: String(stableName[..<dot])) else { return nil }
+        switch kind {
+        case .room:
+            guard let id = UUID(uuidString: rest) else { return nil }
+            self = .room(id)
+        case .solo:
+            guard let id = UUID(uuidString: rest) else { return nil }
+            self = .solo(id)
+        case .outpost:
+            guard let bytes = Data(base64Encoded: rest), bytes.count == 32 else { return nil }
+            self = .outpost(ParticipantID(rawValue: bytes))
+        }
+    }
+
+    public var canonicalBytes: Data {
+        switch self {
+        case .room(let id): Data([1]) + withUnsafeBytes(of: id.uuid) { Data($0) }
+        case .solo(let id): Data([2]) + withUnsafeBytes(of: id.uuid) { Data($0) }
+        case .outpost(let owner): Data([3]) + owner.rawValue
+        }
+    }
+}
+
+extension ConversationID: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let name = try container.decode(String.self)
+        guard let decoded = ConversationID(stableName: name) else {
+            throw DecodingError.dataCorruptedError(
+                in: container, debugDescription: "not a conversation: \(name)")
+        }
+        self = decoded
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(stableName)
     }
 }
 
@@ -118,7 +177,7 @@ public struct Member: Identifiable, Hashable, Sendable {
 }
 
 public struct RoomSummary: Identifiable, Hashable, Sendable {
-    public let id: RoomID
+    public let id: ConversationID
     public let name: String
     public let memberCount: Int
     public let lastAuthor: Member?
@@ -127,7 +186,7 @@ public struct RoomSummary: Identifiable, Hashable, Sendable {
     public let hasUnread: Bool
 
     public init(
-        id: RoomID = RoomID(),
+        id: ConversationID = .room(UUID()),
         name: String,
         memberCount: Int,
         lastAuthor: Member?,
@@ -339,7 +398,7 @@ public struct OutpostPost: Identifiable, Hashable, Sendable {
 }
 
 public struct RoomGreeting: Identifiable, Hashable, Sendable {
-    public let id: RoomID
+    public let id: ConversationID
     public let name: String
     public let invitedBy: Member?
     public let members: [Member]
@@ -347,7 +406,7 @@ public struct RoomGreeting: Identifiable, Hashable, Sendable {
     public let isDirect: Bool
 
     public init(
-        id: RoomID, name: String, invitedBy: Member?, members: [Member], access: RoomAccess,
+        id: ConversationID, name: String, invitedBy: Member?, members: [Member], access: RoomAccess,
         isDirect: Bool = false
     ) {
         self.id = id
@@ -360,7 +419,7 @@ public struct RoomGreeting: Identifiable, Hashable, Sendable {
 }
 
 public struct AwaitingAdmission: Identifiable, Hashable, Sendable {
-    public let room: RoomID
+    public let room: ConversationID
     public let invitedBy: Member
     public let phrase: String?
     public let confirmedAt: Date
@@ -368,12 +427,12 @@ public struct AwaitingAdmission: Identifiable, Hashable, Sendable {
 
     public let hasLapsed: Bool
 
-    public var id: RoomID { room }
+    public var id: ConversationID { room }
 
     public var isIndefinite: Bool { expiresAt >= .distantFuture }
 
     public init(
-        room: RoomID, invitedBy: Member, phrase: String?, confirmedAt: Date, expiresAt: Date,
+        room: ConversationID, invitedBy: Member, phrase: String?, confirmedAt: Date, expiresAt: Date,
         hasLapsed: Bool = false
     ) {
         self.room = room

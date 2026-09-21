@@ -118,7 +118,7 @@ struct NamingYourDevicesTests {
 @MainActor
 struct RemovingSeveralDevicesTests {
     private func sessionWithSpareDevices(_ count: Int) async throws -> (
-        session: AppSession, room: RoomID, spares: [DeviceID]
+        session: AppSession, room: ConversationID, spares: [DeviceID]
     ) {
         let clock = TestClock(now: TestSession.now)
         let session = TestSession.make(keychain: InMemoryKeychainStore(), clock: clock)

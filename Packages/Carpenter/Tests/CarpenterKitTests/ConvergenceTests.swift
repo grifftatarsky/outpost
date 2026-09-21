@@ -105,7 +105,7 @@ private struct History {
     init(seed: UInt64, members memberCount: Int, operations: Int) throws {
         var generator = SeededGenerator(seed: seed)
         let start = Date(timeIntervalSince1970: 1_786_635_000)
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         chain = EpochChain.create(room: room).chain
 
         members = (0..<memberCount).map { _ in Author(chain: chain) }

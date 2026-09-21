@@ -1,7 +1,7 @@
 import Foundation
 
 public struct EpochGrant: Hashable, Sendable, Codable {
-    public let room: RoomID
+    public let room: ConversationID
     public let epoch: EpochNumber
 
     public let link: EpochLink?
@@ -10,7 +10,7 @@ public struct EpochGrant: Hashable, Sendable, Codable {
 
     let wrapped: Data
 
-    init(room: RoomID, epoch: EpochNumber, link: EpochLink?, links: [EpochLink] = [], wrapped: Data) {
+    init(room: ConversationID, epoch: EpochNumber, link: EpochLink?, links: [EpochLink] = [], wrapped: Data) {
         self.room = room
         self.epoch = epoch
         self.link = link
@@ -22,7 +22,7 @@ public struct EpochGrant: Hashable, Sendable, Codable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        room = try container.decode(RoomID.self, forKey: .room)
+        room = try container.decode(ConversationID.self, forKey: .room)
         epoch = try container.decode(EpochNumber.self, forKey: .epoch)
         link = try container.decodeIfPresent(EpochLink.self, forKey: .link)
         links = try container.decodeIfPresent([EpochLink].self, forKey: .links) ?? []
@@ -36,7 +36,7 @@ public struct EpochGrant: Hashable, Sendable, Codable {
     }
 
     public static func issue(
-        _ secret: EpochSecret, at epoch: EpochNumber, in room: RoomID, link: EpochLink?,
+        _ secret: EpochSecret, at epoch: EpochNumber, in room: ConversationID, link: EpochLink?,
         links: [EpochLink] = [], to peer: PairwiseSecret
     ) throws -> EpochGrant {
         let context = Self.context(room: room, epoch: epoch)
@@ -54,7 +54,7 @@ public struct EpochGrant: Hashable, Sendable, Codable {
             material: try peer.unwrap(wrapped, context: Self.context(room: room, epoch: epoch)))
     }
 
-    private static func context(room: RoomID, epoch: EpochNumber) -> Data {
+    private static func context(room: ConversationID, epoch: EpochNumber) -> Data {
         CanonicalBytes.payload(
             domain: Domain.epochGrant, fields: [room.canonicalBytes, epoch.canonicalBytes])
     }

@@ -57,7 +57,7 @@ struct RemovalSurvivesACrashTests {
     }
 
     private func admit(
-        _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
+        _ joiner: AppSession, to room: ConversationID, by inviter: AppSession,
         alongside everyone: [AppSession], through mailbox: InMemoryMailbox
     ) async throws {
         let invite = try await inviter.invite(
@@ -72,7 +72,7 @@ struct RemovalSurvivesACrashTests {
         let alice: AppSession
         let bob: AppSession
         let carol: AppSession
-        let id: RoomID
+        let id: ConversationID
         let epochBefore: EpochNumber
     }
 

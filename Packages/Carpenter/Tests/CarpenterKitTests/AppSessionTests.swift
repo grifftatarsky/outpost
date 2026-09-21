@@ -430,7 +430,7 @@ struct PersistedStateCompatibilityTests {
     @Test("What it writes, it reads back whole")
     func roundTrip() throws {
         var state = PersistedState()
-        state.knownRooms = [RoomID()]
+        state.knownRooms = [ConversationID.room(UUID())]
         state.knownKeys = [Identity.generate().publicKeys]
         state.epochs = [state.knownRooms[0]: [0, 1]]
 

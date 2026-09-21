@@ -6,7 +6,7 @@ import Testing
 @Suite("One member, two devices")
 struct MultiDeviceTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
-    private let chain = EpochChain.create(room: RoomID()).chain
+    private let chain = EpochChain.create(room: ConversationID.room(UUID())).chain
 
     private func seal(_ text: String) throws -> SealedPayload {
         try Payload.post(text).sealed(at: .initial, using: chain)
@@ -28,7 +28,7 @@ struct MultiDeviceTests {
         try hastur.admit(phoneCertificate)
         try hastur.admit(macCertificate)
 
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let fromPhone = try Entry.append(
             to: nil, author: identity.id, device: phone, clock: VectorClock(),
             wallTime: start.addingTimeInterval(120), room: room,
@@ -86,7 +86,7 @@ struct MultiDeviceTests {
         try replica.admit(DeviceCertificate.issue(for: kept.publicKey, by: identity, at: start))
         try replica.admit(DeviceCertificate.issue(for: lost.publicKey, by: identity, at: start))
 
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let beforeLoss = try Entry.append(
             to: nil, author: identity.id, device: lost, clock: VectorClock(),
             wallTime: start.addingTimeInterval(60), room: room,

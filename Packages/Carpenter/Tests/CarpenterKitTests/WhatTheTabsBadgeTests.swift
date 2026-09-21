@@ -26,7 +26,7 @@ struct WhatTheTabsBadgeTests {
 
     private func aWallBobCanRead(
         _ clock: TestClock, _ mailbox: InMemoryMailbox
-    ) async throws -> (alice: AppSession, bob: AppSession, room: RoomID) {
+    ) async throws -> (alice: AppSession, bob: AppSession, room: ConversationID) {
         let alice = try session(clock)
         let bob = try session(clock)
         await alice.load()

@@ -29,9 +29,9 @@ public struct SpentEntry: Hashable, Sendable, Codable {
     public let feed: FeedKey
     public let seq: UInt64
     public let hash: EntryHash
-    public let room: RoomID?
+    public let room: ConversationID?
 
-    public init(feed: FeedKey, seq: UInt64, hash: EntryHash, room: RoomID?) {
+    public init(feed: FeedKey, seq: UInt64, hash: EntryHash, room: ConversationID?) {
         self.feed = feed
         self.seq = seq
         self.hash = hash
@@ -50,7 +50,7 @@ public struct Replica: Sendable {
     private var feeds: [FeedKey: [UInt64: [EntryHash: Entry]]] = [:]
     private var spent: [FeedKey: [UInt64: SpentEntry]] = [:]
 
-    public private(set) var closedRooms: Set<RoomID> = []
+    public private(set) var closedRooms: Set<ConversationID> = []
 
     public private(set) var forks: [Fork] = []
 
@@ -173,13 +173,13 @@ public struct Replica: Sendable {
         return spent[feed]?[top]?.link
     }
 
-    public mutating func restore(spent entries: [SpentEntry], closing rooms: Set<RoomID>) {
+    public mutating func restore(spent entries: [SpentEntry], closing rooms: Set<ConversationID>) {
         closedRooms.formUnion(rooms)
         for entry in entries where feeds[entry.feed]?[entry.seq] == nil { spend(entry) }
     }
 
     @discardableResult
-    public mutating func close(_ room: RoomID) -> [Entry] {
+    public mutating func close(_ room: ConversationID) -> [Entry] {
         closedRooms.insert(room)
         highestInRoom[room] = nil
         var taken: [Entry] = []
@@ -206,7 +206,7 @@ public struct Replica: Sendable {
         return taken
     }
 
-    public mutating func reopen(_ room: RoomID) {
+    public mutating func reopen(_ room: ConversationID) {
         closedRooms.remove(room)
         var touched: Set<FeedKey> = []
         for (feed, bySeq) in spent {
@@ -254,7 +254,7 @@ public struct Replica: Sendable {
         }
     }
 
-    public func entries(in room: RoomID?) -> [Entry] {
+    public func entries(in room: ConversationID?) -> [Entry] {
         CausalOrder.sorted(allEntries.filter { $0.room == room })
     }
 
@@ -262,9 +262,9 @@ public struct Replica: Sendable {
         CausalOrder.sorted(allEntries)
     }
 
-    private var highestInRoom: [RoomID?: [FeedKey: UInt64]] = [:]
+    private var highestInRoom: [ConversationID?: [FeedKey: UInt64]] = [:]
 
-    public func frontier(in room: RoomID?) -> VectorClock {
+    public func frontier(in room: ConversationID?) -> VectorClock {
         var clock = VectorClock()
         for (key, top) in highestInRoom[room] ?? [:] { clock.observe(key, seq: top) }
         return clock

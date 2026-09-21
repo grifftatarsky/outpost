@@ -30,10 +30,10 @@ public struct OutpostAccess: Hashable, Sendable, Codable {
     public struct Grant: Hashable, Sendable, Codable {
         public var windows: [AccessWindow]
         public var origin: Origin
-        public var chosenIn: RoomID?
+        public var chosenIn: ConversationID?
 
         public init(
-            windows: [AccessWindow], origin: Origin = .chosen, chosenIn: RoomID? = nil
+            windows: [AccessWindow], origin: Origin = .chosen, chosenIn: ConversationID? = nil
         ) {
             self.windows = windows
             self.origin = origin
@@ -42,7 +42,7 @@ public struct OutpostAccess: Hashable, Sendable, Codable {
 
         public init(
             from: Date? = nil, isAllowed: Bool = true, origin: Origin = .chosen,
-            chosenIn: RoomID? = nil
+            chosenIn: ConversationID? = nil
         ) {
             self.init(
                 windows: isAllowed ? [AccessWindow(from: from)] : [],
@@ -126,7 +126,7 @@ public struct OutpostAccess: Hashable, Sendable, Codable {
 
     public mutating func allow(
         _ person: ParticipantID, from: Date? = nil, origin: Origin = .chosen,
-        chosenIn: RoomID? = nil, stamp: OrganisationStamp
+        chosenIn: ConversationID? = nil, stamp: OrganisationStamp
     ) {
         var grant = granted[person]?.value ?? Grant(windows: [])
         if let from { grant.open(at: from) } else { grant.openEverything() }
@@ -136,7 +136,7 @@ public struct OutpostAccess: Hashable, Sendable, Codable {
     }
 
     public mutating func revoke(
-        _ person: ParticipantID, chosenIn: RoomID? = nil, stamp: OrganisationStamp
+        _ person: ParticipantID, chosenIn: ConversationID? = nil, stamp: OrganisationStamp
     ) {
         var grant = granted[person]?.value ?? Grant(windows: [])
         grant.close(at: stamp.at)

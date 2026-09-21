@@ -41,7 +41,7 @@ public final class AppSession {
     public internal(set) var state: State = .loading
     public internal(set) var rooms: [RoomSummary] = []
 
-    var roomsThisMemberIsIn: Set<RoomID> = []
+    var roomsThisMemberIsIn: Set<ConversationID> = []
     public internal(set) var organisation = RoomsListOrganisation()
 
     public internal(set) var enrolment: Enrolment?
@@ -61,17 +61,17 @@ public final class AppSession {
 
     var persisted = PersistedState()
     var replica = Replica() { didSet { foldChanged() } }
-    var chains: [RoomID: EpochChain] = [:] { didSet { foldChanged() } }
+    var chains: [ConversationID: EpochChain] = [:] { didSet { foldChanged() } }
 
     var cachedProjection: Projection?
     var cachedEntries: [EntryHash: Entry]?
-    var cachedRosters: [RoomID: RoomRoster] = [:]
+    var cachedRosters: [ConversationID: RoomRoster] = [:]
 
-    var cachedOutOfRoom: [RoomID: Set<EntryHash>] = [:]
-    var cachedReadEvidence: [RoomID: ReadEvidence] = [:]
-    var cachedReporting: [RoomID: Set<ParticipantID>] = [:]
+    var cachedOutOfRoom: [ConversationID: Set<EntryHash>] = [:]
+    var cachedReadEvidence: [ConversationID: ReadEvidence] = [:]
+    var cachedReporting: [ConversationID: Set<ParticipantID>] = [:]
     var cachedOutpostAccess: OutpostAccess?
-    var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
+    var cachedDevicesAdded: [ConversationID: [AddedDevice]] = [:]
     var cachedComparisonHalves: [ParticipantID: String] = [:]
 
     var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
@@ -105,7 +105,7 @@ public final class AppSession {
 
     var issuedGrants: Set<String> = []
 
-    var roomsWithUnsentMessages: Set<RoomID> = []
+    var roomsWithUnsentMessages: Set<ConversationID> = []
 
     var unsentWallPosts: Set<EntryHash> = []
 
@@ -129,7 +129,7 @@ public final class AppSession {
 
     public var distribution: DistributionChannel = .appStore
 
-    var furthestSeen: [RoomID: MessageID] = [:]
+    var furthestSeen: [ConversationID: MessageID] = [:]
 
     var arrivalDelays: [EntryHash: TimeInterval] = [:]
 
@@ -157,7 +157,7 @@ public final class AppSession {
         arrivalDelays[message.entry]
     }
 
-    func peersToRing(in rooms: Set<RoomID>) -> [Peer] {
+    func peersToRing(in rooms: Set<ConversationID>) -> [Peer] {
         guard !rooms.isEmpty, let me = enrolment?.identity.id else { return [] }
 
         let audience = rooms.reduce(into: Set<ParticipantID>()) { people, room in
@@ -260,7 +260,7 @@ public final class AppSession {
     }
 
     func append(
-        _ payload: Payload, to room: RoomID?, isWall: Bool = false,
+        _ payload: Payload, to room: ConversationID?, isWall: Bool = false,
         alsoFor extra: PairwiseSecret? = nil
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
@@ -386,7 +386,7 @@ public final class AppSession {
         let hidden = persisted.preferences.hiddenEntries
         let shutOut = shutOutAuthors()
         let me = enrolment?.identity.id
-        var joined: Set<RoomID> = []
+        var joined: Set<ConversationID> = []
         rooms = projected.summaries().map { summary in
             let roster = projected.roster(of: summary.id, opening: opener)
             if let me, roster.members.contains(me) { joined.insert(summary.id) }
@@ -431,7 +431,7 @@ public final class AppSession {
     // MARK: Epoch persistence
 
     func persistEpoch(
-        _ secret: EpochSecret, at epoch: EpochNumber, for room: RoomID
+        _ secret: EpochSecret, at epoch: EpochNumber, for room: ConversationID
     ) async throws {
         try await storage.keychain.set(
             secret.material, for: Self.epochKey(room, epoch), scope: .device)
@@ -461,15 +461,15 @@ public final class AppSession {
         }
     }
 
-    static func epochKey(_ room: RoomID, _ epoch: EpochNumber) -> KeychainKey {
-        KeychainKey("epoch.\(room.rawValue.uuidString).\(epoch.rawValue)")
+    static func epochKey(_ room: ConversationID, _ epoch: EpochNumber) -> KeychainKey {
+        KeychainKey("epoch.\(room.stableName).\(epoch.rawValue)")
     }
 
-    func outpostRoom(for participant: ParticipantID) -> RoomID {
-        RoomID.outpost(of: participant)
+    func outpostRoom(for participant: ParticipantID) -> ConversationID {
+        ConversationID.outpost(of: participant)
     }
 
-    func walkStopsShort(in room: RoomID) -> Bool {
+    func walkStopsShort(in room: ConversationID) -> Bool {
         guard let me = enrolment?.identity.id, room != outpostRoom(for: me) else { return false }
         guard let owner = replica.knownParticipants.first(where: { outpostRoom(for: $0) == room })
         else { return false }

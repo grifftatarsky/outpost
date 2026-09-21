@@ -9,7 +9,7 @@ extension Projection {
     }
 
     func absenceWindows(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?
+        in room: ConversationID, opening: (RenderedEntry) -> Payload?
     ) -> [ParticipantID: [AbsenceWindow]] {
         var roster = RoomRoster(room: room)
         var windows: [ParticipantID: [AbsenceWindow]] = [:]
@@ -47,7 +47,7 @@ extension Projection {
             && readmitted.clock[entry.feedKey] < entry.seq
     }
 
-    public func outOfRoom(in room: RoomID, opening: (RenderedEntry) -> Payload?) -> Set<EntryHash> {
+    public func outOfRoom(in room: ConversationID, opening: (RenderedEntry) -> Payload?) -> Set<EntryHash> {
         let windows = absenceWindows(in: room, opening: opening)
         guard !windows.isEmpty else { return [] }
 
@@ -69,7 +69,7 @@ extension Projection {
     }
 
     public func summary(
-        of room: RoomID,
+        of room: ConversationID,
         memberCount: Int? = nil,
         others: [ParticipantID] = [],
         unreadFor viewer: ParticipantID? = nil,

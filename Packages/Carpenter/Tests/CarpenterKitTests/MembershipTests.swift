@@ -7,7 +7,7 @@ import CarpenterKitTesting
 @Suite("Membership attestations")
 struct MembershipAttestationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     @Test("An attestation verifies under the inviter's keys")
     func issueAndVerify() throws {
@@ -73,7 +73,7 @@ struct MembershipAttestationTests {
             joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
 
         var movedRoom = original
-        movedRoom.room = RoomID()
+        movedRoom.room = ConversationID.room(UUID())
         #expect(throws: MembershipError.badSignature) {
             try movedRoom.verify(against: inviter.publicKeys, at: start)
         }
@@ -120,7 +120,7 @@ struct MembershipAttestationTests {
 @Suite("Room roster")
 struct RoomRosterTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func rendered(
         _ author: ParticipantID, _ type: PayloadType, hash: UInt8
@@ -177,7 +177,7 @@ struct RoomRosterTests {
         roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
 
         let elsewhere = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: alice, at: start)
 
         #expect(throws: MembershipError.wrongRoom) {
             try roster.verify(elsewhere, inviterKeys: alice.publicKeys, at: start)
@@ -400,7 +400,7 @@ struct InviteCodecTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: start)
 
         let restored = try MembershipAttestation.decoded(from: try attestation.encoded())
 
@@ -413,7 +413,7 @@ struct InviteCodecTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: start)
 
         let wrapped = try attestation.encoded().enumerated()
             .map { $0.offset % 40 == 39 ? "\($0.element)\n" : String($0.element) }
@@ -435,8 +435,8 @@ struct InviteCodecTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         var attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
-        attestation.room = RoomID()
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: start)
+        attestation.room = ConversationID.room(UUID())
 
         let restored = try MembershipAttestation.decoded(from: try attestation.encoded())
         #expect(throws: MembershipError.badSignature) {
@@ -454,7 +454,7 @@ struct JoinerVerificationTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: start)
 
         try attestation.verifyAsJoiner(at: start)
         #expect(attestation.inviterKeys == inviter.publicKeys)
@@ -462,7 +462,7 @@ struct JoinerVerificationTests {
 
     @Test("An impostor's invite shows a different phrase")
     func impostorChangesThePhrase() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let inviter = Identity.generate()
         let impostor = Identity.generate()
         let joiner = Identity.generate()
@@ -483,7 +483,7 @@ struct JoinerVerificationTests {
         let joiner = Identity.generate()
 
         var attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: start)
         attestation.inviterKeys = impostor.publicKeys
 
         #expect(throws: MembershipError.wrongInviter) { try attestation.verifyAsJoiner(at: start) }
@@ -496,7 +496,7 @@ struct JoinerVerificationTests {
         let joiner = Identity.generate()
 
         var attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: start)
         attestation.inviter = impostor.id
         attestation.inviterKeys = impostor.publicKeys
 
@@ -510,7 +510,7 @@ struct JoinerVerificationTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start,
+            joining: ConversationID.room(UUID()), joinerKeys: joiner.publicKeys, by: inviter, at: start,
             lifetime: 3_600)
 
         #expect(throws: MembershipError.expired) {
@@ -525,7 +525,7 @@ struct InviteEnvelopeTests {
 
     private func attestation() throws -> MembershipAttestation {
         try TestInvite.issue(
-            joining: RoomID(), joinerKeys: Identity.generate().publicKeys,
+            joining: ConversationID.room(UUID()), joinerKeys: Identity.generate().publicKeys,
             by: Identity.generate(), at: start)
     }
 

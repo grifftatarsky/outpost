@@ -7,13 +7,13 @@ import Foundation
 extension AppSession {
     // MARK: Membership
 
-    func epochsHeld(in room: RoomID) -> Int { chains[room]?.knownEpochs.count ?? 0 }
+    func epochsHeld(in room: ConversationID) -> Int { chains[room]?.knownEpochs.count ?? 0 }
 
     func knowsIdentity(of person: ParticipantID) -> Bool {
         replica.registry(for: person)?.identity != nil
     }
 
-    public func roster(of room: RoomID) -> RoomRoster {
+    public func roster(of room: ConversationID) -> RoomRoster {
         if let known = cachedRosters[room] { return known }
         let built = projection.roster(of: room, opening: payloadOpener())
         cachedRosters[room] = built
@@ -46,7 +46,7 @@ extension AppSession {
                 let keys = replica.registry(for: entry.author)?.identity,
                 let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)
             else { return nil }
-            return entry.opened(pairwise: secret, wall: RoomID.outpost(of: entry.author))
+            return entry.opened(pairwise: secret, wall: ConversationID.outpost(of: entry.author))
         }
     }
 
@@ -60,7 +60,7 @@ extension AppSession {
         return secret
     }
 
-    public func awaitingConfirmation(in room: RoomID) -> [MembershipAttestation] {
+    public func awaitingConfirmation(in room: ConversationID) -> [MembershipAttestation] {
         guard let me = enrolment?.identity.id else { return [] }
         return roster(of: room).awaitingConfirmation(by: me)
     }
@@ -83,18 +83,18 @@ extension AppSession {
             naming: named)
     }
 
-    public func pendingInvitations(in room: RoomID) -> [RoomRoster.PendingInvitation] {
+    public func pendingInvitations(in room: ConversationID) -> [RoomRoster.PendingInvitation] {
         roster(of: room).pendingInvitations(at: clock.now)
     }
 
-    public func lapsedInvitations(in room: RoomID) -> [RoomRoster.PendingInvitation] {
+    public func lapsedInvitations(in room: ConversationID) -> [RoomRoster.PendingInvitation] {
         roster(of: room).lapsedInvitations(at: clock.now)
     }
 
     public var now: Date { clock.now }
 
     public func attest(
-        code: JoinerCode, joining room: RoomID,
+        code: JoinerCode, joining room: ConversationID,
         lasting lifetime: InvitationLifetime = .aDay,
         sharingHistory: Bool = true
     ) async throws -> MembershipAttestation {
@@ -158,7 +158,7 @@ extension AppSession {
     }
 
     public func invite(
-        joinerCode: String, joining room: RoomID, mailbox: URL?,
+        joinerCode: String, joining room: ConversationID, mailbox: URL?,
         lasting lifetime: InvitationLifetime = .aDay,
         sharingHistory: Bool = true
     ) async throws -> Invite {
@@ -280,7 +280,7 @@ extension AppSession {
 
     // MARK: Who you are talking to, in a solo
 
-    public func soloCheck(in room: RoomID) -> SoloCheck {
+    public func soloCheck(in room: ConversationID) -> SoloCheck {
         projection.soloCheck(in: room, opening: payloadOpener())
     }
 
@@ -290,7 +290,7 @@ extension AppSession {
 
     public var requiresSoloCheck: Bool { persisted.preferences.isRequiringSoloCheck }
 
-    public func isHoldingSolo(_ room: RoomID) -> Bool {
+    public func isHoldingSolo(_ room: ConversationID) -> Bool {
         persisted.preferences.isHoldingSolo(room)
     }
 
@@ -306,18 +306,18 @@ extension AppSession {
         await savePreferences()
     }
 
-    public func canCheckWhoTheyAreTalkingTo(in room: RoomID) -> Bool {
+    public func canCheckWhoTheyAreTalkingTo(in room: ConversationID) -> Bool {
         rooms.first { $0.id == room }?.isDirect ?? false
     }
 
-    public func askWhoYouAreTalkingTo(in room: RoomID, holding: Bool) async throws {
+    public func askWhoYouAreTalkingTo(in room: ConversationID, holding: Bool) async throws {
         guard canCheckWhoTheyAreTalkingTo(in: room) else { throw AppSessionError.cannotWriteThere }
         persisted.preferences.setHoldingSolo(holding, for: room, stamp: stamp())
         await savePreferences()
         try await append(try Payload.soloCheck(SoloCheckBody(move: .asked, answering: nil)), to: room)
     }
 
-    public func answerWhoYouAreTalkingTo(in room: RoomID, matched: Bool) async throws {
+    public func answerWhoYouAreTalkingTo(in room: ConversationID, matched: Bool) async throws {
         guard let me = enrolment?.identity.id else { throw AppSessionError.noIdentity }
         let asks = projection.soloChecksAwaiting(in: room, opening: payloadOpener())
         for ask in asks where !(matched && ask.asker == me) {
@@ -348,7 +348,7 @@ extension AppSession {
         }
     }
 
-    public func canWrite(in room: RoomID) -> Bool {
+    public func canWrite(in room: ConversationID) -> Bool {
         guard rooms.contains(where: { $0.id == room && $0.isDirect && $0.memberCount > 1 })
         else { return true }
         let check = soloCheck(in: room)
@@ -365,7 +365,7 @@ extension AppSession {
         return [invited].filter(\.isWorthShowing)
     }
 
-    public func ownInvitation(to room: RoomID) -> AcceptedInvitation? {
+    public func ownInvitation(to room: ConversationID) -> AcceptedInvitation? {
         persisted.acceptedInvitations.last { $0.attestation.room == room }
     }
 
@@ -376,7 +376,7 @@ extension AppSession {
         let opener = payloadOpener()
         let collectedAt = clock.now
 
-        var owed: [(room: RoomID, body: JoinConfirmedBody)] = []
+        var owed: [(room: ConversationID, body: JoinConfirmedBody)] = []
         for summary in projected.summaries() {
             let roster = projected.roster(of: summary.id, opening: opener)
             var claimed: Set<ParticipantID> = []
@@ -410,27 +410,27 @@ extension AppSession {
         }
     }
 
-    public func epoch(of room: RoomID) -> EpochNumber? { chains[room]?.highestKnownEpoch }
+    public func epoch(of room: ConversationID) -> EpochNumber? { chains[room]?.highestKnownEpoch }
 
     public func member(_ id: ParticipantID) -> Member { projection.member(id) }
 
-    public func announcedName(of author: ParticipantID, in room: RoomID) -> String? {
+    public func announcedName(of author: ParticipantID, in room: ConversationID) -> String? {
         projection.announcedName(of: author, in: room)
     }
 
-    public func announcedPhoto(of author: ParticipantID, in room: RoomID) -> AttachmentReference?? {
+    public func announcedPhoto(of author: ParticipantID, in room: ConversationID) -> AttachmentReference?? {
         projection.announcedPhoto(of: author, in: room)
     }
 
-    public func whoRefused(_ joiner: ParticipantID, in room: RoomID) -> [Member] {
+    public func whoRefused(_ joiner: ParticipantID, in room: ConversationID) -> [Member] {
         roster(of: room).whoRefused(joiner).map(member).sorted { $0.displayName < $1.displayName }
     }
 
-    public func access(of room: RoomID) -> RoomAccess {
+    public func access(of room: ConversationID) -> RoomAccess {
         roster(of: room).access
     }
 
-    public func setAccess(_ access: RoomAccess, in room: RoomID) async throws {
+    public func setAccess(_ access: RoomAccess, in room: ConversationID) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
         guard roster(of: room).founder == enrolment.identity.id else {
             throw MembershipError.notTheFounder
@@ -438,7 +438,7 @@ extension AppSession {
         try await append(try Payload.roomAccess(access), to: room)
     }
 
-    public func remove(_ person: ParticipantID, from room: RoomID) async throws {
+    public func remove(_ person: ParticipantID, from room: ConversationID) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
         let roster = roster(of: room)
 
@@ -453,7 +453,7 @@ extension AppSession {
         try await turnOwedEpoch(in: room)
     }
 
-    public func leave(_ room: RoomID) async throws {
+    public func leave(_ room: ConversationID) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
 
         guard roster(of: room).members.contains(enrolment.identity.id) else {
@@ -463,7 +463,7 @@ extension AppSession {
         try await append(try Payload.departure(), to: room)
     }
 
-    public func standing(in room: RoomID) -> RoomStanding {
+    public func standing(in room: ConversationID) -> RoomStanding {
         guard let enrolment else { return .present }
         let roster = roster(of: room)
         if let removal = roster.removal(of: enrolment.identity.id) {
@@ -498,7 +498,7 @@ extension AppSession {
         }
     }
 
-    public func greeting(for room: RoomID) -> RoomGreeting? {
+    public func greeting(for room: ConversationID) -> RoomGreeting? {
         guard let enrolment, !persisted.greetedRooms.contains(room) else { return nil }
         let roster = roster(of: room)
         guard roster.members.contains(enrolment.identity.id) else { return nil }
@@ -520,7 +520,7 @@ extension AppSession {
             isDirect: isSolo)
     }
 
-    public func acknowledgeGreeting(for room: RoomID) async {
+    public func acknowledgeGreeting(for room: ConversationID) async {
         guard !persisted.greetedRooms.contains(room) else { return }
         persisted.greetedRooms.append(room)
         await persistOrReport("which rooms you have been introduced to") {
@@ -529,12 +529,12 @@ extension AppSession {
         refresh()
     }
 
-    public func removal(from room: RoomID) -> RoomRoster.Removal? {
+    public func removal(from room: ConversationID) -> RoomRoster.Removal? {
         guard let enrolment else { return nil }
         return roster(of: room).removal(of: enrolment.identity.id)
     }
 
-    public func pendingJoins(in room: RoomID) -> [MembershipAttestation] {
+    public func pendingJoins(in room: ConversationID) -> [MembershipAttestation] {
         guard let enrolment else { return [] }
         return roster(of: room).pending(for: enrolment.identity.id, at: clock.now)
     }
@@ -591,7 +591,7 @@ extension AppSession {
     }
 
     private func closeHistoryTo(
-        _ person: ParticipantID, invitedOn attestation: MembershipAttestation, in room: RoomID
+        _ person: ParticipantID, invitedOn attestation: MembershipAttestation, in room: ConversationID
     ) async throws {
         try await advanceEpoch(of: room)
         guard let epoch = chains[room]?.highestKnownEpoch else { throw AppSessionError.unknownRoom }
@@ -617,7 +617,7 @@ extension AppSession {
             to: room)
     }
 
-    public func advanceEpoch(of room: RoomID) async throws {
+    public func advanceEpoch(of room: ConversationID) async throws {
         guard let chain = chains[room] else { throw AppSessionError.unknownRoom }
 
         let epoch = chain.highestKnownEpoch ?? .initial
@@ -632,7 +632,7 @@ extension AppSession {
     }
 
     private func adopt(
-        secret: EpochSecret, link: EpochLink, at epoch: EpochNumber, in room: RoomID
+        secret: EpochSecret, link: EpochLink, at epoch: EpochNumber, in room: ConversationID
     ) throws {
         guard var current = chains[room] else { throw AppSessionError.unknownRoom }
         current.adopt(secret, at: epoch)
@@ -640,7 +640,7 @@ extension AppSession {
         chains[room] = current
     }
 
-    func unwindEpochs(in room: RoomID, bounded: Bool = false) async throws {
+    func unwindEpochs(in room: ConversationID, bounded: Bool = false) async throws {
         guard var chain = chains[room] else { return }
 
         var progressed = true

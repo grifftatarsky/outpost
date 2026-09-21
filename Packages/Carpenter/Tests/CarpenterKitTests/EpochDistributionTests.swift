@@ -17,7 +17,7 @@ struct EpochDistributionTests {
 
     @Test("A grant opens under the pairwise secret it was issued to")
     func grantRoundTrip() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, _, shared) = try pair()
         let (_, founding) = EpochChain.create(room: room)
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
@@ -32,7 +32,7 @@ struct EpochDistributionTests {
 
     @Test("A grant issued to one member does not open for another")
     func grantIsBoundToItsRecipient() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (alice, _, toBob) = try pair()
         let carol = Identity.generate()
         let toCarol = try PairwiseSecret.derive(mine: alice, theirs: carol.publicKeys)
@@ -47,7 +47,7 @@ struct EpochDistributionTests {
 
     @Test("One grant walks a joiner back through every earlier epoch")
     func oneGrantReadsAllHistory() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, _, shared) = try pair()
         var author = EpochChain(room: room)
 
@@ -85,7 +85,7 @@ struct EpochDistributionTests {
 
     @Test("A new epoch secret is fresh, not derived from the one before it")
     func advancingIsNotDerivable() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, founding) = EpochChain.create(room: room)
 
         let first = try EpochChain.advance(from: founding, at: .initial, room: room)
@@ -97,7 +97,7 @@ struct EpochDistributionTests {
 
     @Test("A removed member keeps what it had and gains nothing")
     func removalSticks() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, founding) = EpochChain.create(room: room)
 
         var removed = EpochChain(room: room)
@@ -114,14 +114,14 @@ struct EpochDistributionTests {
 
     @Test("A grant for one room is refused and leaves nothing behind")
     func grantIsBoundToItsRoom() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, _, shared) = try pair()
         let (_, founding) = EpochChain.create(room: room)
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
         let grant = try EpochGrant.issue(
             advanced.secret, at: .initial.next, link: advanced.link, to: shared)
 
-        var elsewhere = EpochChain(room: RoomID())
+        var elsewhere = EpochChain(room: ConversationID.room(UUID()))
         #expect(throws: (any Error).self) { try elsewhere.adopt(grant, using: shared) }
         #expect(elsewhere.knownEpochs.isEmpty)
     }
@@ -131,7 +131,7 @@ struct EpochDistributionTests {
         arguments: [false, true]
     )
     func grantWrapIsBoundToWhatItClaims(moveRoom: Bool) throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (_, _, shared) = try pair()
         let (_, founding) = EpochChain.create(room: room)
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
@@ -139,7 +139,7 @@ struct EpochDistributionTests {
             advanced.secret, at: .initial.next, link: advanced.link, to: shared)
 
         let relabelled = EpochGrant(
-            room: moveRoom ? RoomID() : grant.room,
+            room: moveRoom ? ConversationID.room(UUID()) : grant.room,
             epoch: moveRoom ? grant.epoch : grant.epoch.next,
             link: grant.link,
             wrapped: grant.wrapped
@@ -152,7 +152,7 @@ struct EpochDistributionTests {
 
     @Test("A grant rides along with the entries and reaches only its recipient")
     func packetCarriesGrant() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let alice = Identity.generate()
         let bob = Identity.generate()
         let carol = Identity.generate()
@@ -193,8 +193,8 @@ struct EpochDistributionTests {
         let bobFromAlice = Peer(secret: toBob, them: bob.id, me: alice.id)
         let aliceFromBob = Peer(secret: toBob, them: alice.id, me: bob.id)
 
-        let first = RoomID()
-        let second = RoomID()
+        let first = ConversationID.room(UUID())
+        let second = ConversationID.room(UUID())
         let (_, firstFounding) = EpochChain.create(room: first)
         let (_, secondFounding) = EpochChain.create(room: second)
         let firstAdvanced = try EpochChain.advance(from: firstFounding, at: .initial, room: first)
@@ -221,7 +221,7 @@ struct EpochDistributionTests {
 
     @Test("A packet with no grants still carries entries")
     func packetWithoutGrants() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let alice = Identity.generate()
         let bob = Identity.generate()
         let toBob = try PairwiseSecret.derive(mine: alice, theirs: bob.publicKeys)
@@ -243,7 +243,7 @@ struct EpochDistributionTests {
 
     @Test("The epoch change is an entry, so the link is durable and folds like anything else")
     func epochChangeIsAnEntry() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let (chain, founding) = EpochChain.create(room: room)
         var author = Author(chain: chain)
 

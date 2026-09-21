@@ -13,8 +13,8 @@ struct RemovedMemberRenderingTests {
         return clock
     }
 
-    private func room() throws -> (alice: Author, sam: Author, room: RoomID, entries: [Entry]) {
-        let chain = EpochChain.create(room: RoomID())
+    private func room() throws -> (alice: Author, sam: Author, room: ConversationID, entries: [Entry]) {
+        let chain = EpochChain.create(room: ConversationID.room(UUID()))
         var alice = Author(chain: chain.chain)
         var sam = Author(chain: chain.chain)
         let room = chain.chain.room

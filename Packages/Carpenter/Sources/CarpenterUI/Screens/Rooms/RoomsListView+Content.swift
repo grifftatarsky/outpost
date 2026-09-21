@@ -156,7 +156,7 @@ extension RoomsListView {
     }
 
     @ViewBuilder
-    private func selectionGround(_ room: RoomID) -> some View {
+    private func selectionGround(_ room: ConversationID) -> some View {
         if selectedRoom == room {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(palette.accentColor.opacity(0.16))

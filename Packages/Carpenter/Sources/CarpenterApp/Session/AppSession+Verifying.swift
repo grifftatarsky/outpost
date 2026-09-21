@@ -14,7 +14,7 @@ extension AppSession {
         refresh()
     }
 
-    public func comparisonToOffer(in room: RoomID) -> [ParticipantID] {
+    public func comparisonToOffer(in room: ConversationID) -> [ParticipantID] {
         guard let me = enrolment?.identity.id else { return [] }
         let roster = roster(of: room)
         guard roster.members.contains(me) else { return [] }

@@ -8,7 +8,7 @@ import UserNotifications
 @MainActor
 @Suite("Answering a message from its notification", .serialized)
 struct NotificationAnswerTests {
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private var info: [AnyHashable: Any] { NotificationAnswer.userInfo(for: room) }
 
@@ -111,7 +111,7 @@ struct NotificationAnswerTests {
 
     // MARK: What answering does
 
-    private func joined() async throws -> (alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox) {
+    private func joined() async throws -> (alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
         let bob = TestSession.make()
@@ -132,7 +132,7 @@ struct NotificationAnswerTests {
         return (alice, bob, room, mailbox)
     }
 
-    private func unread(_ session: AppSession, _ room: RoomID) -> Bool {
+    private func unread(_ session: AppSession, _ room: ConversationID) -> Bool {
         session.rooms.first { $0.id == room }?.hasUnread ?? false
     }
 

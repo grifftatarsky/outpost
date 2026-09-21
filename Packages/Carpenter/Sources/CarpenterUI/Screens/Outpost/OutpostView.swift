@@ -16,7 +16,7 @@ public struct OutpostView: View {
     private let audience: OutpostAudience
     private let reciprocal: ReciprocalAccess?
     private let settings: OutpostDetailSettings?
-    private let onChangeAccess: ((ParticipantID, OutpostAccessChoice, RoomID?) async -> String?)?
+    private let onChangeAccess: ((ParticipantID, OutpostAccessChoice, ConversationID?) async -> String?)?
     private let onSeen: (() async -> Void)?
     private let blurb: String?
     private let onPerson: ((ReciprocalAccess) -> Void)?
@@ -43,7 +43,7 @@ public struct OutpostView: View {
         postActions: PostActions? = nil,
         audience: OutpostAudience = OutpostAudience(),
         reciprocal: ReciprocalAccess? = nil,
-        onChangeAccess: ((ParticipantID, OutpostAccessChoice, RoomID?) async -> String?)? = nil,
+        onChangeAccess: ((ParticipantID, OutpostAccessChoice, ConversationID?) async -> String?)? = nil,
         onSeen: (() async -> Void)? = nil,
         blurb: String? = nil,
         settings: OutpostDetailSettings? = nil,

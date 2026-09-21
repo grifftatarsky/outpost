@@ -8,8 +8,8 @@ struct EntryTests {
     private let identity = Identity.generate()
     private let device = DeviceKeys.generate()
     private let wallTime = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
-    private let chain = EpochChain.create(room: RoomID()).chain
+    private let room = ConversationID.room(UUID())
+    private let chain = EpochChain.create(room: ConversationID.room(UUID())).chain
 
     private func seal(_ text: String) throws -> SealedPayload {
         try Payload.post(text).sealed(at: .initial, using: chain)
@@ -90,7 +90,7 @@ struct EntryTests {
             try !mutated {
                 Entry(
                     author: $0.author, device: $0.device, seq: $0.seq, previous: $0.previous,
-                    clock: $0.clock, wallTime: $0.wallTime, room: RoomID(), payload: $0.payload,
+                    clock: $0.clock, wallTime: $0.wallTime, room: ConversationID.room(UUID()), payload: $0.payload,
                     signature: $0.signature)
             })
         #expect(

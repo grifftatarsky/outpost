@@ -8,7 +8,7 @@ import SwiftUI
             demo(tab: .rooms)
         }
 
-        static func demo(tab: PhoneTab, supporter: SupporterSettings? = nil, opening room: RoomID? = nil)
+        static func demo(tab: PhoneTab, supporter: SupporterSettings? = nil, opening room: ConversationID? = nil)
             -> some View
         {
             DemoHost(tab: tab, supporter: supporter, opened: room)
@@ -17,9 +17,9 @@ import SwiftUI
         struct DemoHost: View {
             let tab: PhoneTab
             let supporter: SupporterSettings?
-            @State var openRoom: RoomID?
+            @State var openRoom: ConversationID?
 
-            init(tab: PhoneTab, supporter: SupporterSettings?, opened: RoomID?) {
+            init(tab: PhoneTab, supporter: SupporterSettings?, opened: ConversationID?) {
                 self.tab = tab
                 self.supporter = supporter
                 _openRoom = State(initialValue: opened)
@@ -30,7 +30,7 @@ import SwiftUI
             }
         }
 
-        static func fixture(tab: PhoneTab, supporter: SupporterSettings?, openRoom: Binding<RoomID?>)
+        static func fixture(tab: PhoneTab, supporter: SupporterSettings?, openRoom: Binding<ConversationID?>)
             -> some View
         {
             fixtureRoot(supporter: supporter, openRoom: openRoom)
@@ -38,7 +38,7 @@ import SwiftUI
                 .environment(\.clock, Fixtures.PreviewClock())
         }
 
-        static func fixtureRoot(supporter: SupporterSettings? = nil, openRoom: Binding<RoomID?>) -> RootView {
+        static func fixtureRoot(supporter: SupporterSettings? = nil, openRoom: Binding<ConversationID?>) -> RootView {
             RootView(
                 rooms: Fixtures.rooms,
                 syncedPeers: Fixtures.syncedPeers,

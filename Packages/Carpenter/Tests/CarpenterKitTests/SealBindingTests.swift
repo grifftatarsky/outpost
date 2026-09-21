@@ -13,7 +13,7 @@ struct SealBindingTests {
 
     @Test("One member cannot re-sign another's sealed words as their own")
     func aCiphertextCannotBeLifted() throws {
-        let (chain, _) = EpochChain.create(room: RoomID())
+        let (chain, _) = EpochChain.create(room: ConversationID.room(UUID()))
         let carol = feed(0xC0)
         let dave = feed(0xDA)
 
@@ -30,8 +30,8 @@ struct SealBindingTests {
 
     @Test("A seal does not travel between rooms or epochs")
     func aCiphertextCannotBeMoved() throws {
-        let (here, _) = EpochChain.create(room: RoomID())
-        let (elsewhere, _) = EpochChain.create(room: RoomID())
+        let (here, _) = EpochChain.create(room: ConversationID.room(UUID()))
+        let (elsewhere, _) = EpochChain.create(room: ConversationID.room(UUID()))
         let carol = feed(0xC0)
         let sealed = try Payload.post("here").sealed(at: .initial, using: here, by: carol)
 
@@ -40,7 +40,7 @@ struct SealBindingTests {
 
     @Test("A payload sealed before the binding still opens")
     func oldSealsStillOpen() throws {
-        let (chain, _) = EpochChain.create(room: RoomID())
+        let (chain, _) = EpochChain.create(room: ConversationID.room(UUID()))
         let unbound = try Payload.post("written last year").sealed(
             at: .initial, using: chain, by: nil)
 
@@ -50,7 +50,7 @@ struct SealBindingTests {
 
     @Test("With nothing new to say, the bytes are the old bytes")
     func theAbsentFieldsAreAbsentBytes() {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let epoch = EpochNumber.initial
 
         let contextAsItAlwaysWas = CanonicalBytes.payload(
@@ -69,7 +69,7 @@ struct SealBindingTests {
 
     @Test("With something new to say, the bytes differ")
     func thePresentFieldsChangeTheBytes() {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         #expect(
             SealedPayload.context(room: room, epoch: .initial, by: feed(0xC0))
                 != SealedPayload.context(room: room, epoch: .initial, by: nil))
@@ -80,7 +80,7 @@ struct SealBindingTests {
 
     @Test("The second copy opens for its one reader and nobody else")
     func theSecondCopyIsForOnePerson() throws {
-        let (chain, _) = EpochChain.create(room: RoomID())
+        let (chain, _) = EpochChain.create(room: ConversationID.room(UUID()))
         let carol = feed(0xC0)
         let theirs = PairwiseSecret(material: Data(repeating: 0x11, count: 32))
         let somebodyElse = PairwiseSecret(material: Data(repeating: 0x22, count: 32))
@@ -97,7 +97,7 @@ struct SealBindingTests {
 
     @Test("An entry with no second copy has none to open")
     func noSecondCopyByDefault() throws {
-        let (chain, _) = EpochChain.create(room: RoomID())
+        let (chain, _) = EpochChain.create(room: ConversationID.room(UUID()))
         let sealed = try Payload.post("ordinary").sealed(at: .initial, using: chain, by: feed(0xC0))
         #expect(sealed.alsoFor == nil)
     }

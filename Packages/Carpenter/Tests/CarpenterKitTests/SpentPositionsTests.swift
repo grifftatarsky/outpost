@@ -8,11 +8,11 @@ struct SpentPositionsTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func interleaved() throws -> (
-        replica: Replica, author: Author, kept: RoomID, deleted: RoomID, entries: [Entry]
+        replica: Replica, author: Author, kept: ConversationID, deleted: ConversationID, entries: [Entry]
     ) {
         var author = Author()
-        let kept = RoomID()
-        let deleted = RoomID()
+        let kept = ConversationID.room(UUID())
+        let deleted = ConversationID.room(UUID())
         var entries: [Entry] = []
         for index in 0..<6 {
             let room = index.isMultiple(of: 2) ? kept : deleted
@@ -45,7 +45,7 @@ struct SpentPositionsTests {
     @Test("A deleted room's entry offered again is not kept, whether this device had it or not")
     func offeredAgainIsNotKept() throws {
         var author = Author()
-        let deleted = RoomID()
+        let deleted = ConversationID.room(UUID())
         let first = try author.append(try Payload.post("one"), at: start, room: deleted)
         let second = try author.append(
             try Payload.post("two"), at: start.addingTimeInterval(1), room: deleted)
@@ -72,7 +72,7 @@ struct SpentPositionsTests {
 
         let next = try Entry.append(
             after: top, author: author.identity.id, device: author.device,
-            clock: replica.frontier, wallTime: start.addingTimeInterval(10), room: RoomID(),
+            clock: replica.frontier, wallTime: start.addingTimeInterval(10), room: ConversationID.room(UUID()),
             payload: try Payload.post("after"), at: .initial, sealedWith: author.chain)
         #expect(next.seq == 7)
         #expect(try replica.integrate(next) == .accepted)
@@ -122,8 +122,8 @@ struct LogRemovalTests {
         let url = URL.temporaryDirectory.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
         let store = FileLogStore(url: url)
         var author = Author()
-        let kept = RoomID()
-        let deleted = RoomID()
+        let kept = ConversationID.room(UUID())
+        let deleted = ConversationID.room(UUID())
         var entries: [Entry] = []
         for index in 0..<5 {
             entries.append(

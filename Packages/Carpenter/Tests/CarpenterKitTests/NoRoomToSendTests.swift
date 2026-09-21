@@ -39,7 +39,7 @@ private actor RefusingMailbox: Mailbox {
 @Suite("An account with no room to send", .serialized)
 struct NoRoomToSendTests {
     private func pair() async throws -> (
-        mine: AppSession, room: RoomID, mailbox: RefusingMailbox
+        mine: AppSession, room: ConversationID, mailbox: RefusingMailbox
     ) {
         let mailbox = RefusingMailbox()
         let clock = TestClock(now: TestSession.now)

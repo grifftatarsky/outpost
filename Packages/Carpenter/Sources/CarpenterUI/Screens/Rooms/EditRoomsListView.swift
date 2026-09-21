@@ -13,21 +13,21 @@ public struct EditRoomsListView: View {
     private let rooms: [RoomSummary]
     private let title: LocalizedStringResource
 
-    private let isSilenced: (RoomID) -> Bool
-    private let onSilence: (RoomID, Bool) -> Void
-    private let onLeave: ((RoomID) -> Void)?
-    private let roomDeletion: (RoomID) -> RoomDeletion
-    private let onDelete: ((RoomID) -> Void)?
+    private let isSilenced: (ConversationID) -> Bool
+    private let onSilence: (ConversationID, Bool) -> Void
+    private let onLeave: ((ConversationID) -> Void)?
+    private let roomDeletion: (ConversationID) -> RoomDeletion
+    private let onDelete: ((ConversationID) -> Void)?
 
     public init(
         rooms: [RoomSummary],
         title: LocalizedStringResource = .module("Rooms"),
         organisation: Binding<RoomsListOrganisation>,
-        isSilenced: @escaping (RoomID) -> Bool = { _ in false },
-        onSilence: @escaping (RoomID, Bool) -> Void = { _, _ in },
-        onLeave: ((RoomID) -> Void)? = nil,
-        roomDeletion: @escaping (RoomID) -> RoomDeletion = { _ in .stillIn },
-        onDelete: ((RoomID) -> Void)? = nil
+        isSilenced: @escaping (ConversationID) -> Bool = { _ in false },
+        onSilence: @escaping (ConversationID, Bool) -> Void = { _, _ in },
+        onLeave: ((ConversationID) -> Void)? = nil,
+        roomDeletion: @escaping (ConversationID) -> RoomDeletion = { _ in .stillIn },
+        onDelete: ((ConversationID) -> Void)? = nil
     ) {
         self.roomDeletion = roomDeletion
         self.onDelete = onDelete

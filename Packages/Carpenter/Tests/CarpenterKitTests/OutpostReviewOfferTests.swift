@@ -9,7 +9,7 @@ import Testing
 @Suite("Being asked about people you meet", .serialized)
 struct OutpostReviewOfferTests {
     private func joined() async throws -> (
-        alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID
+        alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: ConversationID
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()

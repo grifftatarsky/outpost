@@ -65,7 +65,7 @@ struct WallIsNotARoomTests {
     @Test("Your photo is not announced onto somebody else's Outpost")
     func photosStayOutOfWalls() async throws {
         let (alice, bob, carol, mailbox) = try await triangle()
-        let bobWall = RoomID.outpost(of: try #require(bob.enrolment?.identity.id))
+        let bobWall = ConversationID.outpost(of: try #require(bob.enrolment?.identity.id))
         let aliceID = try #require(alice.enrolment?.identity.id)
 
         await alice.setSharesAvatar(true)
@@ -80,7 +80,7 @@ struct WallIsNotARoomTests {
     @Test("Your name is not announced onto somebody else's Outpost")
     func namesStayOutOfWalls() async throws {
         let (alice, bob, carol, mailbox) = try await triangle()
-        let bobWall = RoomID.outpost(of: try #require(bob.enrolment?.identity.id))
+        let bobWall = ConversationID.outpost(of: try #require(bob.enrolment?.identity.id))
         let aliceID = try #require(alice.enrolment?.identity.id)
 
         await alice.setSharesName(true)
@@ -111,7 +111,7 @@ struct WallIsNotARoomTests {
         try await bob.allowOutpost(try #require(alice.enrolment?.identity.id), everything: true)
         try await settle([alice, bob], through: mailbox)
 
-        let bobWall = RoomID.outpost(of: try #require(bob.enrolment?.identity.id))
+        let bobWall = ConversationID.outpost(of: try #require(bob.enrolment?.identity.id))
         let aliceID = try #require(alice.enrolment?.identity.id)
         #expect(
             alice.announcedName(of: aliceID, in: bobWall) == nil,

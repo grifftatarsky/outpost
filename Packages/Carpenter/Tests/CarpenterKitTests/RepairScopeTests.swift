@@ -14,7 +14,7 @@ struct RepairScopeTests {
         }
     }
 
-    private func heldRooms(_ session: AppSession) -> Set<RoomID> {
+    private func heldRooms(_ session: AppSession) -> Set<ConversationID> {
         Set(session.replica.allEntries.compactMap(\.room))
     }
 

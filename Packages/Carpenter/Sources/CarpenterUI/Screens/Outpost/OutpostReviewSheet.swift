@@ -193,7 +193,7 @@ public struct OutpostReviewSheet: View {
     #Preview("60 Access review, sheet") {
         OutpostReviewSheet(
             review: OutpostReview(
-                room: RoomID(),
+                room: .room(UUID()),
                 roomName: "Zeppelin Enthusiasts",
                 people: [
                     OutpostReview.Person(member: Fixtures.hastur, grant: nil),

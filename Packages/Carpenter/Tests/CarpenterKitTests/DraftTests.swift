@@ -6,7 +6,7 @@ import Testing
 
 @Suite("A seal for a draft")
 struct DraftSealTests {
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
     private let key = DraftSeal.newKey()
 
     @Test("A draft opens with its key in its room")
@@ -18,7 +18,7 @@ struct DraftSealTests {
     @Test("A draft does not open in another room, under another key, or once a byte has changed")
     func refusals() throws {
         var sealed = try DraftSeal.seal("not yet", at: .room(room), with: key)
-        #expect(DraftSeal.open(sealed, at: .room(RoomID()), with: key) == nil)
+        #expect(DraftSeal.open(sealed, at: .room(ConversationID.room(UUID())), with: key) == nil)
         #expect(DraftSeal.open(sealed, at: .room(room), with: DraftSeal.newKey()) == nil)
         sealed[sealed.count - 1] ^= 1
         #expect(DraftSeal.open(sealed, at: .room(room), with: key) == nil)
@@ -44,7 +44,7 @@ struct DraftSealTests {
 @MainActor
 @Suite("A draft that survives", .serialized)
 struct DraftTests {
-    private func member(at directory: URL, keychain: any KeychainStore) async throws -> (AppSession, RoomID) {
+    private func member(at directory: URL, keychain: any KeychainStore) async throws -> (AppSession, ConversationID) {
         let session = TestSession.make(keychain: keychain, at: directory)
         await session.load()
         try await session.createIdentity(displayName: "Alice")
@@ -127,7 +127,7 @@ struct DraftTests {
 
         #expect(await alice.keepUnsentReply("on my way", in: room))
         #expect(alice.draft(at: .room(room)) == "I was writing this\non my way")
-        #expect(await alice.keepUnsentReply("anything", in: RoomID()) == false)
+        #expect(await alice.keepUnsentReply("anything", in: ConversationID.room(UUID())) == false)
     }
 
     @Test("A new post and a comment keep their drafts across a relaunch too")

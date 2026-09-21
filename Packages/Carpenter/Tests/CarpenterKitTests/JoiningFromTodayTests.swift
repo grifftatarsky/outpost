@@ -14,7 +14,7 @@ struct JoiningFromTodayTests {
         }
     }
 
-    private func words(_ session: AppSession, in room: RoomID) -> [String] {
+    private func words(_ session: AppSession, in room: ConversationID) -> [String] {
         session.messages(in: room).map(\.body)
     }
 
@@ -119,7 +119,7 @@ struct JoiningFromTodayTests {
     func anOlderInvitationSharesHistory() throws {
         let alice = Identity.generate()
         let bob = Identity.generate()
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         let attestation = try MembershipAttestation.issue(
             joining: room, joinerKeys: bob.publicKeys, by: alice,
             at: Date(timeIntervalSince1970: 1_786_635_000))

@@ -16,7 +16,7 @@ import SwiftUI
 // MARK: Preparing what is attached, and loading it back
 
 extension AppRootView {
-    func attach(_ picked: PickedMedia, caption: String?, to room: RoomID) async -> String? {
+    func attach(_ picked: PickedMedia, caption: String?, to room: ConversationID) async -> String? {
         do {
             try await session.send(try await prepare(picked, caption: caption), to: room, through: media)
             discardSources([picked])

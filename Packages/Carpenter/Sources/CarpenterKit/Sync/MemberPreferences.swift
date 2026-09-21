@@ -7,10 +7,10 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
 
     public var isReportingDisplaying: Bool { reportsDisplaying?.value == true }
 
-    public var roomReportsDisplaying: [RoomID: Stamped<Bool>] = [:]
+    public var roomReportsDisplaying: [ConversationID: Stamped<Bool>] = [:]
 
     public mutating func setReportsDisplaying(
-        _ reports: Bool?, for room: RoomID, stamp: OrganisationStamp
+        _ reports: Bool?, for room: ConversationID, stamp: OrganisationStamp
     ) {
         if let reports {
             roomReportsDisplaying[room] = Stamped(reports, stamp: stamp)
@@ -19,11 +19,11 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         }
     }
 
-    public func reportsDisplayingAnswer(for room: RoomID) -> Bool? {
+    public func reportsDisplayingAnswer(for room: ConversationID) -> Bool? {
         roomReportsDisplaying[room]?.value
     }
 
-    public func isReportingDisplaying(in room: RoomID) -> Bool {
+    public func isReportingDisplaying(in room: ConversationID) -> Bool {
         roomReportsDisplaying[room]?.value ?? isReportingDisplaying
     }
 
@@ -33,19 +33,19 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
 
     public var notificationLevel: Stamped<NotificationLevel>?
 
-    public var roomNotificationLevel: [RoomID: Stamped<NotificationLevel>] = [:]
+    public var roomNotificationLevel: [ConversationID: Stamped<NotificationLevel>] = [:]
 
-    public var mutedRooms: [RoomID: Stamped<Bool>] = [:]
+    public var mutedRooms: [ConversationID: Stamped<Bool>] = [:]
 
-    public var roomNotGoneWait: [RoomID: Stamped<NotGoneWait>] = [:]
+    public var roomNotGoneWait: [ConversationID: Stamped<NotGoneWait>] = [:]
 
-    public var deletedRooms: [RoomID: Stamped<Bool>] = [:]
+    public var deletedRooms: [ConversationID: Stamped<Bool>] = [:]
 
-    public var roomsDeleted: Set<RoomID> {
+    public var roomsDeleted: Set<ConversationID> {
         Set(deletedRooms.filter { $0.value.value }.keys)
     }
 
-    public mutating func setDeleted(_ deleted: Bool, _ room: RoomID, stamp: OrganisationStamp) {
+    public mutating func setDeleted(_ deleted: Bool, _ room: ConversationID, stamp: OrganisationStamp) {
         deletedRooms[room] = Stamped(deleted, stamp: stamp)
     }
 
@@ -67,11 +67,11 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         comparisonOffered[person] = Stamped(true, stamp: stamp)
     }
 
-    public func notGoneWait(for room: RoomID) -> NotGoneWait {
+    public func notGoneWait(for room: ConversationID) -> NotGoneWait {
         roomNotGoneWait[room]?.value ?? .standard
     }
 
-    public mutating func setNotGoneWait(_ wait: NotGoneWait, for room: RoomID, stamp: OrganisationStamp) {
+    public mutating func setNotGoneWait(_ wait: NotGoneWait, for room: ConversationID, stamp: OrganisationStamp) {
         roomNotGoneWait[room] = Stamped(wait, stamp: stamp)
     }
 
@@ -111,17 +111,17 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
 
     public var savedRecoveryKey: Stamped<Date>?
 
-    public var heldSolos: [RoomID: Stamped<Bool>] = [:]
+    public var heldSolos: [ConversationID: Stamped<Bool>] = [:]
 
     public var defaultNotificationLevel: NotificationLevel {
         notificationLevel?.value ?? .default
     }
 
-    public func notificationLevel(for room: RoomID) -> NotificationLevel {
+    public func notificationLevel(for room: ConversationID) -> NotificationLevel {
         roomNotificationLevel[room]?.value ?? defaultNotificationLevel
     }
 
-    public func isMuted(_ room: RoomID) -> Bool { mutedRooms[room]?.value == true }
+    public func isMuted(_ room: ConversationID) -> Bool { mutedRooms[room]?.value == true }
 
     public var requiresSoloCheckAnswer: Bool? { requiresSoloCheck?.value }
 
@@ -129,7 +129,7 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
 
     public var recoveryKeySavedAt: Date? { savedRecoveryKey?.value }
 
-    public func isHoldingSolo(_ room: RoomID) -> Bool { heldSolos[room]?.value == true }
+    public func isHoldingSolo(_ room: ConversationID) -> Bool { heldSolos[room]?.value == true }
 
     public var blocked: [ParticipantID: Stamped<Bool>] = [:]
 
@@ -159,7 +159,7 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         blocked[person] = Stamped(isBlocked, stamp: stamp)
     }
 
-    public func followsDefault(_ room: RoomID) -> Bool { roomNotificationLevel[room] == nil }
+    public func followsDefault(_ room: ConversationID) -> Bool { roomNotificationLevel[room] == nil }
 
     public mutating func setNotificationLevel(
         _ level: NotificationLevel, stamp: OrganisationStamp
@@ -168,7 +168,7 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
     }
 
     public mutating func setNotificationLevel(
-        _ level: NotificationLevel?, for room: RoomID, stamp: OrganisationStamp
+        _ level: NotificationLevel?, for room: ConversationID, stamp: OrganisationStamp
     ) {
         guard let level else {
             roomNotificationLevel[room] = Stamped(defaultNotificationLevel, stamp: stamp)
@@ -185,11 +185,11 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         savedRecoveryKey = Stamped(when, stamp: stamp)
     }
 
-    public mutating func setHoldingSolo(_ held: Bool, for room: RoomID, stamp: OrganisationStamp) {
+    public mutating func setHoldingSolo(_ held: Bool, for room: ConversationID, stamp: OrganisationStamp) {
         heldSolos[room] = Stamped(held, stamp: stamp)
     }
 
-    public mutating func setMuted(_ muted: Bool, for room: RoomID, stamp: OrganisationStamp) {
+    public mutating func setMuted(_ muted: Bool, for room: ConversationID, stamp: OrganisationStamp) {
         mutedRooms[room] = Stamped(muted, stamp: stamp)
     }
 
@@ -298,7 +298,7 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         self[keyPath: question] != nil
     }
 
-    public func hasAnsweredMuted(_ room: RoomID) -> Bool { mutedRooms[room] != nil }
+    public func hasAnsweredMuted(_ room: ConversationID) -> Bool { mutedRooms[room] != nil }
 
     public var deviceNames: [DeviceID: Stamped<String>] = [:]
 
@@ -436,19 +436,19 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
             try container.decodeIfPresent(Stamped<Bool>.self, forKey: .reportsDisplaying)
         roomReportsDisplaying =
             try container.decodeIfPresent(
-                [RoomID: Stamped<Bool>].self, forKey: .roomReportsDisplaying) ?? [:]
+                [ConversationID: Stamped<Bool>].self, forKey: .roomReportsDisplaying) ?? [:]
         notificationLevel =
             try container.decodeIfPresent(Stamped<NotificationLevel>.self, forKey: .notificationLevel)
         roomNotificationLevel =
             try container.decodeIfPresent(
-                [RoomID: Stamped<NotificationLevel>].self, forKey: .roomNotificationLevel) ?? [:]
+                [ConversationID: Stamped<NotificationLevel>].self, forKey: .roomNotificationLevel) ?? [:]
         mutedRooms =
-            try container.decodeIfPresent([RoomID: Stamped<Bool>].self, forKey: .mutedRooms) ?? [:]
+            try container.decodeIfPresent([ConversationID: Stamped<Bool>].self, forKey: .mutedRooms) ?? [:]
         roomNotGoneWait =
             try container.decodeIfPresent(
-                [RoomID: Stamped<NotGoneWait>].self, forKey: .roomNotGoneWait) ?? [:]
+                [ConversationID: Stamped<NotGoneWait>].self, forKey: .roomNotGoneWait) ?? [:]
         deletedRooms =
-            try container.decodeIfPresent([RoomID: Stamped<Bool>].self, forKey: .deletedRooms) ?? [:]
+            try container.decodeIfPresent([ConversationID: Stamped<Bool>].self, forKey: .deletedRooms) ?? [:]
         checkedPeople =
             try container.decodeIfPresent(
                 [ParticipantID: Stamped<Date>].self, forKey: .checkedPeople) ?? [:]
@@ -458,7 +458,7 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         requiresSoloCheck =
             try container.decodeIfPresent(Stamped<Bool>.self, forKey: .requiresSoloCheck)
         heldSolos =
-            try container.decodeIfPresent([RoomID: Stamped<Bool>].self, forKey: .heldSolos) ?? [:]
+            try container.decodeIfPresent([ConversationID: Stamped<Bool>].self, forKey: .heldSolos) ?? [:]
         blocked =
             try container.decodeIfPresent([ParticipantID: Stamped<Bool>].self, forKey: .blocked) ?? [:]
         outpostNotified =

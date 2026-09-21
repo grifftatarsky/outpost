@@ -7,7 +7,7 @@ public struct WaitingButton: View {
     private let rooms: [RoomSummary]
     private let authors: [Member]
     private let badge: Int
-    private let onOpenRoom: (RoomID) -> Void
+    private let onOpenRoom: (ConversationID) -> Void
     private let onOpenOutpost: (ParticipantID) -> Void
 
     @State private var showing = false
@@ -16,7 +16,7 @@ public struct WaitingButton: View {
         rooms: [RoomSummary],
         authors: [Member],
         badge: Int,
-        onOpenRoom: @escaping (RoomID) -> Void,
+        onOpenRoom: @escaping (ConversationID) -> Void,
         onOpenOutpost: @escaping (ParticipantID) -> Void
     ) {
         self.rooms = rooms.filter(\.hasUnread)

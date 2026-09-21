@@ -27,7 +27,7 @@ struct SoloTests {
 
     private func solo(
         between alice: AppSession, and bob: AppSession, through mailbox: InMemoryMailbox
-    ) async throws -> RoomID {
+    ) async throws -> ConversationID {
         let bobID = try #require(bob.enrolment?.identity.id)
         let room = try await alice.startSolo(with: bobID)
         let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)

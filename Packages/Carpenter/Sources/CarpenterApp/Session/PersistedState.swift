@@ -3,11 +3,11 @@ import Foundation
 
 struct PersistedState: Codable, Sendable {
     var organisation = RoomsListOrganisation()
-    var knownRooms: [RoomID] = []
-    var greetedRooms: [RoomID] = []
-    var readThrough: [RoomID: EntryHash] = [:]
+    var knownRooms: [ConversationID] = []
+    var greetedRooms: [ConversationID] = []
+    var readThrough: [ConversationID: EntryHash] = [:]
     var answeredDepartures: Set<EntryHash> = []
-    var epochs: [RoomID: [UInt64]] = [:]
+    var epochs: [ConversationID: [UInt64]] = [:]
     var syncedFrontier = VectorClock()
     var publishedEntryCount = 0
     var knownSiblings: [DeviceID] = []
@@ -15,13 +15,13 @@ struct PersistedState: Codable, Sendable {
     var repairs: [HistoryRepair] = []
     var repairDuties: [RepairDuty] = []
     var restoreAsks: [RestoreAskRecord] = []
-    var holesNoticed: [RoomID: Date] = [:]
-    var askedAutomatically: [RoomID: Date] = [:]
+    var holesNoticed: [ConversationID: Date] = [:]
+    var askedAutomatically: [ConversationID: Date] = [:]
     var outpostMediaOwed: [ParticipantID] = []
     var wantsOutpostBell: [ParticipantID] = []
     var outpostSeenThrough: [ParticipantID: Date] = [:]
-    var reviewsPostponed: [RoomID: [ParticipantID]] = [:]
-    var epochTurnsOwed: [RoomID] = []
+    var reviewsPostponed: [ConversationID: [ParticipantID]] = [:]
+    var epochTurnsOwed: [ConversationID] = []
     var unverifiable: [FeedGap] = []
     var elsewhere: [FeedGap] = []
     var withheldTold: [ParticipantID: [FeedGap]] = [:]
@@ -31,7 +31,7 @@ struct PersistedState: Codable, Sendable {
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
     var turnsEveryKeyAfterALoss = false
-    var drafts: [RoomID: Data] = [:]
+    var drafts: [ConversationID: Data] = [:]
     var newPostDraft: Data?
     var commentDrafts: [PostID: Data] = [:]
 
@@ -71,13 +71,13 @@ struct PersistedState: Codable, Sendable {
         organisation =
             try container.decodeIfPresent(RoomsListOrganisation.self, forKey: .organisation)
             ?? RoomsListOrganisation()
-        knownRooms = try container.decodeIfPresent([RoomID].self, forKey: .knownRooms) ?? []
-        greetedRooms = try container.decodeIfPresent([RoomID].self, forKey: .greetedRooms) ?? []
+        knownRooms = try container.decodeIfPresent([ConversationID].self, forKey: .knownRooms) ?? []
+        greetedRooms = try container.decodeIfPresent([ConversationID].self, forKey: .greetedRooms) ?? []
         readThrough =
-            try container.decodeIfPresent([RoomID: EntryHash].self, forKey: .readThrough) ?? [:]
+            try container.decodeIfPresent([ConversationID: EntryHash].self, forKey: .readThrough) ?? [:]
         answeredDepartures =
             try container.decodeIfPresent(Set<EntryHash>.self, forKey: .answeredDepartures) ?? []
-        epochs = try container.decodeIfPresent([RoomID: [UInt64]].self, forKey: .epochs) ?? [:]
+        epochs = try container.decodeIfPresent([ConversationID: [UInt64]].self, forKey: .epochs) ?? [:]
         syncedFrontier =
             try container.decodeIfPresent(VectorClock.self, forKey: .syncedFrontier) ?? VectorClock()
         knownKeys =
@@ -112,12 +112,12 @@ struct PersistedState: Codable, Sendable {
         spentEntries = try container.decodeIfPresent([SpentEntry].self, forKey: .spentEntries) ?? []
         uploadsLeftForOthers =
             try container.decodeIfPresent([AttachmentID].self, forKey: .uploadsLeftForOthers) ?? []
-        holesNoticed = try container.decodeIfPresent([RoomID: Date].self, forKey: .holesNoticed) ?? [:]
+        holesNoticed = try container.decodeIfPresent([ConversationID: Date].self, forKey: .holesNoticed) ?? [:]
         askedAutomatically =
-            try container.decodeIfPresent([RoomID: Date].self, forKey: .askedAutomatically) ?? [:]
-        epochTurnsOwed = try container.decodeIfPresent([RoomID].self, forKey: .epochTurnsOwed) ?? []
+            try container.decodeIfPresent([ConversationID: Date].self, forKey: .askedAutomatically) ?? [:]
+        epochTurnsOwed = try container.decodeIfPresent([ConversationID].self, forKey: .epochTurnsOwed) ?? []
         reviewsPostponed =
-            try container.decodeIfPresent([RoomID: [ParticipantID]].self, forKey: .reviewsPostponed)
+            try container.decodeIfPresent([ConversationID: [ParticipantID]].self, forKey: .reviewsPostponed)
             ?? [:]
         outpostSeenThrough =
             try container.decodeIfPresent([ParticipantID: Date].self, forKey: .outpostSeenThrough)
@@ -136,7 +136,7 @@ struct PersistedState: Codable, Sendable {
             try container.decodeIfPresent(Bool.self, forKey: .wantsWhatWasSaid) ?? false
         turnsEveryKeyAfterALoss =
             try container.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
-        drafts = try container.decodeIfPresent([RoomID: Data].self, forKey: .drafts) ?? [:]
+        drafts = try container.decodeIfPresent([ConversationID: Data].self, forKey: .drafts) ?? [:]
         newPostDraft = try container.decodeIfPresent(Data.self, forKey: .newPostDraft)
         commentDrafts = try container.decodeIfPresent([PostID: Data].self, forKey: .commentDrafts) ?? [:]
     }

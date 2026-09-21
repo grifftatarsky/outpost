@@ -31,7 +31,7 @@ struct AppRootView: View {
     @AppStorage("onboarding.tourSeen") var tourSeen = false
     @AppStorage("onboarding.syncedSplashSeen") var syncedSplashSeen = false
     @Environment(\.scenePhase) private var scenePhase
-    @State var openRoom: RoomID?
+    @State var openRoom: ConversationID?
 
 
     @State var problem: ActionProblem?
@@ -552,7 +552,7 @@ struct AppRootView: View {
     func createRoom(
         named name: String, access: RoomAccess, inviting people: Set<ParticipantID>
     ) async {
-        let room: RoomID
+        let room: ConversationID
         do {
             room = try await session.createRoom(named: name, access: access)
         } catch {
@@ -567,7 +567,7 @@ struct AppRootView: View {
     }
 
     func startSolo(with person: ParticipantID) async -> Invite? {
-        let room: RoomID
+        let room: ConversationID
         do {
             room = try await session.startSolo(with: person)
         } catch {
@@ -583,7 +583,7 @@ struct AppRootView: View {
 
     @discardableResult
     func invite(
-        _ people: Set<ParticipantID>, to room: RoomID, kind: RoomKind
+        _ people: Set<ParticipantID>, to room: ConversationID, kind: RoomKind
     ) async -> [ParticipantID: Invite] {
         guard !people.isEmpty else { return [:] }
 

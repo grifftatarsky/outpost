@@ -6,7 +6,7 @@ import Testing
 struct BadgeCountTests {
     private func room(unread: Bool) -> RoomSummary {
         RoomSummary(
-            id: RoomID(), name: "Kitchen", memberCount: 2, lastAuthor: nil,
+            id: ConversationID.room(UUID()), name: "Kitchen", memberCount: 2, lastAuthor: nil,
             lastMessage: "", lastActivity: Date(timeIntervalSince1970: 1_786_635_000),
             hasUnread: unread)
     }

@@ -87,7 +87,7 @@ struct NotGoneTests {
 
     @Test("A room's time is kept, and follows the member to their other devices")
     func theTimeIsARoomPreference() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         var here = MemberPreferences()
         #expect(here.notGoneWait(for: room) == .standard)
 

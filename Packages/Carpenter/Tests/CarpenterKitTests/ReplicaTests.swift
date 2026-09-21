@@ -15,14 +15,14 @@ struct Author {
         device = DeviceKeys.generate()
         certificate = try! DeviceCertificate.issue(
             for: device.publicKey, by: identity, at: issuedAt)
-        self.chain = chain ?? EpochChain.create(room: RoomID()).chain
+        self.chain = chain ?? EpochChain.create(room: ConversationID.room(UUID())).chain
     }
 
     var feedKey: FeedKey { FeedKey(author: identity.id, device: device.id) }
 
     mutating func append(
         _ payload: Payload, clock: VectorClock = VectorClock(), at wallTime: Date,
-        room: RoomID? = nil
+        room: ConversationID? = nil
     ) throws -> Entry {
         let entry = try Entry.append(
             to: head, author: identity.id, device: device,
@@ -240,7 +240,7 @@ struct ReplicaTests {
         var replica = Replica()
         try replica.meet(alice)
 
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         try replica.integrate(try alice.append(Payload.post("on my Outpost"), at: start, room: nil))
         try replica.integrate(
             try alice.append(

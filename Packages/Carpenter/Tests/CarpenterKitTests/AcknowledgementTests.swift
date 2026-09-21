@@ -8,7 +8,7 @@ import Testing
 @Suite("Acknowledging a round", .serialized)
 struct RoundAcknowledgementTests {
     private func joined() async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        alice: AppSession, bob: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()

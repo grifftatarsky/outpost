@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct RoomNoticeTests {
     private func pair(_ mailbox: any Mailbox) async throws
-        -> (alice: AppSession, bob: AppSession, room: RoomID)
+        -> (alice: AppSession, bob: AppSession, room: ConversationID)
     {
         let clock = TestClock(now: TestSession.now)
         let alice = AppSession(storage: TestSession.storage(), clock: clock)
@@ -31,7 +31,7 @@ struct RoomNoticeTests {
         return (alice, bob, room)
     }
 
-    private func notices(_ session: AppSession, _ room: RoomID) -> [RoomNotice.Kind] {
+    private func notices(_ session: AppSession, _ room: ConversationID) -> [RoomNotice.Kind] {
         session.transcript(in: room).compactMap {
             if case .notice(let notice) = $0 { return notice.kind }
             return nil
@@ -154,7 +154,7 @@ struct RoomNoticeTests {
 
     @Test("The room says who took the invitation back, not who offered it")
     func aWithdrawalNamesWhoeverDidIt() throws {
-        let room = RoomID()
+        let room = ConversationID.room(UUID())
         var alice = Author()
         var bob = Author(chain: alice.chain)
         let joiner = Identity.generate()

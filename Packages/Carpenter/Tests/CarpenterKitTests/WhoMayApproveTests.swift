@@ -7,7 +7,7 @@ import CarpenterKitTesting
 @Suite("Who may agree to an invitation")
 struct WhoMayApproveTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func rendered(
         _ author: ParticipantID, _ type: PayloadType, hash: UInt8

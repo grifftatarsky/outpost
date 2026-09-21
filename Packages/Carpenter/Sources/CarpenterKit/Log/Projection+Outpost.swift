@@ -33,7 +33,7 @@ extension Projection {
     private func accessChanges(
         of owner: ParticipantID, opening: (RenderedEntry) -> Payload?
     ) -> [(body: OutpostAccessBody, at: Date, device: DeviceID)] {
-        let wall = RoomID.outpost(of: owner)
+        let wall = ConversationID.outpost(of: owner)
         var changes: [(OutpostAccessBody, Date, DeviceID)] = []
         for entry in rendered
         where (entry.room == nil || entry.room == wall) && entry.author == owner

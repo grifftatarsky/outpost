@@ -50,7 +50,7 @@ extension AppSession {
         await persistOrReport("deleting drafts") { try await saveState() }
     }
 
-    public func keepUnsentReply(_ words: String, in room: RoomID) async -> Bool {
+    public func keepUnsentReply(_ words: String, in room: ConversationID) async -> Bool {
         guard enrolment != nil, rooms.contains(where: { $0.id == room }) else { return false }
         let already = draft(at: .room(room))
         await keepDraft(already.isEmpty ? words : already + "\n" + words, at: .room(room))

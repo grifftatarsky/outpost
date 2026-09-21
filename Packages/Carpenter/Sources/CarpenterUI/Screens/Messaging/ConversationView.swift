@@ -62,7 +62,7 @@ public struct ConversationView: View {
     let heldRestore: HeldRestore?
     let onLetHistoryThrough: ((ParticipantID) async -> Void)?
     let onRefuseHistory: ((ParticipantID) async -> Void)?
-    let onOutpostChoice: ((ParticipantID, OutpostAccessChoice, RoomID?) async -> String?)?
+    let onOutpostChoice: ((ParticipantID, OutpostAccessChoice, ConversationID?) async -> String?)?
     let onPostponeReview: (() async -> Void)?
     let onDelete: (() -> Void)?
 
@@ -102,7 +102,7 @@ public struct ConversationView: View {
         heldRestore: HeldRestore? = nil,
         onLetHistoryThrough: ((ParticipantID) async -> Void)? = nil,
         onRefuseHistory: ((ParticipantID) async -> Void)? = nil,
-        onOutpostChoice: ((ParticipantID, OutpostAccessChoice, RoomID?) async -> String?)? = nil,
+        onOutpostChoice: ((ParticipantID, OutpostAccessChoice, ConversationID?) async -> String?)? = nil,
         onPostponeReview: (() async -> Void)? = nil,
         onDelete: (() -> Void)? = nil
     ) {

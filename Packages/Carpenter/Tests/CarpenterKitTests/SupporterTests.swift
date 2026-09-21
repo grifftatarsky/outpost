@@ -71,7 +71,7 @@ struct SupporterStandingTests {
 @Suite("The Supporter badge", .serialized)
 struct SupporterBadgeTests {
     private func joined(clock: TestClock = TestClock(now: TestSession.now)) async throws -> (
-        alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID
+        alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: ConversationID
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make(clock: clock)

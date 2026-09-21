@@ -18,12 +18,12 @@ public struct NotificationCopy: Hashable, Sendable {
 }
 
 public enum MessageNotification {
-    public static func thread(for room: RoomID) -> String { room.rawValue.uuidString }
+    public static func thread(for room: ConversationID) -> String { room.stableName }
 
     public static let generic = NotificationCopy(title: "New message", body: "")
 
     public static func of(
-        room roomID: RoomID, roomName: String, author: String, body: String,
+        room roomID: ConversationID, roomName: String, author: String, body: String,
         level: NotificationLevel = .default
     ) -> NotificationCopy {
         let room = roomName.trimmingCharacters(in: .whitespacesAndNewlines)

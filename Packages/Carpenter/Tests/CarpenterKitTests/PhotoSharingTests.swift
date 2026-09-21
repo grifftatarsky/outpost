@@ -10,7 +10,7 @@ struct PhotoSharingTests {
     private static let photo = Data(repeating: 0xAB, count: 4_000)
     private static let secondPhoto = Data(repeating: 0xCD, count: 3_000)
 
-    private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
+    private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: ConversationID) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
         let bob = TestSession.make()

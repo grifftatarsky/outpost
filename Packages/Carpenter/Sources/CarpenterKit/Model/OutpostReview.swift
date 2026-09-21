@@ -1,13 +1,13 @@
 import Foundation
 
 public struct OutpostReview: Hashable, Sendable, Identifiable {
-    public let room: RoomID
+    public let room: ConversationID
     public let roomName: String
     public let people: [Person]
 
-    public var id: RoomID { room }
+    public var id: ConversationID { room }
 
-    public init(room: RoomID, roomName: String, people: [Person]) {
+    public init(room: ConversationID, roomName: String, people: [Person]) {
         self.room = room
         self.roomName = roomName
         self.people = people.sorted { left, right in

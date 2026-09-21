@@ -9,7 +9,7 @@ import Testing
 @Suite("Who has read a message", .serialized)
 struct WhoHasReadItTests {
     private func room(of size: Int) async throws -> (
-        host: AppSession, others: [AppSession], room: RoomID, mailbox: InMemoryMailbox,
+        host: AppSession, others: [AppSession], room: ConversationID, mailbox: InMemoryMailbox,
         clock: TestClock
     ) {
         let mailbox = InMemoryMailbox()
@@ -176,7 +176,7 @@ struct WhoHasReadItTests {
 @Suite("Reporting can differ from room to room", .serialized)
 struct PerRoomReportingTests {
     private func twoRooms() async throws -> (
-        host: AppSession, reader: AppSession, kitchen: RoomID, hangar: RoomID,
+        host: AppSession, reader: AppSession, kitchen: ConversationID, hangar: ConversationID,
         mailbox: InMemoryMailbox
     ) {
         let mailbox = InMemoryMailbox()
@@ -187,7 +187,7 @@ struct PerRoomReportingTests {
         try await host.createIdentity(displayName: "Griff")
         try await reader.createIdentity(displayName: "Outie")
 
-        var made: [RoomID] = []
+        var made: [ConversationID] = []
         for name in ["Kitchen", "Hangar"] {
             let room = try await host.createRoom(named: name)
             let invite = try await host.invite(

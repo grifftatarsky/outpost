@@ -57,16 +57,16 @@ extension AppSession {
         return status
     }
 
-    public func lastFocusStatus(of author: ParticipantID, in room: RoomID) -> FocusStatusBody? {
+    public func lastFocusStatus(of author: ParticipantID, in room: ConversationID) -> FocusStatusBody? {
         projection.lastFocusStatus(of: author, in: room)
     }
 
-    func roomsToTell() -> [RoomID] {
+    func roomsToTell() -> [ConversationID] {
         guard let me = enrolment?.identity.id else { return [] }
         return chains.keys.filter { roster(of: $0).members.contains(me) }
     }
 
-    func announceFocus(silenced: Bool, in rooms: [RoomID]) async throws {
+    func announceFocus(silenced: Bool, in rooms: [ConversationID]) async throws {
         guard let me = enrolment?.identity.id else { return }
         let prefs = persisted.preferences
         let body = FocusStatusBody(
@@ -88,15 +88,15 @@ extension AppSession {
 
     public var notificationLevel: NotificationLevel { persisted.preferences.defaultNotificationLevel }
 
-    public func notificationLevel(for room: RoomID) -> NotificationLevel {
+    public func notificationLevel(for room: ConversationID) -> NotificationLevel {
         persisted.preferences.isMuted(room) ? .nothing : persisted.preferences.notificationLevel(for: room)
     }
 
-    public func followsDefaultNotificationLevel(_ room: RoomID) -> Bool {
+    public func followsDefaultNotificationLevel(_ room: ConversationID) -> Bool {
         persisted.preferences.followsDefault(room)
     }
 
-    public func isMuted(_ room: RoomID) -> Bool { persisted.preferences.isMuted(room) }
+    public func isMuted(_ room: ConversationID) -> Bool { persisted.preferences.isMuted(room) }
 
     public var outpostNotifications: OutpostNotificationChoices {
         persisted.preferences.outpostNotificationChoices
@@ -139,12 +139,12 @@ extension AppSession {
         await savePreferences()
     }
 
-    public func setNotificationLevel(_ level: NotificationLevel?, for room: RoomID) async {
+    public func setNotificationLevel(_ level: NotificationLevel?, for room: ConversationID) async {
         persisted.preferences.setNotificationLevel(level, for: room, stamp: stamp())
         await savePreferences()
     }
 
-    public func setMuted(_ muted: Bool, for room: RoomID) async {
+    public func setMuted(_ muted: Bool, for room: ConversationID) async {
         guard persisted.preferences.hasAnsweredMuted(room) == false
             || persisted.preferences.isMuted(room) != muted else { return }
         persisted.preferences.setMuted(muted, for: room, stamp: stamp())
@@ -174,15 +174,15 @@ extension AppSession {
         refresh()
     }
 
-    public func reportsDisplayingAnswer(for room: RoomID) -> Bool? {
+    public func reportsDisplayingAnswer(for room: ConversationID) -> Bool? {
         persisted.preferences.reportsDisplayingAnswer(for: room)
     }
 
-    public func isReportingDisplaying(in room: RoomID) -> Bool {
+    public func isReportingDisplaying(in room: ConversationID) -> Bool {
         persisted.preferences.isReportingDisplaying(in: room)
     }
 
-    public func setReportsDisplaying(_ reports: Bool?, in room: RoomID) async {
+    public func setReportsDisplaying(_ reports: Bool?, in room: ConversationID) async {
         let before = persisted.preferences.isReportingDisplaying(in: room)
         persisted.preferences.setReportsDisplaying(reports, for: room, stamp: stamp())
         await savePreferences()

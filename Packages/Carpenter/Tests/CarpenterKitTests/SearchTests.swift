@@ -9,14 +9,14 @@ import Testing
 @Suite("Searching what was said", .serialized)
 struct SearchTests {
     private func pair(named name: String = "Lanterns") async throws -> (
-        mine: AppSession, theirs: AppSession, room: RoomID, mailbox: InMemoryMailbox
+        mine: AppSession, theirs: AppSession, room: ConversationID, mailbox: InMemoryMailbox
     ) {
         let (mine, theirs, room, mailbox, _) = try await pairWithClock(named: name)
         return (mine, theirs, room, mailbox)
     }
 
     private func pairWithClock(named name: String = "Lanterns") async throws -> (
-        mine: AppSession, theirs: AppSession, room: RoomID, mailbox: InMemoryMailbox,
+        mine: AppSession, theirs: AppSession, room: ConversationID, mailbox: InMemoryMailbox,
         clock: TestClock
     ) {
         let mailbox = InMemoryMailbox()

@@ -470,7 +470,7 @@ public enum TestInvite {
     }
 
     public static func issue(
-        joining room: RoomID,
+        joining room: ConversationID,
         joinerKeys: IdentityPublicKeys,
         by identity: Identity,
         at issuedAt: Date,
@@ -485,7 +485,7 @@ public enum TestInvite {
     }
 
     public static func issue(
-        joining room: RoomID,
+        joining room: ConversationID,
         joinerKeys: IdentityPublicKeys,
         by identity: Identity,
         at issuedAt: Date,

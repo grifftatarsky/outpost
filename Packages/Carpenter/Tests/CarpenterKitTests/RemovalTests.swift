@@ -7,7 +7,7 @@ import Testing
 @Suite("Removing somebody from a room")
 struct RemovalTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func rendered(
         _ author: ParticipantID, _ type: PayloadType, hash: UInt8, at offset: TimeInterval = 0
@@ -333,7 +333,7 @@ struct RemovalTests {
 @Suite("Removing somebody, through the session", .serialized)
 struct SessionRemovalTests {
     private func roomWithTwo() async throws -> (
-        alice: AppSession, bob: AppSession, room: RoomID, bobID: ParticipantID
+        alice: AppSession, bob: AppSession, room: ConversationID, bobID: ParticipantID
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
@@ -418,7 +418,7 @@ struct SessionRemovalTests {
 @Suite("Removal, enforced by the session", .serialized)
 struct RemovalEnforcementTests {
     private func roomWithTwo() async throws -> (
-        alice: AppSession, room: RoomID, bob: ParticipantID
+        alice: AppSession, room: ConversationID, bob: ParticipantID
     ) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()

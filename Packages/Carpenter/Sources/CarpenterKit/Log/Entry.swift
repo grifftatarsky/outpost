@@ -28,7 +28,7 @@ public struct Entry: Hashable, Sendable, Codable {
 
     public let wallTime: Date
 
-    public let room: RoomID?
+    public let room: ConversationID?
 
     public let payload: SealedPayload
     public let signature: Data
@@ -70,7 +70,7 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: RoomID?,
+        room: ConversationID?,
         payload: SealedPayload
     ) throws -> Entry {
         try append(
@@ -84,7 +84,7 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: RoomID?,
+        room: ConversationID?,
         payload: SealedPayload
     ) throws -> Entry {
         let seq = (previous?.seq).map { $0 + 1 } ?? firstSequence
@@ -113,7 +113,7 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: RoomID?,
+        room: ConversationID?,
         payload: Payload,
         at epoch: EpochNumber,
         sealedWith chain: EpochChain,
@@ -131,7 +131,7 @@ public struct Entry: Hashable, Sendable, Codable {
         device: DeviceKeys,
         clock: VectorClock,
         wallTime: Date,
-        room: RoomID?,
+        room: ConversationID?,
         payload: Payload,
         at epoch: EpochNumber,
         sealedWith chain: EpochChain,
@@ -149,7 +149,7 @@ public struct Entry: Hashable, Sendable, Codable {
         try? payload.opened(using: chain, by: feedKey)
     }
 
-    public func opened(pairwise secret: PairwiseSecret, wall: RoomID) -> Payload? {
+    public func opened(pairwise secret: PairwiseSecret, wall: ConversationID) -> Payload? {
         guard payload.alsoFor != nil else { return nil }
         return try? payload.opened(pairwise: secret, room: room ?? wall, by: feedKey)
     }
@@ -175,7 +175,7 @@ public struct Entry: Hashable, Sendable, Codable {
         previous: EntryHash?,
         clock: VectorClock,
         wallTime: Date,
-        room: RoomID?,
+        room: ConversationID?,
         payload: SealedPayload,
         signature: Data
     ) {
@@ -195,8 +195,3 @@ public struct Entry: Hashable, Sendable, Codable {
     }
 }
 
-extension RoomID {
-    var canonicalBytes: Data {
-        withUnsafeBytes(of: rawValue.uuid) { Data($0) }
-    }
-}

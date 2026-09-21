@@ -7,7 +7,7 @@ import Testing
 @MainActor
 @Suite("A name of your own for somebody", .serialized)
 struct NicknameTests {
-    private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
+    private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: ConversationID) {
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make()
         let bob = TestSession.make()

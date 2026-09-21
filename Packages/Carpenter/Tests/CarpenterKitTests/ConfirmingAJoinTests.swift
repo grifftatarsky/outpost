@@ -7,7 +7,7 @@ import Testing
 @Suite("Confirming that the right person joined")
 struct ConfirmingAJoinTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func rendered(
         _ author: ParticipantID, _ type: PayloadType, hash: UInt8

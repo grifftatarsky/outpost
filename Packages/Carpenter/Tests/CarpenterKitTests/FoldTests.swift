@@ -239,7 +239,7 @@ struct PayloadTypeClassificationTests {
 struct WallPlumbingRoutingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
-    private func feed(of author: Author, room: RoomID?) throws -> [OutpostPost] {
+    private func feed(of author: Author, room: ConversationID?) throws -> [OutpostPost] {
         var writing = author
         let entry = try writing.append(
             Payload(type: PayloadType(rawValue: 31_337), body: Data([1])), at: start, room: room)
@@ -258,7 +258,7 @@ struct WallPlumbingRoutingTests {
     @Test("The same payload addressed to the wall is drawn nowhere")
     func addressedToTheWallItIsNot() throws {
         let alice = Author()
-        let wall = RoomID.outpost(of: alice.identity.id)
+        let wall = ConversationID.outpost(of: alice.identity.id)
         #expect(try feed(of: alice, room: wall).isEmpty, "a wall's machinery reached the feed")
     }
 
@@ -266,7 +266,7 @@ struct WallPlumbingRoutingTests {
     func theWallIsDerived() {
         let alice = Author()
         let bob = Author()
-        #expect(RoomID.outpost(of: alice.identity.id) == RoomID.outpost(of: alice.identity.id))
-        #expect(RoomID.outpost(of: alice.identity.id) != RoomID.outpost(of: bob.identity.id))
+        #expect(ConversationID.outpost(of: alice.identity.id) == ConversationID.outpost(of: alice.identity.id))
+        #expect(ConversationID.outpost(of: alice.identity.id) != ConversationID.outpost(of: bob.identity.id))
     }
 }

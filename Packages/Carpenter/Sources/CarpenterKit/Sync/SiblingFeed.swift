@@ -2,11 +2,11 @@ import CryptoKit
 import Foundation
 
 public struct HeldEpoch: Hashable, Sendable, Codable {
-    public let room: RoomID
+    public let room: ConversationID
     public let epoch: EpochNumber
     public let material: Data
 
-    public init(room: RoomID, epoch: EpochNumber, material: Data) {
+    public init(room: ConversationID, epoch: EpochNumber, material: Data) {
         self.room = room
         self.epoch = epoch
         self.material = material

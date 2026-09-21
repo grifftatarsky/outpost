@@ -96,7 +96,7 @@ struct PairwiseTests {
 
 @Suite("Epoch chain")
 struct EpochChainTests {
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func history(through epochs: Int) throws
         -> (secrets: [EpochNumber: EpochSecret], links: [EpochLink])
@@ -192,7 +192,7 @@ struct EpochChainTests {
     @Test("A link from another room is refused rather than stored")
     func linksAreRoomBound() throws {
         let (_, first) = EpochChain.create(room: room)
-        let advanced = try EpochChain.advance(from: first, at: .initial, room: RoomID())
+        let advanced = try EpochChain.advance(from: first, at: .initial, room: ConversationID.room(UUID()))
 
         var chain = EpochChain(room: room)
         #expect(throws: CryptoError.wrongRoom) { try chain.record(advanced.link) }
@@ -246,7 +246,7 @@ struct EpochChainTests {
 
 @Suite("Sealed payloads")
 struct SealedPayloadTests {
-    private let room = RoomID()
+    private let room = ConversationID.room(UUID())
 
     private func chainAt(_ epoch: Int) throws -> (EpochChain, [EpochLink]) {
         let (_, first) = EpochChain.create(room: room)
@@ -296,7 +296,7 @@ struct SealedPayloadTests {
         let (chain, _) = try chainAt(0)
         let sealed = try Payload.post("private").sealed(at: .initial, using: chain)
 
-        var elsewhere = EpochChain(room: RoomID())
+        var elsewhere = EpochChain(room: ConversationID.room(UUID()))
         elsewhere.adopt(try chain.secret(for: .initial), at: .initial)
 
         #expect(throws: CryptoError.openFailed) { try sealed.opened(using: elsewhere) }

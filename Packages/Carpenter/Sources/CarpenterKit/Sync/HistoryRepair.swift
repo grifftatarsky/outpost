@@ -112,13 +112,13 @@ public struct RepairRequest: Hashable, Sendable, Codable {
     public let authors: [ParticipantID]
     public let heads: VectorClock
     public let gaps: [FeedGap]
-    public let room: RoomID?
+    public let room: ConversationID?
     public let wallOf: ParticipantID?
     public let reason: RepairReason
 
     public init(
         id: RepairID = RepairID(), authors: [ParticipantID], heads: VectorClock, gaps: [FeedGap],
-        room: RoomID? = nil, wallOf: ParticipantID? = nil, reason: RepairReason = .gap
+        room: ConversationID? = nil, wallOf: ParticipantID? = nil, reason: RepairReason = .gap
     ) {
         self.id = id
         self.authors = authors
@@ -139,7 +139,7 @@ public struct RepairRequest: Hashable, Sendable, Codable {
         authors = try container.decodeIfPresent([ParticipantID].self, forKey: .authors) ?? []
         heads = try container.decodeIfPresent(VectorClock.self, forKey: .heads) ?? VectorClock()
         gaps = try container.decodeIfPresent([FeedGap].self, forKey: .gaps) ?? []
-        room = try container.decodeIfPresent(RoomID.self, forKey: .room)
+        room = try container.decodeIfPresent(ConversationID.self, forKey: .room)
         wallOf = try container.decodeIfPresent(ParticipantID.self, forKey: .wallOf)
         reason = try container.decodeIfPresent(RepairReason.self, forKey: .reason) ?? .gap
     }
@@ -189,7 +189,7 @@ extension Replica {
             if let room = request.room { return entry.room == room }
             if let wantsWall {
                 if entry.room == nil { return entry.author == wantsWall }
-                return entry.room == RoomID.outpost(of: wantsWall)
+                return entry.room == ConversationID.outpost(of: wantsWall)
             }
             return authors.contains(entry.author)
         }
@@ -239,7 +239,7 @@ extension Replica {
     }
 
     public func heads(
-        of authors: Set<ParticipantID>, inRoom room: RoomID?, onWallOf wantsWall: ParticipantID?
+        of authors: Set<ParticipantID>, inRoom room: ConversationID?, onWallOf wantsWall: ParticipantID?
     ) -> VectorClock {
         var clock = VectorClock()
         for entry in allEntries where authors.contains(entry.feedKey.author) {
@@ -249,7 +249,7 @@ extension Replica {
             } else if let wantsWall {
                 asked =
                     entry.room == nil
-                    ? entry.author == wantsWall : entry.room == RoomID.outpost(of: wantsWall)
+                    ? entry.author == wantsWall : entry.room == ConversationID.outpost(of: wantsWall)
             } else {
                 asked = true
             }
@@ -264,7 +264,7 @@ public struct HeldRestore: Hashable, Sendable, Identifiable {
     public let request: RepairID
     public let person: ParticipantID
     public let personName: String
-    public let room: RoomID?
+    public let room: ConversationID?
     public let roomName: String
     public let phrase: String?
     public let askedAt: Date
@@ -272,7 +272,7 @@ public struct HeldRestore: Hashable, Sendable, Identifiable {
     public var id: RepairID { request }
 
     public init(
-        request: RepairID, person: ParticipantID, personName: String, room: RoomID?,
+        request: RepairID, person: ParticipantID, personName: String, room: ConversationID?,
         roomName: String, phrase: String?, askedAt: Date
     ) {
         self.request = request
