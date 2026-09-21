@@ -109,7 +109,7 @@ public final class AppSession {
 
     var wallsWrittenOn: Set<ParticipantID> = []
 
-    var notifyWallsSent: [ParticipantID]?
+    var notifyWallsSent: [ParticipantID: Bool] = [:]
 
     var attachmentTasks: [AttachmentID: Task<Data?, any Error>] = [:]
     var hasAskedForWall: Set<ParticipantID> = []

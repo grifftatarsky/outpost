@@ -291,11 +291,13 @@ extension AppSession {
             let answer = RepairAnswer(
                 request: duty.request.id, unheld: unheld, elsewhere: withheld,
                 heads: replica.heads(inScopeOf: duty.request))
+            let needed = peopleTheyMayKnowOf(entries, among: [peer])
             do {
                 let sent = try await session.send(
-                    entries, to: [peer], certificates: knownCertificates(),
-                    revocations: persisted.revocations, at: clock.now, answers: [answer],
-                    identities: knownIdentities())
+                    entries, to: [peer], certificates: knownCertificates(of: needed),
+                    revocations: persisted.revocations.filter { needed.contains($0.participant) },
+                    at: clock.now, answers: [answer],
+                    identities: knownIdentities(of: needed))
                 report = report.adding(sent)
                 if sent.sendFailure == nil { answered.insert(duty) }
             } catch {

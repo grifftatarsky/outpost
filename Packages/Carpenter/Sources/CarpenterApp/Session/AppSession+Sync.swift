@@ -46,14 +46,14 @@ extension AppSession {
 
             let ringingWall = peersToRingForWall(carrying: sending)
 
-            let wishes = wallsToBeToldAbout()
-            let sayingWishes = notifyWallsSent == wishes ? nil : wishes
+            let wishes = Set(wallsToBeToldAbout())
 
             let (rounds, unaddressed) = addressed(sending)
             nobodyToSendTo = unaddressed
             let ringing = Set((peersToRing(in: ringingRooms) + ringingWall).map(\.them))
             let withheldByPeer = withheldFromEveryone()
             var extrasDone: Set<ParticipantID> = []
+            var wishesTold: Set<ParticipantID> = []
             do {
                 for leg in rounds {
                     let owning = leg.peers.filter { !extrasDone.contains($0.them) }
@@ -80,17 +80,29 @@ extension AppSession {
                             persisted.withheldTold[peer.them] = known
                         }
                     }
+                    let needed = peopleTheyMayKnowOf(leg.entries, among: leg.peers)
                     let legReport = try await session.send(
-                        leg.entries, to: leg.peers, certificates: knownCertificates(),
-                        revocations: persisted.revocations,
+                        leg.entries, to: leg.peers, certificates: knownCertificates(of: needed),
+                        revocations: persisted.revocations.filter {
+                            needed.contains($0.participant)
+                        },
                         granting: owedGrants.filter { owningIDs.contains($0.to.them) }
                             .map { (to: $0.to, grant: $0.grant) }, at: clock.now,
                         ringing: leg.peers.filter { ringing.contains($0.them) },
-                        identities: knownIdentities(), notifyWalls: sayingWishes,
+                        identities: knownIdentities(of: needed),
                         confirming: owedConfirmations.filter { owningIDs.contains($0.to) }
                             .map(\.body),
                         withholding: saying)
                     report = report.adding(legReport)
+                }
+
+                for peer in peers()
+                where notifyWallsSent[peer.them] != wishes.contains(peer.them) {
+                    let wanted = wishes.contains(peer.them)
+                    let told = try await session.send(
+                        [], to: [peer], at: clock.now, notifyWalls: wanted ? [peer.them] : [])
+                    report = report.adding(told)
+                    if told.packetsWritten > 0 { wishesTold.insert(peer.them) }
                 }
             } catch let refused as MailboxFailure {
                 cannotSend = refused
@@ -110,7 +122,7 @@ extension AppSession {
                 roomsWithUnsentMessages.subtract(ringingRooms)
                 unsentWallPosts.subtract(sending.filter { $0.room == nil }.map(\.hash))
                 wallsWrittenOn.removeAll()
-                if sayingWishes != nil { notifyWallsSent = wishes }
+                for person in wishesTold { notifyWallsSent[person] = wishes.contains(person) }
             }
         }
 
@@ -342,8 +354,18 @@ extension AppSession {
         replica.knownParticipants.flatMap { replica.registry(for: $0)?.certificates ?? [] }
     }
 
+    func knownCertificates(of people: Set<ParticipantID>) -> [DeviceCertificate] {
+        replica.knownParticipants.filter(people.contains)
+            .flatMap { replica.registry(for: $0)?.certificates ?? [] }
+    }
+
     func knownIdentities() -> [IdentityPublicKeys] {
         replica.knownParticipants.compactMap { replica.registry(for: $0)?.identity }
+    }
+
+    func knownIdentities(of people: Set<ParticipantID>) -> [IdentityPublicKeys] {
+        replica.knownParticipants.filter(people.contains)
+            .compactMap { replica.registry(for: $0)?.identity }
     }
 
     func unsentEntries() -> [Entry] {

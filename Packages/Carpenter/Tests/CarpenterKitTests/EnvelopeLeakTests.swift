@@ -102,6 +102,69 @@ struct EnvelopeLeakTests {
         #expect(checked > 0, "this test asserted nothing")
     }
 
+    @Test("A peer never learns of somebody they share no conversation with")
+    func strangersStayUnknown() async throws {
+        let mailbox = InMemoryMailbox()
+        let alice = TestSession.make()
+        let bob = TestSession.make()
+        let carol = TestSession.make()
+        for session in [alice, bob, carol] { await session.load() }
+        try await alice.createIdentity(displayName: "Alice")
+        try await bob.createIdentity(displayName: "Bob")
+        try await carol.createIdentity(displayName: "Carol")
+
+        let withBob = try await alice.createRoom(named: "Hangar 7")
+        let withCarol = try await alice.createRoom(named: "Somewhere else")
+        let toBob = try await alice.invite(joinerCode: bob.identityCode(), joining: withBob, mailbox: nil)
+        try await bob.redeem(inviteCode: try toBob.encoded())
+        let toCarol = try await alice.invite(
+            joinerCode: carol.identityCode(), joining: withCarol, mailbox: nil)
+        try await carol.redeem(inviteCode: try toCarol.encoded())
+        try await settle([alice, bob, carol], mailbox)
+        try await alice.send("for bob", to: withBob)
+        try await alice.send("for carol", to: withCarol)
+        try await settle([alice, bob, carol], mailbox)
+
+        let bobID = try #require(bob.enrolment?.identity.id)
+        let carolID = try #require(carol.enrolment?.identity.id)
+
+        #expect(
+            !bob.replica.knownParticipants.contains(carolID),
+            "Bob was handed Carol's keys, and she shares no conversation with him")
+        #expect(
+            !carol.replica.knownParticipants.contains(bobID),
+            "Carol was handed Bob's keys, and he shares no conversation with her")
+    }
+
+    @Test("A peer is never told whose Outposts this member follows")
+    func followedWallsStayPrivate() async throws {
+        let mailbox = InMemoryMailbox()
+        let alice = TestSession.make()
+        let bob = TestSession.make()
+        let carol = TestSession.make()
+        for session in [alice, bob, carol] { await session.load() }
+        try await alice.createIdentity(displayName: "Alice")
+        try await bob.createIdentity(displayName: "Bob")
+        try await carol.createIdentity(displayName: "Carol")
+
+        let room = try await alice.createRoom(named: "Hangar 7")
+        for joiner in [bob, carol] {
+            let invite = try await alice.invite(
+                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            try await joiner.redeem(inviteCode: try invite.encoded())
+        }
+        try await settle([alice, bob, carol], mailbox)
+
+        let carolID = try #require(carol.enrolment?.identity.id)
+        await alice.setNotified(true, about: carolID)
+        try await alice.sync(through: mailbox, media: mailbox)
+
+        let seenByBob = try await bob.sync(through: mailbox, media: mailbox)
+        #expect(
+            !(seenByBob.notifyWalls ?? []).contains(carolID),
+            "Bob was told that Alice follows Carol's Outpost")
+    }
+
     private struct Position: Hashable {
         let feed: FeedKey
         let seq: UInt64

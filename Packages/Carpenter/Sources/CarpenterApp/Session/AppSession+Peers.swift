@@ -142,6 +142,19 @@ extension AppSession {
         return nil
     }
 
+    func peopleTheyMayKnowOf(_ entries: [Entry], among audience: [Peer]) -> Set<ParticipantID> {
+        var who = Set(entries.map(\.author))
+        who.formUnion(audience.map(\.them))
+        if let me = enrolment?.identity.id { who.insert(me) }
+        for room in Set(entries.compactMap(\.room)) {
+            let roster = roster(of: room)
+            who.formUnion(roster.members)
+            who.formUnion(roster.requests.keys)
+            who.formUnion(roster.absent)
+        }
+        return who
+    }
+
     func withheldFromEveryone() -> [ParticipantID: [FeedGap]] {
         let everyone = peers()
         guard !everyone.isEmpty else { return [:] }
@@ -179,8 +192,9 @@ extension AppSession {
             (peers: who.compactMap { addressable[$0] }, entries: byAudience[who] ?? [])
         }
         let covered = Set(rounds.flatMap { $0.peers.map(\.them) })
-        let left = everyone.filter { !covered.contains($0.them) }
-        if !left.isEmpty { rounds.append((peers: left, entries: [])) }
+        for peer in everyone where !covered.contains(peer.them) {
+            rounds.append((peers: [peer], entries: []))
+        }
         return (rounds, unaddressed)
     }
 
