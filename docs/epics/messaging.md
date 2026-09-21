@@ -21,6 +21,10 @@ through the mailbox, surviving relaunch, with marks derived from what actually h
 proven between two Apple Accounts. A device also notices history it is missing and asks for it, and
 a message that has not gone says so where it was sent.
 
+Since 2026-09-20 a round hands each reader only what they are allowed to read, and an entry's
+envelope names only the conversation it belongs to. Both are held by the suite and neither has run
+between two accounts.
+
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
 
@@ -540,6 +544,64 @@ collected.
 was asked; the app does not guess when a phone will be turned on. *Still missing* is counted at the
 moment it is read, from the log and the answers, never carried. A hole in a revoked device's feed
 after its revocation would be asked for and refused forever, and is not handled.
+
+</details>
+
+<details markdown="1">
+<summary><b>A packet carries only what its reader may read</b> · Complete (tested)</summary>
+
+**The story.** A device should hand over only what its reader is allowed to read. Not seal it and
+trust the app not to draw it — not send it.
+
+**What it was.** A round collected every entry this device had not yet sent, across every room and
+solo, sealed them into one body, and wrapped that body's key for every peer. The addressing was per
+recipient and correct; the contents were global. History repair leaked the same history a second way:
+`Replica.fill` served a named author's log whole, ignoring the room the request named, and the answer
+never consulted the asker's history floor.
+
+**Measured before any change**, 2026-09-20: a three-member fixture put a second room's entries on a
+device that was never in it, and a member invited from today held nine sealed entries from before
+they were let in.
+
+**Acceptance.**
+- No entry reaches a peer for a conversation they are not in.
+- Nothing at or below a joiner's history floor reaches them.
+- Somebody removed or gone gets nothing sealed after the key turned on them.
+- A member never ends up asking, forever, for history nobody will hand over.
+
+**What holds it.** `RepairScopeTests`, three cases, each red before the fix.
+
+**What is owed.** Two Apple Accounts on the rig. Nothing crossing the network is proven by the suite.
+
+</details>
+
+<details markdown="1">
+<summary><b>The envelope names only its own conversation</b> · Complete (tested)</summary>
+
+**The story.** An entry's payload is sealed. The envelope around it is not, because that is how an
+entry moves with no server in the middle. So the envelope must say as little as it can.
+
+**What it was.** `AppSession.append` stamped `replica.frontier` — every log the device held, across
+every room and Outpost, as person and device — in the clear and inside the signature. One message
+from a room you share told you how many other conversations its writer keeps, who is in them, and how
+far each had got. Three other things went to every peer: the public keys of everyone this device had
+met, their device certificates, and the list of whose Outposts this member follows. Repair heads were
+taken across every conversation.
+
+**Acceptance.**
+- A clock names only the conversation its entry was written in.
+- A packet names only people its reader already shares something with.
+- A wish to be told about an Outpost names only the person whose Outpost it is.
+- Repair heads stop at the edge of the conversation asked about.
+- Nothing on disk or on the wire changes shape.
+
+**What holds it.** `EnvelopeLeakTests`, five cases, each red with its own fix reverted.
+
+**What is still legible.** A position number is counted per device across every conversation. Closing
+that needs a separate hash chain per conversation, which would let a device drop or reorder its own
+history without anyone being able to tell. In [the inbox](../inbox.md), undecided.
+
+**What is owed.** Two Apple Accounts on the rig.
 
 </details>
 
