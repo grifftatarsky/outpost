@@ -156,9 +156,12 @@ ring the bell.
 
 **The sibling feed is one record that only grows.** `CloudKitEntrySync` writes a device's whole sealed
 feed, every entry, certificate and room key it holds and the member's preferences, into one field and
-republishes it after every write. CloudKit accepted 16MB in a field, so it is not a wall yet, but a
-member's hundredth message republishes the first ninety-nine to every device. Not measured at any real
-size.
+republishes it after every write. Each message adds 0.9 to 1.75 KB to it, measured 2026-09-21 over
+two hundred posts of twenty to three hundred characters, so a device's thousandth message republishes
+about a megabyte. Apple documents a record as holding at most 1 MB; the development server accepted
+16 MB in a field on 2026-09-14, and production is not measured. It is [ruled](decisions.md#a-reinstall-is-the-same-device-if-it-is-still-correctly-identified)
+that a reinstalled device waits for this record before it writes, so once that is built, a record
+that stopped updating would hand it a place it has already passed.
 
 ## Unwired or unwatched
 

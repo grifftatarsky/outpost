@@ -31,20 +31,6 @@ attention, written as a question rather than a statement.
 
 ## Waiting on an answer
 
-### How is a reinstalled device recognized, and how does it learn where it had got to?
-
-[Ruled](decisions.md#a-reinstall-is-the-same-device-if-it-is-still-correctly-identified): a reinstall
-is the same device, if it is still correctly identified. iOS keeps keychain items across a reinstall,
-so a reinstalled app comes back with its identity and its device key, and none of its log or state.
-Its position in each conversation only ever goes forward, so before it writes anywhere it has to
-know where it had got to — and it holds nothing that says.
-
-What is built: a device that sees its own writing come back, from any source, moves its place to
-match (`adoptOwnHeads`). That covers every case where its history returns before it writes.
-
-**The questions:** what counts as correctly identified, and does a reinstalled device stay silent in
-a conversation until it has learned its place there? A proposal is walked through with Griff.
-
 Griff worked through the rest on 2026-09-13, and three more on 2026-09-15. Those rulings were
 recorded in the log that is now [archived](archive/decisions-2026.md); the links below go there, and
 what they describe has not been re-checked against the build.

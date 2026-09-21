@@ -16,6 +16,10 @@ extension Projection {
         return Set(rendered.lazy.filter { $0.conversation == room && authors.contains($0.author) }.map(\.id))
     }
 
+    public func entries(of type: PayloadType, by author: ParticipantID) -> [RenderedEntry] {
+        rendered.filter { $0.type == type && $0.author == author }
+    }
+
     public func name(of room: ConversationID) -> String? {
         rendered.last { $0.conversation == room && $0.type == .roomProfile }
             .flatMap { if case .text(let name) = $0.content { name } else { nil } }

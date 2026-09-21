@@ -481,6 +481,54 @@ extension AppSession {
                     """)
             }
         }
+        for room in keyTurnsTheLogOwes() where !persisted.epochTurnsOwed.contains(room) {
+            do {
+                try await advanceEpoch(of: room)
+                Diagnostics.sync.notice(
+                    "mailbox sync: turned a key this device's own removal was still owed")
+            } catch {
+                Diagnostics.sync.error(
+                    """
+                    mailbox sync: still cannot turn a key this device's own removal owes — \
+                    somebody removed can read what is said until it turns \
+                    (\(String(describing: error), privacy: .public))
+                    """)
+            }
+        }
+    }
+
+    func keyTurnsTheLogOwes() -> Set<ConversationID> {
+        guard let enrolment else { return [] }
+        let me = enrolment.identity.id
+        let wall = outpostRoom(for: me)
+        var owed: Set<ConversationID> = []
+
+        for removal in projection.entries(of: .removal, by: me)
+        where removal.device == enrolment.device.id {
+            guard let entry = replica.entry(named: removal.id),
+                entry.payload.epoch == chains[removal.conversation]?.highestKnownEpoch,
+                standing(in: removal.conversation) == .present
+            else { continue }
+            owed.insert(removal.conversation)
+        }
+
+        guard let chain = chains[wall] else { return owed }
+        var letIn: Set<ParticipantID> = []
+        var shutOut: Set<ParticipantID> = []
+        for choice in projection.entries(of: .outpostAccess, by: me) where choice.conversation == wall {
+            guard let entry = replica.entry(named: choice.id),
+                let body = try? entry.opened(using: chain)?.decode(OutpostAccessBody.self)
+            else { continue }
+            if body.isAllowed {
+                letIn.insert(body.person)
+            } else if choice.device == enrolment.device.id,
+                entry.payload.epoch == chain.highestKnownEpoch
+            {
+                shutOut.insert(body.person)
+            }
+        }
+        if !shutOut.isDisjoint(with: letIn) { owed.insert(wall) }
+        return owed
     }
 
     @discardableResult

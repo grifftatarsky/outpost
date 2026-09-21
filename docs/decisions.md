@@ -113,6 +113,30 @@ data, and opens only with all three. An entry opens only under the key of the co
 **RULED 2026-09-21 by Griff:** *"A reinstall should become the same device - if it's still correctly
 identified."*
 
+**RULED 2026-09-21 by Griff:** *"Keep the log and state out of backups. And wait only for its own
+record."* A restored device is to come back as a reinstalled one does, holding its keys and nothing
+else, and neither is to write anything, in any conversation, until it has read its own record back
+from iCloud.
+
+**PROPOSED 2026-09-21:** a device is correctly identified when all three hold: its device key is in
+this device's keychain, stored so that it never moves to another device; its certificate is signed by
+the identity beside it; and no revocation names it. If any fails, it enrolls as a new device.
+
+**PROPOSED 2026-09-21:** photos stay in backups. Each is sealed, and a sender's upload is deleted once
+every recipient has collected it, so a device that loses its copy has nowhere to fetch it again.
+
 {: .warning }
-> **Not built.** What "correctly identified" means, and how a reinstalled device learns where it had
-> got to before it writes, is in [open questions](open-questions.md).
+> **Not built.** A reinstalled device starts every conversation again at position 1, and never reads
+> its own record: it writes an empty one over it instead. It restores none of its room keys, because
+> the list of which it holds is in the state file. Its first full round deletes every upload of the
+> member's that its empty log does not name. And its device key is stored so that an encrypted backup
+> carries it to another device.
+
+### A key turn a removal owes is found in the log
+
+**PROPOSED 2026-09-21.** A device that removed somebody from a room, or took its Outpost from somebody
+it had let in, turns that conversation's key. Every full round it reads what it still owes from the
+log as well as from the state file: a removal it wrote, still sealed under the newest key it holds, in
+a conversation it is still in. Losing the state file does not forget the turn. What this rules out:
+any other device, of the member or anybody else, finishing a turn another device owes, because two
+turns at once write two secrets for one epoch. `OwedKeyTurnTests`.
