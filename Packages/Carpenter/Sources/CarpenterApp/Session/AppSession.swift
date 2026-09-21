@@ -290,7 +290,7 @@ public final class AppSession {
             after: head,
             author: enrolment.identity.id,
             device: enrolment.device,
-            clock: replica.frontier,
+            clock: replica.frontier(in: room),
             wallTime: clock.now,
             room: room,
             payload: payload,

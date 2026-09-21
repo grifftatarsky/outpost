@@ -122,6 +122,9 @@ public struct Replica: Sendable {
         }
 
         feeds[entry.feedKey, default: [:]][entry.seq, default: [:]][entry.hash] = entry
+        if entry.seq > (highestInRoom[entry.room]?[entry.feedKey] ?? 0) {
+            highestInRoom[entry.room, default: [:]][entry.feedKey] = entry.seq
+        }
         claimed = claimed.merging(entry.clock)
         if existingAtSeq.isEmpty { occupy(entry.seq, in: entry.feedKey) }
 
@@ -178,6 +181,7 @@ public struct Replica: Sendable {
     @discardableResult
     public mutating func close(_ room: RoomID) -> [Entry] {
         closedRooms.insert(room)
+        highestInRoom[room] = nil
         var taken: [Entry] = []
         for (feed, bySeq) in feeds {
             var kept = bySeq
@@ -256,6 +260,14 @@ public struct Replica: Sendable {
 
     public func ordered() -> [Entry] {
         CausalOrder.sorted(allEntries)
+    }
+
+    private var highestInRoom: [RoomID?: [FeedKey: UInt64]] = [:]
+
+    public func frontier(in room: RoomID?) -> VectorClock {
+        var clock = VectorClock()
+        for (key, top) in highestInRoom[room] ?? [:] { clock.observe(key, seq: top) }
+        return clock
     }
 
     public var frontier: VectorClock {
