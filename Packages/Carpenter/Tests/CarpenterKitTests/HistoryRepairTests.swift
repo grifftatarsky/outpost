@@ -26,7 +26,7 @@ struct FeedGapTests {
         let request = RepairRequest(
             authors: [alice.identity.id], heads: replica.heads(of: [alice.identity.id]),
             gaps: replica.gaps())
-        let (served, unheld) = full.fill(request)
+        let (served, unheld, _) = full.fill(request)
         #expect(served.map(\.seq) == [3])
         #expect(unheld.isEmpty)
 
@@ -67,7 +67,7 @@ struct FeedGapTests {
         try held.integrate(post)
         try held.integrate(comment)
 
-        let (served, _) = held.fill(
+        let (served, _, _) = held.fill(
             RepairRequest(
                 authors: [], heads: VectorClock(), gaps: [], room: nil,
                 wallOf: bob.identity.id))
@@ -94,7 +94,7 @@ struct FeedGapTests {
         let request = RepairRequest(
             authors: [alice.identity.id], heads: asker.heads(of: [alice.identity.id]),
             gaps: asker.gaps())
-        let (served, unheld) = partial.fill(request)
+        let (served, unheld, _) = partial.fill(request)
         #expect(served.map(\.seq) == [4, 5, 6])
         #expect(unheld == [FeedGap(feed: alice.feedKey, spans: [SequenceSpan(2, 2)])])
     }

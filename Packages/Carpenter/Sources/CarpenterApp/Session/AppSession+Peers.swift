@@ -54,6 +54,136 @@ extension AppSession {
         }
     }
 
+    func mayReceive(_ entry: Entry, among everyone: [Peer]) -> [Peer] {
+        guard let me = enrolment?.identity.id else { return [] }
+
+        guard let room = entry.room else {
+            guard entry.author == me else { return [] }
+            let opened = entryOpener()(entry)
+            if entry.payload.alsoFor != nil {
+                guard let named = wallOwnerAddressed(by: opened) else { return [] }
+                return everyone.filter { $0.them == named }
+            }
+            let readers = outpostReaders()
+            if opened?.type == .outpostAccess,
+                let body = try? opened?.decode(OutpostAccessBody.self)
+            {
+                return everyone.filter { readers.contains($0.them) || $0.them == body.person }
+            }
+            return everyone.filter { readers.contains($0.them) }
+        }
+
+        if room == RoomID.outpost(of: me) {
+            let readers = outpostReaders()
+            var named: ParticipantID?
+            if let opened = entryOpener()(entry), opened.type == .outpostAccess {
+                named = (try? opened.decode(OutpostAccessBody.self))?.person
+            }
+            return everyone.filter {
+                readers.contains($0.them) || $0.them == entry.author || $0.them == named
+            }
+        }
+        if let owner = everyone.first(where: { room == RoomID.outpost(of: $0.them) }) {
+            return [owner]
+        }
+
+        let roster = roster(of: room)
+        if roster.members.isEmpty, roster.founder == nil {
+            let letMeIn = Set(
+                persisted.acceptedInvitations
+                    .filter { $0.attestation.room == room }
+                    .map(\.attestation.inviter))
+            return everyone.filter { letMeIn.contains($0.them) }
+        }
+        let floors = roster.everyHistoryFloor
+        func lastEpoch(_ hash: EntryHash?) -> EpochNumber? {
+            hash.flatMap { replica.entry(named: $0) }?.payload.epoch
+        }
+        return everyone.filter { peer in
+            if let removal = roster.removals[peer.them] {
+                guard let last = lastEpoch(removal.entry) else { return false }
+                return entry.payload.epoch <= last
+            }
+            if let departure = roster.departures[peer.them] {
+                guard let last = lastEpoch(departure.entry) else { return false }
+                return entry.payload.epoch <= last
+            }
+            guard roster.members.contains(peer.them) || roster.founder == peer.them
+                || roster.requests.keys.contains(peer.them)
+            else { return false }
+            if let floor = floors[peer.them] { return entry.payload.epoch >= floor }
+            if let invitation = roster.invitation(of: peer.them), !invitation.sharesHistory {
+                return false
+            }
+            return true
+        }
+    }
+
+    func wallOwnerAddressed(by payload: Payload?) -> ParticipantID? {
+        guard let payload else { return nil }
+        let open = entryOpener()
+        var target: EntryHash?
+        switch payload.type {
+        case .comment: target = (try? payload.decode(CommentBody.self))?.target
+        case .reaction: target = (try? payload.decode(ReactionBody.self))?.target
+        default: return nil
+        }
+        var walked = 0
+        while let hash = target, walked < 8 {
+            walked += 1
+            guard let found = replica.entry(named: hash) else { return nil }
+            guard let opened = open(found) else { return found.author }
+            switch opened.type {
+            case .comment: target = (try? opened.decode(CommentBody.self))?.target
+            case .reaction: target = (try? opened.decode(ReactionBody.self))?.target
+            default: return found.author
+            }
+        }
+        return nil
+    }
+
+    func withheldFromEveryone() -> [ParticipantID: [FeedGap]] {
+        let everyone = peers()
+        guard !everyone.isEmpty else { return [:] }
+        var out: [ParticipantID: [FeedGap]] = [:]
+        for entry in replica.allEntries {
+            let allowed = Set(mayReceive(entry, among: everyone).map(\.them))
+            for peer in everyone where !allowed.contains(peer.them) {
+                out[peer.them, default: []].insert(entry.feedKey, entry.seq)
+            }
+        }
+        return out
+    }
+
+    func addressed(_ sending: [Entry]) -> (rounds: [(peers: [Peer], entries: [Entry])], unaddressed: [Entry]) {
+        let everyone = peers()
+        var byAudience: [[ParticipantID]: [Entry]] = [:]
+        var unaddressed: [Entry] = []
+        for entry in sending {
+            let who = mayReceive(entry, among: everyone).map(\.them)
+                .sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
+            if who.isEmpty {
+                unaddressed.append(entry)
+            } else {
+                byAudience[who, default: []].append(entry)
+            }
+        }
+        func naming(_ who: [ParticipantID]) -> Data {
+            who.reduce(into: Data()) { $0.append($1.rawValue) }
+        }
+        let order = byAudience.keys.sorted {
+            naming($0).lexicographicallyPrecedes(naming($1))
+        }
+        let addressable = Dictionary(uniqueKeysWithValues: everyone.map { ($0.them, $0) })
+        var rounds = order.map { who in
+            (peers: who.compactMap { addressable[$0] }, entries: byAudience[who] ?? [])
+        }
+        let covered = Set(rounds.flatMap { $0.peers.map(\.them) })
+        let left = everyone.filter { !covered.contains($0.them) }
+        if !left.isEmpty { rounds.append((peers: left, entries: [])) }
+        return (rounds, unaddressed)
+    }
+
     static func withholdsKeys(viewMayBeStale: Bool, roomHasAbsences: Bool) -> Bool {
         viewMayBeStale && roomHasAbsences
     }

@@ -275,6 +275,10 @@ public struct Replica: Sendable {
 
     public func highestSequence(in feed: FeedKey) -> UInt64? { highest[feed] }
 
+    public func entry(named hash: EntryHash) -> Entry? {
+        allEntries.first { $0.hash == hash }
+    }
+
     public func entries(in feed: FeedKey, at seq: UInt64) -> [Entry] {
         feeds[feed]?[seq].map { Array($0.values) } ?? []
     }

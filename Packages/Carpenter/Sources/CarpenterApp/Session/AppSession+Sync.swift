@@ -18,6 +18,7 @@ extension AppSession {
 
         var report = SyncReport()
         var sending: [Entry] = []
+        var nobodyToSendTo: [Entry] = []
         var ringingRooms: Set<RoomID> = []
         if mode == .full {
             let owedGrants = try grantsOwed()
@@ -48,14 +49,49 @@ extension AppSession {
             let wishes = wallsToBeToldAbout()
             let sayingWishes = notifyWallsSent == wishes ? nil : wishes
 
+            let (rounds, unaddressed) = addressed(sending)
+            nobodyToSendTo = unaddressed
+            let ringing = Set((peersToRing(in: ringingRooms) + ringingWall).map(\.them))
+            let withheldByPeer = withheldFromEveryone()
+            var extrasDone: Set<ParticipantID> = []
             do {
-                report = try await session.send(
-                    sending, to: peers(), certificates: knownCertificates(),
-                    revocations: persisted.revocations,
-                    granting: owedGrants.map { (to: $0.to, grant: $0.grant) }, at: clock.now,
-                    ringing: peersToRing(in: ringingRooms) + ringingWall,
-                    identities: knownIdentities(), notifyWalls: sayingWishes,
-                    confirming: owedConfirmations.map(\.body))
+                for leg in rounds {
+                    let owning = leg.peers.filter { !extrasDone.contains($0.them) }
+                    let owningIDs = Set(owning.map(\.them))
+                    extrasDone.formUnion(owningIDs)
+
+                    var common: [FeedGap]?
+                    var told: [FeedGap]?
+                    for peer in leg.peers {
+                        let theirs = withheldByPeer[peer.them] ?? []
+                        common = common.map { $0.intersecting(theirs) } ?? theirs
+                        let already = persisted.withheldTold[peer.them] ?? []
+                        told = told.map { $0.intersecting(already) } ?? already
+                    }
+                    let saying = (common ?? []).subtracting(told ?? [])
+                    if !saying.isEmpty {
+                        for peer in leg.peers {
+                            var known = persisted.withheldTold[peer.them] ?? []
+                            for gap in saying {
+                                for span in gap.spans {
+                                    for seq in span.sequences { known.insert(gap.feed, seq) }
+                                }
+                            }
+                            persisted.withheldTold[peer.them] = known
+                        }
+                    }
+                    let legReport = try await session.send(
+                        leg.entries, to: leg.peers, certificates: knownCertificates(),
+                        revocations: persisted.revocations,
+                        granting: owedGrants.filter { owningIDs.contains($0.to.them) }
+                            .map { (to: $0.to, grant: $0.grant) }, at: clock.now,
+                        ringing: leg.peers.filter { ringing.contains($0.them) },
+                        identities: knownIdentities(), notifyWalls: sayingWishes,
+                        confirming: owedConfirmations.filter { owningIDs.contains($0.to) }
+                            .map(\.body),
+                        withholding: saying)
+                    report = report.adding(legReport)
+                }
             } catch let refused as MailboxFailure {
                 cannotSend = refused
                 Diagnostics.sync.error(
@@ -115,7 +151,17 @@ extension AppSession {
                         """)
                 }
             }
+            for gap in received.withheld {
+                for span in gap.spans {
+                    for seq in span.sequences { persisted.elsewhere.insert(gap.feed, seq) }
+                }
+            }
             for answer in received.repairAnswers {
+                for gap in answer.elsewhere {
+                    for span in gap.spans {
+                        for seq in span.sequences { persisted.elsewhere.insert(gap.feed, seq) }
+                    }
+                }
                 if let index = persisted.repairs.firstIndex(where: { $0.id == answer.request }) {
                     persisted.repairs[index].answers[peer.them] = answer
                 }
@@ -236,6 +282,13 @@ extension AppSession {
         let writtenEntries = Set(report.written.flatMap(\.entries))
         for entry in sending where writtenEntries.contains(entry.hash) {
             persisted.syncedFrontier.observe(entry.feedKey, seq: entry.seq)
+        }
+        if !nobodyToSendTo.isEmpty {
+            Diagnostics.sync.notice(
+                """
+                mailbox sync: \(nobodyToSendTo.count, privacy: .public) entr(ies) have no reader \
+                on this device's peer list and were not written
+                """)
         }
 
         if mode == .full, let waiting = try? await mailbox.pendingDeliveries() {

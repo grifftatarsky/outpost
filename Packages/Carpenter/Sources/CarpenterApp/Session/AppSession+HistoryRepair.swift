@@ -9,6 +9,7 @@ extension AppSession {
 
     public func missingHistory(in room: RoomID) -> [FeedGap] {
         replica.gaps(from: membersToCheck(in: room)).subtracting(persisted.unverifiable)
+            .subtracting(persisted.elsewhere)
     }
 
     private func membersToCheck(in room: RoomID) -> Set<ParticipantID> {
@@ -36,7 +37,8 @@ extension AppSession {
         let request = RepairRequest(
             authors: authors.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
             heads: replica.heads(of: authors),
-            gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable),
+            gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
+                .subtracting(persisted.elsewhere),
             room: room, reason: reason)
         persisted.repairs.removeAll { $0.room == room }
         persisted.repairs.append(
@@ -184,6 +186,7 @@ extension AppSession {
         else { return nil }
         let authors = Set(repair.request.authors)
         let open = replica.gaps(from: authors).subtracting(persisted.unverifiable)
+            .subtracting(persisted.elsewhere)
         let named = open.intersecting(repair.request.gaps)
         let refused = persisted.unverifiable.stillMissing(of: repair.request.gaps)
         let answered = repair.asked.filter { repair.answers[$0] != nil }
@@ -241,7 +244,8 @@ extension AppSession {
             let request = RepairRequest(
                 id: repair.request.id, authors: repair.request.authors,
                 heads: replica.heads(of: authors),
-                gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable),
+                gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable)
+                .subtracting(persisted.elsewhere),
                 room: repair.request.room, wallOf: repair.request.wallOf,
                 reason: repair.request.reason)
             do {
@@ -270,13 +274,23 @@ extension AppSession {
                 Diagnostics.sync.notice("repair: dropped a request from a peer this device cannot address")
                 continue
             }
-            let (held, unheld) = replica.fill(duty.request)
-            let entries = held.filter {
-                $0.seq <= persisted.syncedFrontier[$0.feedKey] && !justSent.contains($0.hash)
+            let (held, unheld, apart) = replica.fill(duty.request)
+            let floor = duty.request.room.flatMap { roster(of: $0).historyFloor(of: duty.from) }
+            var withheld = apart
+            var entries: [Entry] = []
+            for entry in held {
+                guard entry.seq <= persisted.syncedFrontier[entry.feedKey],
+                    !justSent.contains(entry.hash)
+                else { continue }
+                if let floor, entry.payload.epoch < floor {
+                    withheld.insert(entry.feedKey, entry.seq)
+                    continue
+                }
+                entries.append(entry)
             }
             let answer = RepairAnswer(
-                request: duty.request.id, unheld: unheld,
-                heads: replica.heads(of: Set(duty.request.authors)))
+                request: duty.request.id, unheld: unheld, elsewhere: withheld,
+                heads: replica.heads(inScopeOf: duty.request))
             do {
                 let sent = try await session.send(
                     entries, to: [peer], certificates: knownCertificates(),

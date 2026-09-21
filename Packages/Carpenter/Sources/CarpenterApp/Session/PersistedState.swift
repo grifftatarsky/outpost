@@ -23,6 +23,8 @@ struct PersistedState: Codable, Sendable {
     var reviewsPostponed: [RoomID: [ParticipantID]] = [:]
     var epochTurnsOwed: [RoomID] = []
     var unverifiable: [FeedGap] = []
+    var elsewhere: [FeedGap] = []
+    var withheldTold: [ParticipantID: [FeedGap]] = [:]
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
     var acceptedInvitations: [AcceptedInvitation] = []
@@ -104,6 +106,9 @@ struct PersistedState: Codable, Sendable {
         restoreAsks =
             try container.decodeIfPresent([RestoreAskRecord].self, forKey: .restoreAsks) ?? []
         unverifiable = try container.decodeIfPresent([FeedGap].self, forKey: .unverifiable) ?? []
+        elsewhere = try container.decodeIfPresent([FeedGap].self, forKey: .elsewhere) ?? []
+        withheldTold =
+            try container.decodeIfPresent([ParticipantID: [FeedGap]].self, forKey: .withheldTold) ?? [:]
         spentEntries = try container.decodeIfPresent([SpentEntry].self, forKey: .spentEntries) ?? []
         uploadsLeftForOthers =
             try container.decodeIfPresent([AttachmentID].self, forKey: .uploadsLeftForOthers) ?? []

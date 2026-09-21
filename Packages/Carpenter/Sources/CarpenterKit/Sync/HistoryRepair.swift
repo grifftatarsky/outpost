@@ -150,64 +150,79 @@ public struct RepairRequest: Hashable, Sendable, Codable {
 public struct RepairAnswer: Hashable, Sendable, Codable {
     public let request: RepairID
     public let unheld: [FeedGap]
+    public let elsewhere: [FeedGap]
     public let heads: VectorClock
 
-    public init(request: RepairID, unheld: [FeedGap], heads: VectorClock) {
+    public init(
+        request: RepairID, unheld: [FeedGap], elsewhere: [FeedGap] = [], heads: VectorClock
+    ) {
         self.request = request
         self.unheld = unheld
+        self.elsewhere = elsewhere
         self.heads = heads
     }
 
-    private enum CodingKeys: String, CodingKey { case request, unheld, heads }
+    private enum CodingKeys: String, CodingKey { case request, unheld, elsewhere, heads }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         request = try container.decode(RepairID.self, forKey: .request)
         unheld = try container.decodeIfPresent([FeedGap].self, forKey: .unheld) ?? []
+        elsewhere = try container.decodeIfPresent([FeedGap].self, forKey: .elsewhere) ?? []
         heads = try container.decodeIfPresent(VectorClock.self, forKey: .heads) ?? VectorClock()
     }
 }
 
 extension Replica {
-    public func fill(_ request: RepairRequest) -> (entries: [Entry], unheld: [FeedGap]) {
+    public func fill(
+        _ request: RepairRequest
+    ) -> (entries: [Entry], unheld: [FeedGap], elsewhere: [FeedGap]) {
         var found: [Entry] = []
         var seen: Set<EntryHash> = []
         func take(_ entries: [Entry]) {
             for entry in entries where seen.insert(entry.hash).inserted { found.append(entry) }
         }
 
+        let authors = Set(request.authors)
+        let wantsWall = request.wallOf
+        func wasAskedFor(_ entry: Entry) -> Bool {
+            if let room = request.room { return entry.room == room }
+            if let wantsWall {
+                if entry.room == nil { return entry.author == wantsWall }
+                return entry.room == RoomID.outpost(of: wantsWall)
+            }
+            return authors.contains(entry.author)
+        }
+
         var unheld: [FeedGap] = []
+        var elsewhere: [FeedGap] = []
         for gap in request.gaps {
             var lacking: [UInt64] = []
+            var apart: [UInt64] = []
             for span in gap.spans {
                 for seq in span.sequences {
                     let held = entries(in: gap.feed, at: seq)
-                    if held.isEmpty { lacking.append(seq) } else { take(held) }
+                    if held.isEmpty {
+                        lacking.append(seq)
+                        continue
+                    }
+                    let asked = held.filter(wasAskedFor)
+                    if asked.isEmpty { apart.append(seq) } else { take(asked) }
                 }
             }
             if !lacking.isEmpty {
                 unheld.append(FeedGap(feed: gap.feed, spans: FeedGap.spans(of: lacking)))
             }
+            if !apart.isEmpty {
+                elsewhere.append(FeedGap(feed: gap.feed, spans: FeedGap.spans(of: apart)))
+            }
         }
 
-        let authors = Set(request.authors)
-        let wantsWall = request.wallOf
-        for feed in heldFeeds
-        where authors.contains(feed.author) || request.room != nil || wantsWall != nil {
+        for feed in heldFeeds {
             guard let top = highestSequence(in: feed) else { continue }
             let from = request.heads[feed] + 1
             guard from <= top else { continue }
-            let whole = authors.contains(feed.author)
-            for seq in from...top {
-                take(
-                    entries(in: feed, at: seq).filter { entry in
-                        if whole { return true }
-                        if let room = request.room, entry.room == room { return true }
-                        guard let wantsWall else { return false }
-                        if entry.room == nil { return entry.author == wantsWall }
-                        return entry.room == RoomID.outpost(of: wantsWall)
-                    })
-            }
+            for seq in from...top { take(entries(in: feed, at: seq).filter(wasAskedFor)) }
         }
 
         found.sort {
@@ -216,7 +231,28 @@ extension Replica {
             }
             return $0.seq < $1.seq
         }
-        return (found, unheld)
+        return (found, unheld, elsewhere)
+    }
+
+    public func heads(inScopeOf request: RepairRequest) -> VectorClock {
+        let authors = Set(request.authors)
+        let wantsWall = request.wallOf
+        var clock = VectorClock()
+        for entry in allEntries where authors.contains(entry.feedKey.author) {
+            let asked: Bool
+            if let room = request.room {
+                asked = entry.room == room
+            } else if let wantsWall {
+                asked =
+                    entry.room == nil
+                    ? entry.author == wantsWall : entry.room == RoomID.outpost(of: wantsWall)
+            } else {
+                asked = true
+            }
+            guard asked, entry.seq > clock[entry.feedKey] else { continue }
+            clock.observe(entry.feedKey, seq: entry.seq)
+        }
+        return clock
     }
 }
 
