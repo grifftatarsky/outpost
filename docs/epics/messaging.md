@@ -613,6 +613,27 @@ history without anyone being able to tell. In [the inbox](../inbox.md), undecide
 Accounts, two simulators, against the live container.
 
 <details markdown="1">
+<summary>2026-09-21 — a log per conversation, across two accounts</summary>
+
+Alpha on account A as Trig, beta on account B as Quad, both accounts cleared first. Every step on
+the build that splits the log per conversation and adds attestations.
+
+| Step | Result |
+|---|---|
+| Onboard both | **Passed.** Both reached home on their own account. |
+| Make a room and invite | **Passed.** Checks made on alpha; the invitation left in the rig directory. |
+| Join | **Passed.** The same ten characters, `G8SJ7GCSAD`, on both. |
+| Let in | **Passed, after about three minutes.** The rendezvous found beta's offer on the fourth look; beta then received the room's key and the room appeared. |
+| Quad speaks | **Passed.** *hello from Quad on account B* reached alpha, and beta's mark moved to *Collected*. |
+| Trig answers | **Passed.** *hello back from Trig on account A* reached beta. |
+| Attestations | **Passed.** Each device heard about both logs in the room; no contradiction on either. |
+
+Not seen here, only in the suite: a contradiction, a forward-only joiner, and coming back to a
+deleted room.
+
+</details>
+
+<details markdown="1">
 <summary>2026-09-01 — the first two-account run</summary>
 
 | Step | Result |

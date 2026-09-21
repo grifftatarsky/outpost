@@ -190,6 +190,11 @@ xcrun simctl terminate <udid> com.microgpt.carpenter
 > reaches every real iPhone, iPad and Mac signed into that account that has this app. It is scoped to
 > this app's service and access group and touches nothing else. **Ask Griff before running it.**
 
+**Run the live CloudKit suite before a reset, never after.** `TEST_RUNNER_CARPENTER_CLOUDKIT_TESTS=1`
+publishes real feeds into the signed-in account and leaves them there, so an account cleared and then
+used for the live suite reads as occupied again — *This Apple Account already has a member* — and the
+rig cannot onboard on it. Found 2026-09-21, which cost a second reset.
+
 Terminate the app as soon as the erase finishes. If it keeps running, the change of session state
 starts device sync again, which republishes a feed and makes the account occupied again.
 
