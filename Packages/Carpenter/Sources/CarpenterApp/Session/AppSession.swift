@@ -348,6 +348,7 @@ public final class AppSession {
         integrity.unexplainedContradictions = persisted.contradictions.filter {
             !$0.explainedByRestore
         }.count
+        integrity.ownRecordAhead = persisted.ownRecordAhead
         integrity.discardedBytes = loaded.discardedTrailingBytes
 
         let own = enrolment.map { (author: $0.identity.id, device: $0.device.id) }

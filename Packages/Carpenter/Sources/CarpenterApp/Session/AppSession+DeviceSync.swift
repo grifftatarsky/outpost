@@ -91,7 +91,6 @@ extension AppSession {
             it knows its place in \(self.heads.count, privacy: .public) conversation(s)
             """)
         refresh()
-        sendOwnEntries()
     }
 
     private func catchUpWithOwnRecords(through engine: any EntrySync) async {
@@ -106,7 +105,9 @@ extension AppSession {
         }
         let moved = ownPositions.filter { $0.value.seq > before[$0.key]?.seq ?? 0 }.count
         if moved > 0 {
-            integrity.ownRecordAhead += moved
+            persisted.ownRecordAhead += moved
+            integrity.ownRecordAhead = persisted.ownRecordAhead
+            await persistOrReport("that this device's own record was ahead of it") { try await saveState() }
             Diagnostics.sync.error(
                 """
                 device sync: this device's own record was ahead of it in \(moved, privacy: .public) \

@@ -30,6 +30,7 @@ struct PersistedState: Codable, Sendable {
     var contradictionAsks: [Contradiction] = []
     var awaitingOwnRecords = false
     var publishedPositions: [ConversationID: UInt64] = [:]
+    var ownRecordAhead = 0
     var withheldTold: [ParticipantID: [FeedGap]] = [:]
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
@@ -158,5 +159,6 @@ struct PersistedState: Codable, Sendable {
             try container.decodeIfPresent(Bool.self, forKey: .awaitingOwnRecords) ?? false
         publishedPositions =
             try container.decodeIfPresent([ConversationID: UInt64].self, forKey: .publishedPositions) ?? [:]
+        ownRecordAhead = try container.decodeIfPresent(Int.self, forKey: .ownRecordAhead) ?? 0
     }
 }

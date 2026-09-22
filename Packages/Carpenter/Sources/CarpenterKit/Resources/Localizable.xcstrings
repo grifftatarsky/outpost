@@ -162,6 +162,9 @@
     "Everything up to %@" : {
       "comment" : "Outpost access: the whole wall, up to a date"
     },
+    "Filled mailbox" : {
+      "comment" : "App icon drawing: the mailbox alone, drawn solid"
+    },
     "Hangar Slate" : {
       "comment" : "Accent color name"
     },

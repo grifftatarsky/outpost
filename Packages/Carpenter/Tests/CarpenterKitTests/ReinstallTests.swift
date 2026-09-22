@@ -333,6 +333,12 @@ struct ReinstallTests {
         #expect(behind.integrity.ownRecordAhead > 0, "the copy moved forward without saying so")
         try await settle([behind, bob], mailbox)
         #expect(bob.replica.forks.isEmpty, "Bob holds two entries at one of Alice's positions")
+
+        let relaunched = TestSession.make(keychain: keychain, at: copy, clock: clock)
+        await relaunched.load()
+        #expect(
+            relaunched.integrity.ownRecordAhead > 0,
+            "a relaunch forgot that another copy of this device had been writing")
     }
 
     // MARK: The record goes first

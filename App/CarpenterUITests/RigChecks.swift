@@ -16,6 +16,7 @@ final class RigChecks: XCTestCase {
     }
 
     func launch(_ extra: [String] = []) -> XCUIApplication {
+        XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments += (isCloud ? ["--rig-codes", codes] : ["--mailbox", "/tmp/outpost-rig-mailbox"]) + extra
         app.launch()
@@ -33,9 +34,18 @@ final class RigChecks: XCTestCase {
 
     func tapIfThere(_ app: XCUIApplication, _ label: String, timeout: TimeInterval = 2, scrolling: Bool = false) -> Bool {
         let button = app.buttons.matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", label, label + ",")).firstMatch
-        if button.waitForExistence(timeout: timeout), button.isHittable {
-            button.tap()
-            return true
+        if button.waitForExistence(timeout: timeout) {
+            usleep(400_000)
+            if button.exists, button.isHittable {
+                button.tap()
+                return true
+            }
+            if button.exists, button.frame.maxY < (app.keyboards.firstMatch.exists ? app.keyboards.firstMatch.frame.minY : .infinity) {
+                XCTContext.runActivity(named: "\(label) was not reported tappable; tapped its center") { _ in
+                    button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                }
+                return true
+            }
         }
         guard scrolling else { return false }
         for _ in 0..<5 {
@@ -59,7 +69,7 @@ final class RigChecks: XCTestCase {
             }
             if !tapped {
                 for label in [
-                    "Familiar and open", "Use these settings", "Not now", "Continue without it",
+                    "Familiar and open", "Use these settings", "Not now", "Not for now", "Continue without it",
                     "Continue", "Get started", "Skip", "Next", "Finish", "Done",
                 ] where tapIfThere(app, label, timeout: 0.5) {
                     tapped = true
@@ -129,7 +139,7 @@ final class RigChecks: XCTestCase {
         if field.waitForExistence(timeout: 5) {
             field.tap()
             field.typeText(ProcessInfo.processInfo.environment["RIG_NAME"] ?? "Trig")
-            _ = tapIfThere(app, "Create my identity")
+            if !tapIfThere(app, "Create my identity") { field.typeText("\n") }
         }
         sleep(3)
         settle(app)
@@ -311,6 +321,7 @@ final class RigChecks: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText(invite)
+        app.typeText("\n")
         shoot(app, "join-1-pasted")
         XCTAssertTrue(tapIfThere(app, "Read the invite", timeout: 3))
         sleep(2)
