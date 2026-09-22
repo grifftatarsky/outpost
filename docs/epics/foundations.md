@@ -1002,9 +1002,9 @@ Added 2026-09-16, from Griff.
   the app writes had ever reached it — the rig runs against `FileMailbox` and the live suite is
   opt-in behind `CARPENTER_CLOUDKIT_TESTS`. Deploying development to production would have deployed
   nothing and looked like it worked.
-- **Open, and his.** **Deploy development to production**, in the Console, for
-  **`iCloud.com.microgpt.outpost`**. Check with
-  `xcrun cktool export-schema … --environment production | grep "RECORD TYPE"` — six lines, not one.
+- **Done.** **Development is deployed to production** for **`iCloud.com.microgpt.outpost`**. Found
+  deployed on 2026-09-22: `xcrun cktool export-schema … --environment production` lists six record
+  types, and the production schema is identical to development's, field for field.
 - **The trap, and it was walked into once.** There is a second container,
   `iCloud.com.microgpt.carpenter`, which is **not the app's**. `APP_ICLOUD_CONTAINER` resolves to
   `…outpost`, the built entitlement carries `…outpost`, and `CKContainer.default()` takes the first

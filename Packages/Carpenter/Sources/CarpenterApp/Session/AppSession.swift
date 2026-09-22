@@ -140,6 +140,7 @@ public final class AppSession {
     var siblingsFetched = false
     var deviceSyncGeneration = 0
     var ownEntriesUnpublished = true
+    public var recordsAreExpected = false
 
     var stateWrites: Task<Void, any Error>?
 

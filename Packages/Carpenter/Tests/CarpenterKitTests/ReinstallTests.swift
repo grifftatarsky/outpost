@@ -357,6 +357,37 @@ struct ReinstallTests {
             "once the record was saved the message still did not go")
     }
 
+    @Test("Before device sync is attached, a round still holds back what its record does not count")
+    func aRoundBeforeTheEngineHoldsBack() async throws {
+        let rig = try await rig()
+        let directory = URL.temporaryDirectory.appending(path: "early-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let alice = TestSession.make(keychain: rig.keychain, at: directory, clock: rig.clock)
+        await alice.load()
+        alice.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
+        await caughtUp(alice)
+        try await settle([alice, rig.bob], rig.mailbox)
+
+        let relaunched = TestSession.make(keychain: rig.keychain, at: directory, clock: rig.clock)
+        relaunched.recordsAreExpected = true
+        await relaunched.load()
+        try await relaunched.send("written before the engine was attached", to: rig.room)
+        try await settle([relaunched, rig.bob], rig.mailbox)
+        #expect(
+            !rig.bob.messages(in: rig.room).map(\.body).contains("written before the engine was attached"),
+            "a round that ran before device sync was attached sent writing no saved record counted")
+
+        relaunched.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
+        let deadline = Date().addingTimeInterval(5)
+        while relaunched.ownRecordIsBehind || relaunched.deviceSync == nil, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        try await settle([relaunched, rig.bob], rig.mailbox)
+        #expect(
+            rig.bob.messages(in: rig.room).map(\.body).contains("written before the engine was attached"),
+            "once the record was saved the writing still did not go")
+    }
+
     @Test("An entries record the server refuses does not hold messages back")
     func aRefusedEntriesRecordHoldsNothingBack() async throws {
         let rig = try await rig()

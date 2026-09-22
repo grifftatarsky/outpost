@@ -135,6 +135,7 @@ extension AppRootView {
         outpostAvatars = [:]
 
         session = AppSession(storage: .onDisk(), clock: UITestMode.clock)
+        session.recordsAreExpected = shell.usesDeviceRecords
         session.enforcesDenyList = safety.blocksKnownAbusers
         mediaLoader = makeMediaLoader()
         session.checkAccount(with: accountRegistry)

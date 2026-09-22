@@ -237,7 +237,9 @@ xcrun simctl launch <udid> com.microgpt.carpenter --mailbox /tmp/outpost-rig-mai
 
 `--mailbox` swaps in `FileMailbox`, which keeps packets in a host directory. A simulator's `/tmp` is
 the host's `/tmp`, so one directory is one group of members. Launch every member of a test with the
-same flag; a mix is two separate groups. Debug builds only.
+same flag; a mix is two separate groups. Debug builds only. A device on the directory mailbox does
+not start device sync: with no Apple Account it could never save its records, and it holds none of
+its own writing back waiting for them.
 
 `FileMailbox` stores the same wire fields as CloudKit, returns packets in write order and never hands
 a packet back to its writer. Acknowledgments are separate files, because three processes cannot

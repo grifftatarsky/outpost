@@ -45,6 +45,17 @@ final class AppShell {
     var notificationsAllowed: Bool?
     var badgesAllowed: Bool?
 
+    init() {
+        session.recordsAreExpected = usesDeviceRecords
+    }
+
+    var usesDeviceRecords: Bool {
+        #if DEBUG
+            if rig != nil { return false }
+        #endif
+        return !UITestMode.isOn
+    }
+
     var mailbox: any Mailbox {
         #if DEBUG
             if let rig { return rig }

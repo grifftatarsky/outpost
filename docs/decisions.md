@@ -137,7 +137,9 @@ record write whenever this device writes, and one push to the member's other dev
 **PROPOSED 2026-09-22:** a round sends an entry of this device's own only once a saved summary counts
 it, so the summary is never behind anything another member holds. What it costs: a message waits for
 one iCloud save before it leaves, not measured; and if the summary cannot be saved, nothing this
-device writes leaves. A message held this way is drawn as not yet gone.
+device writes leaves. A message held this way is drawn as not yet gone. The hold is on from the first
+round of a launch, before device sync has attached (`AppSession.recordsAreExpected`). Devices on the
+rig's directory mailbox have no Apple Account, keep no records and hold nothing back.
 
 **PROPOSED 2026-09-22:** every start reads the device's own records, not only a reinstall's, and moves
 forward to anything they hold that the device does not. Positions only ever go forward, whatever

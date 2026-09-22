@@ -579,8 +579,9 @@ itself, so that nothing I wrote is written twice and the people I talk to see no
 - **Done.** Reading them back restores all of that and the device's own entries. What other people
   wrote comes back through history repair.
 - **Done.** A device that reads its own removal in the member's records enrolls as a new device.
-- **Done.** A round sends an entry of this device's own only once a saved summary counts it. A
-  message held this way is drawn as not yet gone. A refused entries record holds nothing back.
+- **Done.** A round sends an entry of this device's own only once a saved summary counts it, from
+  the first round of a launch, before device sync has attached. A message held this way is drawn as
+  not yet gone. A refused entries record holds nothing back.
 - **Done.** Every start reads the device's own records and moves forward to anything they hold that
   the device does not. When that happens the History check says so.
 - **Done.** Of two certificates for the same device key, the earlier decides, in any order.
@@ -594,7 +595,7 @@ itself, so that nothing I wrote is written twice and the people I talk to see no
   `IdentityStoreTests`, `BackupExclusionTests`, `SiblingFeedIsSealedTests.bothRecordsAreSealed`, and
   in the app-bundle suite `KeychainTests.deviceItemsNeverLeave` and `anOlderItemIsMovedInPlace`,
   against the real Security framework. Each guard was removed in turn and a named test went red —
-  seventeen of seventeen. Ten clean runs in a row.
+  twenty of twenty. Ten clean runs in a row.
 - The in-memory device sync keeps each device's records across installs, refuses a write over a copy
   it never read by handing the server's copy over first, and refuses a record over the 1 MB Apple
   documents.

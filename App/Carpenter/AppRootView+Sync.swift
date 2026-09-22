@@ -24,7 +24,7 @@ extension AppRootView {
                 RigCodes.leave(session.identityCode(), as: "\(session.viewer.displayName).identity")
             }
         #endif
-        guard !UITestMode.isOn else { return }
+        guard shell.usesDeviceRecords else { return }
         guard case .start(let device) = DeviceSyncDecision.make(
             device: session.enrolment?.device.id, startedFor: startedSyncFor)
         else { return }

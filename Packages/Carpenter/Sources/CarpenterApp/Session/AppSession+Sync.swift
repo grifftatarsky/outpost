@@ -386,7 +386,7 @@ extension AppSession {
     }
 
     func sendableEntries() -> [Entry] {
-        let heldBack = deviceSync == nil ? nil : enrolment?.device.id
+        let heldBack = deviceSync != nil || recordsAreExpected ? enrolment?.device.id : nil
         let published = persisted.publishedPositions
         return unsentEntries()
             .filter { $0.device != heldBack || $0.seq <= published[$0.conversation] ?? 0 }
