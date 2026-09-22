@@ -138,6 +138,11 @@ every 50ms until the sibling's room appears, against a ten-second deadline. It f
 run on 2026-09-14 and passed four times alone. Raising the deadline would hide the next real failure
 longer; the fix is to wait on the write.
 
+**A rig step could not tap Checks once, straight after an install.** On 2026-09-22
+`RigChecks.testQuadSaysWhatItIsTold` failed on alpha with *Checks not hittable*, right after the build
+was installed over the reinstalled app; the same step passed at once on a second run, and a screenshot
+between them showed the room list plainly. What covered the row was not seen.
+
 **The UI tests run only by hand.** `CarpenterUITests` holds the accessibility audits and the rig steps,
 which need booted simulators and minutes each. CI does not run them.
 
@@ -154,16 +159,23 @@ one.
 **Nothing cleans up bells.** One record per channel, overwritten, never deleted, because a delete would
 ring the bell.
 
-**The sibling feed is one record that only grows.** `CloudKitEntrySync` writes a device's whole sealed
-feed, every entry, certificate and room key it holds and the member's preferences, into one field and
-republishes it after every write. Each message adds 0.9 to 1.75 KB to it, measured 2026-09-21 over
-two hundred posts of twenty to three hundred characters, so a device's thousandth message republishes
-about a megabyte. Apple documents a record as holding at most 1 MB; the development server accepted
-16 MB in a field on 2026-09-14, and production is not measured. It is [ruled](decisions.md#a-reinstall-is-the-same-device-if-it-is-still-correctly-identified)
-that a reinstalled device waits for this record before it writes, so once that is built, a record
-that stopped updating would hand it a place it has already passed.
+**A device's entries record only grows.** `CloudKitEntrySync` writes every entry a device wrote into
+one field of its entries record and republishes it whenever the device writes. Each message adds 0.9
+to 1.75 KB, measured 2026-09-21 over two hundred posts of twenty to three hundred characters, so a
+device's thousandth message republishes about a megabyte. Apple documents a record as holding at most
+1 MB; the development server accepted 16 MB in a field on 2026-09-14, and production is not measured.
+Where a position is kept does not depend on it: that is in the summary record, which stays small. What
+a refused entries record costs is the member's other devices, and a reinstall, getting this device's
+own history from iCloud; they would have to get it from other members instead, and a solo room has
+none.
 
 ## Unwired or unwatched
+
+**A record on account A will not open, so alpha's History check is never clean.** After the
+reinstall on 2026-09-22, alpha fetched every record in its `SiblingFeeds` zone again and one, from a
+device with fingerprint `afe03767`, would not open under Trig's identity. It is most likely one the
+live CloudKit suite wrote with a throwaway identity. It counts into `unreadableSiblingFeeds`, which
+shows the red mark on You. Reaping it is the item below.
 
 **Reaping abandoned device feeds is written and tested, and not wired.** `AbandonedFeeds` decides which
 feeds belong to devices that are gone. The deletion is destructive to a member's iCloud: wire it behind

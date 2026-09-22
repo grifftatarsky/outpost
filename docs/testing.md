@@ -58,6 +58,7 @@ a rule.
 | `MediaMailbox` | a photo is handed only to an address it was sent to | handed the bytes to anyone |
 | `LogStore` | every entry is encoded, and one over the ceiling is refused | held the struct, so a type that failed to serialize passed |
 | `EntrySync` | the feed crosses as bytes | held the struct. This is the one that put every epoch key in CloudKit in the clear for four weeks. |
+| `EntrySync` | a device's records outlive the install that wrote them; a write over a copy it never read is refused until the server's copy has been read; a record over the 1 MB Apple documents is refused | forgot a device's records with the object that wrote them, overwrote anything, and took any size (fixed 2026-09-22, `TheDeviceSyncFakeTests`). It can also refuse a kind of record, go offline, or fail only reads, which is how `ReinstallTests` holds a message back and retries a read. |
 | `MediaScreen` | Apple's analyzer refuses to look with screening off, refuses bytes that are not a picture, and refuses a clip that is not on disk | answered all three (fixed 2026-09-17, `TheFakeScreenIsNoEasierTests`) |
 
 `MemoryMediaStore` matches `FileMediaStore`. There is no fake `DocumentStore`: tests use the real one
@@ -87,8 +88,10 @@ TEST_RUNNER_CARPENTER_CLOUDKIT_TESTS=1 xcodebuild test -workspace Carpenter.xcwo
 
 Two things about that command are required:
 
-- **`-parallel-testing-enabled NO`.** Parallel testing runs on a clone of the simulator, and a clone
-  has no iCloud account, so every test reports "no iCloud account".
+- **`-parallel-testing-enabled NO`.** Parallel testing runs on a clone of the simulator and shuts the
+  original down. What the clone carries is not dependable: this suite has reported "no iCloud account"
+  on one, and on 2026-09-22 a clone of alpha carried its keychain and Apple Account and sent a message
+  as alpha's own device.
 - **The variable goes before `xcodebuild`.** Written after it, it becomes a build setting, the suite
   disables itself, and every test "passes" in a hundredth of a second. A run that fast was skipped.
 

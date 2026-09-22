@@ -821,11 +821,27 @@ unreadable until you have unlocked the phone once after it boots.
 | Item | Keychain scope | Accessibility |
 |---|---|---|
 | `identity.keys` (both seeds, concatenated) | `.synchronized` — iCloud Keychain | `kSecAttrAccessibleAfterFirstUnlock` |
-| `device.signing` | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlock` |
-| `draft.sealing` (32 random bytes) | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlock` |
+| `device.signing` | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+| `device.owner` (the identity the device key was made for) | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+| each room key, by room and epoch | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+| `draft.sealing` (32 random bytes) | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
 
 Everything uses `kSecUseDataProtectionKeychain: true`, and the log, media and document stores are
 written with `FileProtectionType.completeUntilFirstUserAuthentication`.
+
+**A device key never leaves its device, and answers to one member.** Apple: items with a
+`ThisDeviceOnly` accessibility "do not migrate to a new device", so a phone restored from another
+phone's backup has no device key and enrolls as a new device, while a reinstall on the same phone
+finds its key and is the same device. A device item stored before this was built is moved over in
+place with `SecItemUpdate` the first time it is read, never deleted and written again. The device key
+is stored with the identity it was made for, and a key found beside a different identity is dropped,
+so no device key is ever certified by two members. `KeychainTests` holds both against the real
+Security framework.
+
+**What a device keeps in iCloud is sealed the same way as before, in two records.** Its summary —
+positions, room keys, certificates and removals, the people it knows, preferences — and its entries
+are each a `SealedSiblingFeed` under the identity-derived key, with the member and the device as
+associated data (`SiblingFeedIsSealedTests.bothRecordsAreSealed`).
 
 **Drafts are the one piece of unsent writing on disk, and they are sealed.** `DraftSeal` seals each
 conversation's draft with ChaChaPoly under `draft.sealing`, with the room's canonical bytes under

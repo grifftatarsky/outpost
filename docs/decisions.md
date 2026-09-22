@@ -69,8 +69,9 @@ draws or decides by order across conversations — that was measured before this
 
 **What it costs.** A count per conversation must never go backwards, or a device writes at a position
 it already used and its message never leaves. This device's own head in every conversation is saved
-(`PersistedState.ownHeads`), survives deleting the conversation, and moves forward whenever this device
-sees its own writing come back from anywhere.
+(`PersistedState.ownHeads`), survives deleting the conversation, is kept in the device's summary record
+in iCloud so it survives a reinstall, and moves forward whenever this device sees its own writing come
+back from anywhere.
 
 `EnvelopeLeakTests.positionsCountOnlyThisConversation`, `DeletingARoomTests.comingBackDoesNotReuseANumber`.
 
@@ -114,13 +115,53 @@ data, and opens only with all three. An entry opens only under the key of the co
 identified."*
 
 **RULED 2026-09-21 by Griff:** *"Keep the log and state out of backups. And wait only for its own
-record."* A restored device is to come back as a reinstalled one does, holding its keys and nothing
-else, and neither is to write anything, in any conversation, until it has read its own record back
-from iCloud.
+record."* A restored device comes back as a reinstalled one does, holding its keys and nothing else,
+and neither writes anything, in any conversation, until it has read its own records back from iCloud.
 
-**PROPOSED 2026-09-21:** a device is correctly identified when all three hold: its device key is in
-this device's keychain, stored so that it never moves to another device; its certificate is signed by
-the identity beside it; and no revocation names it. If any fails, it enrolls as a new device.
+**PROPOSED 2026-09-21:** a device is correctly identified when three things hold. Its device key is in
+this device's keychain, stored so that it never leaves this device. The key is stored with the member
+it was made for. And no removal among the member's devices names it. A key made for another member,
+or one with no owner found by a member who is new to this device, is dropped, and the device enrolls
+as a new one. A device that reads its own removal enrolls as a new one. What this rules out: a new
+phone restored from a backup being the old phone, and one device key answering for two members.
+
+**PROPOSED 2026-09-22:** each device keeps two records in iCloud. The **summary** holds its position
+in every conversation, including ones it deleted, the room keys it holds, the certificates and
+removals of the member's devices, the people it knows, the member's preferences, uploads left for
+others and departures already answered; and, for the device itself only, which rooms have greeted
+the member, how the room list is arranged and how far each conversation has been read. The **entries**
+record holds every entry the device wrote. The summary stays small however much is said; the entries
+record grows with it, and Apple documents a record as holding at most 1 MB. What it costs: a second
+record write whenever this device writes, and one push to the member's other devices for each.
+
+**PROPOSED 2026-09-22:** a round sends an entry of this device's own only once a saved summary counts
+it, so the summary is never behind anything another member holds. What it costs: a message waits for
+one iCloud save before it leaves, not measured; and if the summary cannot be saved, nothing this
+device writes leaves. A message held this way is drawn as not yet gone.
+
+**PROPOSED 2026-09-22:** every start reads the device's own records, not only a reinstall's, and moves
+forward to anything they hold that the device does not. Positions only ever go forward, whatever
+told it. When the record was ahead, the History check says so, because it means another copy of this
+device was writing.
+
+**PROPOSED 2026-09-22:** of two certificates for the same device key, the earlier decides, whatever
+order they arrive in. A reinstalled device issues itself a certificate before it has read its old
+one, and without this its own earlier entries would stop verifying.
+
+**What a reinstall loses.** Drafts, invitations it sent that had not finished, repairs in progress,
+what the History check had noticed, and every photo it had collected: a photo lives only on the
+devices that collected it, and a reinstall deletes this device's copies. A restore brings photos back,
+because they stay in backups.
+
+`ReinstallTests`, `EarliestCertificateTests`, `TheDeviceSyncFakeTests`, `IdentityStoreTests`,
+`BackupExclusionTests`, and in the app-bundle suite `KeychainTests`.
+
+**Proved on two Apple Accounts 2026-09-22.** On the rig, the app was deleted and reinstalled on
+alpha (account A). It found its keys and nothing else, read back both of its records, knew its place
+in both of its conversations and carried on at the next position. Quad on beta (account B) received
+what it wrote and logged no fork. Quad's next message reached it, and the room's history came back.
+Before that, a copy of alpha that `xcodebuild` had cloned wrote as the same device; alpha then found
+its record one position ahead in one conversation and moved forward before writing.
 
 **PROPOSED 2026-09-21:** "state" is everything that says what the log holds or where it came from: the
 state file, both sync engines' saved state, and the learned list of other members' mailboxes. Left in
@@ -130,13 +171,6 @@ recipient has collected it, so a device that loses its copy has nowhere to fetch
 pictures a member chose for themselves or for somebody else stay too, because nothing could bring
 them back. `BackupExclusionTests`; on a simulator on 2026-09-21 the log, the state file, the engine's
 state and the mailbox list each carried the exclusion after one launch.
-
-{: .warning }
-> **Not built.** A reinstalled or restored device starts every conversation again at position 1, and
-> never reads its own record: it writes an empty one over it instead. It restores none of its room
-> keys, because the list of which it holds is in the state file. Its first full round deletes every
-> upload of the member's that its empty log does not name. And its device key is stored so that an
-> encrypted backup carries it to another device.
 
 ### A key turn a removal owes is found in the log
 

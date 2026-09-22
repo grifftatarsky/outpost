@@ -18,8 +18,9 @@ One identity across a member's devices, and what happens when they lose them.
 
 An identity generated on first run and filed in the synchronizable Keychain; a second device adopting
 it through iCloud Keychain with no setup step; a device list that says when each device arrived, with
-names and revocation; a sealed feed between a member's own devices; erasing everything; and a recovery
-key that restores who you are while the people you talk to are asked for what was said. What a
+names and revocation; sealed records between a member's own devices; erasing everything; a recovery
+key that restores who you are while the people you talk to are asked for what was said; and a
+reinstall that carries on as the same device. What a
 simulator cannot show is two real devices on one account, which needs two phones.
 
 Every ticket on this page, with its status and what was actually observed, is on the
@@ -548,6 +549,61 @@ support it, so that the people I talk to can see it if I want them to.
 - Rig, 2026-09-17: the whole flow on gamma (`RigChecks.testSupporter`) and the *Not now* path on delta
   (`testSupporterDeclines`). Gamma's badge collected by delta and drawn on its People list. Over the
   directory mailbox, not CloudKit.
+
+</details>
+
+<details markdown="1" id="a-reinstall-is-the-same-device">
+<summary><b>A reinstall is the same device</b> — Complete (tested; proved on two Apple Accounts)</summary>
+
+**Story.** As a member who deletes the app and puts it back, I want this device to carry on as
+itself, so that nothing I wrote is written twice and the people I talk to see no difference.
+
+**Acceptance criteria**
+
+- **Done.** The device key, the room keys and the draft key are stored so that they never leave this
+  device. A reinstall finds them; a new phone restored from a backup does not, and enrolls as a new
+  device. An item stored before this was built is moved over in place the first time it is read.
+- **Done.** The device key is stored with the member it was made for. A key made for another member,
+  or one with no owner found by a member who is new to this device, is dropped.
+- **Done.** The log, the state file, both sync engines' saved state and the learned list of other
+  members' mailboxes are left out of backups, so a restore comes back as a reinstall does.
+- **Done.** A device with its keys and no state is catching up. It writes nothing, publishes nothing,
+  turns no key and cleans up no upload until it has read its own records back. The message field
+  says so, a relaunch keeps waiting, and a read that fails is tried again every round. It does not
+  ask for the member's name, which comes back with the records.
+- **Done.** Each device keeps two records: a **summary** that stays small — its position in every
+  conversation including deleted ones, room keys, certificates and removals, the people it knows,
+  preferences, uploads left for others, departures already answered, and for itself which rooms have
+  greeted the member, how the room list is arranged and how far each conversation has been read —
+  and an **entries** record with every entry it wrote.
+- **Done.** Reading them back restores all of that and the device's own entries. What other people
+  wrote comes back through history repair.
+- **Done.** A device that reads its own removal in the member's records enrolls as a new device.
+- **Done.** A round sends an entry of this device's own only once a saved summary counts it. A
+  message held this way is drawn as not yet gone. A refused entries record holds nothing back.
+- **Done.** Every start reads the device's own records and moves forward to anything they hold that
+  the device does not. When that happens the History check says so.
+- **Done.** Of two certificates for the same device key, the earlier decides, in any order.
+- **Done.** Recovering onto a device whose own key survived is that device, and waits the same way.
+- **Open.** Photos this device had collected are gone after a reinstall, and cannot be collected
+  again once everybody has theirs.
+
+**Testing**
+
+- Suites: `ReinstallTests` (seventeen cases), `EarliestCertificateTests`, `TheDeviceSyncFakeTests`,
+  `IdentityStoreTests`, `BackupExclusionTests`, `SiblingFeedIsSealedTests.bothRecordsAreSealed`, and
+  in the app-bundle suite `KeychainTests.deviceItemsNeverLeave` and `anOlderItemIsMovedInPlace`,
+  against the real Security framework. Each guard was removed in turn and a named test went red —
+  seventeen of seventeen. Ten clean runs in a row.
+- The in-memory device sync keeps each device's records across installs, refuses a write over a copy
+  it never read by handing the server's copy over first, and refuses a record over the 1 MB Apple
+  documents.
+- Rig, 2026-09-22, on two Apple Accounts: the app deleted and reinstalled on alpha (account A). It
+  found its keys and nothing else, read back both records, knew its place in two conversations and
+  carried on at the next position. Quad on beta (account B) received it and logged no fork; Quad's
+  next message reached it; the room's history came back. Earlier the same night a clone of alpha
+  made by `xcodebuild` wrote as the same device, and alpha, launched afterwards, found its record one
+  position ahead and moved forward before writing.
 
 </details>
 

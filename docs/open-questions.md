@@ -31,6 +31,23 @@ attention, written as a question rather than a statement.
 
 ## Waiting on an answer
 
+### Should a reinstalled device get its photos back?
+
+A reinstall now carries on as the same device and gets its writing, its keys and its history back.
+Its photos it does not: a photo lives only on the devices that collected it, a reinstall deletes this
+device's copies, and a sender's upload is deleted once every recipient has collected it. The room
+shows where each photo was, and nothing can be fetched. A restore is different, because photos stay
+in backups. Keeping uploads longer costs the sender's iCloud; asking another member to send a photo
+again is a request the app does not make today. Is losing them acceptable for the first TestFlight?
+
+### What should a running device do when it learns it was removed?
+
+A device that reads its own removal in the member's records while it is still running can no longer
+write: everything it tries is refused as signed by a device that is out, and the words the member sees
+are the system's, not the app's. A reinstall of that device enrolls as a new one on its own. Should a
+running one do the same, or say plainly that it was removed from another device and offer to start
+again as a new one?
+
 Griff worked through the rest on 2026-09-13, and three more on 2026-09-15. Those rulings were
 recorded in the log that is now [archived](archive/decisions-2026.md); the links below go there, and
 what they describe has not been re-checked against the build.

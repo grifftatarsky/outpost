@@ -211,15 +211,22 @@ to be restored is kept, and not raised. The rest show on the Integrity screen, a
 ## Device sync
 
 A member's own devices converge separately, through `CKSyncEngine` over a `SiblingFeeds` zone in the
-member's private database. There is one record per device, holding that device's entries, the device
-certificates, the epoch keys it holds and the member's preferences.
+member's private database. Each device keeps two records there. Its **summary** holds where it has got
+to in every conversation, the room keys it holds, the certificates and removals of the member's
+devices, the people it knows and the member's preferences, and—for the device itself—which rooms have
+greeted the member, how the room list is arranged and how far each conversation has been read. Its
+**entries** record holds every entry it wrote. The summary stays small however much is said; the
+entries record grows with it.
 
-The record is sealed on the device before it is written: ChaChaPoly under a key derived from the
+A device sends its own writing to anybody else only once a saved summary counts it, so what iCloud
+says about where a device has got to is never behind what any member holds.
+
+The records are sealed on the device before they are written: ChaChaPoly under a key derived from the
 identity with HKDF-SHA256, with the member and the writing device as associated data, so a record
 cannot be replayed into another device's slot. `EntrySync` carries `SealedSiblingFeed` and nothing
 else, so the unsealed type cannot reach a transport.
 
-**The app seals it rather than using `CKRecord.encryptedValues`.** Apple's encrypted fields are
+**The app seals them rather than using `CKRecord.encryptedValues`.** Apple's encrypted fields are
 end-to-end only when the member has Advanced Data Protection on; otherwise Apple holds the keys. And
 the CloudKit service key lives in iCloud Keychain, which is exactly what is missing when somebody
 restores from a recovery key. The seal is under the identity, and the recovery key is the identity.
@@ -227,6 +234,22 @@ restores from a recovery key. The seal is under the identity, and the recovery k
 The app tells the engine when to sync instead of letting it schedule itself
 (`automaticallySync = false`). Left to schedule itself, an explicit `fetchChanges()` returned in
 milliseconds without asking the server anything.
+
+### A reinstall is the same device
+
+The device key stays in this device's keychain, stored so that it never leaves it, beside the member
+it was made for. A reinstall finds it; a new phone restored from a backup does not, and enrolls as a
+new device. The log and the state are left out of backups, so a restore comes back as a reinstall
+does: keys, and nothing else.
+
+A device that finds its keys and no state is **catching up**. It writes nothing, in any
+conversation, until it has read its own records back. From them it takes its positions, its room
+keys, the people it knows and its own entries; what other people wrote comes back through repair.
+It then reads the member's other devices' records, and a device that finds its own removal there
+enrolls as a new one.
+
+Every start reads the device's own records, not only a reinstall's, and moves forward to anything
+they hold that it does not. A position only ever goes forward, whatever told it.
 
 ## Notifications
 

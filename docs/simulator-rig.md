@@ -75,6 +75,10 @@ TEST_RUNNER_OUTPOST_RIG=1 xcodebuild test -workspace Carpenter.xcworkspace -sche
   -only-testing:CarpenterUITests/RigChecks/testSupporter -parallel-testing-enabled NO
 ```
 
+Leave `-parallel-testing-enabled NO` on every run. Without it the runner clones the simulator, shuts
+the original down, and runs the step on the clone, which carries the original's keychain and Apple
+Account: on 2026-09-22 a clone of alpha sent a message as alpha's own device, and beta received it.
+
 Each step attaches screenshots to the result bundle and writes the screen's element tree to
 `/tmp/outpost-rig-exchange/<step>.txt`. Export the screenshots with
 `xcrun xcresulttool export attachments`.
@@ -111,7 +115,7 @@ Measured on this Mac on 2026-09-01 and since.
 | App Group container shared with the extension | yes | `storage: … appGroup=true` in the log. |
 | Push from real APNs | registers | A real sandbox token on Apple silicon. A bell rung by the other account on 2026-09-14 did not arrive in five minutes. |
 | Notification service extension | not reachable | Nothing triggers it. No real push arrives, and in Xcode 27 `simctl push` goes through CoreSimulatorBridge, which adds the request directly: a payload with `mutable-content: 1` was posted as sent, with no extension process, on 2026-09-19. It ran for `simctl push` on 2026-09-01. |
-| Keychain generic password items | yes | Persist across launches. `simctl uninstall` does not clear them. |
+| Keychain generic password items | yes | Persist across launches. `simctl uninstall` does not clear them, so uninstalling and installing again is a reinstall: on 2026-09-22 alpha came back with its keys and nothing else, and read its place back from iCloud. |
 | Keychain access groups | no | Simulator builds are unsigned, so the app and extension's shared group behaves differently than on a phone. |
 | Sensitive Content Analysis | yes | Judged a photo clear on 2026-09-04. A positive verdict needs Apple's test profile on a phone. |
 | Secure Enclave | no | |
