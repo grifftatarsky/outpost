@@ -794,6 +794,7 @@ struct FinalRefusalThroughTheSessionTests {
             "precondition: Bob holds the pad's earlier work")
 
         let padDevice = try #require(pad.enrolment?.device.id)
+        pad.syncDevices(through: InMemoryEntrySync(relay: InMemoryEntrySync.Relay()))
         try await phone.revoke(padDevice)
 
         clock.advance(by: 60)

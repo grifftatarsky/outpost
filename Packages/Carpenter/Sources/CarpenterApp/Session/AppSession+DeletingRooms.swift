@@ -176,6 +176,8 @@ extension AppSession {
         for hash in removedHashes { arrivalDelays[hash] = nil }
 
         await persistOrReport("what is left of a deleted conversation") { try await saveState() }
+        ownEntriesUnpublished = true
+        sendOwnEntries()
     }
 
     func attachments(namedBy entry: Entry) -> Set<AttachmentID> {

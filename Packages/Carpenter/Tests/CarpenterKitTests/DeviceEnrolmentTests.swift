@@ -280,7 +280,7 @@ struct DeviceEnrolmentTests {
 
         let store = IdentityStore(keychain: keychain)
         let identity = try #require(try await store.loadIdentity())
-        let firstDevice = try #require(try await store.loadDeviceKeys()).id
+        let firstDevice = try #require(try await store.loadDeviceKeys(for: identity.id)).id
 
         let published = await firstSync.sent
             .compactMap { try? $0.open(with: identity, from: firstDevice) }

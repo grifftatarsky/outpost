@@ -4,6 +4,12 @@
     "" : {
 
     },
+    "In ^[%lld conversation](inflect: true), your iCloud held writing from this device that this device did not have. Another copy of this device may have been writing. It carried on after that writing rather than over it." : {
+      "comment" : "The History check: how many conversations this device found itself behind its own record in"
+    },
+    "This device had been further along than it knew" : {
+      "comment" : "The History check: this device's own record in iCloud was ahead of it"
+    },
     "“hello — it's me”" : {
 
     },
@@ -525,7 +531,7 @@
     "^[%lld room](inflect: true) together" : {
 
     },
-    "^[%lld time](inflect: true), another member said they hold a different message at a place in someone's history than this device does. A reinstalled device can cause it, and so can someone being shown two versions. Nobody is accused, and nothing here is changed." : {
+    "^[%lld time](inflect: true), another member said they hold a different message at a place in someone's history than this device does. Two copies of one device writing apart can cause it, and so can someone being shown two versions. Nobody is accused, and nothing here is changed." : {
 
     },
     "^[In %lld room](inflect: true) with you" : {

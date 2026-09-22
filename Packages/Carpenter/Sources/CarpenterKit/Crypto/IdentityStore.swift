@@ -16,6 +16,7 @@ public struct Enrolment: Sendable {
 public actor IdentityStore {
     public static let identityKey = KeychainKey("identity.keys")
     public static let deviceKey = KeychainKey("device.signing")
+    public static let deviceOwnerKey = KeychainKey("device.owner")
 
     private static let seedLength = 32
 
@@ -37,12 +38,12 @@ public actor IdentityStore {
             identityExisted = false
         }
 
-        if let device = try await loadDeviceKeys() {
+        if let device = try await loadDeviceKeys(for: identity.id, adoptingUnowned: identityExisted) {
             return Enrolment(identity: identity, device: device, deviceIsNew: false)
         }
 
         let device = DeviceKeys.generate()
-        try await save(device)
+        try await save(device, for: identity.id)
         return Enrolment(identity: identity, device: device, deviceIsNew: identityExisted)
     }
 
@@ -64,16 +65,33 @@ public actor IdentityStore {
         )
     }
 
-    public func loadDeviceKeys() async throws -> DeviceKeys? {
+    public func loadDeviceKeys(
+        for owner: ParticipantID, adoptingUnowned: Bool = true
+    ) async throws -> DeviceKeys? {
         guard let data = try await keychain.data(for: Self.deviceKey) else { return nil }
-        return try DeviceKeys(signingSeed: data)
+        let device = try DeviceKeys(signingSeed: data)
+
+        switch try await keychain.data(for: Self.deviceOwnerKey) {
+        case owner.rawValue?:
+            return device
+        case nil where adoptingUnowned:
+            try await keychain.set(owner.rawValue, for: Self.deviceOwnerKey, scope: .device)
+            return device
+        case _:
+            Diagnostics.identity.notice(
+                "enrol: this device's key belongs to another member, or to nobody; it becomes a new device")
+            try await forgetDevice()
+            return nil
+        }
     }
 
-    public func save(_ device: DeviceKeys) async throws {
+    public func save(_ device: DeviceKeys, for owner: ParticipantID) async throws {
         try await keychain.set(device.signingSeed, for: Self.deviceKey, scope: .device)
+        try await keychain.set(owner.rawValue, for: Self.deviceOwnerKey, scope: .device)
     }
 
     public func forgetDevice() async throws {
         try await keychain.remove(Self.deviceKey)
+        try await keychain.remove(Self.deviceOwnerKey)
     }
 }

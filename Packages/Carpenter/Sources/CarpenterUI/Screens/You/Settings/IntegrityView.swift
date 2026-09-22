@@ -23,6 +23,7 @@ public struct IntegrityView: View {
                     if report.unverifiableOnDisk > 0 { unverifiable }
                     if report.rejectedFromPeers > 0 { rejected }
                     if report.unexplainedContradictions > 0 { contradicted }
+                    if report.ownRecordAhead > 0 { aheadOfItself }
                     if report.writesFailed > 0 { unwritten }
                     if report.feedsFromOtherMembers > 0 { foreignFeeds }
                 }
@@ -148,7 +149,27 @@ public struct IntegrityView: View {
             .foregroundStyle(palette.primaryText)
 
             Text(
-                "^[\(report.unexplainedContradictions) time](inflect: true), another member said they hold a different message at a place in someone's history than this device does. A reinstalled device can cause it, and so can someone being shown two versions. Nobody is accused, and nothing here is changed.",
+                "^[\(report.unexplainedContradictions) time](inflect: true), another member said they hold a different message at a place in someone's history than this device does. Two copies of one device writing apart can cause it, and so can someone being shown two versions. Nobody is accused, and nothing here is changed.",
+                bundle: .module
+            )
+            .font(CarpenterFont.footnote)
+            .foregroundStyle(palette.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var aheadOfItself: some View {
+        card {
+            Label {
+                Text("This device had been further along than it knew", bundle: .module)
+                    .font(CarpenterFont.rowTitle)
+            } icon: {
+                Image(systemName: "doc.on.doc")
+            }
+            .foregroundStyle(palette.primaryText)
+
+            Text(
+                "In ^[\(report.ownRecordAhead) conversation](inflect: true), your iCloud held writing from this device that this device did not have. Another copy of this device may have been writing. It carried on after that writing rather than over it.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)

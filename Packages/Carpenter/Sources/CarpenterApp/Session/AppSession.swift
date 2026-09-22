@@ -135,6 +135,11 @@ public final class AppSession {
 
     var publishing = false
     var publishAgain = false
+    var publishTask: Task<Void, Never>?
+    var learningPlace: Task<Void, Never>?
+    var siblingsFetched = false
+    var deviceSyncGeneration = 0
+    var ownEntriesUnpublished = true
 
     var stateWrites: Task<Void, any Error>?
 
@@ -264,6 +269,7 @@ public final class AppSession {
         _ payload: Payload, to room: ConversationID, alsoFor extra: PairwiseSecret? = nil
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
+        guard !persisted.awaitingOwnRecords else { throw AppSessionError.catchingUp }
 
         switch room {
         case .outpost:
@@ -281,7 +287,10 @@ public final class AppSession {
             }
         }
 
-        defer { sendOwnEntries() }
+        defer {
+            ownEntriesUnpublished = true
+            sendOwnEntries()
+        }
 
         if chains[room] == nil {
             if case .outpost(let owner) = room, owner != enrolment.identity.id {

@@ -25,8 +25,19 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
 
     public let preferences: MemberPreferences
 
+    public let positions: [ConversationID: EntryLink]
+    public let revocations: [DeviceRevocation]
+    public let uploadsLeftForOthers: [AttachmentID]
+    public let answeredDepartures: Set<EntryHash>
+    public let greetedRooms: [ConversationID]
+    public let readThrough: [ConversationID: EntryHash]
+    public let organisation: RoomsListOrganisation?
+    public let identities: [IdentityPublicKeys]
+
     private enum CodingKeys: String, CodingKey {
         case member, writtenAt, entries, certificates, epochs, preferences
+        case positions, revocations, uploadsLeftForOthers, answeredDepartures, greetedRooms
+        case readThrough, organisation, identities
     }
 
     public init(from decoder: any Decoder) throws {
@@ -40,6 +51,22 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         preferences =
             try container.decodeIfPresent(MemberPreferences.self, forKey: .preferences)
             ?? MemberPreferences()
+        positions =
+            try container.decodeIfPresent([ConversationID: EntryLink].self, forKey: .positions) ?? [:]
+        revocations =
+            try container.decodeIfPresent([DeviceRevocation].self, forKey: .revocations) ?? []
+        uploadsLeftForOthers =
+            try container.decodeIfPresent([AttachmentID].self, forKey: .uploadsLeftForOthers) ?? []
+        answeredDepartures =
+            try container.decodeIfPresent(Set<EntryHash>.self, forKey: .answeredDepartures) ?? []
+        greetedRooms =
+            try container.decodeIfPresent([ConversationID].self, forKey: .greetedRooms) ?? []
+        readThrough =
+            try container.decodeIfPresent([ConversationID: EntryHash].self, forKey: .readThrough) ?? [:]
+        organisation =
+            try container.decodeIfPresent(RoomsListOrganisation.self, forKey: .organisation)
+        identities =
+            try container.decodeIfPresent([IdentityPublicKeys].self, forKey: .identities) ?? []
     }
 
     public init(
@@ -48,7 +75,15 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         epochs: [HeldEpoch] = [],
         member: ParticipantID? = nil,
         writtenAt: Date? = nil,
-        preferences: MemberPreferences = MemberPreferences()
+        preferences: MemberPreferences = MemberPreferences(),
+        positions: [ConversationID: EntryLink] = [:],
+        revocations: [DeviceRevocation] = [],
+        uploadsLeftForOthers: [AttachmentID] = [],
+        answeredDepartures: Set<EntryHash> = [],
+        greetedRooms: [ConversationID] = [],
+        readThrough: [ConversationID: EntryHash] = [:],
+        organisation: RoomsListOrganisation? = nil,
+        identities: [IdentityPublicKeys] = []
     ) {
         self.member = member
         self.writtenAt = writtenAt
@@ -56,6 +91,51 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         self.certificates = certificates
         self.epochs = epochs
         self.preferences = preferences
+        self.positions = positions
+        self.revocations = revocations
+        self.uploadsLeftForOthers = uploadsLeftForOthers
+        self.answeredDepartures = answeredDepartures
+        self.greetedRooms = greetedRooms
+        self.readThrough = readThrough
+        self.organisation = organisation
+        self.identities = identities
+    }
+
+    public func withoutEntries() -> SiblingFeed {
+        SiblingFeed(
+            entries: [], certificates: certificates, epochs: epochs, member: member,
+            writtenAt: writtenAt, preferences: preferences, positions: positions,
+            revocations: revocations, uploadsLeftForOthers: uploadsLeftForOthers,
+            answeredDepartures: answeredDepartures, greetedRooms: greetedRooms,
+            readThrough: readThrough, organisation: organisation, identities: identities)
+    }
+}
+
+public struct DeviceRecords: Sendable, Hashable {
+    public let summary: SealedSiblingFeed
+    public let entries: SealedSiblingFeed?
+
+    public init(summary: SealedSiblingFeed, entries: SealedSiblingFeed?) {
+        self.summary = summary
+        self.entries = entries
+    }
+
+    public static func seal(
+        _ feed: SiblingFeed, for identity: Identity, on device: DeviceID, withEntries: Bool = true
+    ) throws -> DeviceRecords {
+        DeviceRecords(
+            summary: try SealedSiblingFeed.seal(feed.withoutEntries(), for: identity, on: device),
+            entries: withEntries ? try SealedSiblingFeed.seal(feed, for: identity, on: device) : nil)
+    }
+}
+
+public struct DeviceRecordsSaved: Sendable, Hashable {
+    public let summary: Bool
+    public let entries: Bool
+
+    public init(summary: Bool, entries: Bool) {
+        self.summary = summary
+        self.entries = entries
     }
 }
 

@@ -23,14 +23,23 @@ extension AppSession {
                 return
             }
 
-            let existingDevice = try await store.loadDeviceKeys()
+            let existingDevice = try await store.loadDeviceKeys(for: identity.id)
             let device = existingDevice ?? DeviceKeys.generate()
-            if existingDevice == nil { try await store.save(device) }
+            if existingDevice == nil { try await store.save(device, for: identity.id) }
 
             enrolment = Enrolment(
                 identity: identity, device: device, deviceIsNew: existingDevice == nil)
-            persisted = try await storage.documents.load(PersistedState.self) ?? PersistedState()
+            let saved = try await storage.documents.load(PersistedState.self)
+            persisted = saved ?? PersistedState()
             organisation = persisted.organisation
+            if saved == nil, existingDevice != nil {
+                persisted.awaitingOwnRecords = true
+                Diagnostics.identity.notice(
+                    "load: this device's keys are here and nothing else; it writes nothing until it has read its own records")
+                await persistOrReport("that this device is reading back where it had got to") {
+                    try await saveState()
+                }
+            }
 
             try await restoreLog(identity: identity)
 
@@ -46,7 +55,7 @@ extension AppSession {
             countWhatIsHeldForOthers()
             await openDrafts()
 
-            state = hasOwnName ? .ready : .needsProfile
+            state = hasOwnName || persisted.awaitingOwnRecords ? .ready : .needsProfile
             Diagnostics.identity.notice("load: \(String(describing: self.state), privacy: .public)")
         } catch {
             state = .failed(error.localizedDescription)
@@ -207,9 +216,14 @@ extension AppSession {
             DeviceCertificate.issue(
                 for: enrolled.device.publicKey, by: enrolled.identity, at: clock.now))
         persisted.certificates = knownCertificates()
+        if !enrolled.deviceIsNew {
+            persisted.awaitingOwnRecords = true
+            Diagnostics.sync.notice(
+                "recovery: this device's own key survived; it reads back where it had got to before it writes")
+        }
 
         Diagnostics.sync.notice(
-            "recovery: restored \(Diagnostics.fingerprint(enrolled.identity.id.rawValue), privacy: .public) onto a new device")
+            "recovery: restored \(Diagnostics.fingerprint(enrolled.identity.id.rawValue), privacy: .public) onto this device")
 
         cameBackFromARecoveryKey = true
         persisted.preferences.setAsksPeersForHistory(askingPeers, stamp: stamp())

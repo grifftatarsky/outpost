@@ -74,7 +74,7 @@ struct IdentityStoreTests {
         let store = IdentityStore(keychain: InMemoryKeychainStore())
 
         #expect(try await store.loadIdentity() == nil)
-        #expect(try await store.loadDeviceKeys() == nil)
+        #expect(try await store.loadDeviceKeys(for: Identity.generate().id) == nil)
     }
 
     @Test("Corrupted key material is refused rather than used")
@@ -96,6 +96,48 @@ struct IdentityStoreTests {
         try await store.forgetDevice()
 
         #expect(try await store.loadIdentity()?.id == enrolment.identity.id)
-        #expect(try await store.loadDeviceKeys() == nil)
+        #expect(try await store.loadDeviceKeys(for: enrolment.identity.id) == nil)
+    }
+
+    @Test("A device key made for another member is not reused, and is forgotten")
+    func aKeyForSomebodyElseIsNotReused() async throws {
+        let keychain = InMemoryKeychainStore()
+        let store = IdentityStore(keychain: keychain)
+        let first = Identity.generate()
+        try await store.save(DeviceKeys.generate(), for: first.id)
+
+        #expect(try await store.loadDeviceKeys(for: Identity.generate().id) == nil)
+        #expect(
+            try await keychain.data(for: IdentityStore.deviceKey) == nil,
+            "a key that belongs to somebody else was left where the next load would find it")
+    }
+
+    @Test("A key with no owner is kept only by a member who was already on this device")
+    func anUnownedKeyIsKeptOnlyByAMemberAlreadyHere() async throws {
+        let keychain = InMemoryKeychainStore()
+        let store = IdentityStore(keychain: keychain)
+        let seed = DeviceKeys.generate()
+        let member = Identity.generate()
+
+        try await keychain.set(seed.signingSeed, for: IdentityStore.deviceKey, scope: .device)
+        #expect(try await store.loadDeviceKeys(for: member.id, adoptingUnowned: true)?.id == seed.id)
+        #expect(try await keychain.data(for: IdentityStore.deviceOwnerKey) == member.id.rawValue)
+
+        try await keychain.remove(IdentityStore.deviceOwnerKey)
+        #expect(
+            try await store.loadDeviceKeys(for: Identity.generate().id, adoptingUnowned: false) == nil,
+            "a brand-new member took over a key nobody could say was theirs")
+    }
+
+    @Test("A new member on a device whose key belonged to somebody else gets a new device")
+    func enrollingAfterSomebodyElseMakesANewDevice() async throws {
+        let keychain = InMemoryKeychainStore()
+        let store = IdentityStore(keychain: keychain)
+        let previous = try await store.enrol()
+        try await keychain.remove(IdentityStore.identityKey)
+
+        let next = try await store.enrol()
+        #expect(next.identity.id != previous.identity.id)
+        #expect(next.device.id != previous.device.id, "two members were given the same device key")
     }
 }

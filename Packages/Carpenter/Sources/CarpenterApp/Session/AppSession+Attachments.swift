@@ -112,7 +112,9 @@ extension AppSession {
     }
 
     func sweepAttachments(through mailbox: any MediaMailbox) async {
-        guard !sweptAttachments, enrolment != nil else { return }
+        guard !sweptAttachments, enrolment != nil, !persisted.awaitingOwnRecords,
+            deviceSync == nil || siblingsFetched
+        else { return }
         sweptAttachments = true
         let waiting: [AttachmentID: Set<RecipientTag>]
         do {

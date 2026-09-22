@@ -30,6 +30,10 @@ public struct DeviceRegistry: Hashable, Sendable {
             guard existing.publicKey == certificate.devicePublicKey else {
                 throw CryptoError.deviceMismatch
             }
+            if certificate.issuedAt < existing.issuedAt {
+                devices[certificate.device] = Enrolment(
+                    certificate: certificate, revokedAt: existing.revokedAt)
+            }
             return
         }
 

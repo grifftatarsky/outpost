@@ -447,7 +447,9 @@ extension AppRootView {
                     wait: session.notGoneWait(in: room),
                     onChange: { await session.setNotGoneWait($0, in: room) })
             },
-            cannotSend: session.cannotSend.map { SessionProblem.sentence(for: $0) },
+            cannotSend: session.isCatchingUp
+                ? SessionProblem.sentence(for: AppSessionError.catchingUp)
+                : session.cannotSend.map { SessionProblem.sentence(for: $0) },
             notifiedOutposts: session.outpostNotifiedPeople(),
             onMarkOutpostSeen: { await session.markOutpostSeen(from: $0) },
             onMarkOutpostSeenPost: { await session.markOutpostSeen($0) },

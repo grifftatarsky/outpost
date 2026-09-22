@@ -12,16 +12,50 @@ public struct SystemKeychainStore: KeychainStore {
     }
 
     public func data(for key: KeychainKey) async throws -> Data? {
-        if let found = try read(key, in: accessGroup) { return found.data }
+        if let found = try read(key, in: accessGroup) {
+            if !found.synchronized, !found.keptOnThisDevice { keepOnThisDevice(key, in: accessGroup) }
+            return found.data
+        }
 
         guard accessGroup != nil, let legacy = try read(key, in: nil) else { return nil }
         try? await set(legacy.data, for: key, scope: legacy.synchronized ? .synchronized : .device)
         return legacy.data
     }
 
+    private func keepOnThisDevice(_ key: KeychainKey, in group: String?) {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key.rawValue,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: false,
+        ]
+        if let group { query[kSecAttrAccessGroup as String] = group }
+        let change: [String: Any] = [
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        let status = SecItemUpdate(query as CFDictionary, change as CFDictionary)
+        if status != errSecSuccess {
+            Diagnostics.identity.error(
+                "keychain: could not keep an item on this device only (\(status, privacy: .public)); it stays as it was")
+        }
+    }
+
+    static func accessibility(for scope: KeychainScope) -> CFString {
+        switch scope {
+        case .device: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        case .synchronized: kSecAttrAccessibleAfterFirstUnlock
+        }
+    }
+
+    public func accessibility(of key: KeychainKey) throws -> String? {
+        guard let found = try read(key, in: accessGroup) ?? read(key, in: nil) else { return nil }
+        return found.accessibility
+    }
+
     private func read(
         _ key: KeychainKey, in group: String?
-    ) throws -> (data: Data, synchronized: Bool)? {
+    ) throws -> (data: Data, synchronized: Bool, accessibility: String?, keptOnThisDevice: Bool)? {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -42,7 +76,11 @@ public struct SystemKeychainStore: KeychainStore {
             guard let item = result as? [String: Any],
                 let data = item[kSecValueData as String] as? Data
             else { return nil }
-            return (data, (item[kSecAttrSynchronizable as String] as? Bool) ?? false)
+            let accessibility = item[kSecAttrAccessible as String] as? String
+            return (
+                data, (item[kSecAttrSynchronizable as String] as? Bool) ?? false, accessibility,
+                accessibility == (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
+            )
         case errSecItemNotFound: return nil
         case errSecMissingEntitlement, errSecNoAccessForItem: return nil
         default: throw KeychainError(status: status)
@@ -75,7 +113,7 @@ public struct SystemKeychainStore: KeychainStore {
             kSecUseDataProtectionKeychain as String: true,
             kSecValueData as String: data,
             kSecAttrSynchronizable as String: (scope == .synchronized),
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrAccessible as String: Self.accessibility(for: scope),
         ]
         if let group { attributes[kSecAttrAccessGroup as String] = group }
 

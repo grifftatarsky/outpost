@@ -80,6 +80,7 @@ public enum AppSessionError: Error, Hashable, Sendable {
     case tooLateToWithdraw
     case tooManyPictures
     case keyNotTurned(rooms: Int)
+    case catchingUp
 }
 
 extension RoomsListOrganisation {

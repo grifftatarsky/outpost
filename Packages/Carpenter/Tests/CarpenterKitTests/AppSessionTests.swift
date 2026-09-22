@@ -66,6 +66,12 @@ struct AppSessionTests {
 
         let app = session(storage)
         await app.load()
+        app.syncDevices(through: InMemoryEntrySync(relay: InMemoryEntrySync.Relay()))
+        let deadline = Date().addingTimeInterval(5)
+        while app.isCatchingUp, Date() < deadline {
+            await app.learnWhereThisDeviceHadGotTo()
+            try? await Task.sleep(for: .milliseconds(10))
+        }
         #expect(app.state == .needsProfile)
 
         try await app.setDisplayName("Cassilda")

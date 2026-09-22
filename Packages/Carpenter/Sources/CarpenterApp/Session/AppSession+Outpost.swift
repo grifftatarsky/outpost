@@ -505,7 +505,7 @@ extension AppSession {
 
         for removal in projection.entries(of: .removal, by: me)
         where removal.device == enrolment.device.id {
-            guard let entry = replica.entry(named: removal.id),
+            guard let entry = replica.entries(in: removal.feedKey, at: removal.seq).first(where: { $0.hash == removal.id }),
                 entry.payload.epoch == chains[removal.conversation]?.highestKnownEpoch,
                 standing(in: removal.conversation) == .present
             else { continue }
@@ -516,7 +516,7 @@ extension AppSession {
         var letIn: Set<ParticipantID> = []
         var shutOut: Set<ParticipantID> = []
         for choice in projection.entries(of: .outpostAccess, by: me) where choice.conversation == wall {
-            guard let entry = replica.entry(named: choice.id),
+            guard let entry = replica.entries(in: choice.feedKey, at: choice.seq).first(where: { $0.hash == choice.id }),
                 let body = try? entry.opened(using: chain)?.decode(OutpostAccessBody.self)
             else { continue }
             if body.isAllowed {

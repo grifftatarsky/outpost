@@ -28,6 +28,8 @@ struct PersistedState: Codable, Sendable {
     var attestedHeads: [FeedKey: [ParticipantID: EntryLink]] = [:]
     var contradictions: [RecordedContradiction] = []
     var contradictionAsks: [Contradiction] = []
+    var awaitingOwnRecords = false
+    var publishedPositions: [ConversationID: UInt64] = [:]
     var withheldTold: [ParticipantID: [FeedGap]] = [:]
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
@@ -152,5 +154,9 @@ struct PersistedState: Codable, Sendable {
         drafts = try container.decodeIfPresent([ConversationID: Data].self, forKey: .drafts) ?? [:]
         newPostDraft = try container.decodeIfPresent(Data.self, forKey: .newPostDraft)
         commentDrafts = try container.decodeIfPresent([PostID: Data].self, forKey: .commentDrafts) ?? [:]
+        awaitingOwnRecords =
+            try container.decodeIfPresent(Bool.self, forKey: .awaitingOwnRecords) ?? false
+        publishedPositions =
+            try container.decodeIfPresent([ConversationID: UInt64].self, forKey: .publishedPositions) ?? [:]
     }
 }

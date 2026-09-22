@@ -454,6 +454,7 @@ struct AppRootView: View {
             }
         }
         .onChange(of: session.state) { _, _ in startDeviceSync() }
+        .onChange(of: session.enrolment?.device.id) { _, _ in startDeviceSync() }
         .task(id: session.state) { await settleDistribution() }
         .task { PushArrivals.shared.onArrival { await syncNow() } }
         .task {

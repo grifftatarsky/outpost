@@ -21,13 +21,17 @@ extension AppSession {
         var nobodyToSendTo: [Entry] = []
         var ringingRooms: Set<ConversationID> = []
         if mode == .full {
+            await learnWhereThisDeviceHadGotTo()
+            if ownRecordIsBehind { _ = await publishOwnRecordsNow() }
+        }
+        if mode == .full {
             let owedGrants = try grantsOwed()
             let owedConfirmations = confirmationsOwed()
             if !owedGrants.isEmpty {
                 Diagnostics.sync.notice(
                     "mailbox sync: owe \(owedGrants.count, privacy: .public) epoch key(s) to peers; sending")
             }
-            sending = unsentEntries()
+            sending = sendableEntries()
 
             let reachable = peers().count
             if reachable == 0
@@ -335,6 +339,15 @@ extension AppSession {
 
         if mode == .full { await publishCommentTallies() }
 
+        let forksNow = replica.forks.count
+        let forksBefore = forks.count
+        if forksNow > forksBefore {
+            Diagnostics.sync.error(
+                """
+                log: \(forksNow - forksBefore, privacy: .public) new position(s) where somebody's \
+                log holds two entries; \(forksNow, privacy: .public) in all
+                """)
+        }
         forks = replica.forks
         integrity.forks = replica.forks
         integrity.rejectedFromPeers += report.entriesRejected
@@ -370,6 +383,13 @@ extension AppSession {
     func knownIdentities(of people: Set<ParticipantID>) -> [IdentityPublicKeys] {
         replica.knownParticipants.filter(people.contains)
             .compactMap { replica.registry(for: $0)?.identity }
+    }
+
+    func sendableEntries() -> [Entry] {
+        let heldBack = deviceSync == nil ? nil : enrolment?.device.id
+        let published = persisted.publishedPositions
+        return unsentEntries()
+            .filter { $0.device != heldBack || $0.seq <= published[$0.conversation] ?? 0 }
     }
 
     func unsentEntries() -> [Entry] {

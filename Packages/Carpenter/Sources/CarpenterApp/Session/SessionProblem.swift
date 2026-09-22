@@ -60,6 +60,10 @@ public enum SessionProblem {
             return String(
                 localized: "That code came from a device that is already set up, so there is nothing to add.",
                 bundle: .module, comment: "The pasted offer carries no device subkey")
+        case .catchingUp:
+            return String(
+                localized: "This device is reading back from your iCloud where it had got to. You can write as soon as that is done.",
+                bundle: .module, comment: "A reinstalled device has not yet read its own record back")
         case .keyNotTurned(let rooms):
             return String(
                 localized: "That device is out. ^[\(rooms) conversation](inflect: true) has not turned its key yet, so it can still read what is said there until something does.",

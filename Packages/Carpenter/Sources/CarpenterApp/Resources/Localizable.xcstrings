@@ -90,6 +90,9 @@
     "This device has not finished setting up yet." : {
       "comment" : "No identity on the device yet"
     },
+    "This device is reading back from your iCloud where it had got to. You can write as soon as that is done." : {
+      "comment" : "A reinstalled device has not yet read its own record back"
+    },
     "This device no longer has the entry behind that." : {
       "comment" : "The entry is not on this device"
     },

@@ -484,6 +484,7 @@ extension AppSession {
                     await persistOrReport("that this room's key has been turned") {
                         try await saveState()
                     }
+                    sendOwnEntries()
                     Diagnostics.sync.notice(
                         "mailbox sync: turned a room's key because somebody left it")
                 } catch {
@@ -522,6 +523,7 @@ extension AppSession {
         await persistOrReport("which rooms you have been introduced to") {
             try await saveState()
         }
+        sendOwnEntries()
         refresh()
     }
 
@@ -698,6 +700,7 @@ extension AppSession {
         Task { await persistOrReport("how your rooms are arranged") {
             try await saveState()
         } }
+        sendOwnEntries()
     }
 
     public func stamp() -> OrganisationStamp {

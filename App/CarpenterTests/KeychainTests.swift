@@ -1,5 +1,6 @@
 import CarpenterKeychain
 import Foundation
+import Security
 import Testing
 
 import CarpenterKit
@@ -48,6 +49,49 @@ struct SystemKeychainTests {
         try await store.set(Data([2]), for: key, scope: .synchronized)
 
         #expect(try await store.data(for: key) == Data([2]))
+    }
+
+    @Test("An item kept to this device can never leave it; a synchronized one can")
+    func deviceItemsNeverLeave() async throws {
+        let kept = scratchKey()
+        let synced = scratchKey()
+        defer {
+            Task {
+                try? await store.remove(kept)
+                try? await store.remove(synced)
+            }
+        }
+
+        try await store.set(Data([1]), for: kept, scope: .device)
+        try await store.set(Data([2]), for: synced, scope: .synchronized)
+
+        #expect(
+            try store.accessibility(of: kept) == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String,
+            "a device key, a room key or the draft key would travel to another device in a backup")
+        #expect(try store.accessibility(of: synced) == kSecAttrAccessibleAfterFirstUnlock as String)
+    }
+
+    @Test("An item stored before this build is moved to this device only, in place, when it is read")
+    func anOlderItemIsMovedInPlace() async throws {
+        let key = scratchKey()
+        defer { Task { try? await store.remove(key) } }
+        let older: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.microgpt.carpenter.tests",
+            kSecAttrAccount as String: key.rawValue,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecValueData as String: Data([7, 7]),
+            kSecAttrSynchronizable as String: false,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        #expect(SecItemAdd(older as CFDictionary, nil) == errSecSuccess, "precondition: could not write the older item")
+        #expect(try store.accessibility(of: key) == kSecAttrAccessibleAfterFirstUnlock as String)
+
+        #expect(try await store.data(for: key) == Data([7, 7]), "reading the older item lost it")
+        #expect(
+            try store.accessibility(of: key) == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String,
+            "an item stored the older way was left able to leave this device")
+        #expect(try await store.data(for: key) == Data([7, 7]))
     }
 
     @Test("Removal is idempotent")

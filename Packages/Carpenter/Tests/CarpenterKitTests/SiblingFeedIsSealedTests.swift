@@ -16,6 +16,10 @@ struct SiblingFeedIsSealedTests {
     private static let blocked = ParticipantID(rawValue: Data(repeating: 0x77, count: 32))
     private static let room = ConversationID.room(UUID())
     private static let keys = DeviceKeys.generate()
+    private static let positionHash = EntryHash(rawValue: Data(repeating: 0x21, count: 32))
+    private static let readMark = EntryHash(rawValue: Data(repeating: 0x22, count: 32))
+    private static let upload = AttachmentID()
+    private static let contact = Identity.generate()
 
     private static func populated() -> SiblingFeed {
         let stamp = OrganisationStamp(at: Date(timeIntervalSince1970: 1_000), device: device)
@@ -42,7 +46,21 @@ struct SiblingFeedIsSealedTests {
             epochs: [HeldEpoch(room: room, epoch: .initial, material: epochMaterial)],
             member: identity.id,
             writtenAt: Date(timeIntervalSince1970: 4_000),
-            preferences: prefs)
+            preferences: prefs,
+            positions: [room: EntryLink(seq: 9, hash: positionHash)],
+            revocations: [
+                DeviceRevocation(
+                    participant: identity.id, device: other,
+                    revokedAt: Date(timeIntervalSince1970: 5_000),
+                    signature: Data(repeating: 0x0F, count: 64))
+            ],
+            uploadsLeftForOthers: [upload],
+            answeredDepartures: [EntryHash(rawValue: Data(repeating: 0x23, count: 32))],
+            greetedRooms: [room],
+            readThrough: [room: readMark],
+            organisation: RoomsListOrganisation(
+                rooms: [room: RoomOrganisation(pin: Stamped(1.0, stamp: stamp))]),
+            identities: [contact.publicKeys])
     }
 
     private static func sealed() throws -> SealedSiblingFeed {
@@ -83,6 +101,10 @@ struct SiblingFeedIsSealedTests {
             ("the display name", Data(Self.displayName.utf8)),
             ("a blocked person", Self.blocked.rawValue),
             ("the member's own id", Self.identity.id.rawValue),
+            ("where this device had got to", Self.positionHash.rawValue),
+            ("what the member had read", Self.readMark.rawValue),
+            ("a removed device", Self.other.rawValue),
+            ("somebody the member knows", Self.contact.publicKeys.signing),
         ] {
             #expect(
                 !bytes.contains(marker),
@@ -91,6 +113,31 @@ struct SiblingFeedIsSealedTests {
                 2026-08-16: the record is readable by anybody who can read the container.
                 """)
         }
+    }
+
+    @Test("Both of a device's records are sealed, and the summary carries no entries")
+    func bothRecordsAreSealed() throws {
+        let records = try DeviceRecords.seal(Self.populated(), for: Self.identity, on: Self.device)
+        let withEntries = try #require(records.entries)
+        for (name, sealed) in [("summary", records.summary), ("entries", withEntries)] {
+            for marker in [
+                Self.epochMaterial, Data(Self.displayName.utf8), Self.identity.id.rawValue,
+                Self.positionHash.rawValue, Self.readMark.rawValue,
+            ] {
+                #expect(!sealed.ciphertext.contains(marker), "the \(name) record carries a marker in the clear")
+            }
+        }
+        let summary = try records.summary.open(with: Self.identity, from: Self.device)
+        #expect(summary.entries.isEmpty, "the summary record carries entries, so it grows with them")
+        #expect(summary.positions == Self.populated().positions)
+        #expect(summary.epochs == Self.populated().epochs)
+        #expect(summary.revocations == Self.populated().revocations)
+        let entries = try withEntries.open(with: Self.identity, from: Self.device)
+        #expect(entries.entries == Self.populated().entries)
+
+        let summaryOnly = try DeviceRecords.seal(
+            Self.populated(), for: Self.identity, on: Self.device, withEntries: false)
+        #expect(summaryOnly.entries == nil, "a summary-only publish still carried the entries")
     }
 
     @Test("The fixture actually fills every field")

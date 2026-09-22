@@ -15,11 +15,18 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
     private var engine: CKSyncEngine?
     private var delegate: Delegate?
     private var handler: (@Sendable (SealedSiblingFeed, DeviceID) async -> Void)?
-    private var pending: Data?
+    private var pending: [CKRecord.ID: Data] = [:]
+    private var outcomes: [CKRecord.ID: Outcome] = [:]
+
+    private enum Outcome {
+        case saved
+        case conflict
+        case failed
+    }
 
     private var starting: Task<Void, any Error>?
 
-    private var known: CKRecord?
+    private var known: [CKRecord.ID: CKRecord] = [:]
 
     public init(container: CKContainer, device: DeviceID, stateStore: any DocumentStore) {
         self.container = container
@@ -29,26 +36,12 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
 
     private var zoneID: CKRecordZone.ID { CKRecordZone.ID(zoneName: Self.zoneName) }
 
-    private func recordID(for device: DeviceID) -> CKRecord.ID {
-        CKRecord.ID(recordName: Self.namePrefix + Self.hex(device.rawValue), zoneID: zoneID)
+    private func recordID(_ kind: DeviceRecordKind, for device: DeviceID) -> CKRecord.ID {
+        CKRecord.ID(recordName: kind.name(for: device), zoneID: zoneID)
     }
 
-    private static let namePrefix = "feed-"
-
-    private static func hex(_ data: Data) -> String {
-        data.map { String(format: "%02x", $0) }.joined()
-    }
-
-    private static func device(named name: String) -> DeviceID? {
-        guard name.hasPrefix(namePrefix) else { return nil }
-        let digits = Array(name.dropFirst(namePrefix.count))
-        guard digits.count % 2 == 0 else { return nil }
-        var bytes = Data()
-        for pair in stride(from: 0, to: digits.count, by: 2) {
-            guard let byte = UInt8(String(digits[pair...pair + 1]), radix: 16) else { return nil }
-            bytes.append(byte)
-        }
-        return DeviceID(rawValue: bytes)
+    private func ownIDs(of device: DeviceID) -> [CKRecord.ID] {
+        DeviceRecordKind.allCases.map { recordID($0, for: device) }
     }
 
     // MARK: EntrySync
@@ -85,12 +78,10 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
         engine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: zoneID))])
 
         do {
-            known = try await container.privateCloudDatabase.record(for: recordID(for: device))
-        } catch let error as CKError where error.code == .unknownItem {
-            known = nil
+            _ = try await fetchOwn(of: device)
         } catch {
             Diagnostics.sync.error(
-                "device sync: could not read this device's record: \(String(describing: error), privacy: .public)")
+                "device sync: could not read this device's records: \(String(describing: error), privacy: .public)")
         }
 
         await subscribeForPushes()
@@ -150,17 +141,79 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
         self.handler = handler
     }
 
-    public func send(_ feed: SealedSiblingFeed, from device: DeviceID) async throws {
-        pending = feed.ciphertext
+    public func send(_ records: DeviceRecords, from device: DeviceID) async throws -> DeviceRecordsSaved {
+        let summaryID = recordID(.summary, for: device)
+        let entriesID = recordID(.entries, for: device)
+        pending[summaryID] = records.summary.ciphertext
+        var writing = [summaryID]
+        if let entries = records.entries {
+            pending[entriesID] = entries.ciphertext
+            writing.append(entriesID)
+        }
 
         try await start()
-        guard let engine else { return }
+        guard let engine else { return DeviceRecordsSaved(summary: false, entries: false) }
 
-        engine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID(for: device))])
+        var saved: Set<CKRecord.ID> = []
+        for _ in 0..<2 {
+            let waiting = writing.filter { !saved.contains($0) }
+            guard !waiting.isEmpty else { break }
+            for id in waiting { outcomes[id] = nil }
+            engine.state.add(pendingRecordZoneChanges: waiting.map { .saveRecord($0) })
+            Diagnostics.sync.notice(
+                """
+                device sync: staged \(records.summary.ciphertext.count, privacy: .public) + \
+                \(records.entries?.ciphertext.count ?? 0, privacy: .public) sealed bytes
+                """)
+
+            try await engine.sendChanges()
+
+            for id in waiting where outcomes[id] == .saved { saved.insert(id) }
+            guard waiting.contains(where: { outcomes[$0] == .conflict }) else { break }
+        }
+
+        if !saved.contains(summaryID) {
+            Diagnostics.sync.error("device sync: this device's summary record was not saved")
+        }
+        if writing.contains(entriesID), !saved.contains(entriesID) {
+            Diagnostics.sync.error("device sync: this device's entries record was not saved")
+        }
+        return DeviceRecordsSaved(summary: saved.contains(summaryID), entries: saved.contains(entriesID))
+    }
+
+    public func ownRecords(of device: DeviceID) async throws -> [SealedSiblingFeed] {
+        try await start()
+        return try await fetchOwn(of: device).map(SealedSiblingFeed.init(ciphertext:))
+    }
+
+    private func fetchOwn(of device: DeviceID) async throws -> [Data] {
+        let ids = ownIDs(of: device)
+        let results: [CKRecord.ID: Result<CKRecord, any Error>]
+        do {
+            results = try await container.privateCloudDatabase.records(for: ids)
+        } catch let error as CKError where error.code == .zoneNotFound || error.code == .userDeletedZone {
+            return []
+        }
+
+        var found: [Data] = []
+        for id in ids {
+            switch results[id] {
+            case .success(let record)?:
+                known[id] = record
+                if let data = record[Self.payloadKey] as? Data { found.append(data) }
+            case .failure(let error as CKError)?
+            where error.code == .unknownItem || error.code == .zoneNotFound
+                || error.code == .userDeletedZone:
+                known[id] = nil
+            case .failure(let error)?:
+                throw error
+            case nil:
+                continue
+            }
+        }
         Diagnostics.sync.notice(
-            "device sync: staged \(feed.ciphertext.count, privacy: .public) sealed bytes")
-
-        try await engine.sendChanges()
+            "device sync: read back \(found.count, privacy: .public) of this device's own record(s)")
+        return found
     }
 
     public func refresh() async throws {
@@ -224,7 +277,7 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
             saving: [], deleting: [zoneID])
         engine = nil
         delegate = nil
-        known = nil
+        known = [:]
         try? await stateStore.clear()
         Diagnostics.sync.notice("device sync: erased every feed on this account")
     }
@@ -243,10 +296,10 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
         try await start()
         guard let engine else { return }
 
-        pending = nil
-        engine.state.add(pendingRecordZoneChanges: [.deleteRecord(recordID(for: device))])
+        for id in ownIDs(of: device) { pending[id] = nil }
+        engine.state.add(pendingRecordZoneChanges: ownIDs(of: device).map { .deleteRecord($0) })
         try await engine.sendChanges()
-        Diagnostics.sync.notice("device sync: withdrew this device's feed")
+        Diagnostics.sync.notice("device sync: withdrew this device's records")
     }
 
     // MARK: Engine callbacks
@@ -263,45 +316,43 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
             Diagnostics.sync.notice("device sync: asked for a batch with nothing staged")
             return nil
         }
-        guard let pending else {
-            Diagnostics.sync.error(
-                "device sync: \(changes.count, privacy: .public) change(s) staged but no feed to send")
-            return nil
-        }
 
-        let mine = recordID(for: device)
-        let feed = pending
-
-        let template = known
+        let payloads = pending
+        let templates = known
 
         return await CKSyncEngine.RecordZoneChangeBatch(pendingChanges: changes) { id in
-            guard id == mine else { return nil }
-
-            let record = template ?? CKRecord(recordType: Self.recordType, recordID: id)
-            record[Self.payloadKey] = feed as NSData
+            guard let payload = payloads[id] else { return nil }
+            let record = templates[id] ?? CKRecord(recordType: Self.recordType, recordID: id)
+            record[Self.payloadKey] = payload as NSData
             return record
         }
     }
 
     fileprivate func saved(_ records: [CKRecord]) {
-        for record in records where record.recordID == recordID(for: device) {
-            known = record
+        for record in records {
+            known[record.recordID] = record
+            outcomes[record.recordID] = .saved
         }
     }
 
-    fileprivate func resolve(_ record: CKRecord) {
-        guard record.recordID == recordID(for: device) else { return }
-        known = record
-        Diagnostics.sync.notice("device sync: adopted the server's copy after a conflict")
+    fileprivate func conflicted(_ server: CKRecord) async {
+        outcomes[server.recordID] = .conflict
+        Diagnostics.sync.notice(
+            "device sync: the server held a newer copy of one of this device's records; reading it first")
+        await received([server])
+        known[server.recordID] = server
+    }
+
+    fileprivate func failed(_ id: CKRecord.ID) {
+        outcomes[id] = .failed
     }
 
     fileprivate func received(_ records: [CKRecord]) async {
-        let mine = recordID(for: device)
-
-        for record in records where record.recordID != mine {
+        for record in records {
+            if let held = known[record.recordID], held.recordChangeTag == record.recordChangeTag { continue }
             guard let data = record[Self.payloadKey] as? Data else { continue }
-            guard let writer = Self.device(named: record.recordID.recordName) else {
-                Diagnostics.sync.error("device sync: a sibling record's name named no device")
+            guard let (_, writer) = DeviceRecordKind.parse(record.recordID.recordName) else {
+                Diagnostics.sync.error("device sync: a device record's name named no device")
                 continue
             }
             await handler?(SealedSiblingFeed(ciphertext: data), writer)
@@ -334,19 +385,9 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
                     if failure.error.code == .serverRecordChanged,
                         let server = failure.error.serverRecord
                     {
-                        await owner.resolve(server)
-
-                        let id = failure.record.recordID
-                        Task {
-                            syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(id)])
-                            do {
-                                try await syncEngine.sendChanges()
-                            } catch {
-                                Diagnostics.sync.error(
-                                    "device sync: retry after conflict failed: \(String(describing: error), privacy: .public)")
-                            }
-                        }
+                        await owner.conflicted(server)
                     } else {
+                        await owner.failed(failure.record.recordID)
                         Diagnostics.sync.error(
                             "device sync: save failed: \(String(describing: failure.error), privacy: .public)")
                     }
