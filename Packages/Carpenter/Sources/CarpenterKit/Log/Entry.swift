@@ -32,17 +32,26 @@ public struct Entry: Hashable, Sendable, Codable {
 
     public let payload: SealedPayload
     public let signature: Data
+    public let hash: EntryHash
 
     public var feedKey: FeedKey { FeedKey(author: author, device: device) }
 
-    public var hash: EntryHash {
+    private static func hash(signing: Data, signature: Data) -> EntryHash {
         let digest = SHA256.hash(
-            data: CanonicalBytes.payload(
-                domain: Domain.entryHash, fields: [signingPayload, signature]))
+            data: CanonicalBytes.payload(domain: Domain.entryHash, fields: [signing, signature]))
         return EntryHash(rawValue: Data(digest))
     }
 
     var signingPayload: Data {
+        Self.signingPayload(
+            author: author, device: device, seq: seq, previous: previous, clock: clock,
+            wallTime: wallTime, room: room, payload: payload)
+    }
+
+    private static func signingPayload(
+        author: ParticipantID, device: DeviceID, seq: UInt64, previous: EntryHash?,
+        clock: VectorClock, wallTime: Date, room: RoomID?, payload: SealedPayload
+    ) -> Data {
         CanonicalBytes.payload(
             domain: Domain.entry,
             fields: [
@@ -166,6 +175,7 @@ public struct Entry: Hashable, Sendable, Codable {
         room = entry.room
         payload = entry.payload
         self.signature = signature
+        hash = Self.hash(signing: entry.signingPayload, signature: signature)
     }
 
     public init(
@@ -188,6 +198,37 @@ public struct Entry: Hashable, Sendable, Codable {
         self.room = room
         self.payload = payload
         self.signature = signature
+        hash = Self.hash(
+            signing: Self.signingPayload(
+                author: author, device: device, seq: seq, previous: previous, clock: clock,
+                wallTime: wallTime, room: room, payload: payload),
+            signature: signature)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case author, device, seq, previous, clock, wallTime, room, payload, signature
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            author: try values.decode(ParticipantID.self, forKey: .author),
+            device: try values.decode(DeviceID.self, forKey: .device),
+            seq: try values.decode(UInt64.self, forKey: .seq),
+            previous: try values.decodeIfPresent(EntryHash.self, forKey: .previous),
+            clock: try values.decode(VectorClock.self, forKey: .clock),
+            wallTime: try values.decode(Date.self, forKey: .wallTime),
+            room: try values.decodeIfPresent(RoomID.self, forKey: .room),
+            payload: try values.decode(SealedPayload.self, forKey: .payload),
+            signature: try values.decode(Data.self, forKey: .signature))
+    }
+
+    public static func == (left: Entry, right: Entry) -> Bool {
+        left.hash == right.hash
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(hash)
     }
 
     public func hasValidSignature(from devicePublicKey: Data) throws -> Bool {

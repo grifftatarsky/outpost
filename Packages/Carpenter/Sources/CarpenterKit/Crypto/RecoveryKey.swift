@@ -20,11 +20,10 @@ public enum RecoveryKey {
         return """
             \(header) v\(version)
 
-            Anybody with this file can become you. There is no way to change it and no way to
-            revoke it. Keep it where you keep passwords, not where you keep photographs.
+            This is a skeleton key. Treat it carefully! There is no way to change it and no way to
+            revoke it (besides permanently deleting it).
 
-            It restores who you are, not what was said. Your conversations come back from the
-            people you were talking to. Anything nobody else still holds is gone.
+            This will restore your identity, and you can request history backfill from the people you were talking to.
 
             Created: \(made)
             Fingerprint: \(fingerprint(of: identity))

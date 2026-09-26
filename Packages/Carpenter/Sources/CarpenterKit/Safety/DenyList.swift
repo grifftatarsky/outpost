@@ -38,11 +38,19 @@ public struct DenyList: Hashable, Sendable {
         return list
     }
 
+    private static let hexDigits = Array("0123456789abcdef".utf8)
+
     public static func fingerprint(of participant: ParticipantID) -> String {
-        SHA256.hash(data: participant.rawValue).map { String(format: "%02x", $0) }.joined()
+        var hex: [UInt8] = []
+        hex.reserveCapacity(SHA256.byteCount * 2)
+        for byte in SHA256.hash(data: participant.rawValue) {
+            hex.append(hexDigits[Int(byte >> 4)])
+            hex.append(hexDigits[Int(byte & 0x0f)])
+        }
+        return String(decoding: hex, as: UTF8.self)
     }
 
     public func contains(_ participant: ParticipantID) -> Bool {
-        fingerprints.contains(Self.fingerprint(of: participant))
+        !fingerprints.isEmpty && fingerprints.contains(Self.fingerprint(of: participant))
     }
 }

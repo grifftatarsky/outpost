@@ -32,7 +32,7 @@ public struct RecoveryKeyView: View {
                         icon: "key.horizontal.fill",
                         title: Text("Your recovery key", bundle: .module),
                         paragraph: Text(
-                            "This file is the only way back into this account if you lose every device you own. There is no password to reset and nobody to ask — not us, because we have nothing of yours to give back.",
+                            "Save this file in a safe place. This is the only way back into your account if all devices are lost.",
                             bundle: .module))
                 }
                 .groupedRowSurface()
@@ -44,10 +44,10 @@ public struct RecoveryKeyView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                 } header: {
-                    Text("What is on it", bundle: .module).sectionHeading()
+                    Text("The Key", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
-                        "These six characters are printed on the file, so you can tell it from anybody else's. It holds your keys and nothing else — no messages, and nothing anybody wrote to you.",
+                        "These six characters are your identifier, so your recovery key is distinct from all others. It holds your identity, but no history.",
                         bundle: .module)
                 }
                 .groupedRowSurface()
@@ -98,7 +98,7 @@ public struct RecoveryKeyView: View {
                     preview: SharePreview(
                         Text("\(Branding.displayName) recovery key", bundle: .module))
                 ) {
-                    Text("Save my key", bundle: .module).primaryAction()
+                    Text("Save key", bundle: .module).primaryAction()
                 }
                 .prominentActionButton()
                 .simultaneousGesture(TapGesture().onEnded { onSaved() })
@@ -118,7 +118,7 @@ public struct RecoveryKeyView: View {
         }
         .background(palette.background)
         // COPY BEGIN 62a19f8e [NEEDS HUMAN REVIEW]
-        .navigationTitle(Text("Recovery key", bundle: .module))
+        .navigationTitle(Text("Recovery Key", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .confirmationDialog(
             Text("Continue without your key?", bundle: .module),

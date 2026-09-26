@@ -3,14 +3,24 @@ import Foundation
 extension Projection {
     // MARK: Names
 
-    public var members: [ParticipantID: Member] {
+    static func namesAndBadges(
+        in rendered: [RenderedEntry]
+    ) -> (members: [ParticipantID: Member], badges: Set<ParticipantID>) {
         var names: [ParticipantID: Member] = [:]
-        for entry in rendered where entry.type == .memberProfile {
-            if case .text(let name) = entry.content, !name.isEmpty {
-                names[entry.author] = Member(id: entry.author, displayName: name)
+        var shows: [ParticipantID: Bool] = [:]
+        for entry in rendered {
+            switch entry.type {
+            case .memberProfile:
+                if case .text(let name) = entry.content, !name.isEmpty {
+                    names[entry.author] = Member(id: entry.author, displayName: name)
+                }
+            case .supporterBadge:
+                if let badge = entry.supporterBadge { shows[entry.author] = badge.shows }
+            default:
+                continue
             }
         }
-        return names
+        return (names, Set(shows.filter(\.value).keys))
     }
 
     public func member(_ id: ParticipantID) -> Member {
@@ -40,7 +50,7 @@ extension Projection {
         return named
     }
 
-    public func peopleInRooms(opening: (RenderedEntry) -> Payload?) -> Set<ParticipantID> {
+    public func rosters(opening: (RenderedEntry) -> Payload?) -> [RoomID: RoomRoster] {
         var rosters: [RoomID: RoomRoster] = [:]
         for entry in rendered {
             guard let room = entry.room, RoomRoster.rosterShaping.contains(entry.type) else {
@@ -49,6 +59,10 @@ extension Projection {
             guard let payload = opening(entry) else { continue }
             rosters[room, default: RoomRoster(room: room)].apply(entry, body: payload)
         }
+        return rosters
+    }
+
+    public static func people(in rosters: [RoomID: RoomRoster]) -> Set<ParticipantID> {
         var people: Set<ParticipantID> = []
         for roster in rosters.values {
             people.formUnion(roster.members)
@@ -71,9 +85,7 @@ extension Projection {
     }
 
     public func announcedName(of author: ParticipantID, in room: RoomID) -> String? {
-        let last = rendered.last {
-            $0.room == room && $0.type == .memberProfile && $0.author == author
-        }
+        let last = entries(in: room).last { $0.type == .memberProfile && $0.author == author }
         if case .text(let name) = last?.content, !name.isEmpty { return name }
         return nil
     }
@@ -127,7 +139,7 @@ extension Projection {
     }
 
     public func announcedPhoto(of author: ParticipantID, in room: RoomID) -> AttachmentReference?? {
-        rendered.last { $0.room == room && $0.type == .memberPhoto && $0.author == author }?.memberPhoto
+        entries(in: room).last { $0.type == .memberPhoto && $0.author == author }?.memberPhoto
             .map(\.reference)
     }
 
@@ -136,19 +148,10 @@ extension Projection {
     }
 
     public func lastFocusStatus(of author: ParticipantID, in room: RoomID) -> FocusStatusBody? {
-        rendered.last { $0.room == room && $0.type == .focusStatus && $0.author == author }?.focusStatus
-    }
-
-    public var supporterBadges: Set<ParticipantID> {
-        var latest: [ParticipantID: Bool] = [:]
-        for entry in rendered where entry.type == .supporterBadge {
-            guard let badge = entry.supporterBadge else { continue }
-            latest[entry.author] = badge.shows
-        }
-        return Set(latest.filter(\.value).keys)
+        entries(in: room).last { $0.type == .focusStatus && $0.author == author }?.focusStatus
     }
 
     public func lastSupporterBadge(of author: ParticipantID, in room: RoomID) -> SupporterBadgeBody? {
-        rendered.last { $0.room == room && $0.type == .supporterBadge && $0.author == author }?.supporterBadge
+        entries(in: room).last { $0.type == .supporterBadge && $0.author == author }?.supporterBadge
     }
 }

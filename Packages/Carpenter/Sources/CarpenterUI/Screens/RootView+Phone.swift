@@ -85,11 +85,6 @@ extension RootView {
                     NavigationStack(path: roomPath) {
                         RoomsListView(
                             rooms: visibleRooms,
-                            // A split inbox used to hand `awaiting` to the Solos tab and not this
-                            // one, so somebody waiting to be let into a room saw the invitation on
-                            // the wrong tab and never on this one. An invitation that is invisible
-                            // is worse than one shown twice, so both tabs get it until
-                            // `AwaitingAdmission` can say which kind of room it is for.
                             awaiting: awaitingAdmission,
                             managedTags: managedTags,
                             scope: .groups,
@@ -198,11 +193,6 @@ extension RootView {
 
             Tab(value: PhoneTab.you) {
                 NavigationStack {
-                    // One constructor for both platforms. There were two, with the same very
-                    // long argument list, and they had already drifted: this one omitted
-                    // `tutorialMode`, so *Help on every screen* wrote a preference that nothing
-                    // on iPhone read — the exact defect its own ticket claimed to have fixed,
-                    // fixed on the desktop path only. Found by walking the rig, 2026-09-15.
                     youScreen
                     .navigationDestination(for: ParticipantID.self) { id in
                         outpostDestination(id)
@@ -226,9 +216,6 @@ extension RootView {
         .environment(\.showsAvatars, preferences.showsAvatars)
         .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)
         .environment(\.hapticsEnabled, theme.playsHaptics)
-        .onChange(of: organisation) { _, updated in
-            onOrganisationChange { $0 = updated }
-        }
     }
 
     func moveRooms(from source: IndexSet, to destination: Int) {
@@ -239,13 +226,11 @@ extension RootView {
             let landing = order.firstIndex(where: { $0.id == moved.id })
         else { return }
 
-        onOrganisationChange { organisation in
-            organisation.movePin(
-                moved.id,
-                between: landing > 0 ? order[landing - 1].id : nil,
-                and: landing < order.count - 1 ? order[landing + 1].id : nil,
-                stamp: OrganisationStamp(at: roomClock.now, device: stampDevice))
-        }
+        organisation.movePin(
+            moved.id,
+            between: landing > 0 ? order[landing - 1].id : nil,
+            and: landing < order.count - 1 ? order[landing + 1].id : nil,
+            stamp: OrganisationStamp(at: roomClock.now, device: stampDevice))
     }
 
     var youScreen: some View {
@@ -261,6 +246,7 @@ extension RootView {
                 get: { notificationLevel },
                 set: { value in Task { await onNotificationLevelChange(value) } }),
             debugActions: debugActions,
+            testProfiles: testProfiles,
             demoConversation: $theme.demoConversation,
             demoParticipants: $theme.demoParticipants,
             demoOutpost: $theme.demoOutpost,

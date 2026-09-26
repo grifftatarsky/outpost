@@ -80,8 +80,8 @@ struct OutpostReviewTests {
         #expect(alice.outpostReaders().isEmpty)
     }
 
-    @Test("Saying no to somebody who was never let in does not turn the wall's key")
-    func refusingCostsNoKeyTurn() async throws {
+    @Test("Saying no to somebody who was never let in does not rotate the wall's key")
+    func refusingCostsNoKeyRotation() async throws {
         let (alice, joiners, _, mailbox) = try await room(with: ["Hastur", "Camilla"])
         try await alice.send("before any of it", to: nil)
         try await settle([alice] + joiners, through: mailbox)
@@ -95,13 +95,13 @@ struct OutpostReviewTests {
         try await alice.revokeOutpost(try #require(joiners[0].enrolment?.identity.id))
         #expect(
             alice.entryCount == before + 1,
-            "the wall's key turned to shut out somebody who was never let in")
+            "the wall's key was rotated to shut out somebody who was never let in")
 
         let quiet = alice.entryCount
         try await alice.revokeOutpost(camilla)
         #expect(
             alice.entryCount == quiet + 2,
-            "the key did not turn for a reader who actually held it")
+            "the key was not rotated for a reader who actually held it")
     }
 
     @Test("Later silences the room about the people it was asked about")

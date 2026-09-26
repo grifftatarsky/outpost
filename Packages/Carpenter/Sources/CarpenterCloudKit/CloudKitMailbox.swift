@@ -73,8 +73,8 @@ public struct CloudKitMailbox: Mailbox, MediaMailbox {
 
     static func inWriteOrder(_ records: [CKRecord]) -> [CKRecord] {
         records.sorted {
-            let mine = $0.modificationDate ?? .distantPast
-            let theirs = $1.modificationDate ?? .distantPast
+            let mine = $0.creationDate ?? .distantPast
+            let theirs = $1.creationDate ?? .distantPast
             if mine != theirs { return mine < theirs }
             return $0.recordID.recordName < $1.recordID.recordName
         }

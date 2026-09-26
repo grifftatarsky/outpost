@@ -66,15 +66,16 @@ public struct Replica: Sendable {
         feeds.values.reduce(0) { $0 + $1.values.reduce(0) { $0 + $1.count } }
     }
 
-    public var allEntries: [Entry] {
-        feeds.values.flatMap { $0.values.flatMap(\.values) }
-    }
+    public private(set) var allEntries: [Entry] = []
+    public private(set) var revision = UUID()
 
     public var hasDiverged: Bool { !forks.isEmpty }
 
     public mutating func introduce(_ identity: IdentityPublicKeys) {
-        registries[identity.participantID] = registries[identity.participantID]
-            ?? DeviceRegistry(identity: identity)
+        let participant = identity.participantID
+        guard registries[participant] == nil else { return }
+        registries[participant] = DeviceRegistry(identity: identity)
+        revision = UUID()
     }
 
     public mutating func admit(_ certificate: DeviceCertificate) throws {
@@ -82,7 +83,9 @@ public struct Replica: Sendable {
             throw LogError.unknownParticipant
         }
         try registry.admit(certificate)
+        guard registry != registries[certificate.participant] else { return }
         registries[certificate.participant] = registry
+        revision = UUID()
     }
 
     public mutating func revoke(_ revocation: DeviceRevocation) throws {
@@ -90,7 +93,9 @@ public struct Replica: Sendable {
             throw LogError.unknownParticipant
         }
         try registry.revoke(revocation)
+        guard registry != registries[revocation.participant] else { return }
         registries[revocation.participant] = registry
+        revision = UUID()
     }
 
     public var knownParticipants: Set<ParticipantID> { Set(registries.keys) }
@@ -99,15 +104,36 @@ public struct Replica: Sendable {
         registries[participant]
     }
 
+    public func signatureChecks(
+        for entries: [Entry], alsoTrusting certificates: [DeviceCertificate] = []
+    ) async -> SignatureChecks {
+        var offered: [FeedKey: Data] = [:]
+        for certificate in certificates {
+            offered[FeedKey(author: certificate.participant, device: certificate.device)] =
+                certificate.devicePublicKey
+        }
+        let signed = entries.compactMap { entry -> (entry: Entry, key: Data)? in
+            guard feeds[entry.feedKey]?[entry.seq]?[entry.hash] == nil,
+                let key = registries[entry.author]?.signingKey(for: entry.device) ?? offered[entry.feedKey]
+            else { return nil }
+            return (entry, key)
+        }
+        return await SignatureChecks.verifying(signed)
+    }
+
     @discardableResult
-    public mutating func integrate(_ entry: Entry) throws -> IntegrationResult {
+    public mutating func integrate(
+        _ entry: Entry, checked: SignatureChecks = SignatureChecks()
+    ) throws -> IntegrationResult {
+        if feeds[entry.feedKey]?[entry.seq]?[entry.hash] != nil { return .alreadyPresent }
         guard let registry = registries[entry.author] else { throw LogError.unknownParticipant }
         guard registry.isAuthorized(entry.device, at: entry.wallTime),
             let deviceKey = registry.signingKey(for: entry.device)
         else {
             throw LogError.unauthorizedDevice
         }
-        guard try entry.hasValidSignature(from: deviceKey) else { throw LogError.badSignature }
+        guard try checked.vouches(for: entry, signedWith: deviceKey) || entry.hasValidSignature(from: deviceKey)
+        else { throw LogError.badSignature }
 
         if spent[entry.feedKey]?[entry.seq] != nil { return .alreadyPresent }
 
@@ -121,8 +147,10 @@ public struct Replica: Sendable {
             return .alreadyPresent
         }
 
+        revision = UUID()
         feeds[entry.feedKey, default: [:]][entry.seq, default: [:]][entry.hash] = entry
-        claimed = claimed.merging(entry.clock)
+        allEntries.append(entry)
+        for (feed, seq) in entry.clock.positions { claimed.observe(feed, seq: seq) }
         if existingAtSeq.isEmpty { occupy(entry.seq, in: entry.feedKey) }
 
         guard !existingAtSeq.isEmpty else { return .accepted }
@@ -171,12 +199,14 @@ public struct Replica: Sendable {
     }
 
     public mutating func restore(spent entries: [SpentEntry], closing rooms: Set<RoomID>) {
+        revision = UUID()
         closedRooms.formUnion(rooms)
         for entry in entries where feeds[entry.feed]?[entry.seq] == nil { spend(entry) }
     }
 
     @discardableResult
     public mutating func close(_ room: RoomID) -> [Entry] {
+        revision = UUID()
         closedRooms.insert(room)
         var taken: [Entry] = []
         for (feed, bySeq) in feeds {
@@ -198,11 +228,16 @@ public struct Replica: Sendable {
             }
             feeds[feed] = kept.isEmpty ? nil : kept
         }
+        if !taken.isEmpty {
+            let gone = Set(taken.map(\.hash))
+            allEntries.removeAll { gone.contains($0.hash) }
+        }
         forks.removeAll { fork in (feeds[fork.feed]?[fork.seq]?.count ?? 0) < 2 }
         return taken
     }
 
     public mutating func reopen(_ room: RoomID) {
+        revision = UUID()
         closedRooms.remove(room)
         var touched: Set<FeedKey> = []
         for (feed, bySeq) in spent {
@@ -215,6 +250,7 @@ public struct Replica: Sendable {
     }
 
     private mutating func spend(_ entry: SpentEntry) {
+        revision = UUID()
         spent[entry.feed, default: [:]][entry.seq] = entry
         occupy(entry.seq, in: entry.feed)
     }
@@ -264,11 +300,6 @@ public struct Replica: Sendable {
         return clock
     }
 
-    public func head(of feed: FeedKey) -> Entry? {
-        guard let bySeq = feeds[feed], let highest = bySeq.keys.max() else { return nil }
-        return bySeq[highest]?.values.min { $0.hash.rawValue.lexicographicallyPrecedes($1.hash.rawValue) }
-    }
-
     // MARK: What is missing
 
     public var heldFeeds: Set<FeedKey> { Set(feeds.keys) }
@@ -277,6 +308,27 @@ public struct Replica: Sendable {
 
     public func entries(in feed: FeedKey, at seq: UInt64) -> [Entry] {
         feeds[feed]?[seq].map { Array($0.values) } ?? []
+    }
+
+    public func entries(in feed: FeedKey, after seq: UInt64) -> [Entry] {
+        guard let bySeq = feeds[feed] else { return [] }
+        var found: [Entry] = []
+        func take(_ position: UInt64) {
+            guard let atSeq = bySeq[position] else { return }
+            if atSeq.count == 1, let only = atSeq.first {
+                found.append(only.value)
+            } else {
+                found.append(
+                    contentsOf: atSeq.values.sorted { $0.hash.rawValue.lexicographicallyPrecedes($1.hash.rawValue) })
+            }
+        }
+
+        let run = contiguous[feed] ?? 0
+        if seq < run {
+            for position in (seq + 1)...run { take(position) }
+        }
+        for position in (scattered[feed] ?? []).filter({ $0 > seq }).sorted() { take(position) }
+        return found
     }
 
     public func heads(of authors: Set<ParticipantID>) -> VectorClock {
@@ -296,12 +348,30 @@ public struct Replica: Sendable {
             let run = contiguous[key] ?? 0
             let top = Swift.max(highest[key] ?? 0, claimed[key])
             guard top > run else { continue }
-            let held = scattered[key] ?? []
-            let missing = ((run + 1)...top).filter { !held.contains($0) }
+            let held = FeedGap.spans(of: (scattered[key] ?? []).sorted())
+            let missing = [SequenceSpan(run + 1, top)].subtracting(held)
             if !missing.isEmpty {
-                found.append(FeedGap(feed: key, spans: FeedGap.spans(of: missing)))
+                found.append(FeedGap(feed: key, spans: missing))
             }
         }
         return found
+    }
+
+    func occupied(in feed: FeedKey, within spans: [SequenceSpan]) -> [UInt64] {
+        let run = contiguous[feed] ?? 0
+        let beyond = (scattered[feed] ?? []).sorted()
+        var positions: [UInt64] = []
+        var next = 0
+        for span in spans.normalized {
+            let lower = Swift.max(span.lower, 1)
+            let upper = Swift.min(span.upper, run)
+            if lower <= upper { positions.append(contentsOf: lower...upper) }
+            while next < beyond.count, beyond[next] < span.lower { next += 1 }
+            while next < beyond.count, beyond[next] <= span.upper {
+                positions.append(beyond[next])
+                next += 1
+            }
+        }
+        return positions
     }
 }

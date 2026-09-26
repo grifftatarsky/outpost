@@ -149,7 +149,7 @@ struct SoloCheckPresentationTests {
         let reopened = shown(check)
         #expect(
             reopened == .refused(by: naming(them), at: start, answerable: naming(them)),
-            "the way out the fold describes is not on the screen")
+            "the way out the check describes is not on the screen")
         #expect(reopened.canAnswer)
         #expect(reopened.closesTheComposer, "answering it is the way out, not carrying on")
     }
@@ -199,17 +199,17 @@ struct SoloCheckPresentationTests {
             "the other person's screen can tell whether the asker held, which is one line from letting it freeze them")
     }
 
-    @Test("A room is never held by the solo setting, whatever has been folded")
+    @Test("A room is never held by the solo setting, whatever the log says")
     func aRoomIsNeverHeld() throws {
         let asked = try check(askedBy: them)
         let refused = try check(askedBy: me, answeredBy: them, matched: false)
         let confirmed = try check(askedBy: me, answeredBy: them, matched: true)
 
-        for folded in [try check(), asked, refused, confirmed] {
+        for soloCheck in [try check(), asked, refused, confirmed] {
             for requires in [true, false] {
                 for holding in [true, false] {
                     let inARoom = shown(
-                        folded, isSolo: false, requiresCheck: requires, isHolding: holding)
+                        soloCheck, isSolo: false, requiresCheck: requires, isHolding: holding)
                     #expect(
                         inARoom == .nothing,
                         "a room drew \(inARoom), and a room has no six characters to check")

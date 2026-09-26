@@ -47,28 +47,32 @@ extension Projection {
     }
 
     public func posts(by author: ParticipantID) -> [OutpostPost] {
-        outpostEntries.filter { $0.author == author }.map(post)
+        posts(outpostEntries.filter { $0.author == author })
     }
 
     public func feed() -> [OutpostPost] {
-        outpostEntries.map(post)
+        posts(outpostEntries)
+    }
+
+    private func posts(_ entries: [RenderedEntry]) -> [OutpostPost] {
+        var replies: [EntryHash: [RenderedEntry]] = [:]
+        for entry in rendered where entry.type == .comment && entry.isReadable {
+            if let target = entry.replyingTo { replies[target, default: []].append(entry) }
+        }
+        return entries.map { post($0, replies: replies[$0.id] ?? []) }
     }
 
     public func outpostAuthors() -> [Member] {
-        var seen: [ParticipantID] = []
-        for entry in outpostEntries where !seen.contains(entry.author) {
-            seen.append(entry.author)
-        }
-        let others = seen.filter { $0 != viewer }.map(member)
-        return (seen.contains(viewer) ? [member(viewer)] : []) + others
+        let others = outpostAuthorOrder.filter { $0 != viewer }.map(member)
+        return (outpostAuthorOrder.contains(viewer) ? [member(viewer)] : []) + others
     }
 
     private var outpostEntries: [RenderedEntry] {
         rendered.filter { $0.room == nil && $0.isConversation && $0.isReadable }.reversed()
     }
 
-    private func post(_ entry: RenderedEntry) -> OutpostPost {
-        let replies = comments(on: entry.id)
+    private func post(_ entry: RenderedEntry, replies entries: [RenderedEntry]) -> OutpostPost {
+        let replies = entries.map(comment)
         let media: [MediaAttachment]
         let body: String
         if case .media(let photo) = entry.content {
@@ -96,17 +100,19 @@ extension Projection {
     public func comments(on target: EntryHash) -> [OutpostComment] {
         rendered
             .filter { $0.type == .comment && $0.replyingTo == target && $0.isReadable }
-            .map { entry in
-                OutpostComment(
-                    id: PostID(entry: entry.id),
-                    author: member(entry.author),
-                    body: preview(entry, withdrawn: Self.withdrawnComment),
-                    postedAt: entry.wallTime,
-                    reactions: entry.reactions,
-                    isMine: entry.author == viewer,
-                    editedAt: entry.editedAt,
-                    isWithdrawn: Self.isWithdrawn(entry)
-                )
-            }
+            .map(comment)
+    }
+
+    private func comment(_ entry: RenderedEntry) -> OutpostComment {
+        OutpostComment(
+            id: PostID(entry: entry.id),
+            author: member(entry.author),
+            body: preview(entry, withdrawn: Self.withdrawnComment),
+            postedAt: entry.wallTime,
+            reactions: entry.reactions,
+            isMine: entry.author == viewer,
+            editedAt: entry.editedAt,
+            isWithdrawn: Self.isWithdrawn(entry)
+        )
     }
 }

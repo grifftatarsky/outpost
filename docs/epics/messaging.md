@@ -45,7 +45,7 @@ messenger and not a notebook.
 
 - **Done.** A message is sealed under the room's epoch key on the sending device and left in the sender's
   own iCloud, addressed to a rotating tag per recipient.
-- **Done.** The recipient collects it, verifies the chain, folds it, and acknowledges so the sender can
+- **Done.** The recipient collects it, verifies the chain, adds it to the log, and acknowledges so the sender can
   delete it.
 - **Done.** It arrives with the recipient's app closed, in order, once.
 - **Done.** Two sends in immediate succession both arrive, in order.
@@ -53,7 +53,7 @@ messenger and not a notebook.
 
 **Testing**
 
-- Suite: the sync, fold, replica-race and stranded-packet suites. The in-memory mailbox stores wire
+- Suite: the sync, rendering, replica-race and stranded-packet suites. The in-memory mailbox stores wire
   fields and counts every server operation, so a test that says "writes nothing" counts everything.
 - Two accounts, 2026-09-01: introduce and join, send each way, send with the app closed, two in
   succession. All passed; see [what has actually been observed](#what-has-actually-been-observed).

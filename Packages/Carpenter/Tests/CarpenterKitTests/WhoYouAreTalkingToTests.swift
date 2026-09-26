@@ -67,7 +67,7 @@ struct WhoYouAreTalkingToTests {
             "the later copy of the same confirmation moved the date")
     }
 
-    @Test("A confirmation that folds to nothing leaves no date")
+    @Test("A confirmation that counts for nothing leaves no date")
     func aForgeryLeavesNoDate() throws {
         let inviter = Identity.generate()
         let joiner = Identity.generate()

@@ -44,7 +44,7 @@ for what that is and, more importantly, what it cannot prove.
 Griff (an account), Outie (a second account) and **Trig** (no account, an erased iPhone 17) are in a
 room called **Triangle**. Both joins ran the full round trip over the directory — invitation, the six
 characters read off both screens (**7M3HZF** for Trig, **V748WW** for Outie), confirmation, the
-inviter folding it, the epoch grant collected. All three devices say *Triangle — 3 members*, and all
+inviter recording it, the epoch grant collected. All three devices say *Triangle — 3 members*, and all
 three transcripts read the same six lines:
 
 > Griff started Triangle · Griff invited Trig · Trig confirmed the invitation ·
@@ -211,7 +211,7 @@ roster, and where an invitation is enough that roster reaches B through ordinary
 
   The choice was already in the model — `attest` and `invite` have taken an `InvitationLifetime`
   since expiry existed and nothing ever passed one — so that half was a picker. The purge was not:
-  `PayloadType.invitationRescinded` = 22 is new, and the room folds it. **It reaches nobody's
+  `PayloadType.invitationRescinded` = 22 is new, and the room records it. **It reaches nobody's
   device.** Whoever holds the link still holds it and can still confirm; what changes is that the
   room declines to admit on that invitation, which is the only shape available when the other party
   may be offline or may be the party this exists to protect against.
@@ -219,7 +219,7 @@ roster, and where an invitation is enough that roster reaches B through ordinary
   waits. The gate is in `RoomRoster.isAdmitted`, ahead of all six rules and touching none of them,
   and `RoomAccessTests` still passes unchanged. Both waiting states are drawn: the inviter's in the
   member list, and the joiner's as a *Waiting to be let in* row at the top of their own list, which
-  is a room-shaped state for a room the device does not hold.
+  is drawn like a room for a room the device does not hold yet.
 - **Done.** `member(x)` where x has left still fails closed, as it does today — `RoomAccessTests`, unchanged.
 - **Done.** The phrase stays reachable from the room afterwards, on both sides: *Who you are talking to*,
   in the room's menu, with the date beside each person. *Waiting to join* is now drawn only when
@@ -227,7 +227,7 @@ roster, and where an invitation is enough that roster reaches B through ordinary
 
   **The date is when the room recorded the confirmation**, and the screen says so in those words. It
   is not when the other person tapped — no device here saw that — and `RoomRoster.confirmations`
-  keeps the earliest entry time so two devices folding in different orders cannot show different
+  keeps the earliest entry time so two devices reading entries in different orders cannot show different
   dates. The joiner's side is answerable only because `PersistedState.acceptedInvitations` is
   append-only: it is their sole copy of the attestation the phrase is derived from.
 
@@ -237,7 +237,7 @@ roster, and where an invitation is enough that roster reaches B through ordinary
 
 **Wire, as built.** **Two** cases, and neither is a refusal — a refusal still does not travel.
 `PayloadType.joinConfirmed` = 21 in stage 2, and `PayloadType.invitationRescinded` = 22 in stage 3,
-both in `allKnown` and `plumbing`. The second is the purge this ticket folds in, which was the one
+both in `allKnown` and `plumbing`. The second is the purge this ticket includes, which was the one
 part of *A controls how long an invitation lives* with no model behind it at all.
 
 The claim this paragraph used to make — that an older build would "treat both as plumbing so they
@@ -253,7 +253,7 @@ fell out of it that each broke everything on their own — including why it is a
 than an entry on the joiner's own feed. See
 [Decisions](../decisions.md#an-invitation-is-an-offer-not-an-admission).
 
-**Testing, as done.** `InvitationInvariantTests` pinned the old behavior first — one epoch turn per
+**Testing, as done.** `InvitationInvariantTests` pinned the old behavior first — one key rotation per
 join, the inviter keeping the joiner's keys, `mayWrite` not becoming the gate, tightening evicting
 nobody — and all four survived, which is the signal the change was right rather than merely green.
 `InvitationIsAnOfferTests` covers the roster; `JoinConfirmationWireTests` covers the payload,
@@ -294,7 +294,7 @@ room's admission machinery, which does not fit two people.
   > *"An incoming solo is held rather than opened"* — what the build holds is the **composer**, and
   > it holds it wherever a write would come from, not only where the text field is. The conversation
   > itself is not hidden: its messages, its banner and its unread mark are unchanged. A state that
-  > closed the whole thing would be a fourth `RoomStanding`, folded from the log, and this is not a
+  > closed the whole thing would be a fourth `RoomStanding`, derived from the log, and this is not a
   > fact about the log — it is one member's setting.
   >
   > *"The sender is told it is held"* — **it cannot be, and the app does not pretend to.** The ask
@@ -392,11 +392,11 @@ it, and bring people I already know, so that the room is the shape I meant befor
 **Testing**
 
 - Suite: the policy threshold and the greeting suites.
-- Two accounts: driven 2026-09-01; the invitee's sheet 2026-09-02. Turning the room's key on an
+- Two accounts: driven 2026-09-01; the invitee's sheet 2026-09-02. Rotating the room's key on an
   open invitation was fixed in the same pass.
 
-**Design.** Boards 74 (New room) and 75 (Admission policy), with the advanced-toggle departure recorded
-in [Design](../design.md#board-74--the-admission-policy-sits-behind-an-advanced-toggle).
+**Design.** Boards 74 (New room) and 75 (Admission policy). The admission policy sits behind an advanced
+toggle, which differs from the board.
 
 <!-- COPY END c72d9029 -->
 
@@ -457,8 +457,8 @@ correct rather than only add to.
 **Acceptance criteria**
 
 - **Done.** Any member of a room may remove any other, including whoever made it, and the removal is an
-  entry every device folds.
-- **Done.** Removal turns the room's epoch and the removed member is not granted the new key. They keep
+  entry every device records.
+- **Done.** Removal rotates the room's key and the removed member is not granted the new key. They keep
   what they already hold, and the app does not claim otherwise.
 - **Done.** The removed member's copy says *"You were removed from this room"* in those words, keeps the
   history readable, and blocks the composer. No push, no banner, no message to them from the room.
@@ -469,7 +469,7 @@ correct rather than only add to.
 
 **Testing**
 
-- Suite: twenty tests over the fold and the session.
+- Suite: twenty tests over `RoomRoster` and the session.
 - Two accounts, 2026-09-02: all three removal steps passed. Alpha sent after removing Beta; the
   entry reached Beta and drew as *Not readable on this device*; Beta's log shows `installed epoch
   1` ten times and `installed epoch 2` never. Survived relaunch on both sides.
@@ -532,7 +532,7 @@ what I meant to stop.
   not drawn, and coming back is a fresh join.
 - **Done.** It is not a removal and nothing merges the two: two types, two roster maps, two notices, two
   errors.
-- **Done.** The leaver does not turn the key. Somebody who stays does, the founder if still here and
+- **Done.** The leaver does not rotate the key. Somebody who stays does, the founder if still here and
   otherwise the lowest identity remaining, named identically on every device.
 - **Done.** The confirmation states what will happen; the room says what the leaver keeps: *"You left this
   room. Everything already here is still yours to read."*
@@ -541,11 +541,11 @@ what I meant to stop.
 
 - Suite: the departure suites.
 - Two accounts, 2026-09-02: Beta left from the rooms list; both copies drew *"Beta left this room"*;
-  Alpha dropped to one member and turned the key to epoch 2; Beta stayed on epoch 1.
+  Alpha dropped to one member and rotated the key to epoch 2; Beta stayed on epoch 1.
 
 **Design.** Boards 23–25, of which one step is built. **Decisions.**
 [Leaving and being removed are two acts](../decisions.md#leaving-and-being-removed-are-two-acts-and-never-one-with-a-flag)
-· [Somebody who stays turns the key](../decisions.md#somebody-who-stays-turns-the-key-after-somebody-leaves).
+· [Somebody who stays rotates the key](../decisions.md#somebody-who-stays-rotates-the-key-after-somebody-leaves).
 
 <!-- COPY END 9026ca40 -->
 
@@ -557,7 +557,7 @@ what I meant to stop.
 Leaving used to be a swipe that cleared a pin: membership stayed in the log, the room came back on
 the next sync, and everybody else went on addressing packets to somebody who believed they had gone.
 The author *is* the subject, which is what makes the entry's signature the whole of the proof. The
-leaver must not turn the key because `advanceEpoch` keeps the secret it generates, so they would walk
+leaver must not rotate the key because `advanceEpoch` keeps the secret it generates, so they would walk
 out holding the key to everything said afterwards. iMessage tells a removed person "You have left
 this conversation"; the mirror of that lie is naming a remover for somebody who walked out, and this
 app makes neither claim.
@@ -594,11 +594,11 @@ mine to read.
   outright: a wall has a single owner and nobody else to hand its key over.
 - **Done.** The filter lives at the `CarpenterApp` call sites — `notShutOut(_:)` — and never inside
   `RoomRoster`. The roster is derived from entries every member replays; a local choice inside it
-  would make the fold device-specific and two devices would disagree about who is in a room.
+  would make the member list device-specific and two devices would disagree about who is in a room.
 - **Done.** Nothing said while somebody was blocked is lost. The sender never had an acknowledgment, so
   the packet is still on offer and comes back on the round after they are unblocked.
-- **Changed.** **Blocking does not turn the room's epoch.** Proposed, then dropped on building it: in a group
-  every other member re-grants the key, so the turn buys nothing and costs everyone a re-key; in a
+- **Changed.** **Blocking does not rotate the room's key.** Proposed, then dropped on building it: in a group
+  every other member re-grants the key, so the rotation buys nothing and costs everyone a re-key; in a
   direct conversation not answering has already done it. Recorded rather than left silent, because
   the cost is real — inside a shared room a block is this device refusing to deal with somebody,
   not a wall around what they can read.
@@ -674,10 +674,10 @@ is not defined by which rooms I happen to be in.
 - **Done.** The model, `OutpostAccess`: an allow-list defaulting to nobody, grants from a date, revocation
   as a stamped false, per-person cross-device merge, and an inherited origin for today's readers.
 - **Done.** Posts sealed to the granted people rather than filtered at render time. There was no
-  room-shaped grant to remove: a wall's roster is empty and always will be, so the old rule was
+  roster-based grant to remove: a wall's roster is empty and always will be, so the old rule was
   already granting nobody anything.
 - **Done.** The migration: there is none to write, and that is the finding rather than a gap. Nobody could
-  read any wall before this, so there is no room-shaped reader to mint an inherited grant for. The
+  read any wall before this, so there is no existing reader to make an inherited grant for. The
   `inherited` origin stays in the model for a migration that a future rule might need.
 - **Done.** Granting access to everything is a separate, deliberate confirmation.
 - **Done.** A new room raises a non-blocking prompt in the conversation, a row and not a sheet; the review
@@ -715,8 +715,8 @@ is not defined by which rooms I happen to be in.
   now" claims. Beta's log reads `adopt: installed epoch 1 for a room (link absent…)` — the grant
   arriving with no way back — and the request for the wall it had just been let into.
 - **Two accounts, 2026-09-07, second run** — the half the first run could not reach. Alpha removed
-  beta, whose row moved to *You have not decided / Cannot see it* with no key-turn notice, so the
-  wall's epoch had turned in the same breath. Alpha then posted a two-picture gallery while nobody
+  beta, whose row moved to *You have not decided / Cannot see it* with no key-rotation notice, so the
+  wall's key had been rotated at the same moment. Alpha then posted a two-picture gallery while nobody
   could see the wall, uploading `recipients=0` twice, and let beta back in to *everything*. The next
   round logged `outpost: re-offered 3 wall picture(s) to 1 new reader(s); 0 no longer here`, and
   beta answered with `adopt: installed epoch 2 for a room (link present, now holding 3 epoch(s))`
@@ -724,7 +724,7 @@ is not defined by which rooms I happen to be in.
   both text posts, and the photo from the day before. No access change appeared as a post on either
   device, and the *"the room may not appear at all"* diagnostic did not fire once. Alpha's packets
   went out `addressed to 1 recipient(s)` throughout, which is the narrowed peer set on a real
-  transport. Still unseen on hardware: a key turn that *fails* and is retried by the next round, and
+  transport. Still unseen on hardware: a key rotation that *fails* and is retried by the next round, and
   an entry refused for good — both covered by the suite and by nothing else.
 - **Two accounts, 2026-09-07, the review.** Beta's Emoji conversation drew the row: *1 person here
   can't see your Outpost*, the default said plainly, *Later* and *Review*, with the transcript
@@ -737,7 +737,7 @@ is not defined by which rooms I happen to be in.
   post readable on another Apple Account.
 - **Two accounts, 2026-09-07, the reciprocal card.** Alpha opened beta's wall and the card read
   *You can read: their posts from Sep 7, 2026 · Their decision* over *They can read: everything of
-  yours · Change* — genuinely lopsided, each half folded from a different member's log, and the
+  yours · Change* — genuinely lopsided, each half built from a different member's log, and the
   half that is not alpha's to change saying so instead of leaving a gap. *Change* offered the same
   three answers, narrowing the grant rewrote the lower line to a date, and widening it back
   restored *Everything of yours*.
@@ -751,7 +751,7 @@ is not defined by which rooms I happen to be in.
 
 **Two offers, not a date.** An epoch covers everything said while it stood, so "from last Tuesday"
 would really mean "from whenever this wall's key last changed" — which is not the promise those
-words make. So the screen offers *everything* and *from now*, and from now turns the wall's epoch
+words make. So the screen offers *everything* and *from now*, and from now rotates the wall's key
 before writing the entry, so the reader is handed an epoch with nothing in it yet.
 
 **The floor is remembered, not recomputed.** A grant hands over one secret and the links that walk
@@ -767,8 +767,8 @@ written, until the floor went into the key.
 
 **A refusal is an answer, and it costs no key.** The review's third answer, and *Allow nobody*,
 write the same `outpostAccess` entry a revocation does — with `isAllowed` false — and that is what
-stops the room asking again. What they do not do is turn the wall's epoch: a key only turns for
-somebody who holds one, and saying no to a person who was never let in takes nothing away. Turning
+stops the room asking again. What they do not do is rotate the wall's key: a key is only rotated for
+somebody who holds one, and saying no to a person who was never let in takes nothing away. Rotating
 it anyway would rewrap the wall to every reader and wake every one of their devices, once per
 person, for a decision that changed nothing.
 
@@ -835,10 +835,10 @@ first.
   asked back, a second offer superseding a confirmed but unapproved first, and withdrawn then
   replaced.
 - **Done.** A removal or a departure records the offer it ends as **spent**, so re-appending that
-  attestation's own bytes — which any member can do, because the fold checks nothing about a
+  attestation's own bytes — which any member could do, because `RoomRoster` then checked nothing about a
   `.joinRequest` beyond the room it names — puts nothing back on the table.
 - **Done.** `confirmedAt`, `hasConfirmed` and `confirmed` keep their public shapes and resolve through
-  `requests[person]?.signature`; `isOpen(_:)` is the one question the fold, `verify`, the relay and
+  `requests[person]?.signature`; `isOpen(_:)` is the one question `RoomRoster`, `verify`, the relay and
   the two invitation lists all ask, so no two of them can drift.
 - **Done.** The honest re-join works, which it did not: `outstandingInvitations()` asks membership rather
   than possession. **It has to be membership** — removal advances the room's epoch, so the fresh
@@ -852,11 +852,11 @@ first.
 
 **Testing.** Two mutations proven: keying `confirmations` by the person again re-opens the fresh
 invitation and the approval cases, and making the spend a plain forget re-opens the replay — each
-failing only its own tests. `RemovalTests` and `LeavingTests` carry the fold; `JoinIsARoundTripTests`
+failing only its own tests. `RemovalTests` and `LeavingTests` cover `RoomRoster`; `JoinIsARoundTripTests`
 carries the round trip, which is the one that fails on either half alone and which no roster test can
 see. Three existing tests were inverted rather than deleted, so the diff shows the rule moving.
 
-**Unproven on two accounts:** remove → re-invite → confirm, with the room's key turning for the
+**Unproven on two accounts:** remove → re-invite → confirm, with the room's key rotated for the
 re-admission. `docs/testing.md` has no step for it.
 
 </details>
@@ -889,7 +889,7 @@ room does not accumulate invitations to people who moved on.
   every device still checks the same moment. The member's own Wednesday is the Wednesday they meant.
 - **Done.** **When it lapses it closes itself** — and where that is true is the part worth writing down. The
   device holding the link will not redeem or confirm it, and the inviter's device will not relay a
-  confirmation it collected after the date. **The fold asks no expiry and must not**: a lapse has no
+  confirmation it collected after the date. **Reading the log checks no expiry and must not**: a lapse has no
   entry, so it has no position, so it cannot be given the never-evict guard a withdrawal has, and a
   gate there would compare one party's clock against a lifetime that party chose. See
   [An invitation's lifetime bounds the offer up to the confirmation](../decisions.md#an-invitations-lifetime-bounds-the-offer-up-to-the-confirmation-and-the-room-is-not-where-it-is-asked).
@@ -899,7 +899,7 @@ room does not accumulate invitations to people who moved on.
   transcript draws the invitation, the confirmation and the withdrawal as notices. **A lapse is the
   one thing it cannot announce** — there is no entry to draw — so the lists are where it is visible.
 - **Done.** Taking an invitation back follows the rule the room has for removal **as that rule stands
-  today**: any member in good standing, enforced in the fold, because an entry arriving from another
+  today**: any member in good standing, enforced in `RoomRoster`, because an entry arriving from another
   device has no call site to trust. The transcript names who took it back, and the row and the sheet
   say whose offer it was.
 
@@ -919,10 +919,10 @@ screen or a control saying something the code did not do:
 
 - **A withdrawn invitation kept its *Admit* button, and tapping it wrote a false line into the room's
   permanent history.** `pending(for:)` and `RoomRoster.verify` both ignored withdrawals, so `decide`
-  appended an `.admission`, the transcript drew *"Alice let Bob in"*, and only then did the fold
+  appended an `.admission`, the transcript drew *"Alice let Bob in"*, and only then did `RoomRoster`
   decline to establish anybody.
 - **The transcript credited a withdrawal to whoever made the offer**, not whoever took it back —
-  invisible only because the fold forced them to be the same person, and a false attribution the
+  invisible only because `RoomRoster` forced them to be the same person, and a false attribution the
   moment that changed.
 - **Every membership refusal reached the screen as a case number.** `SessionProblem` had no
   `MembershipError` arm at all, so *"The operation couldn't be completed. (CarpenterKit.MembershipError
@@ -936,7 +936,7 @@ screen or a control saying something the code did not do:
 **Testing.** `InvitationLifetimeTests` and `PendingInvitationTests` (the lifetime, the two lists),
 `RescindingAnInvitationTests` and `SessionRescindTests` (taking one back), `AnOfferThatRanOutTests`
 (what the expiry does and where). Six mutations proven: the relay gate, `decide`'s widening, the split
-between the two lists, the widened fold, the transcript's attribution, and the joiner's row.
+between the two lists, the widened `RoomRoster` check, the transcript's attribution, and the joiner's row.
 
 **(c) ran on the rig, 2026-09-09, proved above the mailbox.** Griff invited Quad into *Triangle*
 choosing **a date you pick** — the sheet said *"This invite expires Sep 16, 2026 at 11:59 PM"*, so the
@@ -1048,7 +1048,7 @@ Three ways out, none free:
   and it has to survive the hand-written decoder — the `greetedRooms` tax.
 - **Keep the entries and drop only the room**, which is honest only if the copy stops saying it takes
   every message with it. That is a different feature with a different sentence.
-- **Make the deletion an entry**, which the member's own other devices would fold — but this is a
+- **Make the deletion an entry**, which the member's own other devices would record — but this is a
   local act on a room nobody else can see them in, so putting it on the wire is the wrong shape.
 
 **Ruled by Griff, 2026-09-14: the first, and built once.** Built 2026-09-17 as `SpentEntry` in
@@ -1394,7 +1394,7 @@ same entry. Design it as a second recipient, not as a second entry.
 - **Done.** Enforced in `AppSession`, not only by the screens, the way *Read only* is.
 - **Done.** **The post's author is wrapped in as a second recipient**, so a closed comment reaches the person
   it answers whether or not they are one of this member's readers. A second copy of the same words on
-  the same entry, sealed under the pairwise secret, gated on a nil check so the fold never derives a
+  the same entry, sealed under the pairwise secret, gated on a nil check so rendering never derives a
   key to find out it did not need one. The refusal it replaces is gone.
 - **Done.** A thread says when it is short. The post's owner is the one person who can see the whole of it,
   so their device publishes the count — only where somebody wrote closed, so a wall of open readers
@@ -1490,21 +1490,21 @@ so that the two-member proof is not the whole proof.
 
 - **Done.** 2026-09-16. The non-atomic two halves of a removal survive a crash between them.
   `RemovalSurvivesACrashTests` builds a room of three, cuts Alice's removal of Carol off at each of
-  the two points that matter — **after the removal entry is written and before the key turns**, and
-  **after the key-turn entry is written and before its secret is kept** — throws the session away,
+  the two points that matter — **after the removal entry is written and before the key is rotated**, and
+  **after the key-rotation entry is written and before its secret is kept** — throws the session away,
   opens a new one over the same files and keychain, and lets the round run.
 
   **Before the fix both cases failed, and the failure was worse than the audit said.** The audit
-  claimed every device would agree Carol was out while the key never turned. Measured: that, *and*
+  claimed every device would agree Carol was out while the key was never rotated. Measured: that, *and*
   Carol read "after Carol went" — the removed member reading what was said after the removal. The
-  message reaches her device whether or not she is in the room; the key turn is the only thing that
+  message reaches her device whether or not she is in the room; the key rotation is the only thing that
   stops it being read.
 
-  **The fix is the one the Outpost already had.** Revoking a reader writes that a key turn is owed
-  before it writes the revocation, and every full round retries an owed turn until it lands
-  (`OutpostKeyTurnTests`). A room removal now does the same: `oweEpochTurn`, then the removal, then
-  `turnOwedEpoch`. A crash before the removal is written leaves a turn owed for a room nobody left,
-  which costs one extra key turn and nothing else.
+  **The fix is the one the Outpost already had.** Revoking a reader writes that a key rotation is owed
+  before it writes the revocation, and every full round retries an owed rotation until it lands
+  (`OutpostKeyRotationTests`). A room removal now does the same: `oweKeyRotation`, then the removal, then
+  `rotateOwedKey`. A crash before the removal is written leaves a rotation owed for a room nobody left,
+  which costs one extra key rotation and nothing else.
 - **Deferred.** Rival epoch secrets from two concurrent advances resolve identically everywhere.
 - **Deferred.** The narrow grant window with a stale roster is closed end to end.
 

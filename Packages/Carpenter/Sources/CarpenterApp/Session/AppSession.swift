@@ -60,32 +60,67 @@ public final class AppSession {
     let clock: any Clock
 
     var persisted = PersistedState()
-    var replica = Replica() { didSet { foldChanged() } }
-    var chains: [RoomID: EpochChain] = [:] { didSet { foldChanged() } }
+    var replica = Replica() {
+        didSet {
+            guard replica.revision != projectedRevision else { return }
+            projectedRevision = replica.revision
+            logChanged()
+        }
+    }
+    @ObservationIgnored private var projectedRevision: UUID?
+    var chains: [RoomID: EpochChain] = [:] {
+        didSet {
+            if OpenedPayloads.keysWereForgotten(from: oldValue, to: chains) { openedPayloads.forget() }
+            logChanged()
+        }
+    }
+    @ObservationIgnored let openedPayloads = OpenedPayloads()
 
-    var cachedProjection: Projection?
-    var cachedEntries: [EntryHash: Entry]?
-    var cachedRosters: [RoomID: RoomRoster] = [:]
+    private(set) var projectionGeneration = 0
 
-    var cachedOutOfRoom: [RoomID: Set<EntryHash>] = [:]
-    var cachedReadEvidence: [RoomID: ReadEvidence] = [:]
-    var cachedReporting: [RoomID: Set<ParticipantID>] = [:]
-    var cachedOutpostAccess: OutpostAccess?
-    var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
-    var cachedComparisonHalves: [ParticipantID: String] = [:]
-
-    var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
+    @ObservationIgnored var cachedProjection: Projection?
+    @ObservationIgnored var cachedEntries: [EntryHash: Entry]?
+    @ObservationIgnored var cachedRosters: [RoomID: RoomRoster] = [:]
+    @ObservationIgnored var cachedOutOfRoom: [RoomID: Set<EntryHash>] = [:]
+    @ObservationIgnored var cachedReadEvidence: [RoomID: ReadEvidence] = [:]
+    @ObservationIgnored var cachedPositions: [RoomID: [MessageID: Int]] = [:]
+    @ObservationIgnored var cachedReporting: [RoomID: Set<ParticipantID>] = [:]
+    @ObservationIgnored var cachedOutpostAccess: OutpostAccess?
+    @ObservationIgnored var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
+    @ObservationIgnored var cachedComparisonHalves: [ParticipantID: String] = [:]
+    @ObservationIgnored var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
 
     public internal(set) var codeForSharing = ""
 
-    private(set) var foldCount = 0
+    @ObservationIgnored private(set) var projectionBuilds = 0
 
-    func foldChanged() {
+    func cached<Key: Hashable, Value>(
+        _ store: ReferenceWritableKeyPath<AppSession, [Key: Value]>, _ key: Key, _ build: () -> Value
+    ) -> Value {
+        _ = projectionGeneration
+        if let known = self[keyPath: store][key] { return known }
+        let built = build()
+        self[keyPath: store][key] = built
+        return built
+    }
+
+    func update<Value: Equatable>(_ state: ReferenceWritableKeyPath<AppSession, Value>, to value: Value) {
+        if self[keyPath: state] != value { self[keyPath: state] = value }
+    }
+
+    func projectionInputsChanged() {
+        cachedProjection = nil
+        projectionGeneration &+= 1
+    }
+
+    func logChanged() {
+        projectionGeneration &+= 1
         cachedProjection = nil
         cachedEntries = nil
         cachedRosters = [:]
         cachedOutOfRoom = [:]
         cachedReadEvidence = [:]
+        cachedPositions = [:]
         cachedReporting = [:]
         cachedOutpostAccess = nil
         cachedDevicesAdded = [:]
@@ -131,12 +166,16 @@ public final class AppSession {
     var publishAgain = false
 
     var stateWrites: Task<Void, any Error>?
+    var stateOnDisk: PersistedState?
 
     func saveState() async throws {
         let previous = stateWrites
         let write = Task { @MainActor [self] in
             _ = try? await previous?.value
-            try await storage.documents.save(persisted)
+            let state = persisted
+            guard state != stateOnDisk else { return }
+            try await storage.documents.save(state)
+            stateOnDisk = state
         }
         stateWrites = write
         try await write.value
@@ -199,26 +238,33 @@ public final class AppSession {
     // MARK: Internals
 
     var projection: Projection {
+        _ = projectionGeneration
         if let cachedProjection { return cachedProjection }
         var built = Projection(
             viewer: enrolment?.identity.id ?? ParticipantID(rawValue: Data()),
-            rendered: Fold.render(replica.ordered(), opening: entryOpener()),
+            rendered: LogRenderer.render(replica.allEntries, reading: renderStepReader()),
             revealsNames: persisted.preferences.isShowingOthersNames,
             viewerName: persisted.preferences.displayName?.value,
             nicknames: persisted.preferences.currentNicknames,
             anonPersona: persisted.preferences.anonPersona
         )
-        built.onlyName(peopleMet(in: built))
+        let opener = payloadOpener()
+        let rosters = built.rosters(opening: opener)
+        let access = enrolment.map { built.outpostAccess(of: $0.identity.id, opening: opener) }
+        built.onlyName(peopleMet(in: built, rosters: rosters, access: access))
         cachedProjection = built
-        foldCount += 1
+        cachedRosters = rosters
+        cachedOutpostAccess = access
+        projectionBuilds += 1
         return built
     }
 
-    func peopleMet(in projected: Projection) -> Set<ParticipantID> {
-        guard let me = enrolment?.identity.id else { return [] }
-        let opener = payloadOpener()
-        var met = projected.peopleInRooms(opening: opener)
-        met.formUnion(projected.outpostAccess(of: me, opening: opener).audience(at: clock.now))
+    func peopleMet(
+        in projected: Projection, rosters: [RoomID: RoomRoster], access: OutpostAccess?
+    ) -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id, let access else { return [] }
+        var met = Projection.people(in: rosters)
+        met.formUnion(access.audience(at: clock.now))
         met.formUnion(projected.outpostAuthors().map(\.id))
         met.formUnion(persisted.acceptedInvitations.map(\.attestation.inviter))
         met.insert(me)
@@ -230,6 +276,7 @@ public final class AppSession {
     }
 
     var entriesByHash: [EntryHash: Entry] {
+        _ = projectionGeneration
         if let cachedEntries { return cachedEntries }
         let built = Dictionary(
             replica.allEntries.map { ($0.hash, $0) }, uniquingKeysWith: { first, _ in first })
@@ -294,6 +341,7 @@ public final class AppSession {
             sealedWith: chain,
             alsoFor: extra
         )
+        guard SyncSession.fitsAPacket(entry) else { throw AppSessionError.tooBigToSend }
 
         if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
         head = entry.link
@@ -325,12 +373,13 @@ public final class AppSession {
         integrity.lastLoad = loaded.termination
         integrity.discardedBytes = loaded.discardedTrailingBytes
 
+        let checked = await replica.signatureChecks(for: loaded.entries)
         let ownFeed = enrolment.map { FeedKey(author: $0.identity.id, device: $0.device.id) }
         var stillOnDisk: [Entry] = []
         for entry in loaded.entries {
             let outcome: IntegrationResult
             do {
-                outcome = try replica.integrate(entry)
+                outcome = try replica.integrate(entry, checked: checked)
             } catch {
                 integrity.unverifiableOnDisk += 1
                 continue
@@ -370,36 +419,33 @@ public final class AppSession {
     func refresh() {
         prepareCodeForSharing()
         var projected = projection
-        var opener = payloadOpener()
-
-        if introduceEstablishedMembers(in: projected, opening: opener) {
+        if introduceEstablishedMembers(in: projected, opening: payloadOpener()) {
             projected = projection
-            opener = payloadOpener()
         }
 
         let hidden = persisted.preferences.hiddenEntries
         let shutOut = shutOutAuthors()
         let me = enrolment?.identity.id
         var joined: Set<RoomID> = []
-        rooms = projected.summaries().map { summary in
-            let roster = projected.roster(of: summary.id, opening: opener)
-            if let me, roster.members.contains(me) { joined.insert(summary.id) }
+        let summaries: [RoomSummary] = projected.roomIDs().compactMap { room in
+            let roster = roster(of: room)
+            if let me, roster.members.contains(me) { joined.insert(room) }
+            let blocked = projected.entries(by: shutOut, in: room)
             return projected.summary(
-                of: summary.id,
+                of: room,
                 memberCount: roster.members.count,
                 others: roster.members.union(roster.requests.keys)
                     .filter { $0 != me }
                     .sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
                 unreadFor: me,
-                readThrough: persisted.readThrough[summary.id],
-                undrawn: hidden
-                    .union(projected.outOfRoom(in: summary.id, opening: opener))
-                    .union(projected.entries(by: shutOut, in: summary.id))
-            ) ?? summary
+                readThrough: persisted.readThrough[room],
+                undrawn: hidden.union(outOfRoom(in: room, of: projected)).union(blocked))
         }
-        roomsThisMemberIsIn = joined
-        organisation.forgetRoomsMissing(
-            from: Set(rooms.map(\.id)).union(awaitingAdmission.map(\.room)))
+        update(\.rooms, to: summaries)
+        update(\.roomsThisMemberIsIn, to: joined)
+        var organised = organisation
+        organised.forgetRoomsMissing(from: Set(rooms.map(\.id)).union(awaitingAdmission.map(\.room)))
+        update(\.organisation, to: organised)
     }
 
     @discardableResult
@@ -407,8 +453,8 @@ public final class AppSession {
         in projected: Projection, opening: (RenderedEntry) -> Payload?
     ) -> Bool {
         var introduced = false
-        for summary in projected.summaries() {
-            let roster = projected.roster(of: summary.id, opening: opening)
+        for room in projected.namedRoomIDs() {
+            let roster = introduced ? projected.roster(of: room, opening: opening) : roster(of: room)
             for attestation in roster.requests.values {
                 guard !replica.knownParticipants.contains(attestation.joinerKeys.participantID)
                 else { continue }

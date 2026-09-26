@@ -13,6 +13,7 @@ public struct YouView: View {
     @Binding var reportsDisplaying: Bool
     @Binding var notificationLevel: NotificationLevel
     let debugActions: DebugActions?
+    let testProfiles: TestProfilesControl?
     @Binding var demoConversation: Bool
     @Binding var demoParticipants: Int
     @Binding var demoOutpost: Bool
@@ -85,6 +86,7 @@ public struct YouView: View {
         reportsDisplaying: Binding<Bool> = .constant(false),
         notificationLevel: Binding<NotificationLevel> = .constant(.default),
         debugActions: DebugActions? = nil,
+        testProfiles: TestProfilesControl? = nil,
         demoConversation: Binding<Bool> = .constant(false),
         demoParticipants: Binding<Int> = .constant(8),
         demoOutpost: Binding<Bool> = .constant(false),
@@ -146,6 +148,7 @@ public struct YouView: View {
         _reportsDisplaying = reportsDisplaying
         _notificationLevel = notificationLevel
         self.debugActions = debugActions
+        self.testProfiles = testProfiles
         _demoConversation = demoConversation
         _demoParticipants = demoParticipants
         _demoOutpost = demoOutpost

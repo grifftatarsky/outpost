@@ -26,8 +26,8 @@ was written from the code in `CarpenterKit/Crypto`; where the two disagree, trus
 
 Everything a member does is an **entry**: a message, a reaction, a room rename, an admission, a read
 receipt. Each entry is signed by the device that wrote it, linked by hash to the one before it in
-that device's feed, and stamped with a vector clock. Any two devices holding the same entries fold
-them into the same result without talking to each other.
+that device's feed, and stamped with a vector clock. Any two devices holding the same entries build
+the same result from them without talking to each other.
 
 An entry's payload is sealed under the room's **epoch key**. The payload's type, version and text are
 inside the ciphertext; only the epoch number sits beside it. The entry's author, device, position,
@@ -162,7 +162,7 @@ The app never treats that as an error.
 
 ## The seams
 
-`CarpenterKit` depends on nothing but Foundation. Everything platform-shaped sits behind a protocol,
+`CarpenterKit` depends on nothing but Foundation. Everything that needs a platform framework sits behind a protocol,
 such as `Mailbox`, `KeychainStore`, `LogStore`, `DocumentStore`, `MediaStore`, `EntrySync`,
 `MediaScreen`, `AccountRegistry` and `Clock`, so the
 logic above it runs in tests without an account, a container or an entitlement.
@@ -186,7 +186,7 @@ review can be scoped to one:
 
 | File | Holds |
 |---|---|
-| `AppSession.swift` | the type, its state, the fold cache, `append`, `refresh`, epoch persistence |
+| `AppSession.swift` | the type, its state, the projection cache, `append`, `refresh`, epoch persistence |
 | `+Identity` | bring-up, restore, names, avatars, nicknames, the recovery key, devices |
 | `+Membership` | invitations, admissions, the solo check, room access, removal, leaving |
 | `+Verifying` | comparing codes with somebody after the introduction |
@@ -234,9 +234,9 @@ app.
 - **`roster(of:)` opened every membership entry in the room**, a ChaChaPoly open and a JSON decode
   each, and `AppRootView.body` reached it. The main thread measured 100% inside it. It is cached now
   beside the other opened reads (`cachedRosters`, `cachedOutOfRoom`, `cachedReadEvidence`,
-  `cachedReporting`, `cachedOutpostAccess`), and `foldChanged()` clears them all. **Nothing that
+  `cachedReporting`, `cachedOutpostAccess`), and `logChanged()` clears them all. **Nothing that
   depends on a preference belongs in those caches**: hiding, blocking and delivery marks change
-  without a fold, so they are applied to the cached result on every read.
+  without the log changing, so they are applied to the cached result on every read.
 - **`identityCode()` wrote to observed state.** Each call minted a nonce into
   `persisted.phraseNonces`, the write triggered a render, and the render called it again: 1,716
   main-thread samples against five idle, a disk write per pass, and a list growing without bound. A
@@ -247,12 +247,18 @@ app.
   reaches. Keeping them is safe because a `ParticipantID` is the SHA-256 of the keys the secret comes
   from, so an ID cannot come to mean different keys. Only a restore changes this member's own
   identity, and a restore rebuilds the session.
+- **What an entry says is remembered by its hash, and rebuilding the projection does not forget it.** `OpenedPayloads`
+  keeps each entry's plaintext and what it draws, so a rebuild reads nothing twice. An entry's hash
+  fixes its bytes, so the only thing that can make a remembered answer wrong is losing the key that
+  opened it: the memory is forgotten whenever any room's known epochs shrink or its chain goes. A
+  placeholder for an entry that would not open is never remembered, so it cannot outlive the key that
+  opens it (`OpenedPayloadsTests`).
 
 `ProjectionCostTests` holds every screen read to a per-call limit, because a body may make several
 calls and a 60fps frame is 16,700µs. The conversation screen's two reads are still over the limit
 and are recorded as exceptions with their numbers; see
 [the inbox](inbox.md#the-conversation-screen-still-costs-3500µs-a-read). **Any new state those caches
-read needs `foldChanged()` too.** Nothing fails if it is missed; the cache goes quietly stale.
+read needs `logChanged()` too.** Nothing fails if it is missed; the cache goes quietly stale.
 
 <!-- COPY END 166592a6 -->
 

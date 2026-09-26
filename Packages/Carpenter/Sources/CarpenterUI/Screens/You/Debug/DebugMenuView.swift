@@ -2,10 +2,6 @@ import CarpenterKit
 import CarpenterMedia
 import SwiftUI
 
-// Compiled only into a debug build. Gating the *call site* is not enough: the view is still
-// compiled, so its words reach the shipped binary and the string catalogue a translator
-// works from. Measured 2026-09-15 — `strings` on a Release build returned "Blur every
-// photo", "Rotate mailbox share" and "Show message delay".
 #if DEBUG
 
 struct DebugMenuView: View {

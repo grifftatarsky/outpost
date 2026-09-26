@@ -195,7 +195,6 @@ struct CloudKitMailboxTests {
             (try await mailbox.pendingAttachments())[attachment.id] == [first, second],
             "precondition: both recipients owe it")
 
-        // One of two. The bytes have to stay, because somebody still has not collected them.
         try await mailbox.acknowledge(attachment: attachment.id, by: [first])
         #expect(
             (try await mailbox.pendingAttachments())[attachment.id] == [second],
@@ -208,7 +207,6 @@ struct CloudKitMailboxTests {
             for the second person and no error anywhere.
             """)
 
-        // The last one. Now it should go.
         try await mailbox.acknowledge(attachment: attachment.id, by: [second])
         #expect(
             (try await mailbox.pendingAttachments())[attachment.id] == nil,
@@ -253,6 +251,36 @@ struct CloudKitMailboxTests {
             """)
 
         for id in written { try await mailbox.acknowledge(id, by: [mine]) }
+    }
+
+    @Test("A packet one recipient has taken keeps its place for the others")
+    func aPartlyAcknowledgedPacketKeepsItsPlace() async throws {
+        let mailbox = try await LiveCloudKit.mailbox()
+        let bob = LiveCloudKit.tag()
+        let carol = LiveCloudKit.tag()
+
+        var written: [PacketID] = []
+        for _ in 0..<3 {
+            let packet = SyncPacket(
+                wraps: [bob: LiveCloudKit.bytes(48), carol: LiveCloudKit.bytes(48)],
+                ciphertext: LiveCloudKit.bytes(64))
+            try await mailbox.put(packet)
+            written.append(packet.id)
+        }
+        try await mailbox.acknowledge(written[0], by: [carol])
+
+        let back = try await mailbox.fetch(for: [bob]).map(\.id)
+        let places = try written.map { try #require(back.firstIndex(of: $0)) }
+
+        #expect(
+            places == places.sorted(),
+            """
+            Carol taking the first packet moved it behind the later ones for Bob. An \
+            acknowledgement re-saves the record, so ordering by modification date puts the oldest \
+            packet last for everyone still waiting on it, and its older `notifyWalls` wins.
+            """)
+
+        for id in written { try await mailbox.acknowledge(id, by: [bob, carol]) }
     }
 
     @Test("A packet at the app's own budget is accepted by the real server")

@@ -7,7 +7,7 @@ struct SessionProblemTests {
     private static let everyRefusal: [AppSessionError] = [
         .noIdentity, .unknownRoom, .cannotRevokeThisDevice, .notAJoiningDevice, .thatIsYou,
         .nothingToSay, .unknownMessage, .notYourMessage, .tooLateToEdit, .tooLateToWithdraw,
-        .tooManyPictures, .keyNotTurned(rooms: 2),
+        .tooManyPictures, .tooBigToSend, .keyNotRotated(rooms: 2),
     ]
 
     @Test("Every refusal is a sentence, and never the one Foundation makes up")

@@ -63,7 +63,8 @@ public struct EpochGrant: Hashable, Sendable, Codable {
 extension EpochChain {
     public mutating func adopt(_ grant: EpochGrant, using peer: PairwiseSecret) throws {
         guard grant.room == room else { throw CryptoError.wrongRoom }
-        adopt(try grant.open(with: peer), at: grant.epoch)
+        let secret = try grant.open(with: peer)
+        if !knownEpochs.contains(grant.epoch) { adopt(secret, at: grant.epoch) }
         if let link = grant.link { try record(link) }
         try record(grant.links)
     }

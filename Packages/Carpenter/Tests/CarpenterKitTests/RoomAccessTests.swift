@@ -241,8 +241,8 @@ struct RoomAccessTests {
         #expect(roster.access == .open)
     }
 
-    @Test("The setting travels in the log and folds like anything else")
-    func accessFoldsFromTheLog() throws {
+    @Test("The setting travels in the log and is read like anything else")
+    func accessIsReadFromTheLog() throws {
         let alice = Identity.generate()
         let bob = Identity.generate()
 

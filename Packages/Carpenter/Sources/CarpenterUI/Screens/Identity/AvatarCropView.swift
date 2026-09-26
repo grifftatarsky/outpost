@@ -34,7 +34,7 @@ public struct AvatarCropView: View {
                 ContentUnavailableView {
                     Text("That picture could not be opened", bundle: .module)
                 } description: {
-                    Text("Try another one.", bundle: .module)
+                    Text("Try again.", bundle: .module)
                 }
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -106,7 +106,7 @@ public struct AvatarCropView: View {
                 offset = held(offset, within: room(drawn(image, at: zoom)))
             }
             // COPY BEGIN 81ae5c18 [NEEDS HUMAN REVIEW]
-            .accessibilityLabel(Text("Move and scale your picture", bundle: .module))
+            .accessibilityLabel(Text("Move and scale", bundle: .module))
             // COPY END 81ae5c18
         }
     }

@@ -29,11 +29,11 @@ not. He had never made that ruling. Claude had.
 So, from 2026-09-12, every entry carries one of three marks, and **an unmarked entry is not
 authority**:
 
-| Mark | Means | How to treat it |
-|---|---|---|
-| **RULED** | Griff decided this, in conversation, on the date given. | Binding. Do not reverse without asking him. |
-| **PROPOSED** | Claude's judgment. Griff has not been asked, or has not answered. | A default, not a constraint. Change it if the work calls for it, and say so. |
-| **FACT** | Not a decision at all — a property of the platform, the protocol or the code. | Cannot be "decided" either way. Belongs in the source or `architecture.md`; kept here only until moved. |
+| Mark         | Means                                                                         | How to treat it                                                                                         |
+|--------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
+| **RULED**    | Griff decided this, in conversation, on the date given.                       | Binding. Do not reverse without asking him.                                                             |
+| **PROPOSED** | Claude's judgment. Griff has not been asked, or has not answered.             | A default, not a constraint. Change it if the work calls for it, and say so.                            |
+| **FACT**     | Not a decision at all — a property of the platform, the protocol or the code. | Cannot be "decided" either way. Belongs in the source or `architecture.md`; kept here only until moved. |
 
 **A `PROPOSED` entry may never be cited as a reason not to do what Griff asked for.** If a request
 conflicts with one, the entry is what gives way. Say which entry, and why.
@@ -95,6 +95,19 @@ product free to run at any number of users.
 
 <!-- COPY END b6df5a91 -->
 
+<!-- COPY BEGIN 109a34c2 [NEEDS HUMAN REVIEW] -->
+
+### Nothing goes into iCloud that doesn't have to
+
+**RULED 2026-09-26 by Griff:** "We don't want to put more information into Cloud than we have to."
+
+Claude's reading of it: iCloud holds only what another device needs and hasn't collected yet. A copy
+of a member's whole history, or of every key they hold, kept in iCloud in case a device wants it,
+does not qualify, sealed or not. The feed between a member's own devices breaks this today; see
+[Open questions](open-questions.md#should-the-feed-between-your-own-devices-stop-being-re-sent-whole).
+
+<!-- COPY END 109a34c2 -->
+
 <!-- COPY BEGIN da72cc7c [NEEDS HUMAN REVIEW] -->
 
 ### A mark is only ever what was observed
@@ -148,7 +161,7 @@ increases by one per upload for ever.
 
 - **`0.x.0`** — new capability, **or any breaking change to what is on disk or on the wire**: a new
   `PayloadType`, a change to any `CanonicalBytes` layout, a `PersistedState` field an older build
-  cannot tolerate, or a fold rule that re-decides existing logs. *A confirmation answers one
+  cannot tolerate, or a change to how the log is read that re-decides existing logs. *A confirmation answers one
   invitation* would have been one of these.
 - **`0.x.y`** — fixes and copy that leave the log readable by the build before.
 - **`1.0.0`** — the first build for which a breaking change would be a migration rather than a wipe.
@@ -548,10 +561,10 @@ hundred.
 **What it does not do: widen who this device writes to.** Being able to check somebody's signature
 is not a relationship with them, and for a while it was treated as one. `peers()` was
 `knownParticipants`, a set that used to grow only through this member's own acts — an invitation, an
-attestation, a room folded from the log — and introductions made it the transitive closure of the
+attestation, a room built from the log — and introductions made it the transitive closure of the
 social graph: Alice knows Bob, Bob knows Carol, and Alice addressed Carol. Every packet Alice wrote
 carried Carol's tag, and every round of Alice's read Carol's outbox. `AppSession.addressable()`
-narrows it back to rooms this device folds, walls either way, and questions outstanding in both
+narrows it back to rooms this device has built from its log, walls either way, and questions outstanding in both
 directions — the last of which is what carries a joiner from accepting an invitation to holding the
 room, before any roster exists to name the inviter.
 
@@ -629,35 +642,6 @@ rig is where it was demonstrated: a green suite said nothing about it, because n
 
 <!-- COPY END 814a0298 -->
 
-<!-- COPY BEGIN 5579f38c [NEEDS HUMAN REVIEW] -->
-
-### What comes out of a zone is put in the order it was written
-
-`PROPOSED` — Claude, 2026-09-14, measured against a live account.
-
-`CloudKitMailbox.everything(in:)` built its array by iterating
-`CKFetchRecordZoneChangesOperation`'s `modificationResultsByID`, which is a `Dictionary`. Iterating
-one is not an order. Measured by writing four packets and fetching them back with the sort removed:
-**two runs in four came back out of order**, and the other two looked fine — which is exactly how this
-would have been dismissed as a coincidence.
-
-Nothing in the suite could see it, because `InMemoryMailbox` keeps an `order` array and replays
-packets in the order they were written. The fake was easier than the real thing again, in the one
-dimension nobody had thought to compare.
-
-What rode on it: `SyncSession.integrate` accumulates almost everything a delivery carries — grants,
-requests, answers, confirmations are appended — but `notifyWalls` is taken as a whole from each
-packet, so the last one wins. A peer only re-sends that list when it *changes*, so an arbitrary order
-could apply their older wish about their wall bell and leave it there indefinitely. A member turning
-the bell off could watch it stay on.
-
-`everything` now sorts by `modificationDate`, with the record name as the tiebreak so two writes in
-the same millisecond still order the same way on every device. The cost is a sort per fetch, which is
-nothing next to the round trip. `packetsComeBackInWriteOrder` is the guard and it runs against a real
-account, because this is not a property a fake can have an opinion about.
-
-<!-- COPY END 5579f38c -->
-
 <!-- COPY BEGIN fd29dd05 [NEEDS HUMAN REVIEW] -->
 
 ### The record ceiling is the app's own, and CloudKit never asked for it
@@ -706,7 +690,7 @@ every grant it issued from then on carried `link: nil`. The device can open its 
 entries with the secrets it just restored, so the links are derivable from the log it is already
 holding — a second stored copy would be state that can disagree with the log.
 
-**Cost:** one walk of each known room's entries at launch, on a device that already folds the whole
+**Cost:** one walk of each known room's entries at launch, on a device that already reads the whole
 log at launch anyway.
 
 **What would change it:** a log big enough that the walk is measurable. It is the same traversal
@@ -721,33 +705,120 @@ absent — and then, once `adopt` was made to say so, `link absent`.
 
 <!-- COPY BEGIN fce6a062 [NEEDS HUMAN REVIEW] -->
 
-### Somebody who stays turns the key after somebody leaves
+### Somebody who stays rotates the key after somebody leaves
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
 
 Every other membership change has an obvious advancer — the inviter for a join, the remover for a
 removal — and Build Decision D32 wants exactly one, or a single change mints several secrets all
 claiming one epoch. A departure is the one change whose author must not answer it: `advanceEpoch`
-generates the next secret and keeps it, so a leaver who turned the key would walk out holding the key
+generates the next secret and keeps it, so a leaver who rotated the key would walk out holding the key
 to everything said afterwards. Asking them to generate it and promise to forget it is a hope, not a
 guarantee.
 
-So it falls to `RoomRoster.keyTurner`: the founder if they are still in the room, otherwise the
+So it falls to `RoomRoster.keyRotator`: the founder if they are still in the room, otherwise the
 lowest identity remaining. Arbitrary, and *identical on every device*, which is the property that
 matters. Each device records which departures it has already answered, because an epoch says that the
-key turned and never which membership change turned it.
+key was rotated and never which membership change caused it.
 
-**Cost:** liveness. If the member who has to turn it does not open the app for a week, the key does
-not turn for a week. What protects the room meanwhile is that a departure takes the leaver out of
-`rewrapTargets` immediately on every device that has folded it — nobody addresses them a packet, so
+**Cost:** liveness. If the member who has to rotate it does not open the app for a week, the key is
+not rotated for a week. What protects the room meanwhile is that a departure takes the leaver out of
+`rewrapTargets` immediately on every device that has read it — nobody addresses them a packet, so
 there is nothing for the old key to open. It is also one round slower than a removal even in the best
-case: the round that *collects* a departure is the round that turns the key, and the grants for the
+case: the round that *collects* a departure is the round that rotates the key, and the grants for the
 new epoch go out on the next one.
 
 **What would change it:** a way for the leaver to mint a secret they demonstrably cannot keep. Absent
 that, the alternative is not rotating at all, which is what leaving did before it did anything.
 
 <!-- COPY END fce6a062 -->
+
+<!-- COPY BEGIN 6a19cdf6 [NEEDS HUMAN REVIEW] -->
+
+### A screen redraws only when something it shows has changed
+
+`PROPOSED` by Claude, 2026-09-26. Griff has not ruled on it.
+
+SwiftUI redraws a screen whenever a value the screen read is assigned, even if the new value is the
+same as the old one. The session assigned values far more often than they changed, so screens
+redrew for nothing. Measured before the fix: filling one room's cache made screens showing other
+rooms redraw, a sync round that brought nothing new still threw away every cache and rebuilt the
+projection, and the open conversation redrew on every round.
+
+Now the caches are hidden from SwiftUI with `@ObservationIgnored`, and screens watch one counter,
+`projectionGeneration`, instead. It goes up only when the log really changes (`logChanged()`) or
+when something else a screen shows changes, such as a name (`projectionInputsChanged()`). State a
+sync round writes is written only when the new value is different, through `update(_:to:)`.
+`WhatAScreenIsToldTests` checks that an unrelated change and an empty round redraw nothing, and that
+a new message or a new name does.
+
+The cost is two rules to remember. A new cache goes through `cached(_:_:_:)`, or it can show stale
+data. New round state is written through `update(_:to:)`, or screens redraw for nothing.
+[Style](style.md#caches-and-what-a-screen-is-told) has both.
+
+<!-- COPY END 6a19cdf6 -->
+
+<!-- COPY BEGIN 6a6f13d7 [NEEDS HUMAN REVIEW] -->
+
+### A test profile is a world of its own
+
+`PROPOSED` by Claude, 2026-09-26, from Griff's design of test profiles the same night — the shape
+is his, the mechanics below are Claude's defaults.
+
+A profile runs the app against a mailbox the member hosts instead of CloudKit. Each profile has its
+own storage directory, its own identity and its own pictures, and switching closes one world and
+opens the other; iCloud is untouched while a profile is on, including by the notification extension.
+A profile's identity is stored on the device only, never in iCloud Keychain, because a member who
+chose not to use iCloud for messages has not chosen to put a key there either.
+
+**Debug builds only, for now.** The only mailbox a profile can reach is a shared directory, which is
+the rig's file mailbox. A screen offering a server the build cannot reach would claim something the
+build cannot do, so the whole feature stays behind `#if DEBUG` until the server mailbox exists.
+
+**What it costs.** Another world to keep apart: every path that touches CloudKit has to stay closed
+while a profile is on, and a new one has to be checked for it. Switching waits for any sync in
+flight to finish first, so nothing from one world lands in the other.
+
+<!-- COPY END 6a6f13d7 -->
+
+<!-- COPY BEGIN 37a5d7fa [NEEDS HUMAN REVIEW] -->
+
+### Only members can add people to a room
+
+`PROPOSED` by Claude, 2026-09-26. Griff has not ruled on it.
+
+A person is added to a room only by people who are in it. An invitation counts only if the member
+who made it posts it to the room while they are a member. The joiner's confirmation counts only if a
+member posts it. A vote to admit somebody counts only if the voter is a member, and it stops counting
+if they leave or are removed before the vote is decided. Only the founder can change who may admit
+people, and only while the founder is still in the room.
+
+Before 2026-09-26 the app checked this for removals and withdrawn invitations, but not for
+invitations, confirmations or votes. That mattered because a removed member still has the room's
+old keys, so anything they post with an old key can still be read by everyone, and the app acted on
+it. A removed member could invite a second account of their own back into an open room, and a vote
+from somebody outside the room counted. `WhoCanAddPeopleToARoomTests` has five tests for this, and
+all five failed before the change.
+
+The cost: an invitation posted by anybody other than the member who made it is ignored. The app
+never posts one that way, but one old test did, and it was rewritten. If a voter is removed while a
+vote is open, their vote stops counting, which can change the result. This was found by reading the
+code and is covered by tests. Nobody has tried it on the rig with a modified app.
+
+<!-- COPY END 37a5d7fa -->
+
+<!-- COPY BEGIN 328f81d7 [NEEDS HUMAN REVIEW] -->
+
+### A device that hasn't been admitted doesn't see who is in the room
+
+**RULED 2026-09-26 by Griff:** "devices who aren't allowed in yet shouldn't see members."
+
+This is how the app works now. Everything that says who is in a room is locked with the room key, and
+a joining device gets the room key only once it is admitted. It also means a joining device can't
+check who sent it a key; see
+[Open questions](open-questions.md#who-can-send-your-device-a-room-key-it-cant-check-yet).
+
+<!-- COPY END 328f81d7 -->
 
 <!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
@@ -821,7 +892,7 @@ beside it; see [the ruling above](#the-verification-phrase-gets-ten-characters-a
   holds the room's entire history. That is not an oversight: the app's promise is that history lives
   on the devices of the people who were there, and an app that makes that promise cannot also destroy
   the keys to it. The compensating property is real — post-compromise security holds, because each
-  epoch's link is sealed under the *new* secret, so turning the key genuinely shuts an old holder out
+  epoch's link is sealed under the *new* secret, so rotating the key genuinely shuts an old holder out
   of everything said afterwards.
 - **Non-repudiable, deliberately.** Every entry carries a device signature, and those entries sit on
   other people's phones, so anybody in a room can prove what somebody said in it. Signal provides
@@ -981,7 +1052,7 @@ because the triangle cannot be observed on a two-account rig.
 **RULED 2026-09-12.**
 
 Somebody admitted under an open room stays in when the founder tightens the setting. Membership
-accumulates as the log folds rather than being recomputed from the current setting.
+accumulates as the log is read rather than being recomputed from the current setting.
 
 **Cost:** you cannot retroactively tighten who is in a room, only stop new people joining.
 
@@ -1028,7 +1099,7 @@ a parameter and parses both spellings, so the change is additive.
 Somebody added, somebody let in or refused, a rename, a change to who gets in: each is drawn as a
 centered line in the transcript, in the same treatment as the day heading.
 
-Every one is folded from a signed entry that was already in the log, so a notice cannot claim a
+Every one is built from a signed entry that was already in the log, so a notice cannot claim a
 membership change that did not happen, and two devices holding the same log draw the same lines in
 the same places.
 
@@ -1060,7 +1131,7 @@ whether to draw what somebody wrote while they were not here. The answer is no, 
 code asks only "were they out", and its type is named for the question rather than for one of the
 answers.
 
-**Cost:** every screen and every fold that cares about somebody being out of a room has to handle two
+**Cost:** every screen and every reading of the log that cares about somebody being out of a room has to handle two
 cases rather than one, forever. `RoomRoster.absent` exists for the callers that genuinely do not
 care, and it is deliberately the exception.
 
@@ -1116,10 +1187,10 @@ Three more consequences fell out of it, each of which broke everything until it 
 - **The inviter learns the joiner's keys from the invitation, not from the membership.** An entry
   whose author is unknown is refused before its device is looked at, so an inviter who waited for
   somebody to become a room-mate could never open the confirmation that would make them one.
-- **The key turns when the confirmation lands**, not when the invitation is made. A membership change turns the key
+- **The key is rotated when the confirmation lands**, not when the invitation is made. The key is rotated
   on a membership change, and the membership change moved.
 - **An invitation the joiner has confirmed keeps its inviter addressable.** Addressing is narrow and
-  built from rooms this device folds, of which a waiting joiner has none. Under `unanimous` the wait
+  built from rooms this device has built from its log, of which a waiting joiner has none. Under `unanimous` the wait
   can be days; the quiet repair that used to cover the gap is dropped as soon as it is answered.
 
 **What `open` means now.** *An invitation is enough* — for the room. The joiner still decides whether
@@ -1145,11 +1216,11 @@ invitation was **never accepted**. Weaker, and not a lie.
 the inviter cannot end is an invitation they cannot take back: they choose the expiry when they make
 it, they can see what is outstanding, and they can purge one by hand at any time.
 
-**It applies to history, and that is a cost rather than a detail.** Folding is where the rule lives,
+**It applies to history, and that is a cost rather than a detail.** Reading the log is where the rule lives,
 so every open room already in existence is re-decided by it: those logs hold an invitation and no
 confirmation, and everybody who joined one before this is no longer counted in it until they confirm.
-Not a removal — nothing folds as one, nobody is told they were put out, standing to write is
-untouched, and the same invitation still admits them. Measured in `JoinsFoldedBeforeTheRuleTests`.
+Not a removal — nothing is recorded as one, nobody is told they were put out, standing to write is
+untouched, and the same invitation still admits them. Measured in `JoinsRecordedBeforeTheRuleTests`.
 Accepted because the app is in development; **reaching anybody with it needs a migration instead.**
 
 **Nothing may remove from `acceptedInvitations`.** It is the joiner's only copy of the verification
@@ -1174,7 +1245,7 @@ back. It never implies either reading.
 <!-- COPY BEGIN 38be9c61 [NEEDS HUMAN REVIEW] -->
 
 **An invitation can be taken back, and taking it back reaches nobody.** `PayloadType.invitationRescinded`
-= 22. Whoever holds the link still holds it and can still confirm; the room folds the withdrawal and
+= 22. Whoever holds the link still holds it and can still confirm; the room records the withdrawal and
 declines to admit on that invitation. That is the only shape available when the other device may be
 offline or may be the party this exists to protect against, and it is the shape every membership
 question here already has. It never evicts: somebody already in stays in, because membership is
@@ -1184,14 +1255,14 @@ monotonic and putting a member out is a removal that says so.
 first answer.* It was the inviter's alone, on the reasoning that a wider rule would be "a removal with
 none of a removal's honesty, and drawn as nothing at all". Both halves of that turned out to be about
 the **drawing** rather than the permission: the transcript named the offer's inviter instead of the
-entry's author — invisible only because the fold forced the two to be the same person — and the notice
+entry's author — invisible only because `RoomRoster` forced the two to be the same person — and the notice
 itself had existed since the payload did. The attribution is fixed, the row and the sheet say whose
-offer is being undone, and the fold asks for standing the way a removal does.
+offer is being undone, and `RoomRoster` asks for standing the way a removal does.
 
 What is left is the permission, and the asymmetry ran backwards. The room's rule for putting somebody
 out is already *anyone may remove anyone* (Board 26, 2026-09-01, on the grounds that in the default
 room a founder is not a role that means anything — and neither is inviter). So any member could put
-the joiner out one second after they landed, loudly and with a key turn, and none but the inviter
+the joiner out one second after they landed, loudly and with a key rotation, and none but the inviter
 could stop them arriving — while under `open`, arriving hands them the epoch key and every message the
 room has ever held, which removal takes back from nobody. An invitation is the first half of
 membership, and this is the room's rule for the second half applied to the first.
@@ -1205,13 +1276,13 @@ saying what the room is waiting on, for ever, with nobody able to clear it.
 
 <!-- COPY BEGIN e7133f5c [NEEDS HUMAN REVIEW] -->
 
-**Cost.** A quiet, cheap veto in every member's hands: `rescind` appends and returns, with no key turn
+**Cost.** A quiet, cheap veto in every member's hands: `rescind` appends and returns, with no key rotation
 and no round trip, where removal is loud and expensive. A transcript line is not a notification, so a
 member scrolling a busy room may never see it. And **the way back is not symmetrical** — `rescinded`
 is keyed by the invitation's signature, so re-opening means a *fresh* invitation, which needs the
 joiner's identity code, which in the shipped app only the original inviter holds. A hasty withdrawal
 by a third party can strand a join only somebody else can rebuild. The sheet says so; that does not
-make it untrue. **The symmetry is in the permission and not in the act**: a removal turns the key and
+make it untrue. **The symmetry is in the permission and not in the act**: a removal rotates the key and
 files a record the removed member's own device reads, and a withdrawal does neither, so nothing here
 argues for adding an epoch advance — a merely-invited person was never addressed by `rewrapTargets`,
 and minting a secret would put two on one epoch number for one membership change.
@@ -1229,20 +1300,20 @@ to is the architecture. See [Who you are talking to](verification.md).
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
 
 **2026-09-09.** The date on an invitation decides whether it can still be *taken*. Once the room has
-folded the joiner's confirmation, the offer has been taken and the date stops mattering — what is
+recorded the joiner's confirmation, the offer has been taken and the date stops mattering — what is
 left is the room's own `RoomAccess` rule.
 
-**The fold asks no expiry, and may not.** Three things follow from that and each is load-bearing:
+**Reading the log checks no expiry, and may not.** Three things follow from that and each is load-bearing:
 
-- **A lapse has no entry, so it has no position.** A withdrawal can be asked about in the fold
+- **A lapse has no entry, so it has no position.** A withdrawal can be checked when the log is read
   because it *is* an entry: `.invitationRescinded` carries `guard !established.contains(...)`, so
-  one arriving after somebody is in folds to nothing and nobody is ever evicted. A lapse is a date
+  one arriving after somebody is in counts for nothing and nobody is ever evicted. A lapse is a date
   inside a signature every device already holds; nothing is written when it passes. That guard
   cannot be written for it, and `isAdmitted` is what decides `established`, so asking there is
   circular.
-- **There is no first admission to grandfather.** `Projection.roster(of:)` builds a fresh roster and
-  refolds every entry on every `AppRootView` body pass and at the top of every sync round. Every
-  fold is the first fold, so a rule added there is applied to all of history, every time.
+- **There is no first admission to grandfather.** `Projection.roster(of:)` builds a fresh roster from
+  every entry in the room whenever the log changes. Every build starts from the first entry, so a rule
+  added there is applied to all of history, every time.
 - **And it would constrain nobody.** The only deterministic instant available is `entry.wallTime`,
   and a `.joinConfirmed` entry is authored by the inviter *relaying* it — the same identity that
   signed the expiry when it chose the lifetime. The gate would compare one party's clock against a
@@ -1256,10 +1327,10 @@ So it is enforced at three writes, all on the device that is about to do somethi
 
 <!-- COPY BEGIN 14168ef7 [NEEDS HUMAN REVIEW] -->
 
-| Where | What it stops |
-|---|---|
-| `AppSession.inspect` / `accept` | The device holding the link redeeming or confirming a dead offer. |
-| `AppSession.outstandingInvitations` | That device going on re-offering a confirmation nobody will take. |
+| Where                               | What it stops                                                                                                            |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| `AppSession.inspect` / `accept`     | The device holding the link redeeming or confirming a dead offer.                                                        |
+| `AppSession.outstandingInvitations` | That device going on re-offering a confirmation nobody will take.                                                        |
 | `AppSession.relayJoinConfirmations` | **The inviter writing a confirmation into the room that it collected after the date.** This is the one that was missing. |
 
 **What it costs.** Built 2026-09-09. The gate at the inviter's relay has not been seen on two
@@ -1283,7 +1354,7 @@ come back and been declined, and this device keeps no record of which.
 
 <!-- COPY BEGIN 2b3f6e4e [NEEDS HUMAN REVIEW] -->
 
-**A taken-but-unapproved offer stays admissible indefinitely.** A confirmation folded in March can be
+**A taken-but-unapproved offer stays admissible indefinitely.** A confirmation recorded in March can be
 approved in September, for as long as the offer it answers is the one on the table. The remedy is to
 take the invitation back, and that is why a confirmed offer stays in `pendingInvitations` even past
 its date: that list is what draws the row the control hangs off. *Amended 2026-09-09 — this said
@@ -1317,13 +1388,13 @@ as **spent**, so it cannot be put back on the table.
 close was permanently open for anybody who had ever confirmed anything in that room. Four ways in,
 all reproduced:
 
-- removed, then re-invited — under `.open`, back in the moment the offer folds;
+- removed, then re-invited — under `.open`, back in the moment the offer is recorded;
 - left, then asked back — the same, through the other ending;
 - confirmed under `.founder` and never approved, then a *second* offer supersedes the first — the
   next approval admits them on an answer to a different transcript;
 - withdrawn, then re-invited — no removal involved at all.
 
-Under `.open` the harm lands earlier than "a bare invitation folds": `attest` appends the offer as it
+Under `.open` the harm lands earlier than "a bare invitation is recorded": `attest` appends the offer as it
 is created, so the removed person was back **on the inviter's own device before the code had been
 handed to anybody**, and the next round addressed them the current epoch key.
 
@@ -1343,7 +1414,7 @@ the offer at all. What they can answer is whether the room counts them.
 
 <!-- COPY BEGIN 33603eb1 [NEEDS HUMAN REVIEW] -->
 
-**Spent as well as forgotten, because the question can be re-asked.** The fold checks nothing about a
+**Spent as well as forgotten, because the question can be re-asked.** `RoomRoster` checked nothing about a
 `.joinRequest` beyond the room it names, so any member could re-append the ended invitation's own
 bytes — already in the log — and the removed member's device, which keeps every invitation it ever
 accepted, would sign it again for the inviter to relay. One member, replaying bytes, undoing a removal
@@ -1355,7 +1426,7 @@ so under any setting but `.open` an approval given for one offer still counted f
 `AdmissionBody` now names the invitation it answers, and both maps key on it, so a vote for a
 superseded offer admits nobody to the live one. `MembershipTests` and `JoinIsARoundTripTests` hold it.
 
-**What it costs.** Built 2026-09-09 and seen on two accounts. A fold rule applied to all history,
+**What it costs.** Built 2026-09-09 and seen on two accounts. A rule applied to all history,
 on the precedent this feature already set: every log is re-decided, and anybody admitted on a stale
 confirmation is outside until they confirm the offer the room now holds. Nobody is evicted who joined
 through a confirmation of the offer on the table, which is every ordinary join. And an invitation back
@@ -1402,7 +1473,7 @@ that would be two chips to learn.
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
 
 A solo is not a second kind of thing in the log. It is a room — one log, one roster, one chain of
-keys — whose founding profile entry says `RoomKind.solo`. Every device that folds it reads the kind
+keys — whose founding profile entry says `RoomKind.solo`. Every device that reads it takes the kind
 from that first entry, lists it under Solos, and titles it by the person it is with, as that device
 knows them: their shared name where names are shown, their code otherwise. The founder's stored name
 is a fallback for the moment before anybody is invited.
@@ -1443,7 +1514,7 @@ reading survived until 2026-09-09 as a property nothing read and a test that pas
 
 **The way out of a refusal is a question raised afterwards and confirmed** — never the one that was
 already in the air when the refusal landed, which settles that question and leaves the conversation
-closed. That is what the fold does, and the screens now offer it: the refusal card carries the
+closed. That is what `RoomRoster` does, and the screens now offer it: the refusal card carries the
 standing question and the answer to it. Until that was wired, the way out existed only in the model
 and a refusal was permanent on both devices. Costs: two people who both refuse must both, eventually,
 ask and confirm; blocking is the other exit, offered on the same card.
@@ -1608,7 +1679,7 @@ getting.
 An Outpost is a room whose membership is a list its owner keeps, entry by entry, on the wall
 itself. Its key goes to the people on that list and nobody else — sharing a room grants nothing.
 There are two offers: **everything**, which hands over the current epoch secret and every link that
-walks back from it, and **from now**, which turns the wall's epoch first and hands over that epoch
+walks back from it, and **from now**, which rotates the wall's key first and hands over that epoch
 with no links at all.
 
 **Why not a date in between.** An epoch covers everything said while it stood, so "from last
@@ -2181,7 +2252,7 @@ shouldn't be responsible for handing him a key. He can't communicate with your i
 
 So a block, from the blocker's device: they are dropped from the rewrap targets, their packets stop
 being collected and acknowledged, and they are dropped from the Outpost audience. The room's key is
-not turned; see below for why.
+not rotated; see below for why.
 
 **What it costs.** In a direct conversation the blocked person can tell, because there is nobody else
 to hand them a key. That is the intended effect rather than a leak. In a group they usually cannot,
@@ -2206,9 +2277,9 @@ addresses a person: `peers()`, the two `rewrapTargets` call sites, the media upl
 room's epoch, on the reasoning that a stable room never re-keys so the blocked person reads on with
 the key they hold. Building it showed that is wrong in both directions, so it was not built:
 
-- In a **group**, turning the epoch changes nothing. Every other member's `rewrapTargets` still
+- In a **group**, rotating the key changes nothing. Every other member's `rewrapTargets` still
   includes the blocked person, so they are handed the new key by somebody else on the next round —
-  which is exactly the property that keeps the block silent. The turn would cost every member a
+  which is exactly the property that keeps the block silent. The rotation would cost every member a
   re-key and buy nothing.
 - In a **direct conversation**, not answering has already done it. Nothing is written to them and
   nothing of theirs is collected, and there is no third party to carry anything either way.
@@ -2219,7 +2290,7 @@ they can read.
 
 **Where the filter may not go.** `RoomRoster.rewrapTargets` is in `CarpenterKit` and is derived from
 entries every member replays; blocking is local and lives in `persisted.preferences`. Putting the
-filter inside the roster would make the fold device-specific, and two devices reading the same log
+filter inside the roster would make the member list device-specific, and two devices reading the same log
 would disagree about who is in a room. It goes at the `CarpenterApp` call sites.
 
 **A case to accept deliberately.** If every member of a group blocks the same person, they receive no
@@ -2258,7 +2329,7 @@ Removing a message from other people needs their agreement. See
 
 **2026-09-09.** Destroying a message replaces its payload with a tombstone and leaves
 the entry where it is. The hash chain verifies unchanged, the words are gone from every device that
-folds the tombstone, and the fact that *something was there* stays visible.
+reads the tombstone, and the fact that *something was there* stays visible.
 
 **Why not the other answer.** The alternative was removing the entry outright and teaching the
 validator to accept a gap where a predecessor used to be. That buys one thing — nothing at all
@@ -2270,14 +2341,14 @@ being evidence of itself.
 **What it costs.** A purged message leaves a hole a member can see: the room says something was here
 and is gone. That is the honest reading and the screens must not dress it as anything else — a
 transcript that closed over the gap would be the app hiding a thing it knows. It also means a purge
-is not deniable: everybody who folded the room knows the message existed and knows it was destroyed.
+is not deniable: everybody who read the room knows the message existed and knows it was destroyed.
 
 **What this unblocks.** [Consensus hard delete](after-testflight.md#consensus-hard-delete) and
 *Hard delete and desync quietly*, which were both blocked on this one question and were moved past
 TestFlight on 2026-09-14.
 
 **What would change it.** A verification scheme that can prove a gap was authorized — a signed
-statement over the removed entry's hash, folded in its place. That is a tombstone with extra steps,
+statement over the removed entry's hash, recorded in its place. That is a tombstone with extra steps,
 which is the argument for starting here.
 
 <!-- COPY END 1c2848f9 -->
@@ -2477,15 +2548,15 @@ exactly the shape worth telling somebody about.
 
 <!-- COPY BEGIN ed40492b [NEEDS HUMAN REVIEW] -->
 
-### Turning every room's key on a restore is a question, not a default
+### Rotating every room's key on a restore is a question, not a default
 
 **RULED 2026-09-13 by Griff:** ask on the restore screen.
 
-Before this, nothing about a restore turned a key. If a lost phone is in somebody else's hands it still
+Before this, nothing about a restore rotated a key. If a lost phone is in somebody else's hands it still
 holds the current epoch key and reads everything said afterwards, because `rewrapTargets` is keyed by
 participant and the thief's device is still certified under that identity.
 
-So the restore screen asks once — **was a device lost or stolen?** — and a yes turns the key in every
+So the restore screen asks once — **was a device lost or stolen?** — and a yes rotates the key in every
 room. It is the one moment the member has actually said out loud what happened, and it makes the cost
 legible instead of surprising.
 
@@ -2493,7 +2564,7 @@ legible instead of surprising.
 owns goes dark until they restore it too. Answering no leaves the old devices reading along until one
 is revoked from the device list, which now shows a real arrival date for each.
 
-**Why not automatic.** A key turn is not free and not reversible, and "I restored onto a new laptop"
+**Why not automatic.** A key rotation is not free and not reversible, and "I restored onto a new laptop"
 is not the same event as "my phone was taken". The app does not know which happened and must not
 guess.
 
@@ -2645,7 +2716,7 @@ that pressed and dwelt on it did, and the rows in this work were exercised that 
 
 ### The lost-or-stolen question is a choice with no default, not a switch
 
-`PROPOSED` — Claude, 2026-09-13, building [the ruling on turning keys after a restore](#turning-every-rooms-key-on-a-restore-is-a-question-not-a-default).
+`PROPOSED` — Claude, 2026-09-13, building [the ruling on rotating keys after a restore](#rotating-every-rooms-key-on-a-restore-is-a-question-not-a-default).
 
 Griff ruled the restore screen asks *was a device lost or stolen?* and that the app "does not know
 which happened and must not guess". A switch cannot express that: a switch always has a position, so
@@ -2656,14 +2727,14 @@ answer about what happened. So it is two `ChoiceRow`s with nothing selected, **R
 stays disabled until one is chosen**, and the footer changes to name the cost of whichever answer is
 showing.
 
-**When the turn happens.** `restore` records the answer in `PersistedState.turnsEveryKeyAfterALoss`;
-the first full round that finds rooms with chains owes an epoch turn in each and clears the flag.
+**When the rotation happens.** `restore` records the answer in `PersistedState.rotatesEveryKeyAfterALoss`;
+the first full round that finds rooms with chains owes a key rotation in each and clears the flag.
 It cannot happen at the restore itself — the rooms arrive from the member's own iCloud several rounds
 later, which is why the answer is persisted rather than held in memory.
 
-**Measured on the rig, two Apple Accounts:** answering yes logged `a device was lost or stolen; every
-room's key turns`, then `turning the key in 1 room(s) after a loss`, then the turn itself; a message
-sent afterwards was read by the peer, so the turn cut off the device that is gone without cutting off
+**Measured on the rig, two Apple Accounts:** answering yes logged that a device was lost or stolen, then that
+one room's key would be rotated, then the rotation itself; a message
+sent afterwards was read by the peer, so the rotation cut off the device that is gone without cutting off
 the member who is still there.
 
 **What answering no costs.** An old device keeps reading along until it is revoked from the device
@@ -2731,7 +2802,7 @@ this app draws a floating tab bar there — `.status` placement rendered it *beh
 found on the rig. It is a `safeAreaInset(edge: .bottom)`, which is what `RoomsListView` already does
 on a tab-bar screen, in `destructiveActionButton()` so the color is the system's and not a hand tint.
 
-**One removal is one event.** `revoke(_ devices:)` issues every revocation, then turns each room's
+**One removal is one event.** `revoke(_ devices:)` issues every revocation, then rotates each room's
 key **once** — not once per device. Removing three used to mean three bursts of rewrapping for
 everybody in every room. A batch naming this device throws before anything is written, so a refusal
 changes nothing.
@@ -3268,8 +3339,8 @@ that a signal which cannot resolve is treated as a bug in the signal.
 Drawing nothing is not neutral. A state that renders as absence tells the member *nothing happened*,
 and when something did happen — or is waiting to — that is a lie the app is telling by omission.
 
-Both halves of "I sent a message and it disappeared" were this. The message was on screen but below
-the fold, and the message had been stored but had nobody to go to; in each case the app's answer was
+Both halves of "I sent a message and it disappeared" were this. The message was on screen but scrolled
+out of view, and the message had been stored but had nobody to go to; in each case the app's answer was
 to show nothing, and in each case the member correctly read that as failure.
 
 So: a state that **cannot resolve on its own** must be drawn. `pending` may stay invisible because it
@@ -3384,12 +3455,12 @@ did not already hold. What it changed:
   text on a card measured 4.02:1. iOS itself adds **0.08** to every fill, measured on the 26.5 runtime
   by resolving its colors under `UIAccessibilityContrast.high`:
 
-  | Fill | Light | Light, high | Dark | Dark, high |
-  |---|---|---|---|---|
-  | `systemFill` | 0.20 | 0.28 | 0.36 | 0.44 |
-  | `secondarySystemFill` | 0.16 | 0.24 | 0.32 | 0.40 |
-  | `tertiarySystemFill` | 0.12 | 0.20 | 0.24 | 0.32 |
-  | `quaternarySystemFill` | 0.08 | 0.16 | 0.18 | 0.26 |
+  | Fill                   | Light | Light, high | Dark | Dark, high |
+  |------------------------|-------|-------------|------|------------|
+  | `systemFill`           | 0.20  | 0.28        | 0.36 | 0.44       |
+  | `secondarySystemFill`  | 0.16  | 0.24        | 0.32 | 0.40       |
+  | `tertiarySystemFill`   | 0.12  | 0.20        | 0.24 | 0.32       |
+  | `quaternarySystemFill` | 0.08  | 0.16        | 0.18 | 0.26       |
 
   The app's fills now take the same step. Text grays keep their own rule.
 - **The destructive red was one value for both appearances**, `#D1382F`, and measured 3.50:1 on a
@@ -3461,13 +3532,13 @@ WCAG Level AA … Up to 17 pts, All [weights], 4.5:1."
 accent's tint, and never the accent *as* text. It is drawn as text all over the app — bordered
 buttons, links, the selected tab. Adding that one check found five failures at once:
 
-| Accent | Appearance | Was | Worst ratio | Now | Worst ratio |
-|---|---|---|---|---|---|
-| Verdigris (default) | light | `#17877C` | 3.93 | `#14766C` | 4.90 |
-| Signal Amber | light | `#B06E12` | 3.70 | `#945D0F` | 4.91 |
-| Olive Drab | light | `#6C7F24` | 4.01 | `#607120` | 4.85 |
-| Cobalt | dark | `#3E7BFA` | 4.39 | `#4D85FA` | 4.90 |
-| Oxblood | dark | `#C6555A` | 3.93 | `#CE6C70` | 4.86 |
+| Accent              | Appearance | Was       | Worst ratio | Now       | Worst ratio |
+|---------------------|------------|-----------|-------------|-----------|-------------|
+| Verdigris (default) | light      | `#17877C` | 3.93        | `#14766C` | 4.90        |
+| Signal Amber        | light      | `#B06E12` | 3.70        | `#945D0F` | 4.91        |
+| Olive Drab          | light      | `#6C7F24` | 4.01        | `#607120` | 4.85        |
+| Cobalt              | dark       | `#3E7BFA` | 4.39        | `#4D85FA` | 4.90        |
+| Oxblood             | dark       | `#C6555A` | 3.93        | `#CE6C70` | 4.86        |
 
 <!-- COPY END c1a71fa9 -->
 
@@ -3707,12 +3778,12 @@ the member sets under Notifications, and it never counted Outposts at all.
 `BadgeMeaningLine` states in the present tense what the number counts, and **all four of its
 sentences were false**:
 
-| Setting | What the app told the member | What the number was |
-|---|---|---|
-| Both | "counts unread conversations **and Outposts with something new**" | conversations only |
-| Outposts only | "counts Outposts with something new, **and nothing else**" | conversations only — exactly backwards |
-| Messages only | "counts unread conversations, and nothing else" | true, by accident |
-| Off | "Your app icon shows **no number at all**" | the number stayed |
+| Setting       | What the app told the member                                      | What the number was                    |
+|---------------|-------------------------------------------------------------------|----------------------------------------|
+| Both          | "counts unread conversations **and Outposts with something new**" | conversations only                     |
+| Outposts only | "counts Outposts with something new, **and nothing else**"        | conversations only — exactly backwards |
+| Messages only | "counts unread conversations, and nothing else"                   | true, by accident                      |
+| Off           | "Your app icon shows **no number at all**"                        | the number stayed                      |
 
 So two switches on the Notifications screen were dead controls, which is the defect class
 `CLAUDE.md` already names three of, and the copy beside them was a claim the build did not honor.
@@ -3770,7 +3841,7 @@ that is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
 
-Everything platform-shaped sits behind a protocol. This is what makes the logic testable without an
+Everything that needs a platform framework sits behind a protocol. This is what makes the logic testable without an
 account — and it carries a specific hazard that has cost this project more than once.
 
 **A fake that is easier than the real thing proves nothing.** The in-memory mailbox moved a whole
@@ -3785,15 +3856,15 @@ defect will live. Close it in the fake, not in a comment.
 
 <!-- COPY BEGIN 32974f0d [NEEDS HUMAN REVIEW] -->
 
-### The fold is kept, and the state it is derived from says when it changes
+### The projection is cached, and the state it is built from says when it changes
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
 
-`Projection` is the fold of the whole log — `CausalOrder.sorted` over every entry, then a render
+`Projection` is built from the whole log — `CausalOrder.sorted` over every entry, then a render
 pass — and every screen is drawn from it. It was a computed property, so each *read* paid for one.
-Measured, on a six-room account: **fourteen folds of the entire log to send one message**, on the
+Measured, on a six-room account: **fourteen rebuilds from the entire log to send one message**, on the
 path the conversation screen runs every five seconds. Four reads with nothing written between them
-cost four folds. `refresh()` was the worst of it — it folded for its own summaries, again inside
+cost four rebuilds. `refresh()` was the worst of it — it rebuilt for its own summaries, again inside
 `introduceEstablishedMembers`, and then twice more per room.
 
 It is kept now, and invalidated by `didSet` on the two stored properties it derives from
@@ -3802,7 +3873,7 @@ through a mutating method like `replica.integrate(_:)` — is a get-modify-set, 
 mutation there is. The same signal drops a cached entry index that `roster(of:)` had been rebuilding
 per call.
 
-Sending one message into a six-room account now folds once. The package suite, which does almost
+Sending one message into a six-room account now rebuilds once. The package suite, which does almost
 nothing but write and read, went from ~19.5s to ~12.4s.
 
 **The same index closed a worse one.** `openPayload` — the function that reopens an entry so a
@@ -3814,11 +3885,11 @@ in comparisons. Measured on a 167-entry log with sixty read receipts in it: twen
 `messages(in:)` took **4.21s before and 0.19s after** — 211ms to 9.7ms each, and the gap widens with
 the log. Both callers now take one opener over the kept index.
 
-**Cost:** a cache, and a stale fold would be the worst possible failure of it — a member's own
-message not appearing. `ProjectionCostTests` holds both halves: the fold count, *and* that a write
+**Cost:** a cache, and a stale projection would be the worst possible failure of it — a member's own
+message not appearing. `ProjectionCostTests` holds both halves: the rebuild count, *and* that a write
 is visible to the next read.
 
-**What would change it:** nothing foreseeable. If a third piece of state ever feeds the fold, it
+**What would change it:** nothing foreseeable. If a third piece of state ever feeds the projection, it
 needs the same `didSet`, and the tests will not notice on their own.
 
 <!-- COPY END 32974f0d -->
@@ -4109,12 +4180,12 @@ and verify it.
 
 **Built.** 1,582 chunks were placed on 2026-09-25, every one at `NEEDS HUMAN REVIEW`:
 
-| Where | Chunks | Marker |
-|---|---|---|
-| Swift, 133 files: every string a member reads, including accessibility labels, error sentences, notification and Focus filter copy, and the recovery key file | 730 | `// COPY BEGIN <id> [<status>]` … `// COPY END <id>` |
-| The documentation pages and the READMEs | 673 | `<!-- … -->`, with a blank line either side |
-| The design boards: the two decision documents, and the canvas's turn headings, group titles and captions | 172 | `<!-- … -->` |
-| `Info.plist` permission prompts, the display name in `Branding.xcconfig`, and the site title, links, footer and callout names in `_config.yml` | 7 | the file's own comment |
+| Where                                                                                                                                                         | Chunks | Marker                                               |
+|---------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|------------------------------------------------------|
+| Swift, 133 files: every string a member reads, including accessibility labels, error sentences, notification and Focus filter copy, and the recovery key file | 730    | `// COPY BEGIN <id> [<status>]` … `// COPY END <id>` |
+| The documentation pages and the READMEs                                                                                                                       | 673    | `<!-- … -->`, with a blank line either side          |
+| The design boards: the two decision documents, and the canvas's turn headings, group titles and captions                                                      | 172    | `<!-- … -->`                                         |
+| `Info.plist` permission prompts, the display name in `Branding.xcconfig`, and the site title, links, footer and callout names in `_config.yml`                | 7      | the file's own comment                               |
 
 The status on the BEGIN line is the only thing a reviewer edits. `python3 Scripts/copy-review.py
 report` counts chunks by status, `list` names every chunk still open, and `new-id` gives an id for new

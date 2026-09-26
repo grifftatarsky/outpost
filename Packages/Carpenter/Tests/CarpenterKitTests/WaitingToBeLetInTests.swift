@@ -42,8 +42,6 @@ struct WaitingToBeLetInTests {
         let waiting = try #require(bob.awaitingAdmission.first)
         #expect(waiting.room == room)
         #expect(waiting.invitedBy.id == alice.enrolment?.identity.id)
-        // Both sides derive it from the joiner's nonce, so the joiner has it as soon as they
-        // redeem and the inviter has it once the confirmation reaches them.
         #expect(waiting.phrase == bob.phrase(for: invite.attestation))
         #expect(waiting.phrase?.count == invite.attestation.phraseLength.rawValue)
         #expect(bob.awaitingAdmission.count == 1)

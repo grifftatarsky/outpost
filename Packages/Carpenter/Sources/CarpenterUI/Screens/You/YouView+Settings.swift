@@ -230,6 +230,19 @@ extension YouView {
             }
             // COPY END 93d36060
             #if DEBUG
+            if let testProfiles {
+                NavigationLink {
+                    TestProfilesView(control: testProfiles)
+                } label: {
+                    // COPY BEGIN 2ef85f54 [NEEDS HUMAN REVIEW]
+                    SettingsRow(
+                        icon: "testtube.2", tone: .device,
+                        title: Text("Test profiles", bundle: .module),
+                        detail: testProfiles.active.map { Text(verbatim: $0.name) }
+                            ?? Text("iCloud", bundle: .module))
+                    // COPY END 2ef85f54
+                }
+            }
             if let debugActions {
                 NavigationLink {
                     DebugMenuView(

@@ -1,5 +1,5 @@
 ---
-# COPY BEGIN f917ea56 [NEEDS HUMAN REVIEW]
+# COPY BEGIN f917ea56 [HUMAN REVIEWED, UNVERIFIED]
 title: Open questions
 layout: default
 nav_order: 2
@@ -9,46 +9,121 @@ nav_order: 2
 
 {: .no_toc }
 
-Everything waiting on Griff: work that is not built, choices Claude made that he has not seen, and
-things the app does that may not be what he meant.
-
-Nothing here is settled. Anything settled lives in [Decisions](decisions.md).
+Settled decisions live in [Decisions](decisions.md).
 
 1. TOC
 {:toc}
 
+## Questions
 <!-- COPY END f917ea56 -->
 
-<!-- COPY BEGIN 0e83e72c [NEEDS HUMAN REVIEW] -->
+<!-- COPY BEGIN 1c346b30 [NEEDS HUMAN REVIEW] -->
 
-## Why this file exists
+### Removing a device, or rotating keys after a loss, doesn't lock that device out
 
-Claude wrote most of `decisions.md`, and for months wrote it in Griff's voice — entries marked
-"Griff's ruling" on questions he had never been asked. Those entries were then quoted back to him in
-later sessions as constraints he had set. On 12 September 2026 that nearly stopped a feature he had
-just asked for.
+Raised 2026-09-26. Measured in the test suite, not on the rig.
 
-`decisions.md` now marks every entry **RULED**, **PROPOSED** or **FACT**. This file is the other
-half: everything **PROPOSED** that is worth his attention, written as a question rather than a
-statement.
+Your identity key is the key the recovery key restores. The app saves it to iCloud Keychain, so each
+of your devices keeps its own copy in its own keychain. New room keys are sent to you as a person,
+not to one of your devices, so every device that has your identity key can open them.
 
-<!-- COPY END 0e83e72c -->
+So neither of the two ways the app offers to shut out a device works against a device that still has
+the identity key and can still reach your iCloud:
 
-<!-- COPY BEGIN e7b509e7 [NEEDS HUMAN REVIEW] -->
+- Answering "a device was lost or stolen" when you restore rotates every room's key. The lost device
+  opens the new keys too.
+- Removing a device from the device list rotates every room's key. The removed device opens the new
+  keys too.
 
-## Waiting on an answer
+On top of that, a message from somebody else goes to whichever of your devices checks the mailbox
+first. If the lost or removed device checks first, it reads the message and your real device never
+gets it. `WhatALossRotationCutsOffTests` shows all of this as known issues. That is the test mailbox;
+it has not been seen on real CloudKit.
 
-Griff worked through the rest on 2026-09-13, and three more on 2026-09-15. Everything he settled is
-in [Decisions](decisions.md), marked `RULED`.
+The recovery key only comes into it when a new device can't get the identity key from iCloud
+Keychain. That doesn't mean your other devices lost their copy, because each one keeps its own. It
+happens two ways:
 
-Closed on 2026-09-15: the six-character phrase (ruled — ten characters *and* a commitment, see
-[Decisions](decisions.md#the-verification-phrase-gets-ten-characters-and-a-commitment)); *Notify
-anyway* (answered out of Apple's own documentation rather than by asking Apple, see
-[Decisions](decisions.md#the-app-does-not-set-an-interruption-level-because-it-is-a-messaging-app));
-and forcing the emoji keyboard, deleted at Griff's instruction because the approach was abandoned —
-the searchable grid that replaced it is ordinary SwiftUI and needs no device to test.
+- iCloud Keychain is off. The key never left your iPad, so a new iPhone needs the recovery key, and
+  the iPad keeps working. That is fine: it is your iPad.
+- Your phone was stolen. It still has the key in its keychain, and while it is signed in to your
+  Apple Account it can keep reading.
 
-<!-- COPY END e7b509e7 -->
+What locks a stolen phone out today is Apple's side: erasing it with Find My, or removing it from
+your Apple Account, which ends its access to your iCloud.
+
+The question for Griff: should room keys be sent to each device instead of to the person, so that
+removing a device leaves it out of the next key? That changes how every key is sent. Until then, the
+restore screen and the device list should say that Find My is what locks a stolen phone out. Two
+smaller gaps, found by reading and not tested: after a loss, a room that comes back after the first
+sync round is never rotated, and the member's own Outpost is never rotated.
+
+<!-- COPY END 1c346b30 -->
+
+<!-- COPY BEGIN 8623086e [NEEDS HUMAN REVIEW] -->
+
+### Should the feed between your own devices stop being re-sent whole?
+
+Answered by Griff on 2026-09-26: nothing goes into iCloud that doesn't have to. See
+[Decisions](decisions.md#nothing-goes-into-icloud-that-doesnt-have-to).
+
+Checked against the code the same day: this is not fixed. What was fixed on 2026-09-13 is that the
+feed is sealed before it is written; before that it went up unencrypted. It is still sent whole.
+Every time a device writes anything (a message, a reaction, an edit), it uploads everything it has
+ever written, every room key it holds and its settings, as one sealed record, and that record stays
+in iCloud. At 2,000 entries that is about 1.8MB for each message sent, and each of your other devices
+downloads it again.
+
+The fix, not built: send only what is new, as a small sealed record like any other mail, and delete
+it once your other devices have collected it. A room key goes to a new device of yours once, when
+the device first appears. Nothing on the member's own devices can be tested on the rig, because a
+simulator can't get the identity key from iCloud Keychain; it needs two real devices on one account.
+
+<!-- COPY END 8623086e -->
+
+<!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
+
+### Who can send your device a room key it can't check yet?
+
+Raised 2026-09-26 from a test.
+
+How room keys work. Each room has a key, and messages are locked with it. When the key is rotated,
+the member who rotated it sends the new key to everybody in the room, locked so only that person can
+open it. With it they send a link: the old key, locked with the new key. Anybody with the new key can
+open the link, get the old key and read older messages. A new member, or a restored phone, reads a
+room's history by following those links back. Your device writes new messages with the newest key it
+has, and passes that key on to the others in the room.
+
+What was fixed on 2026-09-26. Your device used to accept a room key from anybody it had ever
+exchanged keys with. Somebody removed from a room could make up a new key and send it to you. Your
+device took it as the room's newest key, locked your next messages with it and passed it on, so the
+person who made it up could read what you, and then the room, said next. `WhoCanSendYouAKeyTests`
+shows it. Now a device refuses a key from somebody the room shows as removed or gone, never replaces a
+key it already has, and takes a key to somebody's Outpost only from that person.
+
+What is still open:
+
+- **A device that can't read the room yet can't check who sent a key.** That is a device joining the
+  room, or one restored from the recovery key. The member list is locked with the room key, so until
+  the device has a key it can't see who is in the room. That is right: Griff ruled on 2026-09-26 that
+  a device that hasn't been admitted doesn't see who is in the room. So it needs a different rule.
+  Proposed: a joining device takes its first key for a room only from the member who invited it. It
+  knows who that is from the invitation, so it needs no member list. Whether the inviter always sends that
+  first key, in every admission setting, needs checking before this is built. After that it can read the room and check everybody else the
+  normal way. A restored device has no inviter, so it still takes its first key from anybody.
+- **A key that arrives early is kept.** Because a key never replaces one already held, a made-up key
+  that reaches a device before the real one is the one it keeps. This only works on a device that
+  can't check the sender yet, so the inviter rule closes it for joiners.
+- **Any member can make a link.** A link only proves that whoever made it had the new key, and every
+  member has it. So a member still in the room could send a link with a wrong old key inside. A
+  device that gets it first keeps it and ignores the real one. From reading the code, not tested:
+  that device can't read the room's history from before that rotation. It doesn't let anybody read
+  what they couldn't already read. The fix is for the member who rotated the key to sign the link,
+  and for a device to accept a link only with that member's signature. The app already decides which
+  member rotates the key for each change, so a device can check it. That changes what a key and a
+  link carry.
+
+<!-- COPY END ced635d1 -->
 
 <!-- COPY BEGIN ba7e3be3 [NEEDS HUMAN REVIEW] -->
 
@@ -99,7 +174,7 @@ constraints, and any of them may be wrong for reasons only Griff has.
 - How a round is packed, what a packet carries, and when it is acknowledged.
 - A room announces what happened to it, in its own transcript.
 - A key handed over carries the way back, or it hands over nothing.
-- Somebody who stays turns the key after somebody leaves.
+- Somebody who stays rotates the key after somebody leaves.
 - A tag the app keeps is derived, never filed.
 - A purge is a tombstone, and the link survives it.
 
@@ -157,8 +232,7 @@ constraints, and any of them may be wrong for reasons only Griff has.
 ## Design commentary
 
 Long-form design reasoning, kept because it is useful when picking a feature back up and separated
-because it is not a decision and must not be cited as one. The boards themselves, the rulings they
-carry and the departures already agreed are in [Design](design.md).
+because it is not a decision and must not be cited as one.
 
 <!-- COPY END 9d83b219 -->
 

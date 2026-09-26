@@ -28,7 +28,7 @@ extension AppRootView {
             outpostAudience: OutpostAudience(
                 people: session.audienceCandidates(),
                 access: session.outpostAccess,
-                keyTurnPending: session.outpostKeyTurnPending,
+                keyRotationPending: session.outpostKeyRotationPending,
                 allow: { person, everything in
                     await reporting("let somebody see the Outpost") {
                         try await session.allowOutpost(person, everything: everything)
@@ -41,7 +41,13 @@ extension AppRootView {
                 }),
             conversation: [],
             openRoom: $openRoom,
-            organisation: session.organisation,
+            organisation: Binding(
+                get: { session.organisation },
+                set: { arranged in
+                    guard arranged != session.organisation else { return }
+                    session.updateOrganisation { $0 = arranged }
+                }),
+            preferences: roomsListPreferences,
             feed: session.feed(),
             outpostAuthors: session.outpostAuthors(),
             onReact: { post, emoji in
@@ -113,6 +119,7 @@ extension AppRootView {
             onSilence: { room, silenced in await session.setMuted(silenced, for: room) },
             messageDelay: { session.arrivalDelay(of: $0) },
             debugActions: debugActions,
+            testProfiles: testProfilesControl,
             hiddenMessageCount: session.hiddenMessageCount,
             recoveryKey: session.recoveryKeyFingerprint.map { print in
                 RecoveryKeyRow(
@@ -158,7 +165,6 @@ extension AppRootView {
             sharedName: { session.sharedName(of: $0) },
             onNicknameChange: { person, name in await session.setNickname(name, for: person) },
             onPersonAvatarChange: changePersonAvatar,
-            onOrganisationChange: { session.updateOrganisation($0) },
             pendingJoins: { room in
                 let waiting = session.pendingJoins(in: room).map { attestation in
                     PendingJoin(
@@ -243,9 +249,9 @@ extension AppRootView {
                     try await session.revoke(going.map(\.id))
                 } catch let error as AppSessionError {
                     // COPY BEGIN 5d951e6c [NEEDS HUMAN REVIEW]
-                    if case .keyNotTurned(let rooms) = error {
+                    if case .keyNotRotated(let rooms) = error {
                         Diagnostics.identity.error(
-                            "revoke: \(rooms, privacy: .public) room(s) did not turn their key")
+                            "revoke: \(rooms, privacy: .public) room(s) did not rotate their key")
                         problem = ActionProblem(
                             title: String(localized: "The device is out, but its key is still good"),
                             detail: String(

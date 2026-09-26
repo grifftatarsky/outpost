@@ -176,31 +176,32 @@ struct UnreadTests {
 
     // MARK: The rule itself
 
-    @Test("A read mark this device cannot find reads as nothing read")
-    func anUnknownMarkShowsUnread() throws {
+    private func kitchen() throws -> (projected: Projection, room: RoomID) {
         let chain = EpochChain.create(room: RoomID())
         var alice = Author(chain: chain.chain)
         let room = chain.chain.room
-        let said = try alice.append(
-            try Payload.post("hello"), at: TestSession.now, room: room)
-        let rendered = Fold.render([said], using: chain.chain)
+        let named = try alice.append(try Payload.roomProfile(name: "Kitchen"), at: TestSession.now, room: room)
+        let said = try alice.append(try Payload.post("hello"), at: TestSession.now, room: room)
+        let projected = Projection(
+            viewer: alice.identity.id, rendered: LogRenderer.render([named, said], using: chain.chain))
+        return (projected, room)
+    }
+
+    @Test("A read mark this device cannot find reads as nothing read")
+    func anUnknownMarkShowsUnread() throws {
+        let (projected, room) = try kitchen()
 
         #expect(
-            Projection.hasUnread(
-                in: rendered, for: Identity.generate().id,
-                readThrough: EntryHash(rawValue: Data([0xDE, 0xAD])), undrawn: []),
+            projected.summary(
+                of: room, unreadFor: Identity.generate().id,
+                readThrough: EntryHash(rawValue: Data([0xDE, 0xAD])))?.hasUnread == true,
             "an unfindable mark hid a message that had never been read")
     }
 
     @Test("With nobody reading, nothing is unread")
     func noViewerMeansNoUnread() throws {
-        let chain = EpochChain.create(room: RoomID())
-        var alice = Author(chain: chain.chain)
-        let said = try alice.append(
-            try Payload.post("hello"), at: TestSession.now, room: chain.chain.room)
+        let (projected, room) = try kitchen()
 
-        #expect(
-            !Projection.hasUnread(
-                in: Fold.render([said], using: chain.chain), for: nil, readThrough: nil, undrawn: []))
+        #expect(projected.summary(of: room, unreadFor: nil)?.hasUnread == false)
     }
 }

@@ -67,14 +67,8 @@ extension AppRootView {
     #endif
 
     func wipe() async throws {
-        if let deviceSync {
-            try await deviceSync.eraseSharedState()
-        } else {
-            let engine = CloudKitEntrySync(
-                container: .default(),
-                device: session.enrolment?.device.id ?? DeviceID(rawValue: Data()),
-                stateStore: FileDocumentStore(url: Self.engineStateURL))
-            try await engine.eraseSharedState()
+        if testSession == nil {
+            try await eraseSharedDeviceState()
         }
         deviceSync = nil
         startedSyncFor = nil
@@ -86,11 +80,23 @@ extension AppRootView {
         await eraseThisDevice()
     }
 
+    private func eraseSharedDeviceState() async throws {
+        if let deviceSync {
+            try await deviceSync.eraseSharedState()
+        } else {
+            let engine = CloudKitEntrySync(
+                container: .default(),
+                device: session.enrolment?.device.id ?? DeviceID(rawValue: Data()),
+                stateStore: FileDocumentStore(url: Self.engineStateURL))
+            try await engine.eraseSharedState()
+        }
+    }
+
     func eraseThisDevice() async {
         deviceSync = nil
         startedSyncFor = nil
 
-        let container = Bundle.main.bundleIdentifier ?? "app"
+        let container = worldContainer
         try? await SystemKeychainStore(
             service: container, accessGroup: SharedKeychain.group
         ).removeAll()
@@ -133,7 +139,7 @@ extension AppRootView {
         sharedAvatars = [:]
         outpostAvatars = [:]
 
-        session = AppSession(storage: .onDisk(), clock: UITestMode.clock)
+        session = AppSession(storage: .onDisk(profile: testSession?.profile), clock: UITestMode.clock)
         session.enforcesDenyList = safety.blocksKnownAbusers
         mediaLoader = makeMediaLoader()
         session.checkAccount(with: accountRegistry)

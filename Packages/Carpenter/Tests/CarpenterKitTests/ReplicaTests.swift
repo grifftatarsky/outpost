@@ -278,3 +278,81 @@ struct ReplicaTests {
             replica.allEntries.first?.opened(using: alice.chain)?.body == Data([1, 2, 3]))
     }
 }
+
+@Suite("What the replica holds")
+struct ReplicaHoldsTests {
+    private let start = Date(timeIntervalSince1970: 1_786_635_000)
+
+    @Test("Every entry integrated is listed once, and a closed room's entries leave the list")
+    func theListFollowsTheFeeds() throws {
+        var replica = Replica()
+        var alice = Author()
+        try replica.meet(alice)
+        let kitchen = RoomID()
+        let hangar = RoomID()
+
+        var made: [Entry] = []
+        for step in 0..<6 {
+            let entry = try alice.append(
+                Payload.post("\(step)"), at: start.addingTimeInterval(Double(step)),
+                room: step.isMultiple(of: 2) ? kitchen : hangar)
+            _ = try replica.integrate(entry)
+            _ = try replica.integrate(entry)
+            made.append(entry)
+        }
+
+        #expect(replica.allEntries.count == replica.entryCount)
+        #expect(Set(replica.allEntries.map(\.hash)) == Set(made.map(\.hash)))
+
+        let taken = replica.close(kitchen)
+
+        #expect(taken.count == 3)
+        #expect(replica.allEntries.count == replica.entryCount)
+        #expect(Set(replica.allEntries.map(\.hash)) == Set(made.filter { $0.room == hangar }.map(\.hash)))
+    }
+}
+
+@Suite("What a replica does with what it already holds")
+struct ReplicaAlreadyHoldsTests {
+    private let start = Date(timeIntervalSince1970: 1_786_635_000)
+
+    @Test("Offering held entries again changes nothing and verifies nothing")
+    func heldEntriesAreNotVerifiedAgain() throws {
+        var replica = Replica()
+        var alice = Author()
+        try replica.meet(alice)
+        var entries: [Entry] = []
+        for step in 0..<1_000 {
+            let entry = try alice.post("\(step)", at: start.addingTimeInterval(Double(step)))
+            try replica.integrate(entry)
+            entries.append(entry)
+        }
+        let revision = replica.revision
+
+        let started = Date()
+        for entry in entries { #expect(try replica.integrate(entry) == .alreadyPresent) }
+        let took = Date().timeIntervalSince(started)
+
+        #expect(replica.revision == revision, "offering held entries counted as a change, so every screen redraws")
+        #expect(
+            took < 0.02,
+            """
+            Offering 1,000 held entries again took \(Int(took * 1_000))ms. A feed from another of \
+            the member's devices carries every entry it wrote, every time, so a signature check \
+            per held entry is paid on every arrival.
+            """)
+    }
+
+    @Test("Meeting a known person or admitting a known certificate changes nothing")
+    func knownFactsAreNotChanges() throws {
+        var replica = Replica()
+        let alice = Author()
+        try replica.meet(alice)
+        let revision = replica.revision
+
+        replica.introduce(alice.identity.publicKeys)
+        try replica.admit(alice.certificate)
+
+        #expect(replica.revision == revision)
+    }
+}

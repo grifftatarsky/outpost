@@ -6,17 +6,20 @@ import Foundation
 
 extension AppSession {
     func peers() -> [Peer] {
-        guard let enrolment else { return [] }
-        let reachable = notShutOut(addressable())
+        guard let me = enrolment?.identity.id else { return [] }
+        return reachableParticipants().compactMap { participant in
+            pairwiseSecret(with: participant).map { Peer(secret: $0, them: participant, me: me) }
+        }
+    }
 
-        return replica.knownParticipants
-            .filter { $0 != enrolment.identity.id && reachable.contains($0) }
-            .compactMap { participant -> Peer? in
-                guard let keys = replica.registry(for: participant)?.identity,
-                    let secret = try? PairwiseSecret.derive(mine: enrolment.identity, theirs: keys)
-                else { return nil }
-                return Peer(secret: secret, them: participant, me: enrolment.identity.id)
-            }
+    var hasSomebodyToReach: Bool {
+        reachableParticipants().contains { pairwiseSecret(with: $0) != nil }
+    }
+
+    private func reachableParticipants() -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id else { return [] }
+        let reachable = notShutOut(addressable())
+        return replica.knownParticipants.filter { $0 != me && reachable.contains($0) }
     }
 
     private func addressable() -> Set<ParticipantID> {
@@ -24,8 +27,8 @@ extension AppSession {
         let projected = projection
 
         var reachable: Set<ParticipantID> = []
-        for summary in projected.summaries() {
-            let roster = roster(of: summary.id)
+        for room in projected.namedRoomIDs() {
+            let roster = roster(of: room)
             reachable.formUnion(roster.members)
             reachable.formUnion(roster.requests.keys)
             reachable.formUnion(roster.absent)
@@ -93,10 +96,7 @@ extension AppSession {
                     room: room, epoch: epoch, target: target, floor: floor)
                 guard !issuedGrants.contains(receipt) else { continue }
 
-                guard let keys = replica.registry(for: target)?.identity,
-                    let pairwise = try? PairwiseSecret.derive(
-                        mine: enrolment.identity, theirs: keys)
-                else { continue }
+                guard let pairwise = pairwiseSecret(with: target) else { continue }
 
                 owed.append(
                     (
@@ -118,9 +118,24 @@ extension AppSession {
             "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(target.rawValue.base64EncodedString())|\(since)"
     }
 
+    private func outpostOwner(of room: RoomID) -> ParticipantID? {
+        guard let me = enrolment?.identity.id else { return nil }
+        if room == outpostRoom(for: me) { return me }
+        return replica.knownParticipants.first { outpostRoom(for: $0) == room }
+    }
+
     func adopt(_ grant: EpochGrant, from peer: Peer) async throws {
         guard !replica.closedRooms.contains(grant.room) else {
             Diagnostics.sync.notice("adopt: refused a key for a conversation this member deleted")
+            return
+        }
+        if let owner = outpostOwner(of: grant.room) {
+            guard owner == peer.them else {
+                Diagnostics.sync.notice("adopt: refused a key to an Outpost from somebody who does not own it")
+                return
+            }
+        } else if roster(of: grant.room).absent.contains(peer.them) {
+            Diagnostics.sync.notice("adopt: refused a key from somebody no longer in the room")
             return
         }
         let held = chains[grant.room]

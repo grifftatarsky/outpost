@@ -8,15 +8,6 @@ import Testing
 @Suite("Restoring a member from their recovery key", .serialized)
 @MainActor
 struct RestoringFromAKeyTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     @Test("A key puts the same member back on a fresh device")
     func aKeyPutsTheSameMemberBack() async throws {
         let original = TestSession.make(keychain: InMemoryKeychainStore())
@@ -74,7 +65,7 @@ struct RestoringFromAKeyTests {
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: key)
 
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
 
         #expect(!fresh.rooms.isEmpty, "no room came back from the member's own other device")
         #expect(
@@ -106,7 +97,7 @@ struct RestoringFromAKeyTests {
             for session in [original, peer] { try await session.sync(through: mailbox) }
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         let key = try #require(original.recoveryKeyText())
 
         try await peer.send("said while the phone was gone", to: room)
@@ -121,7 +112,7 @@ struct RestoringFromAKeyTests {
         fresh.syncDevices(through: InMemoryEntrySync(relay: relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: key)
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
 
         for _ in 0..<10 {
             for session in [fresh, peer] { try await session.sync(through: mailbox) }

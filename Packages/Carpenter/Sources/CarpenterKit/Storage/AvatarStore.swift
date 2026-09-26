@@ -138,15 +138,7 @@ public struct PersonAvatarStore: Sendable {
         for url in urls(for: person, kind) { try FileManager.default.removeItem(at: url) }
     }
 
-    public func sharedAttachment(for person: ParticipantID) -> AttachmentID? {
-        publishedAttachment(for: person, .rooms)
-    }
     public func loadShared(for person: ParticipantID) -> Data? { loadPublished(for: person, .rooms) }
-    public func loadAllShared() -> [ParticipantID: Data] { loadAllPublished(.rooms) }
-    public func saveShared(_ jpeg: Data, for person: ParticipantID, attachment: AttachmentID) throws {
-        try savePublished(jpeg, for: person, .rooms, attachment: attachment)
-    }
-    public func removeShared(for person: ParticipantID) throws { try removePublished(for: person, .rooms) }
 
     public func loadOutpost(for person: ParticipantID) -> Data? {
         loadPublished(for: person, .outpost)

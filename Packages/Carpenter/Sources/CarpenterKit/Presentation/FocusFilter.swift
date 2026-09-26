@@ -18,9 +18,6 @@ public struct FocusFilter: Hashable, Sendable, Codable {
         return withoutPreviews(level)
     }
 
-    /// A post belongs to no room, so the room list cannot speak to it and does not try. The
-    /// preview switch can: the Focus filter offers *Show what was said* over banners, not over
-    /// banners about rooms, and a post's words are what was said.
     public func levelForAPost(own level: NotificationLevel) -> NotificationLevel {
         withoutPreviews(level)
     }
@@ -31,7 +28,7 @@ public struct FocusFilter: Hashable, Sendable, Codable {
     }
 }
 
-public struct FocusFilterStore: @unchecked Sendable {  // UserDefaults is thread-safe by contract
+public struct FocusFilterStore: @unchecked Sendable {
     public struct RoomEntry: Hashable, Sendable, Codable {
         public let id: RoomID
         public let name: String

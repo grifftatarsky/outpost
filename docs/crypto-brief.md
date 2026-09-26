@@ -156,8 +156,8 @@ Three properties are worth naming because each is a decision:
 **Known weakness, named.** Authority is judged against a timestamp *the signing device itself wrote*.
 A malicious device that is about to be revoked can date its entries before its own revocation and
 they will verify. The mitigation in the product is that the sibling feed and the log make the
-back-dating visible rather than preventing it, and that turning the room key after a loss
-(`turnEveryKeyAfterALoss`) stops the device reading anything *new* regardless of what it claims to
+back-dating visible rather than preventing it, and that rotating the room key after a loss
+(`rotateEveryKeyAfterALoss`) stops the device reading anything *new* regardless of what it claims to
 have written. This is the classic distributed-clock problem and it is not solved here; it is
 bounded.
 
@@ -219,8 +219,8 @@ key](#the-recovery-key-is-the-whole-of-you-in-a-text-file).
 
 This is the least conventional part of the design and the part most worth attacking.
 
-**In plain words.** Every room has a key. When somebody leaves or a phone is lost, the room turns
-its key, and from that moment the old key opens nothing new. But old conversations must still be
+**In plain words.** Every room has a key. When somebody leaves or a phone is lost, the room's key
+is rotated, and from that moment the old key opens nothing new. But old conversations must still be
 readable — that is the entire point of an app where history lives on your own phone — so each new
 key carries a sealed copy of the one before it. Hold today's key and you can walk backwards through
 the whole conversation. That is a feature. It is also the biggest trade-off in the app, and it is
@@ -266,7 +266,7 @@ in another room even if the secret somehow escaped.
 
 - **Post-compromise security: yes.** Knowing epoch *N* tells you nothing about epoch *N+1*. The link
   at *N+1* is sealed **under** *N+1*'s key, not *N*'s, and *N+1* is a fresh random value distributed
-  only through pairwise-wrapped grants. Turning the key after a loss genuinely shuts the old holder
+  only through pairwise-wrapped grants. Rotating the key after a loss genuinely shuts the old holder
   out of everything said afterwards.
 - **Forward secrecy: no, deliberately.** Whoever holds the current secret and the links holds the
   entire history of the room. There is no point in time before which a compromise is harmless. This
@@ -342,7 +342,7 @@ twice, no nonce is reused — and the small cost is that the message travels twi
 **Assumption named.** Every message in an epoch is sealed under **the same key** with a **random
 96-bit nonce**, which CryptoKit generates per seal. Random nonces under a fixed key are safe up to
 the birthday bound; at 2³² messages in a single epoch the probability of a repeat is on the order of
-2⁻³³. A room would have to send four billion messages without a single key turn to approach it. Not
+2⁻³³. A room would have to send four billion messages without a single key rotation to approach it. Not
 a concern, but it is an assumption rather than a guarantee, and it would stop being safe if epochs
 were ever made long-lived and high-volume at once.
 

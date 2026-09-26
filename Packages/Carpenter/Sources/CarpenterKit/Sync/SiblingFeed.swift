@@ -93,6 +93,18 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
         return SealedSiblingFeed(ciphertext: box.combined)
     }
 
+    @concurrent
+    public static func sealInBackground(
+        _ feed: SiblingFeed, for identity: Identity, on device: DeviceID
+    ) async throws -> SealedSiblingFeed {
+        try seal(feed, for: identity, on: device)
+    }
+
+    @concurrent
+    public func openInBackground(with identity: Identity, from device: DeviceID) async throws -> SiblingFeed {
+        try open(with: identity, from: device)
+    }
+
     public func open(with identity: Identity, from device: DeviceID) throws -> SiblingFeed {
         guard let box = try? ChaChaPoly.SealedBox(combined: ciphertext) else {
             throw CryptoError.openFailed

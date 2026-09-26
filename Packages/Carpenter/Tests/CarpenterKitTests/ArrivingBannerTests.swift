@@ -160,11 +160,13 @@ struct ArrivingBannerTests {
 
     @Test("No banner carries a sender unless its words name one")
     func aSenderIsOnlyAttachedWhenItIsNamed() {
+        var attached = 0
         for rung in NotificationLevel.allCases {
             let fromAMessage = WhatArrived.since(
                 nothingSeenYet, post: nil, ask: nil, message: message(),
                 in: world(level: rung, perRoom: rung))
             if let banner = fromAMessage, banner.sender != nil {
+                attached += 1
                 #expect(
                     rung.showsSender && !banner.copy.isGeneric,
                     """
@@ -177,11 +179,13 @@ struct ArrivingBannerTests {
                 nothingSeenYet, post: post(), ask: nil, message: nil,
                 in: world(level: rung, perRoom: rung))
             if let banner = fromAPost, banner.sender != nil {
+                attached += 1
                 #expect(
                     rung.showsSender && !banner.copy.isGeneric,
                     "at \(rung) a post's banner attached its author while its words withhold them")
             }
         }
+        #expect(attached > 0, "no level attached a sender at all, so nothing here was checked")
     }
 
     @Test("A generic banner never carries a sender")

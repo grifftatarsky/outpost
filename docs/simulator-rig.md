@@ -27,10 +27,10 @@ shut-down twin instead of the running device.
 
 | Name | UDID | Apple Account | Member | Points |
 |---|---|---|---|---|
-| `outpost-alpha`, iPhone 17 Pro | `4CB401B7-ABC0-4C00-ABEC-5BDBB84767D1` | development account A | Griff | 402 × 874 |
-| `outpost-beta`, iPhone 17 Pro Max | `DADA1E7E-6CB3-44F9-B59A-5A8D4C9B7BAF` | development account B | Outie | 440 × 956 |
-| `outpost-gamma`, iPhone 17 | `F7F2F5D2-5F36-4312-8A36-D5834C29CE70` | none | Trig | 402 × 874 |
-| `outpost-delta`, iPhone 17 | `98E5967E-9EC6-4873-B44B-7A1E57258030` | none | Quad | 402 × 874 |
+| `outpost-alpha`, iPhone 17 Pro | `5D9E446D-DE6D-474A-ABEE-0F4096E775B5` | development account A | Griff | 402 × 874 |
+| `outpost-beta`, iPhone 17 Pro Max | `C8637538-65DC-47B1-9D99-73DA89A8CBC5` | development account B | Outie | 440 × 956 |
+| `outpost-gamma`, iPhone 17 | `0993066E-DA3B-4925-A7C3-F4189A3F7DD7` | none | Trig | 402 × 874 |
+| `outpost-delta`, iPhone 17 | `92E0602F-FCEF-4EDF-BC71-389B3C052E89` | none | Quad | 402 × 874 |
 
 Alpha and beta are on two different Apple Accounts, and only they prove anything about CloudKit.
 Gamma and delta have no account and reach each other through a directory instead; see
@@ -42,10 +42,10 @@ week's code looks exactly like a defect, and Griff has caught one twice.
 
 ```bash
 xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter \
-  -destination 'platform=iOS Simulator,id=4CB401B7-ABC0-4C00-ABEC-5BDBB84767D1' \
+  -destination 'platform=iOS Simulator,id=5D9E446D-DE6D-474A-ABEE-0F4096E775B5' \
   -derivedDataPath /tmp/carpenter-dd build
-for u in 4CB401B7-ABC0-4C00-ABEC-5BDBB84767D1 DADA1E7E-6CB3-44F9-B59A-5A8D4C9B7BAF \
-         F7F2F5D2-5F36-4312-8A36-D5834C29CE70 98E5967E-9EC6-4873-B44B-7A1E57258030; do
+for u in 5D9E446D-DE6D-474A-ABEE-0F4096E775B5 C8637538-65DC-47B1-9D99-73DA89A8CBC5 \
+         0993066E-DA3B-4925-A7C3-F4189A3F7DD7 92E0602F-FCEF-4EDF-BC71-389B3C052E89; do
   xcrun simctl terminate "$u" com.microgpt.carpenter 2>/dev/null
   xcrun simctl install "$u" /tmp/carpenter-dd/Build/Products/Debug-iphonesimulator/Outpost.app
 done
@@ -282,7 +282,7 @@ Under `--mailbox`:
 Other debug launch arguments are listed on [Testing](testing.md#launch-arguments-for-the-rig).
 
 **What this proves, and what it must never be said to prove.** Everything above the mailbox: rosters,
-the fold, keys, invitations, confirmations, and what a third or fourth member changes. Nothing below
+rendering the log, keys, invitations, confirmations, and what a third or fourth member changes. Nothing below
 it: zones, shares, the change feed, CloudKit's eventual consistency or push. A result from these
 devices is **proved above the mailbox** and has to be written down in those words.
 

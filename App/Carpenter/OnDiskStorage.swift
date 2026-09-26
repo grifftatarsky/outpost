@@ -14,14 +14,17 @@ import SwiftUI
 #endif
 
 extension SessionStorage {
-    static func onDisk() -> SessionStorage {
-        let container = Bundle.main.bundleIdentifier ?? "app"
+    static func onDisk(profile: TestProfile? = nil) -> SessionStorage {
+        let container = TestProfileWorld.container(for: profile)
         let directory = StorageLocation.directory(container: container)
         Diagnostics.sync.notice(
             "storage: \(directory.path, privacy: .public) appGroup=\(AppGroup.available, privacy: .public)")
 
+        let system = SystemKeychainStore(service: container, accessGroup: SharedKeychain.group)
+        let keychain: any KeychainStore = profile == nil ? system : DeviceOnlyKeychainStore(system)
+
         return SessionStorage(
-            keychain: SystemKeychainStore(service: container, accessGroup: SharedKeychain.group),
+            keychain: keychain,
             log: FileLogStore(url: directory.appending(path: StorageLocation.logName)),
             documents: FileDocumentStore(url: directory.appending(path: StorageLocation.stateName)),
             media: FileMediaStore(directory: FileMediaStore.url(inDirectory: directory))

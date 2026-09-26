@@ -22,7 +22,7 @@ struct HeldRestorePrompt: View {
                         .foregroundStyle(palette.primaryText)
 
                     Text(
-                        "It asked you for what was said here before. You chose to hold that until you have checked, so none of it has gone. Read the characters below to each other on a line you trust. Anything said from now on still reaches them — they are still in this conversation.",
+                        "History backfill has been requested. Read the characters below to each other securely.",
                         bundle: .module)
                         .font(CarpenterFont.footnote)
                         .foregroundStyle(palette.secondaryText)

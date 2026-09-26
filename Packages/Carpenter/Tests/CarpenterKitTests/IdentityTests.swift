@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 
@@ -110,5 +111,56 @@ struct IdentityTests {
 
         #expect(try DeviceKeys.isValidSignature(signature, for: message, publicKey: device.publicKey))
         #expect(try !identity.publicKeys.isValidSignature(signature, for: message))
+    }
+
+    @Test("An identity's keys and ID are the ones its seeds derive, however it was made")
+    func identityDerivesFromItsSeeds() throws {
+        let generated = Identity.generate()
+        let reread = try Identity(signingSeed: generated.signingSeed, agreementSeed: generated.agreementSeed)
+
+        let signing = try Curve25519.Signing.PrivateKey(rawRepresentation: generated.signingSeed)
+        let agreement = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: generated.agreementSeed)
+        let derived = IdentityPublicKeys(
+            signing: signing.publicKey.rawRepresentation, agreement: agreement.publicKey.rawRepresentation)
+
+        #expect(generated.publicKeys == derived)
+        #expect(generated.id == derived.participantID)
+        #expect(reread == generated)
+        #expect(reread.id == generated.id)
+    }
+
+    @Test("A device's public key and ID are the ones its seed derives, however it was made")
+    func deviceDerivesFromItsSeed() throws {
+        let generated = DeviceKeys.generate()
+        let reread = try DeviceKeys(signingSeed: generated.signingSeed)
+        let derived = try Curve25519.Signing.PrivateKey(rawRepresentation: generated.signingSeed)
+            .publicKey.rawRepresentation
+
+        #expect(generated.publicKey == derived)
+        #expect(generated.id == DeviceID(publicKey: derived))
+        #expect(reread == generated)
+    }
+
+    @Test("A malformed seed is refused, not stored")
+    func malformedSeedsAreRefused() {
+        #expect(throws: CryptoError.self) { try Identity(signingSeed: Data([1, 2, 3]), agreementSeed: Data(count: 32)) }
+        #expect(throws: CryptoError.self) { try DeviceKeys(signingSeed: Data([1, 2, 3])) }
+    }
+
+    @Test("A deny-list fingerprint is the lowercase hex SHA-256 of the participant ID")
+    func denyListFingerprintIsPinned() {
+        let person = ParticipantID(rawValue: Data(repeating: 7, count: 32))
+        #expect(
+            DenyList.fingerprint(of: person)
+                == "4bb06f8e4e3a7715d201d573d0aa423762e55dabd61a2c02278fa56cc6d294e0")
+    }
+
+    @Test("An empty deny list holds nobody, and a listed person is held")
+    func denyListMembership() {
+        let person = ParticipantID(rawValue: Data(repeating: 7, count: 32))
+        #expect(!DenyList.empty.contains(person))
+        let listed = DenyList(version: 1, updated: "", fingerprints: [DenyList.fingerprint(of: person)])
+        #expect(listed.contains(person))
+        #expect(!listed.contains(ParticipantID(rawValue: Data(repeating: 8, count: 32))))
     }
 }

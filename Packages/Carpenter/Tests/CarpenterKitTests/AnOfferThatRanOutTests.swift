@@ -28,10 +28,10 @@ struct AnOfferThatRanOutTests {
         return roster
     }
 
-    // MARK: What the fold answers, and must go on answering
+    // MARK: What the member list answers, and must go on answering
 
-    @Test("The fold admits on a confirmation whenever one lands, and never asks the date")
-    func theFoldNeverAsksTheDate() throws {
+    @Test("The member list admits on a confirmation whenever one lands, and never asks the date")
+    func theMemberListNeverAsksTheDate() throws {
         let founder = Identity.generate()
         let joiner = Identity.generate()
         var roster = try founded(by: founder)
@@ -48,7 +48,7 @@ struct AnOfferThatRanOutTests {
 
         #expect(
             roster.members.contains(joiner.id),
-            "the fold started asking whether the invitation had run out")
+            "building the member list started asking whether the invitation had run out")
     }
 
     @Test("A member is still a member a thousand days after the invitation ran out")

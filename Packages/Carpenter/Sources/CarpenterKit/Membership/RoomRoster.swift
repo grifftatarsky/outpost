@@ -209,7 +209,7 @@ public struct RoomRoster: Hashable, Sendable {
     }
 
     public mutating func set(access newAccess: RoomAccess, by author: ParticipantID) {
-        guard author == founder else { return }
+        guard author == founder, established.contains(author) else { return }
         access = newAccess
     }
 
@@ -220,8 +220,8 @@ public struct RoomRoster: Hashable, Sendable {
 
         guard isOpen(attestation) else { return false }
 
-        let admitters = admissionsByInvitation[attestation.signature] ?? []
-        let refusers = refusalsByInvitation[attestation.signature] ?? []
+        let admitters = (admissionsByInvitation[attestation.signature] ?? []).intersection(established)
+        let refusers = (refusalsByInvitation[attestation.signature] ?? []).intersection(established)
 
         switch access {
         case .open:
@@ -265,7 +265,7 @@ public struct RoomRoster: Hashable, Sendable {
             against: inviterKeys, at: instant, allowingExpired: allowingExpired)
     }
 
-    // MARK: Folding
+    // MARK: Building the member list from the log
 
     public static let rosterShaping: Set<PayloadType> = [
         .roomProfile, .roomAccess, .joinRequest, .joinConfirmed, .invitationRescinded, .admission,
@@ -286,7 +286,9 @@ public struct RoomRoster: Hashable, Sendable {
 
         case .joinRequest:
             guard let request = try? body.decode(JoinRequestBody.self),
-                request.attestation.room == room
+                request.attestation.room == room,
+                request.attestation.inviter == entry.author,
+                established.contains(entry.author)
             else { return }
             requests[request.attestation.joiner] = request.attestation
 
@@ -295,7 +297,8 @@ public struct RoomRoster: Hashable, Sendable {
             }
 
         case .joinConfirmed:
-            guard let confirmation = try? body.decode(JoinConfirmedBody.self),
+            guard established.contains(entry.author),
+                let confirmation = try? body.decode(JoinConfirmedBody.self),
                 let attestation = requests[confirmation.joiner],
                 (try? confirmation.verify(confirming: attestation)) != nil
             else { return }
@@ -317,7 +320,9 @@ public struct RoomRoster: Hashable, Sendable {
             rescinded.insert(taken.invitation)
 
         case .admission:
-            guard let decision = try? body.decode(AdmissionBody.self) else { return }
+            guard established.contains(entry.author),
+                let decision = try? body.decode(AdmissionBody.self)
+            else { return }
             guard let invitation = decision.invitation ?? requests[decision.joiner]?.signature
             else { return }
             if decision.admitted {
@@ -389,7 +394,7 @@ public struct RoomRoster: Hashable, Sendable {
         requests[member] = nil
     }
 
-    public var keyTurner: ParticipantID? {
+    public var keyRotator: ParticipantID? {
         if let founder, established.contains(founder) { return founder }
         return established.min { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
     }

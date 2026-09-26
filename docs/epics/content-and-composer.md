@@ -274,7 +274,7 @@ have to be a message.
 - **Not done.** A visible trigger rather than a hold. Reversed deliberately, below.
 - **Done.** The post row speaks one sentence, not a pill at a time. 2026-09-17: a post's reactions are one
   element saying the same sentence a message's stack says — *Reactions: 👍 from you and 1 other, 🔥
-  from 2 people* — including the reactions past the third that the row folds away, with double-tap
+  from 2 people* — including the reactions past the third that the row hides, with double-tap
   opening every reaction and *Remove my reaction* as a named action. And a message now carries a
   named *React* action, because holding it was the only way to react and nothing told VoiceOver so.
   `ReactionsSpeakTests` checks the exact sentence. **Unheard**: the VoiceOver walk waits for
@@ -367,7 +367,7 @@ does.
 - **Done.** 2026-09-15. The bar is unchanged — four favorites, ranked by use — and the plus opens the grid:
   a search field, the recents row, and Unicode's nine groups with pinned headers. The hand-maintained
   twenty are gone.
-- **Done.** Search by name, folding case and accents, ranking **whole-word matches above matches inside
+- **Done.** Search by name, ignoring case and accents, ranking **whole-word matches above matches inside
   another word** so "cat" puts 🐱 above 🎓 *graduation cap*. It says plainly when nothing matches
   rather than showing an empty grid.
 - **Done.** `Scripts/make-emoji-table.py` parses `unicode.org/Public/emoji/latest/emoji-test.txt` into
@@ -462,7 +462,7 @@ reporting a post and withdrawing one were all built afterwards.*
 A post's photo is a `media` entry on the wall — `room == nil`, sealed under the member's own wall
 chain — exactly as a message's is in a room, through the one `upload(_:to:through:)` both now share:
 upload first, entry second, the sender's own copy kept sealed, nothing written if the upload fails.
-The fold gives `OutpostPost` a `media` and makes the caption its words, as it does for `Message`.
+Rendering gives `OutpostPost` a `media` and makes the caption its words, as it does for `Message`.
 Collecting and sweeping attachments used to assume an entry had a room and silently skipped a wall
 entry; both now read the chain an entry is sealed under, wall included, or the sweep would have
 deleted a wall photo as an orphan on the next launch.
@@ -552,7 +552,7 @@ model that reported it: a post drew its new words with nothing beside them and r
 `isWithdrawn` as false while showing the placeholder, which is the same defect `Message` had once
 and for the same reason.
 
-The fold refuses an edit whose target is not text, because applying new words to a photo would
+Rendering refuses an edit whose target is not text, because applying new words to a photo would
 replace the picture with a sentence on every device. Asking that question in `timeLeft(toEdit:)` as
 well is what stopped a photo — a message's as much as a post's — offering an Edit that wrote an
 entry every device ignores.
@@ -837,7 +837,7 @@ the log still verifies end to end.
 
 **What would falsify the epic.** A formatting marker reaching a reader. A packet per message. A tag a
 photo carried in that reaches a reader. An edit that does not converge, two devices showing different
-text for the same entry, which is a fold bug and the one thing here that would undermine the log
+text for the same entry, which is a rendering bug and the one thing here that would undermine the log
 rather than a feature.
 
 <!-- COPY END 17841ab3 -->

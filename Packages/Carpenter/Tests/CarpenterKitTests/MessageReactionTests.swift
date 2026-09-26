@@ -55,7 +55,7 @@ struct MessageReactionTests {
         let after = try #require(alice.messages(in: room).last)
         #expect(
             after.reactions["🫡"]?.count == 1,
-            "the reaction folded and the read model dropped it again")
+            "the reaction was rendered and the read model dropped it again")
         #expect(after.myReaction == "🫡")
     }
 

@@ -73,6 +73,13 @@ keys for one round when the last round refused something and somebody has been r
 The rule is tested; the round is not, because building a real mid-round refusal on top of a real
 removal needs a third participant.
 
+**A reader whose access was stopped can still comment.** Stopping somebody rotates the Outpost's key,
+but they keep the older keys, and a comment written under one still opens for the owner and every
+reader, so it is drawn under the posts they already knew. Only what the owner writes decides access;
+nothing checks who wrote a comment. A time cannot settle it, because the author chooses their own
+dates. Reasoned from the code on 2026-09-26, not tested; the same shape as a removed member writing
+into a room, which `RoomRoster` now ignores.
+
 **Two concurrent advances could mint rival secrets for the same epoch.** *An audit's claim, not
 verified.* One advancer is guaranteed per membership change, not per epoch number; two members removing
 the same person inside one sync interval is the natural way in. On
@@ -89,8 +96,8 @@ A third Apple Account without Advanced Data Protection would settle it over Clou
 **`requests` holds one invitation per person, so any member can decide which offer is on the table.**
 Re-appending an earlier invitation's bytes makes it current again. Keying confirmations and admissions
 by invitation guarantees an answer matches the offer it answers; it does not stop the offer being
-swapped. The `.joinRequest` fold checks neither the signature nor the inviter's membership; both are
-checked at write time only.
+swapped. Only the inviter can swap it now, because a request counts only when its inviter writes it as a
+member. The invitation's signature is still checked only when it is written, not when the log is read.
 
 <!-- COPY END e80f8f25 -->
 
@@ -175,7 +182,7 @@ longer; the fix is to wait on the write.
 **The UI tests run only by hand.** `CarpenterUITests` holds the accessibility audits and the rig steps,
 which need booted simulators and minutes each. CI does not run them.
 
-**Nothing measures cost outside the fold and screen reads.** `CausalOrder` on a long log, a round as the
+**Nothing measures cost outside building the projection and screen reads.** `CausalOrder` on a long log, a round as the
 outbox grows, and laying out a long transcript are unmeasured.
 
 <!-- COPY END 88dfd060 -->
@@ -192,7 +199,25 @@ the room before ringing.
 **A fetch reads whole zones.** `everything(in:of:)` pages a zone's change feed from the start every
 round, with no change token. Correct, since a packet must be re-readable until acknowledged, but the
 cost grows with what is in flight rather than what is new. Logs have shown 89 records scanned to find
-one.
+one. The scan's fields include each packet's ciphertext, so every packet in a peer's outbox comes down
+whole, including those addressed to somebody else: a member whose phone is off for a week leaves a
+growing pile in every outbox, and everybody else downloads it every round. A routing scan (packet ID
+and `outstanding` only) followed by a fetch by ID of the packets addressed to us would bring down only
+ours. Reasoned from the code on 2026-09-26, not measured.
+
+**A photo is fetched whole, however big it is.** The forty-megabyte sealing ceiling is the sender's;
+a recipient downloads whatever asset a media entry names, automatically, and reads it into memory in
+one piece before anything can weigh it. A modified client could name a very large one and every
+recipient would fetch and hold it. CloudKit does not say how big an asset is before it is downloaded,
+so a limit needs the size declared inside the sealed entry and a fetch that can stop early. Reasoned
+from the code on 2026-09-26, not measured.
+
+**Coming back to the app syncs twice.** `AppRootView` answers both `didBecomeActiveNotification` and
+`scenePhase` becoming `.active`, and on iPhone both fire together — returning to the app, closing
+Control Center, dismissing a system alert. Each runs `recheckForSyncedIdentity()` and `syncNow()`, so
+the second finds a round in flight and queues another: two full rounds for every return. Keeping the
+notification for the Mac only would leave one. Read from the code on 2026-09-26, not observed on a
+device.
 
 **Nothing cleans up bells.** One record per channel, overwritten, never deleted, because a delete would
 ring the bell.
@@ -200,12 +225,42 @@ ring the bell.
 **The sibling feed is one record that only grows.** `CloudKitEntrySync` writes a device's whole sealed
 feed, every entry, certificate and room key it holds and the member's preferences, into one field and
 republishes it after every write. CloudKit accepted 16MB in a field, so it is not a wall yet, but a
-member's hundredth message republishes the first ninety-nine to every device. Not measured at any real
-size.
+member's hundredth message republishes the first ninety-nine to every device. Measured 2026-09-26:
+about 900 bytes an entry once sealed, so 1.8MB a send at 2,000 entries, and 16MB at about 18,000.
+[Open questions](open-questions.md) asks what to do about it.
 
 <!-- COPY END b81482a3 -->
 
+<!-- COPY BEGIN 9a32fa33 [NEEDS HUMAN REVIEW] -->
+
+**A send rebuilds the whole projection.** Measured 2026-09-26 in a release build at 2,010 entries:
+8.3ms a send, 5.7ms of it the rebuild, and it grows with the log. A member's own new entry is causally
+last, so it could be added to the existing projection instead of rebuilding it; that is the next
+step if sends feel slow, and it wants a test that compares the incremental result with a full rebuild
+after random changes. Sealing the sibling feed after a send (42ms at that size) no longer happens on the
+main actor. The same day, at larger sizes on a Mac in a release build: at 5,000 entries a send took
+22ms (15ms of it the rebuild) and opening the app 234ms; at 20,000 opening the app took 971ms, and
+after room summaries were read from the projection's index and the rebuild stopped copying each entry
+three times, a send took 86ms (64ms the rebuild, 25ms of that the causal sort) and drawing a
+2,000-message room 4.8ms. A phone is slower; not measured on one.
+
+**What a session remembers costs about half the log again.** Since 2026-09-26 the session keeps every
+entry it has opened (the plaintext, and what it draws) so a rebuild does not decrypt and decode the
+log again. Measured at 2,010 short messages: the plaintexts about 200KB beside an 820KB log, and the
+drawn entries about as much again. The notification extension loads the whole log under a memory
+limit of about 24MB and reloads up to six times a push, so it gains the most time and has the least
+room. Its footprint has never been measured.
+
+**A second device learns what the first collected at least two minutes late.** A packet is addressed
+to the member, not to a device, so whichever of a member's devices fetches it first acknowledges it
+for all of them. The other catches up through history repair, which waits `holeSettlingDelay` (two
+minutes) before asking. Not a loss, but a delay no simulator can show — same-account multi-device is
+hardware-only.
+
+<!-- COPY END 9a32fa33 -->
+
 <!-- COPY BEGIN 08ff1025 [NEEDS HUMAN REVIEW] -->
+
 
 ## Unwired or unwatched
 
@@ -264,7 +319,7 @@ view. Putting the empty state in an overlay above the list was tried on 2026-09-
 nothing, because the overlay covers the list's refresh indicator; it was reverted. The foreground loop
 syncs every 20 seconds regardless. Worth a look with the HIG open.
 
-**"13 of 16" sits below the fold on the longest check-up questions.** The position is in the section
+**"13 of 16" is off screen on the longest check-up questions.** The position is in the section
 footer, under the Next button's inset until you scroll.
 
 **The Focus permission prompt holds the check-up's finish.** Choosing to share Do Not Disturb asks the
@@ -347,17 +402,17 @@ pass across the tree, with `cross-fade only` added to the cross-fades.
 
 <!-- COPY BEGIN 16d05a2e [NEEDS HUMAN REVIEW] -->
 
-### The conversation screen still costs ~3,500µs a read
+### What the conversation screen costs a read
 
-`deliveryMarks(in:of:)` is most of it:
-`peers()` about 800µs, `unsentEntries()` about 700µs. Neither can be cached on a fold alone, because
-blocking and the synced frontier change without one, and a stale one looks like a message that did not
-send. `ProjectionCostTests` pins both reads at 5,000µs so they cannot get worse.
+Measured 2026-09-26 in a release build: a 200-message room reads in about 420µs beside a 2,010-entry
+log. `deliveryMarks(in:of:)` no longer builds `peers()` (it asks `hasSomebodyToReach`, which stops at
+the first) or walks `unsentEntries()` (it asks the room, through `Projection.unsent`). Neither answer
+is cached with the projection, because blocking and the synced frontier change without the log changing, and a stale one looks
+like a message that did not send. `ProjectionCostTests` pins `messages(in:)` and `transcript(in:)`
+at 5,000µs.
 
-**Doc comments survive in the source.** Despite the rule that the repository has no comments, 152
-lines of `///` remain, for example in `ShortAuthenticationString.swift` and
-`MembershipAttestation.swift`, plus a few `//` lines such as one in `RootView+Phone.swift`. The lint
-does not catch `///`. Found 2026-09-17 during the documentation pass.
+**The lint does not catch `///`.** The 152 lines of doc comments found on 2026-09-17 were removed
+on 2026-09-26 and none remain, but nothing stops one coming back.
 
 **`AppIcon.appiconset` carries Mac sizes of an old drawing.** The Mac is not offered.
 

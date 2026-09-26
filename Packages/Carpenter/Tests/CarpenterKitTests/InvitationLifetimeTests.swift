@@ -79,7 +79,7 @@ struct InvitationLifetimeTests {
         let lifetime = InvitationLifetime.endOfDay(noon, in: calendar)
         let expiry = lifetime.expiry(from: start)
 
-        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: expiry)
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: expiry)
         #expect(components.day == 14, "a picked day ended on a different day")
         #expect(components.hour == 23 && components.minute == 59)
 

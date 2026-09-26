@@ -92,37 +92,30 @@ public struct IdentityPublicKeys: Hashable, Sendable, Codable {
 public struct Identity: Hashable, Sendable {
     public let signingSeed: Data
     public let agreementSeed: Data
+    public let publicKeys: IdentityPublicKeys
+    public let id: ParticipantID
 
     public init(signingSeed: Data, agreementSeed: Data) throws {
-        guard (try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed)) != nil,
-            (try? Curve25519.KeyAgreement.PrivateKey(rawRepresentation: agreementSeed)) != nil
+        guard let signing = try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed),
+            let agreement = try? Curve25519.KeyAgreement.PrivateKey(rawRepresentation: agreementSeed)
         else {
             throw CryptoError.malformedKey
         }
-        self.signingSeed = signingSeed
-        self.agreementSeed = agreementSeed
+        self.init(signing: signing, agreement: agreement)
     }
 
     public static func generate() -> Identity {
-        Identity(
-            unchecked: Curve25519.Signing.PrivateKey().rawRepresentation,
-            agreementSeed: Curve25519.KeyAgreement.PrivateKey().rawRepresentation
-        )
+        Identity(signing: Curve25519.Signing.PrivateKey(), agreement: Curve25519.KeyAgreement.PrivateKey())
     }
 
-    private init(unchecked signingSeed: Data, agreementSeed: Data) {
-        self.signingSeed = signingSeed
-        self.agreementSeed = agreementSeed
+    private init(signing: Curve25519.Signing.PrivateKey, agreement: Curve25519.KeyAgreement.PrivateKey) {
+        signingSeed = signing.rawRepresentation
+        agreementSeed = agreement.rawRepresentation
+        publicKeys = IdentityPublicKeys(
+            signing: signing.publicKey.rawRepresentation,
+            agreement: agreement.publicKey.rawRepresentation)
+        id = publicKeys.participantID
     }
-
-    public var publicKeys: IdentityPublicKeys {
-        IdentityPublicKeys(
-            signing: signingKey.publicKey.rawRepresentation,
-            agreement: agreementKey.publicKey.rawRepresentation
-        )
-    }
-
-    public var id: ParticipantID { publicKeys.participantID }
 
     public func sign(_ message: Data) throws -> Data {
         try signingKey.signature(for: message)
@@ -147,25 +140,25 @@ public struct Identity: Hashable, Sendable {
 
 public struct DeviceKeys: Hashable, Sendable {
     public let signingSeed: Data
+    public let publicKey: Data
+    public let id: DeviceID
 
     public init(signingSeed: Data) throws {
-        guard (try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed)) != nil else {
+        guard let signing = try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed) else {
             throw CryptoError.malformedKey
         }
-        self.signingSeed = signingSeed
+        self.init(signing: signing)
     }
 
     public static func generate() -> DeviceKeys {
-        DeviceKeys(unchecked: Curve25519.Signing.PrivateKey().rawRepresentation)
+        DeviceKeys(signing: Curve25519.Signing.PrivateKey())
     }
 
-    private init(unchecked signingSeed: Data) {
-        self.signingSeed = signingSeed
+    private init(signing: Curve25519.Signing.PrivateKey) {
+        signingSeed = signing.rawRepresentation
+        publicKey = signing.publicKey.rawRepresentation
+        id = DeviceID(publicKey: publicKey)
     }
-
-    public var publicKey: Data { signingKey.publicKey.rawRepresentation }
-
-    public var id: DeviceID { DeviceID(publicKey: publicKey) }
 
     public func sign(_ message: Data) throws -> Data {
         try signingKey.signature(for: message)

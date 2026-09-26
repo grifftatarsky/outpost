@@ -10,8 +10,6 @@ struct EmojiCatalogueTests {
 
     @Test("The table actually loaded")
     func loaded() {
-        // A missing or unparseable resource leaves the grid empty and silent, which is the failure
-        // this suite exists to make loud. Run `Scripts/make-emoji-table.py` if this fails.
         #expect(!catalogue.groups.isEmpty, "emoji.json did not load out of the module bundle")
         #expect(catalogue.count > 1_500, "only \(catalogue.count) emoji — the table looks truncated")
     }
@@ -46,12 +44,11 @@ struct EmojiCatalogueTests {
     }
 
     @Test("A whole-word match comes before a match inside another word")
-    func wholeWordsFirst() {
-        // Typing "cat" should not put a graduation cap above a cat.
+    func wholeWordsFirst() throws {
         let found = catalogue.search("cat")
-        let cat = try? #require(found.firstIndex { $0.emoji == "🐱" })
-        let cap = found.firstIndex { $0.name.contains("graduation") }
-        if let cat, let cap { #expect(cat < cap) }
+        let cat = try #require(found.firstIndex { $0.emoji == "🐱" })
+        let inside = try #require(found.firstIndex { $0.name.contains("identification") })
+        #expect(cat < inside)
     }
 
     @Test("Case and accents do not matter")

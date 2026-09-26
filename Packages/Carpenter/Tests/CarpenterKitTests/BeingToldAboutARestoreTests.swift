@@ -8,15 +8,6 @@ import Testing
 @Suite("Being told that somebody came back", .serialized)
 @MainActor
 struct BeingToldAboutARestoreTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private struct Rig {
         let original: AppSession
         let peer: AppSession
@@ -62,7 +53,7 @@ struct BeingToldAboutARestoreTests {
             for session in [original, peer] { try await session.sync(through: mailbox) }
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         let key = try #require(original.recoveryKeyText())
         return Rig(
             original: original, peer: peer, room: room, mailbox: mailbox, relay: relay,
@@ -74,7 +65,7 @@ struct BeingToldAboutARestoreTests {
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: rig.key)
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
         for _ in 0..<10 {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
@@ -233,15 +224,6 @@ struct BeingToldAboutARestoreTests {
 @Suite("Holding history until the person asked has checked", .serialized)
 @MainActor
 struct HoldingHistoryForARestoreTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private struct Rig {
         let original: AppSession
         let peer: AppSession
@@ -284,7 +266,7 @@ struct HoldingHistoryForARestoreTests {
             for session in [original, peer] { try await session.sync(through: mailbox) }
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         let key = try #require(original.recoveryKeyText())
 
         let said = "said while the phone was gone"
@@ -302,7 +284,7 @@ struct HoldingHistoryForARestoreTests {
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: rig.key)
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
         for _ in 0..<rounds {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
@@ -428,15 +410,6 @@ struct HoldingHistoryForARestoreTests {
 @Suite("Choosing not to ask anybody for your history", .serialized)
 @MainActor
 struct NotAskingForHistoryTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private struct Rig {
         let original: AppSession
         let peer: AppSession
@@ -472,7 +445,7 @@ struct NotAskingForHistoryTests {
             for session in [original, peer] { try await session.sync(through: mailbox) }
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         let key = try #require(original.recoveryKeyText())
 
         let said = "said while the phone was gone"
@@ -490,7 +463,7 @@ struct NotAskingForHistoryTests {
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: rig.key, askingPeers: askingPeers)
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
         for _ in 0..<10 {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
@@ -577,18 +550,9 @@ struct NotAskingForHistoryTests {
     }
 }
 
-@Suite("Turning every key after a device was lost", .serialized)
+@Suite("Rotating every key after a device was lost", .serialized)
 @MainActor
-struct TurningEveryKeyAfterALossTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
+struct RotatingEveryKeyAfterALossTests {
     private struct Rig {
         let original: AppSession
         let peer: AppSession
@@ -627,7 +591,7 @@ struct TurningEveryKeyAfterALossTests {
             made.append(room)
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         return Rig(
             original: original, peer: peer, kitchen: made[0], hangar: made[1], mailbox: mailbox,
             relay: relay, clock: clock, key: try #require(original.recoveryKeyText()))
@@ -638,7 +602,7 @@ struct TurningEveryKeyAfterALossTests {
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: rig.key, afterALoss: afterALoss)
-        await settle(fresh) { fresh.rooms.count == 2 }
+        await fresh.settleDeviceSync { fresh.rooms.count == 2 }
         for _ in 0..<12 {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
@@ -649,8 +613,8 @@ struct TurningEveryKeyAfterALossTests {
         session.epochsHeld(in: room)
     }
 
-    @Test("Saying a device was lost turns the key in every room, not just one")
-    func sayingLostTurnsEveryKey() async throws {
+    @Test("Saying a device was lost rotates the key in every room, not just one")
+    func sayingLostRotatesEveryKey() async throws {
         let rig = try await rig()
         let before = [
             rig.kitchen: epoch(rig.original, rig.kitchen),
@@ -662,18 +626,18 @@ struct TurningEveryKeyAfterALossTests {
             #expect(
                 epoch(fresh, room) > (before[room] ?? 0),
                 """
-                A room's key did not turn after the member said a device was lost. Griff's ruling, \
-                2026-09-13: "a yes turns the key in every room" — every one, because a stolen phone \
-                is in every room the member is in.
+                A room's key was not rotated after the member said a device was lost. The ruling of \
+                2026-09-13 is that a yes rotates the key in every room, because a stolen phone is \
+                in every room the member is in.
                 """)
         }
         #expect(
-            !fresh.isTurningEveryKeyAfterALoss,
-            "the turn was never marked done, so every round would turn the keys again")
+            !fresh.isRotatingEveryKeyAfterALoss,
+            "the rotation was never marked done, so every round would rotate the keys again")
     }
 
-    @Test("Saying no turns nothing")
-    func sayingNoTurnsNothing() async throws {
+    @Test("Saying no rotates nothing")
+    func sayingNoRotatesNothing() async throws {
         let rig = try await rig()
         let before = epoch(rig.original, rig.kitchen)
         let fresh = try await restore(rig, afterALoss: false)
@@ -681,7 +645,7 @@ struct TurningEveryKeyAfterALossTests {
         #expect(
             epoch(fresh, rig.kitchen) == before,
             """
-            A key turned on a restore where nothing was lost. A turn is not free and not \
+            A key was rotated on a restore where nothing was lost. A rotation is not free and not \
             reversible, and "I restored onto a new laptop" is not "my phone was taken".
             """)
     }
@@ -691,15 +655,15 @@ struct TurningEveryKeyAfterALossTests {
         let rig = try await rig()
         let fresh = try await restore(rig, afterALoss: true)
 
-        try await fresh.send("after the key turned", to: rig.kitchen)
+        try await fresh.send("after the key was rotated", to: rig.kitchen)
         for _ in 0..<10 {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
 
         #expect(
-            rig.peer.messages(in: rig.kitchen).contains { $0.body == "after the key turned" },
+            rig.peer.messages(in: rig.kitchen).contains { $0.body == "after the key was rotated" },
             """
-            Turning every key locked the people still in the room out of it. The turn is meant to \
+            Rotating every key locked the people still in the room out of it. The rotation is meant to \
             cut off a device that is gone, not the members who are still there.
             """)
     }
@@ -712,16 +676,16 @@ struct TurningEveryKeyAfterALossTests {
         try await fresh.restore(fromRecoveryKey: rig.key, afterALoss: true)
 
         #expect(
-            fresh.isTurningEveryKeyAfterALoss,
+            fresh.isRotatingEveryKeyAfterALoss,
             "nothing recorded the answer, so a relaunch before the rooms arrive loses it")
 
         await fresh.load()
         #expect(
-            fresh.isTurningEveryKeyAfterALoss,
+            fresh.isRotatingEveryKeyAfterALoss,
             """
             The answer was forgotten on a relaunch. The rooms come back from the member's own \
             iCloud several rounds after the restore, so the answer has to outlive the launch that \
-            took it or the keys never turn.
+            took it or the keys are never rotated.
             """)
     }
 }

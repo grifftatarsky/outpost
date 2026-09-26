@@ -196,7 +196,7 @@ struct RoomRosterTests {
         let attestation = try TestInvite.issue(
             joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
-            rendered(joiner.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
+            rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
         roster.apply(
             rendered(alice.id, .joinConfirmed, hash: 102),
             body: try Payload.joinConfirmed(
@@ -232,7 +232,7 @@ struct RoomRosterTests {
         let attestation = try TestInvite.issue(
             joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
-            rendered(joiner.id, .joinRequest, hash: 3), body: try Payload.joinRequest(attestation))
+            rendered(alice.id, .joinRequest, hash: 3), body: try Payload.joinRequest(attestation))
         roster.apply(
             rendered(alice.id, .joinConfirmed, hash: 103),
             body: try Payload.joinConfirmed(
@@ -352,21 +352,25 @@ struct RoomRosterTests {
         #expect(roster.admissions[bob.id]?.isEmpty != false)
     }
 
-    @Test("A relayed join request is recorded against the joiner, not the messenger")
-    func requestsMayBeRelayed() throws {
+    @Test("A join request is recorded against the joiner, and only when its inviter writes it")
+    func requestsAreWrittenByTheirInviter() throws {
         let alice = Identity.generate()
         let joiner = Identity.generate()
         let relay = Identity.generate()
 
         var roster = RoomRoster(room: room)
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
         let attestation = try TestInvite.issue(
             joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
 
         roster.apply(
             rendered(relay.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
+        #expect(roster.requests[joiner.id] == nil, "somebody other than the inviter wrote it")
 
+        roster.apply(
+            rendered(alice.id, .joinRequest, hash: 3), body: try Payload.joinRequest(attestation))
         #expect(roster.requests[joiner.id] == attestation)
-        #expect(roster.requests[relay.id] == nil)
+        #expect(roster.requests[alice.id] == nil)
     }
 
     @Test("Relaying cannot launder an attestation from outside the room")

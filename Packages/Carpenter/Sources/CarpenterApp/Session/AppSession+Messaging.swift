@@ -180,6 +180,7 @@ extension AppSession {
         guard needle.count >= 2 else { return SearchResults() }
 
         var found = SearchResults()
+        let projected = projection
         for summary in rooms {
             let named = summary.name.localizedStandardContains(needle)
             if named {
@@ -187,7 +188,9 @@ extension AppSession {
                     .init(room: summary.id, name: summary.name, isDirect: summary.isDirect))
             }
 
-            for message in messages(in: summary.id) where !message.isWithdrawn {
+            let drawn = projected.messages(in: summary.id, outOfRoom: outOfRoom(in: summary.id, of: projected))
+                .filter(isDrawn)
+            for message in drawn where !message.isWithdrawn {
                 let saidIt = message.body.localizedStandardContains(needle)
                 let byThem = message.author.displayName.localizedStandardContains(needle)
 
@@ -300,7 +303,7 @@ extension AppSession {
     public func readBy(_ message: MessageID, in room: RoomID) -> [ReadBy] {
         let projected = projection
         let opening = payloadOpener()
-        guard let position = projected.positions(in: room)[message] else { return [] }
+        guard let position = positions(in: room, of: projected)[message] else { return [] }
 
         let me = enrolment?.identity.id
         let roster = projected.roster(of: room, opening: opening)
@@ -334,25 +337,20 @@ extension AppSession {
             }
     }
 
-    private func outOfRoom(in room: RoomID, of projected: Projection) -> Set<EntryHash> {
-        if let known = cachedOutOfRoom[room] { return known }
-        let built = projected.outOfRoom(in: room, opening: payloadOpener())
-        cachedOutOfRoom[room] = built
-        return built
+    func outOfRoom(in room: RoomID, of projected: Projection) -> Set<EntryHash> {
+        cached(\.cachedOutOfRoom, room) { projected.outOfRoom(in: room, opening: payloadOpener()) }
+    }
+
+    func positions(in room: RoomID, of projected: Projection) -> [MessageID: Int] {
+        cached(\.cachedPositions, room) { projected.positions(in: room) }
     }
 
     func readEvidence(in room: RoomID, of projected: Projection) -> ReadEvidence {
-        if let known = cachedReadEvidence[room] { return known }
-        let built = projected.readEvidence(in: room, opening: payloadOpener())
-        cachedReadEvidence[room] = built
-        return built
+        cached(\.cachedReadEvidence, room) { projected.readEvidence(in: room, opening: payloadOpener()) }
     }
 
     func reportingMembers(in room: RoomID, of projected: Projection) -> Set<ParticipantID> {
-        if let known = cachedReporting[room] { return known }
-        let built = projected.reportingMembers(in: room, opening: payloadOpener())
-        cachedReporting[room] = built
-        return built
+        cached(\.cachedReporting, room) { projected.reportingMembers(in: room, opening: payloadOpener()) }
     }
 
     public func transcript(in room: RoomID) -> [TranscriptEntry] {
@@ -385,26 +383,24 @@ extension AppSession {
     }
 
     func devicesAdded(in room: RoomID) -> [AddedDevice] {
-        if let known = cachedDevicesAdded[room] { return known }
         guard let me = enrolment?.identity.id else { return [] }
-
-        var firstHeard: [ParticipantID: Date] = [:]
-        for entry in replica.entries(in: room) where entry.author != me {
-            firstHeard[entry.author] = min(firstHeard[entry.author] ?? .distantFuture, entry.wallTime)
-        }
-
-        var added: [AddedDevice] = []
-        for person in roster(of: room).members where person != me {
-            guard let since = firstHeard[person], let registry = replica.registry(for: person)
-            else { continue }
-            for certificate in registry.certificates where certificate.issuedAt > since {
-                added.append(
-                    AddedDevice(person: person, device: certificate.device, at: certificate.issuedAt))
+        return cached(\.cachedDevicesAdded, room) {
+            var firstHeard: [ParticipantID: Date] = [:]
+            for entry in replica.allEntries where entry.room == room && entry.author != me {
+                firstHeard[entry.author] = min(firstHeard[entry.author] ?? .distantFuture, entry.wallTime)
             }
+
+            var added: [AddedDevice] = []
+            for person in roster(of: room).members where person != me {
+                guard let since = firstHeard[person], let registry = replica.registry(for: person)
+                else { continue }
+                for certificate in registry.certificates where certificate.issuedAt > since {
+                    added.append(
+                        AddedDevice(person: person, device: certificate.device, at: certificate.issuedAt))
+                }
+            }
+            return added.sorted { $0.at < $1.at }
         }
-        added.sort { $0.at < $1.at }
-        cachedDevicesAdded[room] = added
-        return added
     }
 
     public func devicesAdded(by person: ParticipantID, after instant: Date) -> [Date] {
@@ -417,15 +413,16 @@ extension AppSession {
     }
 
     private func deliveryMarks(in room: RoomID, of projected: Projection) -> (Message) -> Message {
-        let unsent = Set(unsentEntries().map(\.hash))
-
-        let hasSomebodyToReach = !peers().isEmpty
+        let unsent = enrolment.map {
+            projected.unsent(in: room, by: $0.identity.id, past: persisted.syncedFrontier)
+        } ?? []
+        let hasSomebodyToReach = self.hasSomebodyToReach
 
         let undelivered = undeliveredEntries()
         let evidence = readEvidence(in: room, of: projected)
         let reporting = reportingMembers(in: room, of: projected)
             .subtracting([enrolment?.identity.id].compactMap(\.self))
-        let positions = projected.positions(in: room)
+        let positions = positions(in: room, of: projected)
         return { [self] message in
             guard message.isMine else { return message }
             return Message(
@@ -480,7 +477,7 @@ extension AppSession {
 
     public func markSeen(_ message: MessageID, in room: RoomID) async {
         guard enrolment != nil else { return }
-        let positions = projection.positions(in: room)
+        let positions = positions(in: room, of: projection)
         guard let seen = positions[message] else { return }
 
         await advanceReadMark(to: message, at: seen, in: room, among: positions)
@@ -517,7 +514,7 @@ extension AppSession {
 
     public func markRoomRead(_ room: RoomID) async {
         guard enrolment != nil else { return }
-        let positions = projection.positions(in: room)
+        let positions = positions(in: room, of: projection)
         guard let last = positions.max(by: { $0.value < $1.value }) else { return }
         await advanceReadMark(to: last.key, at: last.value, in: room, among: positions)
     }
@@ -554,8 +551,6 @@ extension AppSession {
 
     public var hiddenMessageCount: Int { persisted.preferences.hiddenEntries.count }
 
-    /// How many of this room's messages this member has hidden. A transcript that is quietly short
-    /// reads as something having failed to load, so the room says the number instead.
     public func hiddenMessageCount(in room: RoomID) -> Int {
         let inRoom = Set(projection.messages(in: room).map(\.id.entry))
         return persisted.preferences.hiddenEntries.intersection(inRoom).count

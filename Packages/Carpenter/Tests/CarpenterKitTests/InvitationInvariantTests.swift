@@ -25,8 +25,8 @@ struct InvitationInvariantTests {
         }
     }
 
-    @Test("A join turns the key once")
-    func oneEpochTurnPerJoin() async throws {
+    @Test("A join rotates the key once")
+    func oneKeyRotationPerJoin() async throws {
         let (a, b, mailbox, room) = try await paired()
         let before = a.epochsHeld(in: room)
 

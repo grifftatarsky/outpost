@@ -26,6 +26,8 @@ public struct VectorClock: Hashable, Sendable, Codable {
 
     public var keys: Set<FeedKey> { Set(frontier.keys) }
 
+    public var positions: [FeedKey: UInt64] { frontier }
+
     public var isEmpty: Bool { frontier.isEmpty }
 
     public mutating func observe(_ key: FeedKey, seq: UInt64) {
@@ -52,11 +54,12 @@ public struct VectorClock: Hashable, Sendable, Codable {
 
     var canonicalBytes: Data {
         let sorted = frontier
-            .sorted { $0.key.canonicalBytes.lexicographicallyPrecedes($1.key.canonicalBytes) }
+            .map { (key: $0.key.canonicalBytes, seq: $0.value) }
+            .sorted { $0.key.lexicographicallyPrecedes($1.key) }
 
         return CanonicalBytes.payload(
             domain: Domain.vectorClock,
-            fields: sorted.flatMap { [$0.key.canonicalBytes, CanonicalBytes.sequence($0.value)] }
+            fields: sorted.flatMap { [$0.key, CanonicalBytes.sequence($0.seq)] }
         )
     }
 }

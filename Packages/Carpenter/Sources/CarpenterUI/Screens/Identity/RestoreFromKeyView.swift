@@ -46,7 +46,7 @@ public struct RestoreFromKeyView: View {
                         icon: "key.horizontal.fill",
                         title: Text("Use your recovery key", bundle: .module),
                         paragraph: Text(
-                            "Paste the whole file, header line and all. It makes this device you again.",
+                            "Paste the whole file, header line and all.",
                             bundle: .module))
                 }
                 .groupedRowSurface()
@@ -56,7 +56,7 @@ public struct RestoreFromKeyView: View {
                     // COPY BEGIN 8ac43771 [NEEDS HUMAN REVIEW]
                     TextField(
                         text: $key,
-                        prompt: Text("OUTPOST RECOVERY KEY…", bundle: .module),
+                        prompt: Text(verbatim: "\(RecoveryKey.header)…"),
                         axis: .vertical
                     ) {
                         Text("Recovery key", bundle: .module)
@@ -74,7 +74,7 @@ public struct RestoreFromKeyView: View {
                         Text(problem).foregroundStyle(palette.destructive)
                     } else {
                         Text(
-                            "Nothing is sent anywhere. The key is read on this device and put back in your keychain.",
+                            "The key is read on device and restored to the iCloud keychain.",
                             bundle: .module)
                     }
                     // COPY END 8ac43771
@@ -84,28 +84,28 @@ public struct RestoreFromKeyView: View {
                 // COPY BEGIN 48aa82d0 [NEEDS HUMAN REVIEW]
                 Section {
                     ChoiceRow(
-                        title: Text("No — I still have it, or I am adding a device", bundle: .module),
+                        title: Text("No", bundle: .module),
                         isSelected: lostOrStolen == false,
                         action: { lostOrStolen = false })
                     ChoiceRow(
-                        title: Text("Yes — a device was lost or stolen", bundle: .module),
+                        title: Text("Yes", bundle: .module),
                         isSelected: lostOrStolen == true,
                         action: { lostOrStolen = true })
                 } header: {
-                    Text("What happened", bundle: .module).sectionHeading()
+                    Text("Was a device lost or stolen?", bundle: .module).sectionHeading()
                 } footer: {
                     switch lostOrStolen {
                     case true:
                         Text(
-                            "Every room turns its key, so the device that is gone stops reading what is said from now on. It cannot be undone, and any other device you still own goes quiet until you restore it too.",
+                            "Conversations rotate keys, removing the lost or stolen device. Your other devices will need the recovery key.",
                             bundle: .module)
                     case false:
                         Text(
-                            "No keys turn. A device you no longer have would keep reading — you can still cut one off later under Devices.",
+                            "No keys are rotated. A device you no longer have would keep reading — you can still cut one off later under Devices.",
                             bundle: .module)
                     default:
                         Text(
-                            "This app cannot tell a new phone from a stolen one, and the answer decides whether every room turns its key. Nothing is restored until you say which it was.",
+                            "This app cannot tell a new device from a stolen one, so if your device was lost or stolen your conversations will rotate keys.",
                             bundle: .module)
                     }
                 }
@@ -116,18 +116,18 @@ public struct RestoreFromKeyView: View {
                 Section {
                     SettingsToggle(
                         icon: "hand.wave.fill",
-                        title: Text("Ask the people I talk to for what was said", bundle: .module),
+                        title: Text("Request history backfill", bundle: .module),
                         isOn: $asksPeers)
                 } header: {
                     Text("Getting your history back", bundle: .module).sectionHeading()
                 } footer: {
                     if asksPeers {
                         Text(
-                            "Each of them is asked once for their copy of what was said. Some will be told you set up a new device — that is their setting, not yours. Anything nobody kept is gone.",
+                            "History providers (people you message) will be asked, and configured devices will see you're using a new device.",
                             bundle: .module)
                     } else {
                         Text(
-                            "Nobody is asked and nobody is told. Your rooms come back as people reach you again, but they come back empty — and there is no way to ask for the old messages later except by turning this back on.",
+                            "No one will see you have set up a new device, but you cannot obtain any history until you enable this.",
                             bundle: .module)
                     }
                 }
@@ -170,7 +170,7 @@ public struct RestoreFromKeyView: View {
             .padding(.bottom, 20)
         }
         .background(palette.background)
-        .navigationTitle(Text("Recovery key", bundle: .module))
+        .navigationTitle(Text("Recovery Key", bundle: .module))
         // COPY END ad65cb88
         .toolbarTitleDisplayMode(.inline)
     }

@@ -61,9 +61,9 @@ public struct DeviceSyncedView: View {
     private var headline: Text {
         switch arrival {
         case .keychain:
-            Text("This device is now yours too", bundle: .module)
+            Text("Device keyed", bundle: .module)
         case .recoveryKey:
-            Text("This device is you again", bundle: .module)
+            Text("Device restored", bundle: .module)
         }
     }
     // COPY END d55c9d07
@@ -73,11 +73,11 @@ public struct DeviceSyncedView: View {
         switch arrival {
         case .keychain:
             Text(
-                "It recognized your keys from iCloud and joined your account as \(memberName). Nothing to set up — your rooms are already here.",
+                "Device has been keyed.",
                 bundle: .module)
         case .recoveryKey:
             Text(
-                "Your key put you back as \(memberName). Your rooms return as the people in them reach you again, and what was said comes from whoever still holds it.",
+                "Device key has been restored.",
                 bundle: .module)
         }
     }

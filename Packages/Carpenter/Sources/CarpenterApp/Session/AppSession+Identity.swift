@@ -45,8 +45,6 @@ extension AppSession {
         }
     }
 
-    private static let extendedKeyWaitAttempts = 24
-
     public func settleRegistration(attempts: Int = 20) async {
         switch state {
         case .checkingForRegistration:
@@ -206,11 +204,11 @@ extension AppSession {
         cameBackFromARecoveryKey = true
         persisted.preferences.setAsksPeersForHistory(askingPeers, stamp: stamp())
         persisted.wantsWhatWasSaid = askingPeers
-        persisted.turnsEveryKeyAfterALoss = afterALoss
-        cachedProjection = nil
+        persisted.rotatesEveryKeyAfterALoss = afterALoss
+        projectionInputsChanged()
         if afterALoss {
             Diagnostics.sync.notice(
-                "recovery: a device was lost or stolen; every room's key turns")
+                "recovery: a device was lost or stolen; every room's key will be rotated")
         }
         if !askingPeers {
             Diagnostics.sync.notice(
@@ -227,7 +225,7 @@ extension AppSession {
 
         if persisted.preferences.displayName?.value != trimmed {
             persisted.preferences.setDisplayName(trimmed, stamp: stamp())
-            cachedProjection = nil
+            projectionInputsChanged()
             await savePreferences()
         }
 
@@ -275,7 +273,7 @@ extension AppSession {
         guard persisted.preferences.hasAnswered(\.showsOthersNames) == false
             || persisted.preferences.isShowingOthersNames != shows else { return }
         persisted.preferences.setShowsOthersNames(shows, stamp: stamp())
-        cachedProjection = nil
+        projectionInputsChanged()
         await savePreferences()
     }
 
@@ -324,7 +322,7 @@ extension AppSession {
         let trimmed = (name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard (persisted.preferences.nickname(for: person) ?? "") != trimmed else { return }
         persisted.preferences.setNickname(trimmed, for: person, stamp: stamp())
-        cachedProjection = nil
+        projectionInputsChanged()
         await savePreferences()
     }
 
@@ -469,18 +467,18 @@ extension AppSession {
             turns once
             """)
 
-        var notTurned: [RoomID] = []
+        var notRotated: [RoomID] = []
         for room in persisted.knownRooms where chains[room] != nil {
             do {
                 try await advanceEpoch(of: room)
             } catch {
-                notTurned.append(room)
+                notRotated.append(room)
                 Diagnostics.identity.error(
-                    "revoke: could not turn the key of a room — the revoked device can still read what is said in it (\(String(describing: error), privacy: .public))")
+                    "revoke: could not rotate the key of a room — the revoked device can still read what is said in it (\(String(describing: error), privacy: .public))")
             }
         }
         refresh()
 
-        guard notTurned.isEmpty else { throw AppSessionError.keyNotTurned(rooms: notTurned.count) }
+        guard notRotated.isEmpty else { throw AppSessionError.keyNotRotated(rooms: notRotated.count) }
     }
 }

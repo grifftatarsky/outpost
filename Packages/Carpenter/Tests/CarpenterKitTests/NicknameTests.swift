@@ -61,7 +61,7 @@ struct NicknameTests {
         await bob.setNickname("Al", for: aliceID)
         try await settle(alice, bob, mailbox)
         #expect(alice.viewer.displayName == "Alice")
-        #expect(alice.sharedName(of: bobID) == nil, "a nickname must never fold as a name Bob gave")
+        #expect(alice.sharedName(of: bobID) == nil, "a nickname must never count as a name Bob gave")
         #expect(alice.member(bobID).isPlaceholder)
     }
 
@@ -133,22 +133,22 @@ struct PersonAvatarStoreTests {
         let first = AttachmentID()
 
         try store.save(Data([1]), for: robin)
-        try store.saveShared(Data([2]), for: robin, attachment: first)
+        try store.savePublished(Data([2]), for: robin, .rooms, attachment: first)
         #expect(store.load(for: robin) == Data([1]))
         #expect(store.loadShared(for: robin) == Data([2]))
-        #expect(store.sharedAttachment(for: robin) == first)
+        #expect(store.publishedAttachment(for: robin, .rooms) == first)
 
-        try store.removeShared(for: robin)
+        try store.removePublished(for: robin, .rooms)
         #expect(store.loadShared(for: robin) == nil)
         #expect(store.load(for: robin) == Data([1]), "a takedown must never cost the member their own choice")
 
         let second = AttachmentID()
-        try store.saveShared(Data([3]), for: robin, attachment: second)
+        try store.savePublished(Data([3]), for: robin, .rooms, attachment: second)
         try store.remove(for: robin)
         #expect(store.load(for: robin) == nil)
         #expect(store.loadShared(for: robin) == Data([3]))
-        #expect(store.sharedAttachment(for: robin) == second)
+        #expect(store.publishedAttachment(for: robin, .rooms) == second)
         #expect(store.loadAll().isEmpty, "the chosen list does not list shared photos")
-        #expect(store.loadAllShared() == [robin: Data([3])])
+        #expect(store.loadAllPublished(.rooms) == [robin: Data([3])])
     }
 }

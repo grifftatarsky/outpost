@@ -84,7 +84,7 @@ struct UnreadableKeychainTests {
 }
 
 @MainActor
-@Suite("Revoking a device that cannot turn the key", .serialized)
+@Suite("Revoking a device that cannot rotate the key", .serialized)
 struct RevocationReportingTests {
     private func pair(
         keychain: any KeychainStore
@@ -116,7 +116,7 @@ struct RevocationReportingTests {
         return (first, second, other)
     }
 
-    @Test("A revocation that turns every key raises nothing")
+    @Test("A revocation that rotates every key raises nothing")
     func cleanRevocationDoesNotThrow() async throws {
         let (first, _, other) = try await pair(keychain: InMemoryKeychainStore())
         let room = try await first.createRoom(named: "Kitchen")
@@ -125,11 +125,11 @@ struct RevocationReportingTests {
         try await first.revoke(other)
 
         let after = try #require(first.epoch(of: room))
-        #expect(after > before, "revoking did not turn the room's key")
+        #expect(after > before, "revoking did not rotate the room's key")
     }
 
-    @Test("A key that cannot be turned is said, not swallowed")
-    func keyThatCannotTurnIsReported() async throws {
+    @Test("A key that cannot be rotated is said, not swallowed")
+    func keyThatCannotRotateIsReported() async throws {
         let keychain = HalfWritableKeychainStore()
         let (first, _, other) = try await pair(keychain: keychain)
         _ = try await first.createRoom(named: "Kitchen")
@@ -138,17 +138,17 @@ struct RevocationReportingTests {
 
         do {
             try await first.revoke(other)
-            Issue.record("the key could not be turned and nothing was raised")
+            Issue.record("the key could not be rotated and nothing was raised")
         } catch let error as AppSessionError {
-            guard case .keyNotTurned(let rooms) = error else {
+            guard case .keyNotRotated(let rooms) = error else {
                 Issue.record("raised \(error) rather than naming the half that failed")
                 return
             }
-            #expect(rooms >= 1, "the error did not say how many rooms went unturned")
+            #expect(rooms >= 1, "the error did not say how many rooms were not rotated")
         }
     }
 
-    @Test("The device is revoked even when its rooms' keys did not turn")
+    @Test("The device is revoked even when its rooms' keys were not rotated")
     func theRevocationItselfStillHolds() async throws {
         let keychain = HalfWritableKeychainStore()
         let (first, _, other) = try await pair(keychain: keychain)

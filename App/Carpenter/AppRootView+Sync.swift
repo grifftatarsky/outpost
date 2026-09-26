@@ -24,7 +24,7 @@ extension AppRootView {
                 RigCodes.leave(session.identityCode(), as: "\(session.viewer.displayName).identity")
             }
         #endif
-        guard !UITestMode.isOn else { return }
+        guard !UITestMode.isOn, testSession == nil else { return }
         guard case .start(let device) = DeviceSyncDecision.make(
             device: session.enrolment?.device.id, startedFor: startedSyncFor)
         else { return }
@@ -42,7 +42,7 @@ extension AppRootView {
         session.syncDevices(through: engine)
     }
     func syncNow() async {
-        guard !UITestMode.isOn else { return }
+        guard !UITestMode.isOn, !switchingWorld else { return }
         if syncing {
             syncAgain = true
             return
@@ -117,7 +117,9 @@ extension AppRootView {
         if outcome.deviceSyncFailed { Diagnostics.sync.error("device sync refresh failed") }
         if outcome.mailboxFailed { Diagnostics.sync.error("sync failed") }
 
-        if let url = DiagnosticsExport.documentsURL { DiagnosticsExport.write(to: url) }
+        if let url = DiagnosticsExport.documentsURL {
+            Task.detached(priority: .utility) { DiagnosticsExport.write(to: url) }
+        }
 
         if session.metSomebodyNew { syncAgain = true }
 

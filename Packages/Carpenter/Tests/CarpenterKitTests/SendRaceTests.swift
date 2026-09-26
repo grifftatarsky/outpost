@@ -74,7 +74,7 @@ struct SendRaceTests {
         try await alice.send("first", to: room)
 
         await mailbox.onPut { @Sendable in
-            await MainActor.run { Task { try? await alice.send("typed while sending", to: room) } }
+            _ = await MainActor.run { Task { try? await alice.send("typed while sending", to: room) } }
             try? await Task.sleep(for: .milliseconds(30))
         }
         try await alice.sync(through: mailbox)
@@ -113,7 +113,7 @@ struct SendRaceTests {
         }
 
         await mailbox.onPut { @Sendable in
-            await MainActor.run { Task { try? await alice.send("ring for this", to: room) } }
+            _ = await MainActor.run { Task { try? await alice.send("ring for this", to: room) } }
             try? await Task.sleep(for: .milliseconds(30))
         }
         try await alice.sync(through: mailbox)

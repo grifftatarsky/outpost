@@ -141,10 +141,10 @@ extension AppSession {
 
     private func attachmentsThisMemberSent() -> Set<AttachmentID> {
         guard let enrolment else { return [] }
+        let open = entryOpener()
         var ids: Set<AttachmentID> = []
         for entry in replica.allEntries where entry.author == enrolment.identity.id {
-            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain)
-            else { continue }
+            guard let payload = open(entry) else { continue }
             switch payload.type {
             case .media:
                 if let body = try? payload.decode(MediaBody.self) {

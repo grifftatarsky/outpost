@@ -116,13 +116,6 @@ public enum ImagePreparer {
         return output as Data
     }
 
-    public static func metadataKeys(of data: Data) -> Set<String> {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
-        else { return [] }
-        return Set(properties.keys.filter { $0.hasPrefix("{") })
-    }
-
     static let harmlessExif: Set<String> = [
         kCGImagePropertyExifColorSpace as String,
         kCGImagePropertyExifPixelXDimension as String,

@@ -118,7 +118,7 @@ struct JoinIsARoundTripTests {
     }
 
     @Test("Confirming twice is confirming once")
-    func confirmingTwiceTurnsTheKeyOnce() async throws {
+    func confirmingTwiceRotatesTheKeyOnce() async throws {
         let (alice, bob, mailbox) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7")
         let before = alice.epochsHeld(in: room)
@@ -131,7 +131,7 @@ struct JoinIsARoundTripTests {
         try await settle([alice, bob], mailbox)
 
         #expect(alice.roster(of: room).members.count == 2)
-        #expect(alice.epochsHeld(in: room) == before + 1, "one join turned the key more than once")
+        #expect(alice.epochsHeld(in: room) == before + 1, "one join rotated the key more than once")
     }
 
     @Test("Only the inviter relays a confirmation")

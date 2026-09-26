@@ -25,7 +25,7 @@ struct AppRootView: View {
     @State var redeeming = false
     @State var restoring = false
 
-    @State var sheetPreferences = RoomsListPreferences()
+    @State var roomsListPreferences = RoomsListPreferences()
     @State var arrivingInvite: String?
     @State var arrivingCode: ArrivingCode?
     @AppStorage("onboarding.tourSeen") var tourSeen = false
@@ -42,7 +42,11 @@ struct AppRootView: View {
     @State var messagePushArmed = false
     @State var openRoom: RoomID?
 
-    @State var session = AppSession(storage: .onDisk(), clock: UITestMode.clock)
+    @State var session = AppSession(
+        storage: .onDisk(profile: TestProfileWorld.launch.session?.profile), clock: UITestMode.clock)
+    @State var testSession: TestSession? = TestProfileWorld.launch.session
+    @State var testProfiles = TestProfileWorld.launch.profiles
+    @State var switchingWorld = false
 
     @State var problem: ActionProblem?
 
@@ -54,6 +58,7 @@ struct AppRootView: View {
     #endif
 
     var mailbox: any Mailbox {
+        if let testSession { return testSession.mailbox }
         #if DEBUG
             if let rig { return rig }
         #endif
@@ -61,6 +66,7 @@ struct AppRootView: View {
     }
 
     var accountRegistry: any AccountRegistry {
+        if testSession != nil { return NoOtherMember() }
         #if DEBUG
             if rig != nil { return RigAccount() }
         #endif
@@ -71,6 +77,7 @@ struct AppRootView: View {
     }
 
     var media: any MediaMailbox {
+        if let testSession { return testSession.mailbox }
         #if DEBUG
             if let rig { return rig }
         #endif
@@ -177,7 +184,8 @@ struct AppRootView: View {
                             stall: why,
                             onRetry: { await session.retryRegistration() },
                             onRestore: { restoring = true },
-                            onNuke: { await nuke() }
+                            onNuke: { await nuke() },
+                            testProfiles: testProfilesControl
                         )
                     #else
                         RegistrationStalledView(
@@ -278,6 +286,7 @@ struct AppRootView: View {
         .environment(\.ownOutpostAvatar, ownOutpostAvatar)
         .environment(\.viewerID, session.viewer.id)
         .environment(\.supporters, session.supporterBadges)
+        .safeAreaInset(edge: .bottom) { testSessionEscape }
         .sheet(isPresented: $askingOutpostNotifications) {
             NavigationStack {
                 OutpostNotificationsAskView { wanted in
@@ -407,9 +416,9 @@ struct AppRootView: View {
                 accept: { code in
                     do {
                         let invite = try await session.redeem(inviteCode: code)
-                        if let url = invite.mailbox {
+                        if let url = invite.mailbox, let cloud = mailbox as? CloudKitMailbox {
                             try await CloudKitMailbox.accept(url, in: .default())
-                            await (mailbox as? CloudKitMailbox)?.subscribeForInbox()
+                            await cloud.subscribeForInbox()
                         }
                         await syncNow()
                         return nil
@@ -435,7 +444,7 @@ struct AppRootView: View {
                         return nil
                     }
                 },
-                preferences: sheetPreferences,
+                preferences: roomsListPreferences,
                 connections: session.connections(),
                 onCreateRoom: { name, access, people in
                     await createRoom(named: name, access: access, inviting: people)

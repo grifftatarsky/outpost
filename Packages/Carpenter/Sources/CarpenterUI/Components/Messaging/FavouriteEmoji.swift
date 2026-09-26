@@ -8,6 +8,8 @@ public final class FavouriteEmoji {
 
     nonisolated public static let slots = 4
 
+    public static let shared = FavouriteEmoji()
+
     nonisolated public static let starting = ["❤️", "👍", "👎", "🫡"]
 
     private let defaults: UserDefaults

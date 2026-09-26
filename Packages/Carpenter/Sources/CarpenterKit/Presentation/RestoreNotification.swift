@@ -28,12 +28,12 @@ public enum RestoreNotification {
         // COPY BEGIN f987b18d [NEEDS HUMAN REVIEW]
         if level.showsRoom && !room.isEmpty {
             body = String(
-                localized: "It asked for your copy of \(room). Your history is on its way to them.",
+                localized: "New device requested history backfill of \(room)",
                 bundle: .module,
                 comment: "Banner body naming the conversation a restored device asked for")
         } else {
             body = String(
-                localized: "It asked for your copy of a conversation. Your history is on its way to them.",
+                localized: "New device requested history backfill.",
                 bundle: .module,
                 comment: "Banner body for a restore when the banner does not name conversations")
         }

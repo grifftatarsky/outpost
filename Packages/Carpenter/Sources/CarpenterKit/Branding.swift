@@ -20,8 +20,6 @@ public enum Branding {
         return schemes?.first ?? ProcessInfo.processInfo.environment["APP_URL_SCHEME"] ?? ""
     }
 
-    /// Where a report goes. The app has no other route and sends nothing itself, so an empty value
-    /// leaves the report screen with nothing to offer but a copy.
     public static var reportFormURL: URL? {
         let raw =
             Bundle.main.infoDictionary?["ReportFormURL"] as? String
@@ -29,8 +27,6 @@ public enum Branding {
         return raw.isEmpty ? nil : URL(string: raw)
     }
 
-    /// Where anything that is not a report goes. Empty means the app offers no route at all, which
-    /// is the honest outcome of a bundle that was built without one.
     public static var contactFormURL: URL? {
         let raw =
             Bundle.main.infoDictionary?["ContactFormURL"] as? String

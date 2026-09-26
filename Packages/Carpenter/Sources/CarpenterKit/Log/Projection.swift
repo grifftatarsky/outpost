@@ -3,6 +3,14 @@ import Foundation
 public struct Projection: Sendable {
     let viewer: ParticipantID
     let rendered: [RenderedEntry]
+    let roomPositions: [RoomID: [Int]]
+    let positionByID: [EntryHash: Int]
+    let lastProfiles: [RoomID: RenderedEntry]
+    let roomKinds: [RoomID: RoomKind]
+    let namedRooms: Set<RoomID>
+    let outpostAuthorOrder: [ParticipantID]
+    public let members: [ParticipantID: Member]
+    public let supporterBadges: Set<ParticipantID>
 
     public init(
         viewer: ParticipantID, rendered: [RenderedEntry], revealsNames: Bool = true,
@@ -11,6 +19,32 @@ public struct Projection: Sendable {
     ) {
         self.viewer = viewer
         self.rendered = rendered
+        var roomPositions: [RoomID: [Int]] = [:]
+        var positionByID: [EntryHash: Int] = [:]
+        var profiles: [RoomID: RenderedEntry] = [:]
+        var kinds: [RoomID: RoomKind] = [:]
+        var lastPosted: [ParticipantID: Int] = [:]
+        for (position, entry) in rendered.enumerated() {
+            positionByID[entry.id] = position
+            if let room = entry.room {
+                roomPositions[room, default: []].append(position)
+                if entry.type == .roomProfile {
+                    profiles[room] = entry
+                    if kinds[room] == nil { kinds[room] = entry.roomKind ?? .room }
+                }
+            } else if entry.isConversation && entry.isReadable {
+                lastPosted[entry.author] = position
+            }
+        }
+        self.roomPositions = roomPositions
+        self.positionByID = positionByID
+        lastProfiles = profiles
+        roomKinds = kinds
+        namedRooms = Set(profiles.compactMap { room, profile in
+            if case .text = profile.content { room } else { nil }
+        })
+        outpostAuthorOrder = lastPosted.sorted { $0.value > $1.value }.map(\.key)
+        (members, supporterBadges) = Self.namesAndBadges(in: rendered)
         self.revealsNames = revealsNames
         self.viewerName = viewerName
         self.nicknames = nicknames
@@ -31,6 +65,14 @@ public struct Projection: Sendable {
     public var revealsNames: Bool
 
     public var nicknames: [ParticipantID: String]
+
+    func entries(in room: RoomID) -> LazyMapSequence<[Int], RenderedEntry> {
+        (roomPositions[room] ?? []).lazy.map { rendered[$0] }
+    }
+
+    func positioned(in room: RoomID) -> LazyMapSequence<[Int], (position: Int, entry: RenderedEntry)> {
+        (roomPositions[room] ?? []).lazy.map { (position: $0, entry: rendered[$0]) }
+    }
 
     static func isWithdrawn(_ entry: RenderedEntry) -> Bool {
         if case .withdrawn = entry.content { return true }

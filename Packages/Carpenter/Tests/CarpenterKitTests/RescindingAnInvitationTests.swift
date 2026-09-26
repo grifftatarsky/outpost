@@ -135,7 +135,7 @@ struct RescindingAnInvitationTests {
         #expect(roster.wasRescinded(joiner.id))
     }
 
-    @Test("A stranger's withdrawal is not folded")
+    @Test("A stranger's withdrawal is ignored")
     func aStrangerCannotWithdraw() throws {
         let inviter = Identity.generate()
         let stranger = Identity.generate()
@@ -408,7 +408,7 @@ struct SessionRescindTests {
         for session in [alice, bob] {
             #expect(
                 session.roster(of: room).wasRescinded(carolID),
-                "a member's withdrawal of somebody else's offer was not folded")
+                "a member's withdrawal of somebody else's offer was ignored")
         }
     }
 

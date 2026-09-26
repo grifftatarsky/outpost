@@ -140,7 +140,7 @@ extension AppSession {
             persisted.holesNoticed[room] = nil
             persisted.askedAutomatically[room] = nil
             persisted.reviewsPostponed[room] = nil
-            persisted.epochTurnsOwed.removeAll { $0 == room }
+            persisted.keyRotationsOwed.removeAll { $0 == room }
             persisted.repairs.removeAll { $0.room == room }
             persisted.restoreAsks.removeAll { $0.room == room }
             furthestSeen[room] = nil

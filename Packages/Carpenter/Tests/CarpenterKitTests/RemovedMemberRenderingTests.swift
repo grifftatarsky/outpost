@@ -16,7 +16,7 @@ struct RemovedMemberRenderingTests {
     private func room() throws -> (alice: Author, sam: Author, room: RoomID, entries: [Entry]) {
         let chain = EpochChain.create(room: RoomID())
         var alice = Author(chain: chain.chain)
-        var sam = Author(chain: chain.chain)
+        let sam = Author(chain: chain.chain)
         let room = chain.chain.room
 
         var entries: [Entry] = []
@@ -56,7 +56,7 @@ struct RemovedMemberRenderingTests {
         entries.append(after)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let opener: (RenderedEntry) -> Payload? = { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         }
@@ -91,7 +91,7 @@ struct RemovedMemberRenderingTests {
         entries.append(removal)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let out = projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -120,7 +120,7 @@ struct RemovedMemberRenderingTests {
         entries.append(backdated)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let out = projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -150,20 +150,20 @@ struct RemovedMemberRenderingTests {
         }
 
         let onAlice = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let outOnAlice = onAlice.outOfRoom(in: room, opening: opener)
         #expect(!onAlice.messages(in: room, outOfRoom: outOnAlice).map(\.body).contains("still mine"))
 
         let onSam = Projection(
-            viewer: sam.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: sam.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let outOnSam = onSam.outOfRoom(in: room, opening: opener)
         #expect(
             onSam.messages(in: room, outOfRoom: outOnSam).map(\.body).contains("still mine"),
             "the app took away something the removed member wrote and still holds")
     }
 
-    @Test("A message the room does not draw is still held and still folded")
-    func stillHeldStillFolded() throws {
+    @Test("A message the room does not draw is still held and still rendered")
+    func stillHeldStillRendered() throws {
         var (alice, sam, room, entries) = try room()
         let chain = alice.chain
 
@@ -177,10 +177,10 @@ struct RemovedMemberRenderingTests {
             at: start.addingTimeInterval(30), room: room)
         entries.append(after)
 
-        let rendered = Fold.render(entries, using: chain)
+        let rendered = LogRenderer.render(entries, using: chain)
         #expect(
             rendered.contains { $0.id == after.hash },
-            "the fold dropped an entry rather than declining to draw it")
+            "rendering dropped an entry rather than declining to draw it")
 
         var replica = Replica()
         replica.introduce(alice.identity.publicKeys)
@@ -213,7 +213,7 @@ struct RemovedMemberRenderingTests {
 
         func verdict(_ order: [Entry]) -> Set<EntryHash> {
             let projected = Projection(
-                viewer: alice.identity.id, rendered: Fold.render(order, using: chain))
+                viewer: alice.identity.id, rendered: LogRenderer.render(order, using: chain))
             return projected.outOfRoom(in: room, opening: { rendered in
                 order.first { $0.hash == rendered.id }?.opened(using: chain)
             })

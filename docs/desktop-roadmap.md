@@ -44,7 +44,7 @@ statuses as [the roadmap](roadmap.md#how-to-read-this).
 
 ## What stands today
 
-The Mac **runs**: a window, three columns, a folding sidebar, and a keychain that behaves like iOS's
+The Mac **runs**: a window, three columns, a collapsing sidebar, and a keychain that behaves like iOS's
 rather than the legacy file-based one — without that last part a Mac and an iPhone carried two
 different identities while claiming to be one member. It keeps working because Griff uses it. It is
 not offered, described or supported, and no member has ever been shown it.

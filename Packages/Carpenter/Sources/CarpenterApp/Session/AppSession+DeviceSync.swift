@@ -30,7 +30,7 @@ extension AppSession {
 
     private func take(_ sealed: SealedSiblingFeed, from device: DeviceID) async {
         guard let enrolment else { return }
-        guard let feed = try? sealed.open(with: enrolment.identity, from: device) else {
+        guard let feed = try? await sealed.openInBackground(with: enrolment.identity, from: device) else {
             integrity.unreadableSiblingFeeds += 1
             Diagnostics.sync.error(
                 "device sync: a sibling record would not open (\(Diagnostics.fingerprint(device.rawValue), privacy: .public))")
@@ -88,6 +88,7 @@ extension AppSession {
         let preferencesChanged = mergedPreferences != persisted.preferences
         if preferencesChanged {
             persisted.preferences = mergedPreferences
+            projectionInputsChanged()
             await persistOrReport("settings from another of your devices") {
                 try await saveState()
             }
@@ -95,10 +96,12 @@ extension AppSession {
             refresh()
         }
 
+        let fromSiblings = feed.entries.filter { $0.device != enrolment.device.id }
+        let checked = await replica.signatureChecks(for: fromSiblings)
         var taken: [Entry] = []
-        for entry in feed.entries where entry.device != enrolment.device.id {
+        for entry in fromSiblings {
             do {
-                _ = try replica.integrate(entry)
+                _ = try replica.integrate(entry, checked: checked)
             } catch {
                 integrity.unverifiableFromOwnDevices += 1
                 Diagnostics.sync.error(
@@ -159,10 +162,9 @@ extension AppSession {
                 entries: mine, certificates: knownCertificates(), epochs: heldEpochs(),
                 member: enrolment.identity.id, writtenAt: clock.now,
                 preferences: persisted.preferences)
-            try await deviceSync.send(
-                try SealedSiblingFeed.seal(
-                    feed, for: enrolment.identity, on: enrolment.device.id),
-                from: enrolment.device.id)
+            let sealed = try await SealedSiblingFeed.sealInBackground(
+                feed, for: enrolment.identity, on: enrolment.device.id)
+            try await deviceSync.send(sealed, from: enrolment.device.id)
         } catch {
             Diagnostics.sync.error(
                 "device sync catch-up failed: \(String(describing: error), privacy: .public)")
@@ -202,10 +204,9 @@ extension AppSession {
                     certificates: knownCertificates(), epochs: heldEpochs(),
                     member: enrolment.identity.id, writtenAt: clock.now,
                     preferences: persisted.preferences)
-                try await deviceSync.send(
-                    try SealedSiblingFeed.seal(
-                        feed, for: enrolment.identity, on: enrolment.device.id),
-                    from: enrolment.device.id)
+                let sealed = try await SealedSiblingFeed.sealInBackground(
+                    feed, for: enrolment.identity, on: enrolment.device.id)
+                try await deviceSync.send(sealed, from: enrolment.device.id)
             } catch {
                 Diagnostics.sync.error(
                     "device sync send failed: \(String(describing: error), privacy: .public)")

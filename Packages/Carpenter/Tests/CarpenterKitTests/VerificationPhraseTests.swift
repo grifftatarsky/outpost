@@ -27,9 +27,6 @@ struct VerificationPhraseTests {
 
     @Test("A long phrase begins with the short one, character for character")
     func longerIsAPrefixExtension() {
-        // This is what makes two people who chose differently able to talk to each other at all.
-        // The stricter requirement wins, and there is nothing to reconcile, because the phrase the
-        // relaxed side would have read is the first ten characters of the one they both now read.
         for n in 0..<200 {
             let short = ShortAuthenticationString.derive(fromTranscript: transcript(n))
             let long = ShortAuthenticationString.derive(
@@ -64,10 +61,6 @@ struct VerificationPhraseTests {
 
     @Test("Every symbol is drawn from the same number of byte values")
     func noModuloBias() {
-        // The defect this replaces: `Int(byte) % 30` over a 256-value byte, where 256 = 8×30 + 16,
-        // so sixteen symbols were reachable from nine byte values and fourteen from eight — 12.5%
-        // more likely. Rejecting at 240, the largest multiple of thirty that fits, gives every
-        // symbol exactly eight.
         #expect(ShortAuthenticationString.ceiling == 240)
         #expect(ShortAuthenticationString.ceiling % ShortAuthenticationString.alphabet.count == 0)
 
@@ -84,10 +77,6 @@ struct VerificationPhraseTests {
 
     @Test("The distribution of first characters is flat across many transcripts")
     func flatInPractice() {
-        // Only the arithmetic test above would have caught the original bias: a 12.5% skew on
-        // sixteen of thirty symbols moves the favoured group's share from 53.3% to 53.1%, which no
-        // realistic frequency test tells apart from noise. What this catches is a rejection bound
-        // wrong the other way — one that drops symbols entirely, or skews the stream.
         var seen: [Character: Int] = [:]
         let runs = 30_000
         for n in 0..<runs { seen[ShortAuthenticationString.derive(fromTranscript: transcript(n)).first!, default: 0] += 1 }
@@ -103,8 +92,6 @@ struct VerificationPhraseTests {
 
     @Test("It keeps going until it has enough, however many bytes it rejects")
     func survivesRejection() {
-        // 6.25% of bytes are discarded, so a 32-byte digest is not always enough for twenty
-        // characters and the loop has to take a second block rather than return a short phrase.
         for n in 0..<3_000 {
             #expect(ShortAuthenticationString.derive(fromTranscript: transcript(n)).count == 10)
             #expect(

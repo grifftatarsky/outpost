@@ -113,6 +113,7 @@ extension AppSession {
 
     public var outpostAccess: OutpostAccess {
         guard let me = enrolment?.identity.id else { return OutpostAccess() }
+        _ = projectionGeneration
         if let known = cachedOutpostAccess { return known }
         let built = projection.outpostAccess(of: me, opening: payloadOpener())
         cachedOutpostAccess = built
@@ -123,9 +124,6 @@ extension AppSession {
         notShutOut(outpostAccess.audience(at: clock.now))
     }
 
-    /// Everybody whose Outpost access this member chose *because of* a particular room, and who
-    /// still has it. Leaving that room is the moment to ask about them: the room ends, and the
-    /// access it led to would otherwise stand for ever.
     public func outpostAccessChosen(in room: RoomID) -> [Member] {
         outpostAccess.granted
             .filter { $0.value.value.chosenIn == room && $0.value.value.isAllowed }
@@ -390,11 +388,12 @@ extension AppSession {
 
         let waiting = (try? await mailbox.pendingAttachments()) ?? [:]
 
+        let open = entryOpener()
         var offered = 0
         var gone = 0
         for entry in replica.allEntries
         where entry.author == enrolment.identity.id && (entry.room == nil || entry.room == wall) {
-            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain),
+            guard let payload = open(entry),
                 payload.type == .media, let body = try? payload.decode(MediaBody.self)
             else { continue }
             for picture in body.all {
@@ -438,12 +437,12 @@ extension AppSession {
 
         let held = outpostReaders().contains(person)
 
-        if held { try await oweEpochTurn(in: wall) }
+        if held { try await oweKeyRotation(in: wall) }
         try await append(
             try Payload.outpostAccess(
                 OutpostAccessBody(person: person, isAllowed: false, chosenIn: chosenIn)),
             to: wall)
-        if held { try await turnOwedEpoch(in: wall) }
+        if held { try await rotateOwedKey(in: wall) }
         Diagnostics.sync.notice(
             """
             outpost: \(held ? "revoked" : "said no to", privacy: .public) \
@@ -451,34 +450,34 @@ extension AppSession {
             """)
     }
 
-    public var outpostKeyTurnPending: Bool {
+    public var outpostKeyRotationPending: Bool {
         guard let me = enrolment?.identity.id else { return false }
-        return persisted.epochTurnsOwed.contains(outpostRoom(for: me))
+        return persisted.keyRotationsOwed.contains(outpostRoom(for: me))
     }
 
-    func oweEpochTurn(in room: RoomID) async throws {
-        guard !persisted.epochTurnsOwed.contains(room) else { return }
-        persisted.epochTurnsOwed.append(room)
+    func oweKeyRotation(in room: RoomID) async throws {
+        guard !persisted.keyRotationsOwed.contains(room) else { return }
+        persisted.keyRotationsOwed.append(room)
         try await saveState()
     }
 
-    func turnOwedEpoch(in room: RoomID) async throws {
-        guard persisted.epochTurnsOwed.contains(room) else { return }
+    func rotateOwedKey(in room: RoomID) async throws {
+        guard persisted.keyRotationsOwed.contains(room) else { return }
         try await advanceEpoch(of: room)
-        persisted.epochTurnsOwed.removeAll { $0 == room }
+        persisted.keyRotationsOwed.removeAll { $0 == room }
         try await saveState()
     }
 
-    func settleOwedEpochTurns() async {
-        for room in persisted.epochTurnsOwed {
+    func settleOwedKeyRotations() async {
+        for room in persisted.keyRotationsOwed {
             do {
-                try await turnOwedEpoch(in: room)
-                Diagnostics.sync.notice("mailbox sync: turned a key that was owed from an earlier change")
+                try await rotateOwedKey(in: room)
+                Diagnostics.sync.notice("mailbox sync: rotated a key that was owed from an earlier change")
             } catch {
                 Diagnostics.sync.error(
                     """
-                    mailbox sync: still cannot turn a key this device owes — somebody removed \
-                    can read what is said until it turns \
+                    mailbox sync: still cannot rotate a key this device owes — somebody removed \
+                    can read what is said until it is rotated \
                     (\(String(describing: error), privacy: .public))
                     """)
             }

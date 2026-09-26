@@ -185,7 +185,7 @@ public struct OutpostView: View {
                     NavigationLink {
                         OutpostAudienceView(
                             people: audience.people, access: audience.access,
-                            keyTurnPending: audience.keyTurnPending,
+                            keyRotationPending: audience.keyRotationPending,
                             onAllow: audience.allow, onRevoke: audience.revoke)
                     } label: {
                         Image(systemName: "person.2.badge.key")

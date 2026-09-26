@@ -1,7 +1,7 @@
 import CarpenterKit
 import Foundation
 
-struct PersistedState: Codable, Sendable {
+struct PersistedState: Codable, Equatable, Sendable {
     var organisation = RoomsListOrganisation()
     var knownRooms: [RoomID] = []
     var greetedRooms: [RoomID] = []
@@ -21,16 +21,16 @@ struct PersistedState: Codable, Sendable {
     var wantsOutpostBell: [ParticipantID] = []
     var outpostSeenThrough: [ParticipantID: Date] = [:]
     var reviewsPostponed: [RoomID: [ParticipantID]] = [:]
-    var epochTurnsOwed: [RoomID] = []
+    var keyRotationsOwed: [RoomID] = []
     var unverifiable: [FeedGap] = []
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
     var acceptedInvitations: [AcceptedInvitation] = []
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
-    var turnsEveryKeyAfterALoss = false
+    var rotatesEveryKeyAfterALoss = false
 
-    private enum RetiredKeys: String, CodingKey { case awaitingJoin }
+    private enum RetiredKeys: String, CodingKey { case awaitingJoin, epochTurnsOwed, turnsEveryKeyAfterALoss }
     var knownKeys: [IdentityPublicKeys] = []
     var certificates: [DeviceCertificate] = []
     var revocations: [DeviceRevocation] = []
@@ -41,6 +41,7 @@ struct PersistedState: Codable, Sendable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let retired = try decoder.container(keyedBy: RetiredKeys.self)
         organisation =
             try container.decodeIfPresent(RoomsListOrganisation.self, forKey: .organisation)
             ?? RoomsListOrganisation()
@@ -60,7 +61,6 @@ struct PersistedState: Codable, Sendable {
         {
             acceptedInvitations = accepted
         } else {
-            let retired = try decoder.container(keyedBy: RetiredKeys.self)
             acceptedInvitations =
                 (try retired.decodeIfPresent([MembershipAttestation].self, forKey: .awaitingJoin)
                     ?? [])
@@ -85,7 +85,9 @@ struct PersistedState: Codable, Sendable {
         holesNoticed = try container.decodeIfPresent([RoomID: Date].self, forKey: .holesNoticed) ?? [:]
         askedAutomatically =
             try container.decodeIfPresent([RoomID: Date].self, forKey: .askedAutomatically) ?? [:]
-        epochTurnsOwed = try container.decodeIfPresent([RoomID].self, forKey: .epochTurnsOwed) ?? []
+        keyRotationsOwed =
+            try container.decodeIfPresent([RoomID].self, forKey: .keyRotationsOwed)
+            ?? retired.decodeIfPresent([RoomID].self, forKey: .epochTurnsOwed) ?? []
         reviewsPostponed =
             try container.decodeIfPresent([RoomID: [ParticipantID]].self, forKey: .reviewsPostponed)
             ?? [:]
@@ -104,7 +106,8 @@ struct PersistedState: Codable, Sendable {
             ?? MemberPreferences()
         wantsWhatWasSaid =
             try container.decodeIfPresent(Bool.self, forKey: .wantsWhatWasSaid) ?? false
-        turnsEveryKeyAfterALoss =
-            try container.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
+        rotatesEveryKeyAfterALoss =
+            try container.decodeIfPresent(Bool.self, forKey: .rotatesEveryKeyAfterALoss)
+            ?? retired.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
     }
 }

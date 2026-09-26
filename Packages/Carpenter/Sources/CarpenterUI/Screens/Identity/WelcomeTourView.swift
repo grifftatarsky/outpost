@@ -1,3 +1,4 @@
+import CarpenterKit
 import SwiftUI
 
 public struct WelcomeTourView: View {
@@ -21,39 +22,39 @@ public struct WelcomeTourView: View {
         [
             Panel(
                 id: 0,
-                title: "You do not have an account",
+                title: "You do not have a key",
                 body:
-                    "Your phone makes a key, and that key is you. No sign-up, no password, no phone number, and nobody can look you up.",
+                    "Your key is your identity, and it lives in your own Keychain. There is no account, and no one can look you up.",
                 icon: "key"),
             Panel(
                 id: 1,
-                title: "Where your messages go",
+                title: "Message Delivery",
                 body:
-                    "Straight to the people you wrote to. Phones sleep, so a mailbox holds what is in flight — messages, photos and clips alike — sealed, addressed to a code that changes, and deleted once everyone has collected.",
+                    "Messages are delivered straight to their recipients. Your iCloud functions as a mailbox, holding in-flight messages. Everything inside is sealed, and addressed to a rotating key. Once all recipients have collected the message, it's removed, and only on your circle's devices.",
                 icon: "tray"),
             Panel(
                 id: 2,
-                title: "Who has your messages",
+                title: "Message Ownership",
                 body:
-                    "You, and the people you sent them to. Nobody else can read them — not us, not Apple — because nothing readable is ever uploaded.",
+                    "Only you and the people you talk to have your messages. Apple can't read anything, and the \(Branding.displayName) Dev has nothing to do with you after download.",
                 icon: "lock"),
             Panel(
                 id: 3,
-                title: "Compared to other apps",
+                title: "Compared to Other Apps",
                 body:
-                    "Standard messaging apps, including the security-focused ones: at best they cannot read your messages but still know who you talk to and how often. At worst they hold a key to everything. Here there is no account for any of that to hang on.",
+                    "At best, even security focused apps who can't read your messages still know who you talk to and how often, and that's stored on their servers. At worst, they can read everything. Here, the \(Branding.displayName) Dev has none of your data at all.",
                 icon: "arrow.left.arrow.right"),
             Panel(
                 id: 4,
-                title: "What it costs",
+                title: "Drawbacks",
                 body:
-                    "Your keys ride your iCloud Keychain, so a new device picks them up by itself. If that goes too, the recovery key you download is the only way back — there is no reset link and nobody to ask. It brings you back, not your conversations: those are asked for from the people who were in them.",
+                    "A private and secure architecture does have cons. Your key—identity—lives in your iCloud Keychain. this allows multi-device sync. If it is wiped, the recovery key is the only way back. So if that's gone, the \(Branding.displayName) Dev has no way to help.\n\nThe recovery key brings back your identity, but the conversations themselves are backfilled by request.",
                 icon: "exclamationmark.triangle"),
             Panel(
                 id: 5,
-                title: "What it will ask you",
+                title: "App Permissions",
                 body:
-                    "Two things, each when it comes up and never at launch. Notifications, so a message can announce itself. And the system's photo picker, which shows your library to you and hands over only what you choose — it never asks for the library itself. There is no camera in the app.",
+                    "\(Branding.displayName) requests permissions, all of which are optional, and customizable. Notifications enable message announcements, Focus enables Do Not Disturb syncing with iOS, and Photos use the system photo picker and hand over only what you select (it does not ask for full access).",
                 icon: "hand.raised"),
         ]
     }
@@ -86,7 +87,7 @@ public struct WelcomeTourView: View {
                         // COPY BEGIN a0ba5304 [NEEDS HUMAN REVIEW]
                         if panel.id == panels.count - 1 {
                             Text(
-                                "New here? Turn on Tutorial mode in You — every screen gains a ? that explains its buttons.",
+                                "\(Branding.displayName) can be as complicated as you want it to be. But if you forget what your options are, there's Tutorial mode in the You page, which will add a ? on every screen to explain!",
                                 bundle: .module
                             )
                             .font(CarpenterFont.footnote)
@@ -110,7 +111,7 @@ public struct WelcomeTourView: View {
                 if page == panels.count - 1 {
                     // COPY BEGIN 70d3df21 [NEEDS HUMAN REVIEW]
                     Button(action: onContinue) {
-                        Text("Get started", bundle: .module)
+                        Text("Start", bundle: .module)
                             .font(CarpenterFont.button)
                             .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
                     }

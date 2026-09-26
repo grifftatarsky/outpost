@@ -78,7 +78,7 @@ public struct OnboardingView: View {
                     Button {
                         explaining = true
                     } label: {
-                        Text("How this works", bundle: .module)
+                        Text("How \(Branding.displayName) works", bundle: .module)
                             .font(CarpenterFont.footnote)
                             .underline()
                     }
@@ -93,7 +93,7 @@ public struct OnboardingView: View {
                 // COPY BEGIN 5ff391a2 [NEEDS HUMAN REVIEW]
                 if invitePending {
                     Text(
-                        "Your invitation is waiting. Tell us what to call you and we will open it.",
+                        "Give yourself a name and get started!",
                         bundle: .module
                     )
                     .font(CarpenterFont.footnote)
@@ -157,7 +157,7 @@ public struct OnboardingView: View {
 
                 // COPY BEGIN ca234160 [NEEDS HUMAN REVIEW]
                 Text(
-                    "Your keys are generated on this device and stored in your iCloud Keychain. \(Branding.displayName) has no account to sign in to.",
+                    "Your keys are generated on this device and stored in your iCloud Keychain. \(Branding.displayName) has no account.",
                     bundle: .module
                 )
                 .font(CarpenterFont.caption)

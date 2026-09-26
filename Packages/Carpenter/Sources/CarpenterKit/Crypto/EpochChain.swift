@@ -85,7 +85,16 @@ public struct EpochChain: Sendable {
 
     public mutating func record(_ link: EpochLink) throws {
         guard link.room == room else { throw CryptoError.wrongRoom }
+        if let held = links[link.epoch], opens(held) != false { return }
+        guard opens(link) != false else { return }
         links[link.epoch] = link
+    }
+
+    private func opens(_ link: EpochLink) -> Bool? {
+        guard let secret = secrets[link.epoch] else { return nil }
+        guard let box = try? ChaChaPoly.SealedBox(combined: link.wrapped) else { return false }
+        let key = Self.wrappingKey(for: secret, room: room, epoch: link.epoch)
+        return (try? ChaChaPoly.open(box, using: key, authenticating: link.context)) != nil
     }
 
     public mutating func record(_ links: some Sequence<EpochLink>) throws {
@@ -95,6 +104,7 @@ public struct EpochChain: Sendable {
     public static func advance(
         from previous: EpochSecret, at previousEpoch: EpochNumber, room: RoomID
     ) throws -> (secret: EpochSecret, link: EpochLink) {
+        guard previousEpoch.rawValue < .max else { throw CryptoError.unknownEpoch }
         let epoch = previousEpoch.next
         let secret = EpochSecret.random()
         let link = EpochLink(room: room, epoch: epoch, wrapped: Data())

@@ -110,6 +110,13 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
         let container = full.lastIndex(of: ".").map { String(full[..<$0]) } ?? full
         let directory = StorageLocation.directory(container: container)
 
+        #if DEBUG
+            if TestProfileStore(directory: directory).isAnyProfileActive {
+                DiagnosticsExport.note("nse: a test profile is on; iCloud stays closed")
+                return Rich(copy: MessageNotification.generic, badge: nil, sender: nil, quietly: true)
+            }
+        #endif
+
         let storage = SessionStorage(
             keychain: SystemKeychainStore(service: container, accessGroup: sharedKeychainGroup),
             log: FileLogStore(url: directory.appending(path: StorageLocation.logName)),

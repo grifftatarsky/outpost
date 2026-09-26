@@ -91,7 +91,7 @@ struct WireFormTests {
         var alice = Author()
         let entry = try alice.post("private", at: start)
 
-        let rendered = Fold.render([entry], using: EpochChain(room: RoomID()))
+        let rendered = LogRenderer.render([entry], using: EpochChain(room: RoomID()))
 
         #expect(rendered.count == 1)
         #expect(rendered.first?.content == .sealed)

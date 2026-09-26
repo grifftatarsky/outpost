@@ -128,8 +128,5 @@ extension RootView {
         .environment(\.showsAvatars, preferences.showsAvatars)
         .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)
         .environment(\.hapticsEnabled, theme.playsHaptics)
-        .onChange(of: organisation) { _, updated in
-            onOrganisationChange { $0 = updated }
-        }
     }
 }

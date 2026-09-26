@@ -209,13 +209,26 @@ public struct SyncSession: Sendable {
         return report
     }
 
+    public static func fitsAPacket(_ entry: Entry) -> Bool {
+        cost(of: entry, encoder: JSONEncoder()) <= packetByteBudget
+    }
+
+    private static func cost(of entry: Entry, encoder: JSONEncoder) -> Int {
+        ((try? encoder.encode(entry).count) ?? 0) + 2
+    }
+
     static func batches(of entries: [Entry], budget: Int = packetByteBudget) -> [[Entry]] {
         var batches: [[Entry]] = []
         var current: [Entry] = []
         var size = 0
         let encoder = JSONEncoder()
         for entry in entries {
-            let cost = ((try? encoder.encode(entry).count) ?? 0) + 2
+            let cost = cost(of: entry, encoder: encoder)
+            guard cost <= budget else {
+                Diagnostics.sync.error(
+                    "mailbox: left out an entry of \(cost, privacy: .public) bytes, too big for any packet")
+                continue
+            }
             if !current.isEmpty, size + cost > budget {
                 batches.append(current)
                 current = []
@@ -277,6 +290,10 @@ public struct SyncSession: Sendable {
 
         public var isEmpty: Bool { packets.isEmpty }
 
+        public var entries: [Entry] { packets.flatMap(\.delivery.entries) }
+
+        public var certificates: [DeviceCertificate] { packets.flatMap(\.delivery.certificates) }
+
         public init(
             tags: Set<RecipientTag>,
             packets: [Opened],
@@ -310,7 +327,8 @@ public struct SyncSession: Sendable {
 
     @discardableResult
     public static func integrate(
-        _ collected: CollectedPackets, into replica: inout Replica
+        _ collected: CollectedPackets, into replica: inout Replica,
+        checked: SignatureChecks = SignatureChecks()
     ) -> (report: SyncReport, settled: Set<PacketID>) {
         var report = SyncReport()
         report.packetsFetched = collected.packets.count
@@ -352,7 +370,7 @@ public struct SyncSession: Sendable {
             report.entriesDelivered += delivery.entries.count
             for entry in delivery.entries {
                 do {
-                    switch try replica.integrate(entry) {
+                    switch try replica.integrate(entry, checked: checked) {
                     case .accepted:
                         report.entriesReceived += 1
                         report.integrated.append(entry)
@@ -402,7 +420,9 @@ public struct SyncSession: Sendable {
         acknowledging: Bool = true
     ) async throws -> SyncReport {
         let collected = try await collect(as: peer, at: instant)
-        let (report, settled) = Self.integrate(collected, into: &replica)
+        let checked = await replica.signatureChecks(
+            for: collected.entries, alsoTrusting: collected.certificates)
+        let (report, settled) = Self.integrate(collected, into: &replica, checked: checked)
         if acknowledging { try await acknowledge(collected, settled) }
         return report
     }

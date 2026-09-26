@@ -21,6 +21,7 @@ never be written down in Swift.
 | looking for what is unfinished | [docs/open-questions.md](docs/open-questions.md) |
 | about to touch a key, a seal or a signature | [docs/crypto-brief.md](docs/crypto-brief.md) — what each key is derived from and bound to, and the three failures that were all in the composition |
 | about to test | [docs/testing.md](docs/testing.md), [docs/simulator-rig.md](docs/simulator-rig.md) |
+| about to write code | [docs/style.md](docs/style.md) — the everyday patterns, what a render may cost, and how caches stay fresh |
 | wondering why something is odd | [docs/inbox.md](docs/inbox.md) — noticed and parked |
 
 **Decisions are attributed.** Every entry is marked `RULED` (Griff decided it), `PROPOSED` (Claude
@@ -44,7 +45,7 @@ copy (the docs, the site config, every string a member reads in the app) sits be
 `COPY BEGIN <id> [<status>]` and `COPY END <id>`, in whatever comment the file takes, so his team can
 review it piece by piece. The status is `NEEDS HUMAN REVIEW`, `HUMAN REVIEWED, UNVERIFIED` or
 `HUMAN REVIEWED & VERIFIED`, and **only a person moves it forward**. Never mark copy reviewed
-yourself, and never delete, reword or re-id a marker. If you change the words inside a chunk, set it
+yourself, and never reword or re-id a marker. When copy is deleted, its markers go with it. If you change the words inside a chunk, set it
 back to `NEEDS HUMAN REVIEW`. If you add copy, wrap it in a new pair using an id from
 `python3 Scripts/copy-review.py new-id`. The lint fails on a broken pair, and `copy-review.py report`
 counts what is left. See [the decision](docs/decisions.md#copy-carries-a-review-marker-and-only-a-person-moves-it).
@@ -171,10 +172,14 @@ Read these before touching sync. Every one cost real time.
   actor is *free* while a network call is suspended — and what runs on it is the member pressing
   send. Copy-modify-write silently ate their message. Fetch in an `async` call, apply in a
   **synchronous** one. See `SyncSession.integrate` and `ReplicaRaceTests`.
-- **The fold is cached, and the cache is invalidated by `didSet` on `replica` and `chains`.** If you
-  add a third piece of state the projection reads, it needs the same treatment — and no test will
-  tell you, because a stale fold looks like a message that did not arrive. `ProjectionCostTests`
-  guards the cost *and* the freshness.
+- **The projection is cached, and the cache is invalidated when the log really changes.** `replica`'s
+  `didSet` rebuilds when `Replica.revision` moves, `chains`' on any change, and
+  `projectionInputsChanged()` covers what the projection reads outside the log (names, nicknames,
+  who you have met). If you add another piece of state the projection reads, it needs the same
+  treatment, because a stale projection looks like a message that did not arrive. Derived caches are
+  `@ObservationIgnored` behind `projectionGeneration`; a new one goes through `cached(_:_:_:)`.
+  `ProjectionCostTests` guards the cost and `WhatAScreenIsToldTests` what a screen hears. See
+  [docs/style.md](docs/style.md).
 - **A nil check does not survive an `await`.** Actors are reentrant, so `guard x == nil` followed
   by an `await` and then `x = …` lets two callers do the same bring-up. Hold the in-flight work as a
   `Task` and make the second caller await it. `Scripts/lint/reentrancy.py` enforces it.
@@ -235,6 +240,18 @@ Read these before touching sync. Every one cost real time.
   same way on 2026-09-14: an `AdmissionBody` now names the invitation it answers, and the maps key on
   that. The leak was an invitation *replaced* rather than removed — removal cleared the old maps, a
   superseding `joinRequest` did not, so a vote for a dead offer admitted somebody to the live one.
+- **A removed member still holds the old key.** Whatever they write under it opens for everyone, so
+  the member list `RoomRoster` builds from the log is the only thing that stops them getting back in. It checked that a
+  removal came from a member and nothing on the entries that let people in: a removed member could
+  invite a second identity of their own into an open room, and a vote from outside the room counted.
+  A request counts only when its inviter writes it as a member, a vote only from a current member
+  (2026-09-26, `WhoCanAddPeopleToARoomTests`). Any new entry type that changes who is in a room needs the
+  same check on its author. Keys too: a member writes under the newest key their device holds and
+  passes it on, and a device took a key from anybody with a pairwise secret, so a removed member could
+  send one they made up and read what the room said next. A key from somebody the room shows as absent is
+  refused, an Outpost's key is taken only from its owner, and a key never replaces one already held
+  (`WhoCanSendYouAKeyTests`); what a device that cannot read the room yet should trust is an open
+  question.
 - **A dictionary keyed by recipient holds one value.** `SyncEngine.pack` addressed epoch grants into
   `[RecipientTag: Data]` with a plain subscript, so a round owing one person keys to two rooms
   delivered the last and dropped the rest — and the sender then marked every owed grant issued,
@@ -300,7 +317,21 @@ Read these before touching sync. Every one cost real time.
   saw an order the server never promised. `SyncSession.integrate` accumulates nearly everything a
   delivery carries, but takes `notifyWalls` whole from each packet — last one wins — and a peer only
   re-sends that list when it changes, so the wrong order leaves a stale wish standing for good.
-  `everything(in:)` sorts by `modificationDate` now, with the record name as a tiebreak.
+  `everything(in:)` sorts by `creationDate` now, with the record name as a tiebreak — not
+  `modificationDate`, because an acknowledgement re-saves the record and moves an old packet last.
+- **A number somebody else chose is not a loop bound.** A sequence number is whatever the signer
+  wrote, a vector clock claims whatever positions it likes, and a repair request names whatever spans
+  a peer sends. History repair walked all of them one number at a time: `Replica.gaps()` built an
+  array from the contiguous run to the highest position anybody claimed, `fill` enumerated every
+  number in a peer's spans, and `heads[feed] + 1` trapped on `UInt64.max`. One entry signed at 2^50,
+  or one request for `1...UInt64.max`, and the device ran out of memory — on every launch, because
+  the entry is on disk. Found by reading, 2026-09-26. Spans are arithmetic now (`normalized`,
+  `intersecting`, `subtracting`), a walk only visits positions this device actually holds, counts
+  saturate, and a span that arrives backwards is empty. `ClaimedHistoryTests` holds it. A date is a
+  number somebody chose too: `CanonicalBytes.timestamp` converted it to `Int64` with a trapping
+  initialiser, and it runs while an entry decodes, so one entry dated `1e300` crashed every recipient
+  on every fetch until somebody deleted the packet by hand. It clamps now, and every date a clock can
+  produce keeps its bytes; `DatesPastTheEndOfTimeTests` holds it.
 - **CloudKit's query index is eventually consistent.** "Write it, then read it" is not a guarantee
   it makes. Read a zone's change feed, or fetch a record by ID. A query cost a week once.
 - **Rotating tags rotate.** Anything keyed by a `RecipientTag` is keyed by *today's* address. A

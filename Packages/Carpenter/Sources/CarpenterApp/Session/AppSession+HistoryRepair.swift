@@ -59,26 +59,26 @@ extension AppSession {
         return true
     }
 
-    func turnEveryKeyAfterALoss() async {
-        guard persisted.turnsEveryKeyAfterALoss, enrolment != nil else { return }
-        let turning = rooms.map(\.id).filter { chains[$0] != nil }
-        guard !turning.isEmpty else { return }
+    func rotateEveryKeyAfterALoss() async {
+        guard persisted.rotatesEveryKeyAfterALoss, enrolment != nil else { return }
+        let rotating = rooms.map(\.id).filter { chains[$0] != nil }
+        guard !rotating.isEmpty else { return }
 
-        for room in turning {
-            do { try await oweEpochTurn(in: room) } catch {
+        for room in rotating {
+            do { try await oweKeyRotation(in: room) } catch {
                 Diagnostics.sync.error(
                     """
-                    recovery: could not note a key turn this room needs \
+                    recovery: could not note a key rotation this room needs \
                     (\(String(describing: error), privacy: .public))
                     """)
             }
         }
-        persisted.turnsEveryKeyAfterALoss = false
+        persisted.rotatesEveryKeyAfterALoss = false
         Diagnostics.sync.notice(
-            "recovery: turning the key in \(turning.count, privacy: .public) room(s) after a loss")
+            "recovery: rotating the key in \(rotating.count, privacy: .public) room(s) after a loss")
     }
 
-    public var isTurningEveryKeyAfterALoss: Bool { persisted.turnsEveryKeyAfterALoss }
+    public var isRotatingEveryKeyAfterALoss: Bool { persisted.rotatesEveryKeyAfterALoss }
 
     func askEverybodyForWhatWasSaid() async {
         guard persisted.wantsWhatWasSaid, enrolment != nil else { return }
@@ -109,7 +109,10 @@ extension AppSession {
 
         for room in rooms.map(\.id) {
             guard missingHistory(in: room).isEmpty == false else {
-                if persisted.holesNoticed.removeValue(forKey: room) != nil { changed = true }
+                if persisted.holesNoticed[room] != nil {
+                    persisted.holesNoticed[room] = nil
+                    changed = true
+                }
                 continue
             }
             let noticed = persisted.holesNoticed[room] ?? clock.now
@@ -192,35 +195,24 @@ extension AppSession {
 
         let recovered = repair.request.namedCount - named.total - refused
 
-        var shortfall = 0
+        var shortfall: UInt64 = 0
         var furthest = VectorClock()
         for answer in answers { furthest = furthest.merging(answer.heads) }
         for feed in furthest.keys where authors.contains(feed.author) {
             let held = replica.highestSequence(in: feed) ?? 0
             guard furthest[feed] > held else { continue }
-            var count = Int(furthest[feed] - held)
-            for gap in persisted.unverifiable where gap.feed == feed {
-                for span in gap.spans {
-                    let lower = Swift.max(span.lower, held + 1)
-                    let upper = Swift.min(span.upper, furthest[feed])
-                    if lower <= upper { count -= Int(upper - lower + 1) }
-                }
-            }
-            shortfall += Swift.max(0, count)
+            let beyond = [SequenceSpan(held + 1, furthest[feed])]
+            shortfall = shortfall.addingSaturated(
+                beyond.subtracting(persisted.unverifiable.spans(of: feed)).sequenceCount)
         }
 
         var nobody = 0
         if !answers.isEmpty {
-            for gap in named {
-                for span in gap.spans {
-                    for seq in span.sequences
-                    where answers.allSatisfy({ $0.unheld.contains(gap.feed, seq) }) {
-                        nobody += 1
-                    }
-                }
-            }
+            var unheldByAll = named
+            for answer in answers { unheldByAll = answer.unheld.intersecting(unheldByAll) }
+            nobody = unheldByAll.total
         }
-        let stillMissing = named.total + shortfall
+        let stillMissing = Int(clamping: UInt64(named.total).addingSaturated(shortfall))
         return HistoryRepairStatus(
             id: repair.id, room: room, startedAt: repair.startedAt,
             asked: repair.asked.map(member), answered: answered.map(member),
@@ -292,8 +284,12 @@ extension AppSession {
         if !answered.isEmpty {
             persisted.repairDuties.removeAll { answered.contains($0) }
         }
-        persisted.repairs.removeAll {
-            $0.quiet && ($0.isAnswered || $0.isStale(at: clock.now, patience: Self.repairPatience))
+        let now = clock.now
+        let isFinished = { (repair: HistoryRepair) in
+            repair.quiet && (repair.isAnswered || repair.isStale(at: now, patience: Self.repairPatience))
+        }
+        if persisted.repairs.contains(where: isFinished) {
+            persisted.repairs.removeAll(where: isFinished)
         }
         if report.packetsWritten > 0 {
             Diagnostics.sync.notice(
@@ -328,10 +324,6 @@ extension AppSession {
             Diagnostics.sync.error(
                 "storage: could not write \(what, privacy: .public) — it is in memory and will be gone on the next launch (\(String(describing: error), privacy: .public))")
         }
-    }
-
-    private func openPayload(_ rendered: RenderedEntry) -> Payload? {
-        payloadOpener()(rendered)
     }
 
     // MARK: The reverse channel

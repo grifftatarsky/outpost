@@ -79,7 +79,8 @@ public enum AppSessionError: Error, Hashable, Sendable {
     case tooLateToEdit
     case tooLateToWithdraw
     case tooManyPictures
-    case keyNotTurned(rooms: Int)
+    case tooBigToSend
+    case keyNotRotated(rooms: Int)
 }
 
 extension RoomsListOrganisation {
@@ -87,17 +88,6 @@ extension RoomsListOrganisation {
         for room in rooms.keys where !present.contains(room) {
             forget(room)
         }
-    }
-}
-
-extension Data {
-    var uuidValue: uuid_t {
-        var bytes = Array(prefix(16))
-        bytes.append(contentsOf: Array(repeating: 0, count: Swift.max(0, 16 - bytes.count)))
-        return (
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-        )
     }
 }
 

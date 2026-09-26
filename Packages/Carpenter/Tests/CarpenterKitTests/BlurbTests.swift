@@ -111,7 +111,7 @@ struct BlurbTests {
 
         let blankName = try JSONDecoder().decode(
             MemberProfileBody.self, from: Data(#"{"displayName":"","blurb":"On the roof"}"#.utf8))
-        #expect(blankName.name == nil, "an empty name folded as a name")
+        #expect(blankName.name == nil, "an empty name counted as a name")
     }
 
     @Test("A blurb is cut at the limit rather than refused")

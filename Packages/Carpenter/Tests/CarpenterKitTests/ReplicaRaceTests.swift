@@ -75,7 +75,7 @@ struct ReplicaRaceTests {
         let (alice, bob, room) = try await pair(clock, mailbox)
 
         await mailbox.onFetch { @Sendable in
-            await MainActor.run { Task { try? await alice.send("typed while fetching", to: room) } }
+            _ = await MainActor.run { Task { try? await alice.send("typed while fetching", to: room) } }
             try? await Task.sleep(for: .milliseconds(60))
         }
         try await alice.sync(through: mailbox)
@@ -122,7 +122,7 @@ struct ReplicaRaceTests {
         }
 
         await mailbox.onFetch { @Sendable in
-            await MainActor.run { Task { try? await alice.send("survives a relaunch", to: room) } }
+            _ = await MainActor.run { Task { try? await alice.send("survives a relaunch", to: room) } }
             try? await Task.sleep(for: .milliseconds(60))
         }
         try await alice.sync(through: mailbox)
@@ -137,7 +137,7 @@ struct ReplicaRaceTests {
 struct AcknowledgementTests {
     @Test("A packet whose entries would not verify is left for the next round")
     func rejectedEntriesHoldThePacket() throws {
-        let stranger = try Identity.generate()
+        let stranger = Identity.generate()
         let device = DeviceKeys.generate()
         let chain = EpochChain.create(room: RoomID())
 
@@ -164,7 +164,7 @@ struct AcknowledgementTests {
 
     @Test("A packet that landed whole is acknowledged")
     func acceptedEntriesSettleThePacket() throws {
-        let author = try Identity.generate()
+        let author = Identity.generate()
         let device = DeviceKeys.generate()
         let chain = EpochChain.create(room: RoomID())
         let certificate = try DeviceCertificate.issue(
@@ -194,7 +194,7 @@ struct AcknowledgementTests {
 
     @Test("A packet whose certificate was refused is left for the next round")
     func rejectedCertificateHoldsThePacket() throws {
-        let known = try Identity.generate()
+        let known = Identity.generate()
         let knownDevice = DeviceKeys.generate()
         let chain = EpochChain.create(room: RoomID())
 
@@ -203,7 +203,7 @@ struct AcknowledgementTests {
             wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
             at: .initial, sealedWith: chain.chain)
 
-        let stranger = try Identity.generate()
+        let stranger = Identity.generate()
         let strangerCertificate = try DeviceCertificate.issue(
             for: DeviceKeys.generate().publicKey, by: stranger, at: .distantPast)
 
@@ -236,7 +236,7 @@ struct AcknowledgementTests {
 
     @Test("A packet whose certificates all landed is still acknowledged")
     func acceptedCertificatesStillSettle() throws {
-        let known = try Identity.generate()
+        let known = Identity.generate()
         let device = DeviceKeys.generate()
         let chain = EpochChain.create(room: RoomID())
 

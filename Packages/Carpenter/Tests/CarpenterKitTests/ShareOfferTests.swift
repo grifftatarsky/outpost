@@ -92,14 +92,14 @@ struct ShareOfferTests {
 
         let attackersZone = try #require(URL(string: "https://www.icloud.com/share/attacker"))
 
-        let planted: [String: Data] = [
+        let offersNobodyMade: [String: Data] = [
             "offer-0000000000000000": Data(attackersZone.absoluteString.utf8),
             "outbox-share-offer-deadbeef": Data(attackersZone.absoluteString.utf8),
             UUID().uuidString: Data(attackersZone.absoluteString.utf8),
         ]
 
         #expect(
-            alice.openShareOffers(planted).isEmpty,
+            alice.openShareOffers(offersNobodyMade).isEmpty,
             "a zone nobody vouched for was about to be joined")
     }
 

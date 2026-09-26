@@ -108,6 +108,93 @@ struct CausalOrderTests {
         #expect(CausalOrder.sorted([only]).map(\.hash) == [only.hash])
     }
 
+    @Test(
+        "The order is the one the full set of dependencies gives, forks and gaps included",
+        arguments: 1...30 as ClosedRange<UInt64>)
+    func matchesTheFullDependencyOrder(seed: UInt64) throws {
+        let entries = try forkedHistoryWithGaps(seed: seed, steps: 60)
+        #expect(CausalOrder.sorted(entries).map(\.hash) == Self.fullDependencyOrder(entries).map(\.hash))
+    }
+
+    @Test("Sorting a thousand entries takes a fraction of a second")
+    func sortingIsNotQuadratic() throws {
+        let entries = try forkedHistoryWithGaps(seed: 7, steps: 1_000)
+        let took = (0..<3).map { _ in
+            let started = Date()
+            _ = CausalOrder.sorted(entries)
+            return Date().timeIntervalSince(started)
+        }.min() ?? 0
+
+        #expect(
+            took < 0.25,
+            """
+            Sorting \(entries.count) entries took \(Int(took * 1_000))ms. The projection sorts the \
+            whole log every time it is rebuilt, which is after every send and every sync.
+            """)
+    }
+
+    private func forkedHistoryWithGaps(seed: UInt64, steps: Int) throws -> [Entry] {
+        var generator = SeededGenerator(seed: seed)
+        var members = [Author(), Author(), Author(), Author()]
+        var views = [VectorClock](repeating: VectorClock(), count: members.count)
+        var entries: [Entry] = []
+
+        for step in 0..<steps {
+            let index = Int.random(in: 0..<members.count, using: &generator)
+            for _ in 0..<Int.random(in: 0...2, using: &generator) {
+                if let heard = entries.randomElement(using: &generator) {
+                    views[index].observe(heard.feedKey, seq: heard.seq)
+                }
+            }
+            let at = start.addingTimeInterval(Double(step / 3))
+            if step % 17 == 5 {
+                var twin = members[index]
+                entries.append(try twin.post("fork \(step)", clock: views[index], at: at))
+            }
+            let entry = try members[index].post("entry \(step)", clock: views[index], at: at)
+            views[index].observe(entry.feedKey, seq: entry.seq)
+            entries.append(entry)
+        }
+        return entries.enumerated().filter { $0.offset % 11 != 3 }.map(\.element)
+    }
+
+    private static func fullDependencyOrder(_ entries: [Entry]) -> [Entry] {
+        let byHash = Dictionary(entries.map { ($0.hash, $0) }, uniquingKeysWith: { first, _ in first })
+        var byFeed: [FeedKey: [(seq: UInt64, hash: EntryHash)]] = [:]
+        for entry in byHash.values { byFeed[entry.feedKey, default: []].append((entry.seq, entry.hash)) }
+        func upTo(_ feed: FeedKey, _ seq: UInt64) -> [EntryHash] {
+            (byFeed[feed] ?? []).filter { $0.seq <= seq }.map(\.hash)
+        }
+        let precedes = { (left: Entry, right: Entry) -> Bool in
+            if left.wallTime != right.wallTime { return left.wallTime < right.wallTime }
+            return left.hash.rawValue.lexicographicallyPrecedes(right.hash.rawValue)
+        }
+
+        var dependencies: [EntryHash: Set<EntryHash>] = [:]
+        var dependents: [EntryHash: [EntryHash]] = [:]
+        for entry in byHash.values {
+            var required = Set(entry.seq > Entry.firstSequence ? upTo(entry.feedKey, entry.seq - 1) : [])
+            for key in entry.clock.keys where key != entry.feedKey { required.formUnion(upTo(key, entry.clock[key])) }
+            required.remove(entry.hash)
+            dependencies[entry.hash] = required
+            for requirement in required { dependents[requirement, default: []].append(entry.hash) }
+        }
+
+        var remaining = Set(byHash.keys)
+        var ready = remaining.filter { dependencies[$0]?.isEmpty ?? true }
+        var ordered: [Entry] = []
+        while let next = ready.map({ byHash[$0]! }).min(by: precedes) {
+            ready.remove(next.hash)
+            remaining.remove(next.hash)
+            ordered.append(next)
+            for dependent in dependents[next.hash] ?? [] {
+                dependencies[dependent]?.remove(next.hash)
+                if dependencies[dependent]?.isEmpty == true, remaining.contains(dependent) { ready.insert(dependent) }
+            }
+        }
+        return ordered + remaining.map { byHash[$0]! }.sorted(by: precedes)
+    }
+
     private func concurrentHistory(seed: UInt64) throws -> [Entry] {
         var generator = SeededGenerator(seed: seed)
         var members = [Author(), Author(), Author()]

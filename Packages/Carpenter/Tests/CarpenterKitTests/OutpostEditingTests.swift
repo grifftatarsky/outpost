@@ -78,7 +78,7 @@ struct OutpostEditingTests {
         #expect(after.body == "This post was withdrawn.")
     }
 
-    @Test("A photo post is not offered an edit, because the fold would refuse one")
+    @Test("A photo post is not offered an edit, because the edit would be ignored")
     func aPhotoPostCannotBeEdited() async throws {
         let mailbox = InMemoryMailbox()
         let (alice, _) = try await member()

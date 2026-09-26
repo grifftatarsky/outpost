@@ -45,7 +45,7 @@ struct MultiDeviceTests {
         #expect(try hastur.integrate(fromMac) == .accepted)
         #expect(!hastur.hasDiverged)
 
-        let rendered = Fold.render(hastur.entries(in: room), using: chain)
+        let rendered = LogRenderer.render(hastur.entries(in: room), using: chain)
         #expect(rendered.count == 2)
         #expect(Set(rendered.map(\.author)) == [identity.id])
         #expect(Set(rendered.map(\.device)) == [phone.id, mac.id])
@@ -108,7 +108,7 @@ struct MultiDeviceTests {
             payload: try seal("replacement phone"))
         #expect(try replica.integrate(carryOn) == .accepted)
 
-        let rendered = Fold.render(replica.entries(in: room), using: chain)
+        let rendered = LogRenderer.render(replica.entries(in: room), using: chain)
         #expect(rendered.map(\.id) == [beforeLoss.hash, carryOn.hash])
     }
 }

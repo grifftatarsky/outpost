@@ -20,7 +20,7 @@ struct ABannersFaceTests {
         let (photos, directory) = try store()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        try photos.saveShared(jpeg(1), for: person, attachment: AttachmentID())
+        try photos.savePublished(jpeg(1), for: person, .rooms, attachment: AttachmentID())
         try photos.savePublished(jpeg(2), for: person, .outpost, attachment: AttachmentID())
 
         #expect(
@@ -37,7 +37,7 @@ struct ABannersFaceTests {
         let (photos, directory) = try store()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        try photos.saveShared(jpeg(1), for: person, attachment: AttachmentID())
+        try photos.savePublished(jpeg(1), for: person, .rooms, attachment: AttachmentID())
         try photos.savePublished(jpeg(2), for: person, .outpost, attachment: AttachmentID())
 
         #expect(photos.faceForABanner(from: person, aboutAPost: false) == jpeg(1))
@@ -49,7 +49,7 @@ struct ABannersFaceTests {
         defer { try? FileManager.default.removeItem(at: directory) }
 
         try photos.save(jpeg(9), for: person)
-        try photos.saveShared(jpeg(1), for: person, attachment: AttachmentID())
+        try photos.savePublished(jpeg(1), for: person, .rooms, attachment: AttachmentID())
 
         #expect(photos.faceForABanner(from: person, aboutAPost: false) == jpeg(9))
     }

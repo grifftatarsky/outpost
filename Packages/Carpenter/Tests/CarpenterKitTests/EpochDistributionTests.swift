@@ -241,7 +241,7 @@ struct EpochDistributionTests {
 
     // MARK: The published link
 
-    @Test("The epoch change is an entry, so the link is durable and folds like anything else")
+    @Test("The epoch change is an entry, so the link is durable and is read like anything else")
     func epochChangeIsAnEntry() throws {
         let room = RoomID()
         let (chain, founding) = EpochChain.create(room: room)

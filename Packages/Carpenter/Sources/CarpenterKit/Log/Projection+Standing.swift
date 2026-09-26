@@ -14,7 +14,7 @@ extension Projection {
         var roster = RoomRoster(room: room)
         var windows: [ParticipantID: [AbsenceWindow]] = [:]
 
-        for entry in rendered where entry.room == room {
+        for entry in entries(in: room) {
             guard let payload = opening(entry) else { continue }
             let before = roster.absent
             roster.apply(entry, body: payload)
@@ -52,7 +52,7 @@ extension Projection {
         guard !windows.isEmpty else { return [] }
 
         var out: Set<EntryHash> = []
-        for entry in rendered where entry.room == room {
+        for entry in entries(in: room) {
             guard let theirs = windows[entry.author] else { continue }
             let isOut = theirs.contains { window in
                 entry.id != window.opened.id
@@ -76,43 +76,45 @@ extension Projection {
         readThrough: EntryHash? = nil,
         undrawn: Set<EntryHash> = []
     ) -> RoomSummary? {
-        let inRoom = rendered.filter { $0.room == room }
-        guard let stored = name(of: room) else { return nil }
+        guard let positions = roomPositions[room], let newest = positions.last,
+            let profile = lastProfiles[room], case .text(let stored) = profile.content
+        else { return nil }
         let kind = kind(of: room)
 
         let partner = kind == .solo ? others.first(where: { $0 != self.viewer }).map(member) : nil
         let name = partner?.displayName ?? stored
 
-        let conversation = inRoom.filter(\.isConversation)
-        let last = conversation.last
+        let last = positions.last { rendered[$0].isConversation }.map { rendered[$0] }
 
         return RoomSummary(
             id: room,
             name: name,
-            memberCount: memberCount ?? Set(inRoom.map(\.author)).count,
+            memberCount: memberCount ?? Set(positions.map { rendered[$0].author }).count,
             lastAuthor: last.map { member($0.author) },
             lastMessage: last.map { preview($0) } ?? "",
-            lastActivity: last?.wallTime ?? inRoom.last?.wallTime ?? .distantPast,
-            hasUnread: Self.hasUnread(
-                in: conversation, for: viewer, readThrough: readThrough, undrawn: undrawn),
+            lastActivity: last?.wallTime ?? rendered[newest].wallTime,
+            hasUnread: hasUnread(
+                in: room, at: positions, for: viewer, readThrough: readThrough, undrawn: undrawn),
             isDirect: kind == .solo,
             initials: partner?.initials,
             partner: partner?.id
         )
     }
 
-    static func hasUnread(
-        in conversation: [RenderedEntry],
-        for viewer: ParticipantID?,
-        readThrough: EntryHash?,
+    private func hasUnread(
+        in room: RoomID, at positions: [Int], for viewer: ParticipantID?, readThrough: EntryHash?,
         undrawn: Set<EntryHash>
     ) -> Bool {
         guard let viewer else { return false }
-        let mark = readThrough.flatMap { hash in conversation.firstIndex { $0.id == hash } }
-        return conversation[(mark.map { $0 + 1 } ?? 0)...].contains { entry in
-            guard entry.author != viewer, !undrawn.contains(entry.id) else { return false }
-            if case .withdrawn = entry.content { return false }
+        let mark = readThrough.flatMap { positionByID[$0] }
+            .flatMap { rendered[$0].isConversation && rendered[$0].room == room ? $0 : nil }
+        for position in positions.reversed() {
+            if let mark, position <= mark { return false }
+            let entry = rendered[position]
+            guard entry.isConversation, entry.author != viewer, !undrawn.contains(entry.id) else { continue }
+            if case .withdrawn = entry.content { continue }
             return true
         }
+        return false
     }
 }

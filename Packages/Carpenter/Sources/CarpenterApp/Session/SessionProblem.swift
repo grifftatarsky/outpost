@@ -62,11 +62,17 @@ public enum SessionProblem {
                 localized: "That code came from a device that is already set up, so there is nothing to add.",
                 bundle: .module, comment: "The pasted offer carries no device subkey")
             // COPY END cd81b719
-        case .keyNotTurned(let rooms):
+        case .tooBigToSend:
+            // COPY BEGIN 08d03bb8 [NEEDS HUMAN REVIEW]
+            return String(
+                localized: "That is too long to send as one message. Split it into a few.",
+                bundle: .module, comment: "A message too big to fit in anything the mailbox carries")
+            // COPY END 08d03bb8
+        case .keyNotRotated(let rooms):
             // COPY BEGIN 8947ed4f [NEEDS HUMAN REVIEW]
             return String(
-                localized: "That device is out. ^[\(rooms) conversation](inflect: true) has not turned its key yet, so it can still read what is said there until something does.",
-                bundle: .module, comment: "A device was revoked but some rooms did not turn their key")
+                localized: "That device is out, but the key for ^[\(rooms) conversation](inflect: true) has not been rotated yet, so the device can still read new messages there until it is.",
+                bundle: .module, comment: "A device was revoked but some rooms' keys were not rotated")
             // COPY END 8947ed4f
         }
     }

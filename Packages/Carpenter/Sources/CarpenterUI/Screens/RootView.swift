@@ -8,7 +8,7 @@ public struct RootView: View {
     @Environment(\.clock) var roomClock
     @Environment(\.stampDevice) var stampDevice
     @State var icons = AppIconStore()
-    @State var organisation: RoomsListOrganisation
+    @Binding var organisation: RoomsListOrganisation
     @State var invite: PresentedInvite?
     @State var showingOutstanding: RoomID?
     @State var reviewing: RoomID?
@@ -22,8 +22,8 @@ public struct RootView: View {
     @State var viewingMembers: RoomID?
     @State var notifying: RoomID?
     @State var showingWaiting: RoomID?
-    @State var preferences = RoomsListPreferences()
-    @State var safety: SafetyPreferences
+    @Bindable var preferences: RoomsListPreferences
+    @Bindable var safety: SafetyPreferences
     @State var destination: Destination? = .allOutposts
     @State var outpostsExpanded = true
     @State var roomsExpanded = true
@@ -102,7 +102,6 @@ public struct RootView: View {
     @Environment(\.ownAvatar) var ownAvatar
     @Environment(\.verificationPhrase) var phraseLookup
     let connections: [Connection]
-    let onOrganisationChange: ((inout RoomsListOrganisation) -> Void) -> Void
     let pendingJoins: (RoomID) -> [PendingJoin]
     let onInvite: (RoomID, String, InvitationLifetime) async -> Invite?
     let onOutstandingInvite: (RoomID) async -> Invite?
@@ -194,6 +193,7 @@ public struct RootView: View {
     let onSilence: (RoomID, Bool) async -> Void
     let messageDelay: (MessageID) -> TimeInterval?
     let debugActions: DebugActions?
+    let testProfiles: TestProfilesControl?
     let hiddenMessageCount: Int
     let recoveryKey: RecoveryKeyRow?
     let onRevealHidden: () async -> Void
@@ -216,7 +216,8 @@ public struct RootView: View {
         outpostAudience: OutpostAudience = OutpostAudience(),
         conversation: [Message],
         openRoom: Binding<RoomID?> = .constant(nil),
-        organisation: RoomsListOrganisation = RoomsListOrganisation(),
+        organisation: Binding<RoomsListOrganisation>,
+        preferences: RoomsListPreferences,
         feed: [OutpostPost] = [],
         outpostAuthors: [Member] = [],
         onReact: @escaping (OutpostPost, String?) async -> Void = { _, _ in },
@@ -242,6 +243,7 @@ public struct RootView: View {
         onSilence: @escaping (RoomID, Bool) async -> Void = { _, _ in },
         messageDelay: @escaping (MessageID) -> TimeInterval? = { _ in nil },
         debugActions: DebugActions? = nil,
+        testProfiles: TestProfilesControl? = nil,
         hiddenMessageCount: Int = 0,
         recoveryKey: RecoveryKeyRow? = nil,
         onRevealHidden: @escaping () async -> Void = {},
@@ -268,7 +270,6 @@ public struct RootView: View {
         sharedName: @escaping (ParticipantID) -> String? = { _ in nil },
         onNicknameChange: ((ParticipantID, String?) async -> Void)? = nil,
         onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)? = nil,
-        onOrganisationChange: @escaping ((inout RoomsListOrganisation) -> Void) -> Void = { _ in },
         pendingJoins: @escaping (RoomID) -> [PendingJoin] = { _ in [] },
         onInvite: @escaping (RoomID, String, InvitationLifetime) async -> Invite? = { _, _, _ in nil },
         onOutstandingInvite: @escaping (RoomID) async -> Invite? = { _ in nil },
@@ -390,7 +391,7 @@ public struct RootView: View {
         self.viewer = viewer
         self.messageActions = messageActions
         self.onAttach = onAttach
-        _safety = State(initialValue: safety ?? SafetyPreferences())
+        self.safety = safety ?? SafetyPreferences()
         self.screening = screening
         self.onOpenSystemSettings = onOpenSystemSettings
         self.blockedPeople = blockedPeople
@@ -415,6 +416,7 @@ public struct RootView: View {
         self.onSilence = onSilence
         self.messageDelay = messageDelay
         self.debugActions = debugActions
+        self.testProfiles = testProfiles
         self.hiddenMessageCount = hiddenMessageCount
         self.recoveryKey = recoveryKey
         self.onRevealHidden = onRevealHidden
@@ -451,7 +453,8 @@ public struct RootView: View {
         self.onAnswerWhoYouAreTalkingTo = onAnswerWhoYouAreTalkingTo
         self.awaitingAdmission = awaitingAdmission
         self.managedTags = managedTags
-        _organisation = State(initialValue: organisation)
+        _organisation = organisation
+        self.preferences = preferences
         _openRoom = openRoom
         self.feed = feed
         self.outpostAuthors = outpostAuthors
@@ -479,7 +482,6 @@ public struct RootView: View {
         self.sharedName = sharedName
         self.onNicknameChange = onNicknameChange
         self.onPersonAvatarChange = onPersonAvatarChange
-        self.onOrganisationChange = onOrganisationChange
         self.rooms = rooms
         self.syncedPeers = syncedPeers
         self.lastSync = lastSync
@@ -504,8 +506,6 @@ public struct RootView: View {
     public var body: some View {
         layout
             .environment(\.showsHelp, theme.tutorialMode)
-            // A confirmation dialog rather than an alert: Apple's answer for a choice related to an
-            // intentional action, and an alert offers no additional choices related to the action.
             // COPY BEGIN 209d0602 [NEEDS HUMAN REVIEW]
             .confirmationDialog(
                 Text("Leave \(leaving?.name ?? "")", bundle: .module),

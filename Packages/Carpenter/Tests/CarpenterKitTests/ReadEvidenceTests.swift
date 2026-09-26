@@ -67,7 +67,7 @@ struct ReadEvidenceTests {
         #expect(evidence.firstCovering(2) == at(5))
     }
 
-    @Test("The folded answer agrees with the plain one, whatever order the receipts arrive in")
+    @Test("The indexed answer agrees with the plain one, whatever order the receipts arrive in")
     func agreesWithBruteForce() {
         let raw: [ReadEvidence.Mark] = (0..<40).map { index in
             .init(position: (index * 17) % 23, at: at(Double((index * 29) % 37)))
@@ -87,7 +87,7 @@ struct ReadEvidenceTests {
 }
 
 @MainActor
-@Suite("A seen mark through the fold", .serialized)
+@Suite("A seen mark from the log", .serialized)
 struct SeenMarkTimeTests {
     @Test("Each message carries the instant its own first receipt was written")
     func eachMessageKeepsItsOwnInstant() async throws {

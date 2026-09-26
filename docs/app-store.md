@@ -303,7 +303,7 @@ set a higher minimum age than the questionnaire computes. Using it to paper over
 too conservative leaves the wrong answers on file with the right rating bolted on top. Fix the input.
 
 **Social media features: No.** Signal is the evidence — it has Stories, which is considerably more
-feed-shaped than an Outpost wall, and carries no social media descriptor. Outpost has no public
+like a feed than an Outpost wall, and carries no social media descriptor. Outpost has no public
 profile, no follower graph, no discovery, no feed of people you have not admitted, and no algorithmic
 distribution. These questions become mandatory in September 2026, and anything that trips the flag is
 locked to a 13+ floor, so being on the right side of it is worth the care.

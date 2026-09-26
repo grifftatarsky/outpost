@@ -78,7 +78,7 @@ public struct MessageRunView: View {
     @State fileprivate var listingReactionsOf: Message?
     @State private var pickingFor: Message?
     @State private var editDetent: PresentationDetent = .large
-    @State private var favourites = FavouriteEmoji()
+    private var favourites: FavouriteEmoji { .shared }
     private let onSeen: ((MessageID) async -> Void)?
     private let delay: (MessageID) -> TimeInterval?
 
@@ -402,8 +402,6 @@ extension MessageRunView {
 
 // COPY BEGIN 95bf0122 [NEEDS HUMAN REVIEW]
 extension MessageRunView {
-    /// The message being hidden, short enough for a dialog title. Apple asks that a title fit one
-    /// line; a long message is cut rather than wrapped, and a message with no words says so.
     fileprivate func quoted(_ message: Message) -> Text {
         let words = message.body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !words.isEmpty else { return Text("Hide this?", bundle: .module) }

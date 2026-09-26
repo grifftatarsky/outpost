@@ -16,10 +16,6 @@ extension AppSession {
         distribution.offersTheTestFlightYear && persisted.preferences.supporterYearClaimed == nil
     }
 
-    public var hasAnsweredSupporterBadge: Bool {
-        persisted.preferences.showsSupporterBadge != nil
-    }
-
     public var showsSupporterBadge: Bool {
         isSupporter && persisted.preferences.isShowingSupporterBadge
     }

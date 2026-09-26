@@ -117,8 +117,6 @@ extension AppSession {
 
     public var badgeChoices: BadgeChoices { persisted.preferences.badgeChoices }
 
-    /// The number on the app icon. The app sets it when it changes and the notification extension
-    /// sets it as a banner is delivered, so it is one property rather than a sum written twice.
     public var badgeNumber: Int {
         BadgeCount.of(
             rooms, outposts: outpostAuthorsWithUnseen().count, choices: badgeChoices)

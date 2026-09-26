@@ -229,16 +229,6 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
         Diagnostics.sync.notice("device sync: erased every feed on this account")
     }
 
-    public func subscriptionSummary() async -> String {
-        do {
-            let all = try await container.privateCloudDatabase.allSubscriptions()
-            guard !all.isEmpty else { return "No subscriptions: nothing will arrive on its own." }
-            return all.map { "\($0.subscriptionID) (\(type(of: $0)))" }.joined(separator: "\n")
-        } catch {
-            return "Could not read subscriptions: \(error.localizedDescription)"
-        }
-    }
-
     public func forgetOwnContribution() async throws {
         try await start()
         guard let engine else { return }

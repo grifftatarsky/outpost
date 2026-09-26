@@ -10,12 +10,12 @@ struct InviteLinkTests {
     private let scheme = "outposttest"
 
     private func keys() throws -> IdentityPublicKeys {
-        try Identity.generate().publicKeys
+        Identity.generate().publicKeys
     }
 
     private func invite() throws -> Invite {
-        let inviter = try Identity.generate()
-        let joiner = try Identity.generate()
+        let inviter = Identity.generate()
+        let joiner = Identity.generate()
         return Invite(
             attestation: try TestInvite.issue(
                 joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter,

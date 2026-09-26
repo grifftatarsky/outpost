@@ -4,10 +4,6 @@ import CloudKit
 import Foundation
 import Testing
 
-/// The sibling feed carried every epoch secret its member held to CloudKit **in the clear** from
-/// 2026-08-16 to 2026-09-13, and no test in the suite could see it, because the in-memory relay
-/// stored the struct rather than the bytes. The suite holds the seal itself in eight tests now.
-/// These hold the part the suite still cannot reach: what the record on the real server contains.
 @Suite(
     "The sibling feed on a real CloudKit account",
     .enabled(if: LiveCloudKit.isAsked),
@@ -27,7 +23,6 @@ struct LiveSiblingFeedTests {
                 .appending(path: "engine.json"))
     }
 
-    /// A feed holding a secret we can search the wire for.
     private func feed(carrying material: Data) -> SiblingFeed {
         SiblingFeed(
             entries: [],
@@ -94,7 +89,6 @@ struct LiveSiblingFeedTests {
             payload == sealed.ciphertext,
             "the bytes on the server are not the ciphertext the app sealed")
 
-        // And the seal is real rather than an encoding: the same identity opens it, nobody else does.
         let reopened = try SealedSiblingFeed(ciphertext: payload).open(with: identity, from: mine)
         #expect(reopened.epochs.first?.material == material, "the round trip lost the secret")
         #expect(
@@ -123,8 +117,6 @@ struct LiveSiblingFeedTests {
             try SealedSiblingFeed.seal(feed(carrying: material), for: identity, on: first),
             from: first)
 
-        // Wait for the write to land before the reader starts, so the reader's first fetch has
-        // something to find rather than racing the upload.
         var landed = false
         for _ in 0..<30 {
             if try await record(for: first) != nil {

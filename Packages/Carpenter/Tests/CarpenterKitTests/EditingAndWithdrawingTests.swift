@@ -10,8 +10,8 @@ struct EditingAndWithdrawingTests {
 
     private func author() -> Author { Author(chain: EpochChain.create(room: RoomID()).chain) }
 
-    private func folded(_ entries: [Entry], _ chain: EpochChain) -> [RenderedEntry] {
-        Fold.render(entries, using: chain)
+    private func rendered(_ entries: [Entry], _ chain: EpochChain) -> [RenderedEntry] {
+        LogRenderer.render(entries, using: chain)
     }
 
     // MARK: The windows
@@ -23,7 +23,7 @@ struct EditingAndWithdrawingTests {
         let edit = try alice.append(
             try Payload.edit(post.hash, to: "first"), at: start.addingTimeInterval(600))
 
-        let drawn = try #require(folded([post, edit], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post, edit], alice.chain).first { $0.id == post.hash })
         guard case .text(let body) = drawn.content else {
             Issue.record("the edit did not take")
             return
@@ -40,7 +40,7 @@ struct EditingAndWithdrawingTests {
             try Payload.edit(post.hash, to: "rewritten much later"),
             at: start.addingTimeInterval(Editing.editWindow + 1))
 
-        let drawn = try #require(folded([post, late], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post, late], alice.chain).first { $0.id == post.hash })
         guard case .text(let body) = drawn.content else {
             Issue.record("the message stopped being text")
             return
@@ -56,7 +56,7 @@ struct EditingAndWithdrawingTests {
         let gone = try alice.append(
             try Payload.tombstone(post.hash), at: start.addingTimeInterval(60))
 
-        let drawn = try #require(folded([post, gone], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post, gone], alice.chain).first { $0.id == post.hash })
         guard case .withdrawn = drawn.content else {
             Issue.record("the withdrawal did not take")
             return
@@ -71,7 +71,7 @@ struct EditingAndWithdrawingTests {
             try Payload.tombstone(post.hash),
             at: start.addingTimeInterval(Editing.withdrawWindow + 1))
 
-        let drawn = try #require(folded([post, late], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post, late], alice.chain).first { $0.id == post.hash })
         guard case .text = drawn.content else {
             Issue.record("a withdrawal outside the window still took the message back")
             return
@@ -91,7 +91,7 @@ struct EditingAndWithdrawingTests {
 
         let edit = try alice.append(try Payload.edit(post.hash, to: "edited"), at: atFive)
         let gone = try alice.append(try Payload.tombstone(post.hash), at: atFive)
-        let drawn = try #require(folded([post, edit, gone], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post, edit, gone], alice.chain).first { $0.id == post.hash })
         guard case .text(let body) = drawn.content else {
             Issue.record("the late withdrawal took effect")
             return
@@ -118,7 +118,7 @@ struct EditingAndWithdrawingTests {
             try Payload.tombstone(post.hash), at: start.addingTimeInterval(20))
 
         let drawn = try #require(
-            folded([post, forgedEdit, forgedWithdraw], alice.chain).first { $0.id == post.hash })
+            rendered([post, forgedEdit, forgedWithdraw], alice.chain).first { $0.id == post.hash })
         guard case .text(let body) = drawn.content else {
             Issue.record("somebody withdrew a message that was not theirs")
             return
@@ -134,11 +134,11 @@ struct EditingAndWithdrawingTests {
         let post = try alice.post("taken back", at: start)
         let gone = try alice.append(try Payload.tombstone(post.hash), at: start.addingTimeInterval(30))
 
-        let all = folded([post, gone], alice.chain)
+        let all = rendered([post, gone], alice.chain)
         let drawn = try #require(all.first { $0.id == post.hash })
         #expect(drawn.author == alice.identity.id, "the entry lost its author")
         #expect(drawn.wallTime == start, "the entry lost its place in time")
-        #expect(all.contains { $0.id == post.hash }, "the fold dropped the entry rather than drawing a placeholder")
+        #expect(all.contains { $0.id == post.hash }, "rendering dropped the entry rather than drawing a placeholder")
     }
 
     @Test("A withdrawn message cannot then be edited back into existence")
@@ -149,7 +149,7 @@ struct EditingAndWithdrawingTests {
         let after = try alice.append(
             try Payload.edit(post.hash, to: "back again"), at: start.addingTimeInterval(20))
 
-        let drawn = try #require(folded([post, gone, after], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post, gone, after], alice.chain).first { $0.id == post.hash })
         guard case .withdrawn = drawn.content else {
             Issue.record("an edit undid a withdrawal")
             return
@@ -168,7 +168,7 @@ struct EditingAndWithdrawingTests {
             try Payload.edit(post.hash, to: "three"), at: start.addingTimeInterval(120))
 
         let drawn = try #require(
-            folded([post, first, second], alice.chain).first { $0.id == post.hash })
+            rendered([post, first, second], alice.chain).first { $0.id == post.hash })
         #expect(drawn.revisions.map(\.text) == ["one", "two", "three"])
         #expect(drawn.revisions.map(\.at) == [start, start.addingTimeInterval(60), start.addingTimeInterval(120)])
     }
@@ -177,7 +177,7 @@ struct EditingAndWithdrawingTests {
     func noHistoryWhenUnedited() throws {
         var alice = author()
         let post = try alice.post("said once", at: start)
-        let drawn = try #require(folded([post], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post], alice.chain).first { $0.id == post.hash })
         #expect(drawn.revisions.isEmpty)
         #expect(!drawn.isEdited)
     }
@@ -191,7 +191,7 @@ struct EditingAndWithdrawingTests {
         let gone = try alice.append(
             try Payload.tombstone(post.hash), at: start.addingTimeInterval(60))
 
-        let drawn = try #require(folded([post, edit, gone], alice.chain).first { $0.id == post.hash })
+        let drawn = try #require(rendered([post, edit, gone], alice.chain).first { $0.id == post.hash })
         #expect(drawn.revisions.isEmpty, "the room could still read what was withdrawn")
     }
 }

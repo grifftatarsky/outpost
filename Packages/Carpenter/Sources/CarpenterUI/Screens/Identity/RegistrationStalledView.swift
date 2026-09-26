@@ -8,19 +8,23 @@ public struct RegistrationStalledView: View {
     private let onRetry: () async -> Void
     private let onRestore: (() -> Void)?
     private let onNuke: (() async -> Void)?
+    private let testProfiles: TestProfilesControl?
 
     @State private var retrying = false
+    @State private var choosingTestProfile = false
 
     public init(
         stall: RegistrationStall,
         onRetry: @escaping () async -> Void,
         onRestore: (() -> Void)? = nil,
-        onNuke: (() async -> Void)? = nil
+        onNuke: (() async -> Void)? = nil,
+        testProfiles: TestProfilesControl? = nil
     ) {
         self.stall = stall
         self.onRetry = onRetry
         self.onRestore = onRestore
         self.onNuke = onNuke
+        self.testProfiles = testProfiles
     }
 
     public var body: some View {
@@ -76,6 +80,28 @@ public struct RegistrationStalledView: View {
             }
             // COPY END c1d22f7a
 
+            #if DEBUG
+                if let testProfiles {
+                    Button {
+                        choosingTestProfile = true
+                    } label: {
+                        // COPY BEGIN 33f3faee [NEEDS HUMAN REVIEW]
+                        Text("Are you running a testing server?", bundle: .module)
+                        // COPY END 33f3faee
+                            .font(CarpenterFont.rowDetail)
+                            .foregroundStyle(palette.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    .sheet(isPresented: $choosingTestProfile) {
+                        NavigationStack {
+                            TestProfilesView(control: testProfiles)
+                        }
+                        .themed(palette.accent)
+                    }
+                }
+            #endif
+
             Spacer(minLength: 0)
 
             if let onNuke {
@@ -99,13 +125,13 @@ public struct RegistrationStalledView: View {
     private var headline: Text {
         switch stall {
         case .accountHasAMember:
-            Text("This Apple Account already has a member", bundle: .module)
+            Text("Apple Account cannot be used", bundle: .module)
         case .accountUnreadable:
-            Text("Could not read this Apple Account", bundle: .module)
+            Text("Apple Account cannot be used", bundle: .module)
         case .accountOffline:
             Text("Could not reach iCloud", bundle: .module)
         case .keychainUnreadable:
-            Text("The Keychain would not answer", bundle: .module)
+            Text("Keychain would not answer", bundle: .module)
         }
     }
     // COPY END 4f8229af
@@ -115,19 +141,19 @@ public struct RegistrationStalledView: View {
         switch stall {
         case .accountHasAMember:
             Text(
-                "Their key has not reached this device. It travels through iCloud Keychain, so check that Passwords and Keychain sync is on for this device; this app will notice by itself if it arrives. If iCloud Keychain was reset, or sync was never on, it will not arrive, and a recovery key is the way back.",
+                "Key has not been collected from iCloud. Check that Passwords and Keychain sync is on for this device and return here. If the Keychain has been lost, use a recovery key.",
                 bundle: .module)
         case .accountUnreadable:
             Text(
-                "iCloud answered, but not with an answer. This device will not offer to make a second member until it knows there is not one already.",
+                "iCloud is unreadable.",
                 bundle: .module)
         case .accountOffline:
             Text(
-                "This device has to ask iCloud whether this Apple Account already has a member before it makes one, so there are never two of you. Check that it is online and signed in to iCloud in Settings, then try again.",
+                "iCloud is offline. Check your settings and return here.",
                 bundle: .module)
         case .keychainUnreadable:
             Text(
-                "This device cannot tell whether it already holds a member, so it will not make a second one. Unlocking the device and checking again usually settles it.",
+                "The Keychain is unreadable. Try locking and unlocking your device.",
                 bundle: .module)
         }
     }

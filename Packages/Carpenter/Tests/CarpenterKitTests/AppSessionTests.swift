@@ -87,7 +87,7 @@ struct AppSessionTests {
         #expect(app.rooms.map(\.name) == ["Zeppelin Enthusiasts"])
     }
 
-    @Test("A sent message is readable back through the fold")
+    @Test("A sent message is readable back from the log")
     func sendAndRead() async throws {
         let (storage, directory) = storage()
         defer { try? FileManager.default.removeItem(at: directory) }

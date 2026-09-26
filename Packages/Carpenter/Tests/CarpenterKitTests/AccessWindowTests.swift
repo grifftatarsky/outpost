@@ -76,7 +76,7 @@ struct AccessWindowSessionTests {
         #expect(!read.contains("three, in the gap"), "he read the gap")
 
         let windows = try #require(alice.outpostAccess.grant(for: bobID)?.windows)
-        #expect(windows.count == 2, "two stretches were folded as one")
+        #expect(windows.count == 2, "two stretches were counted as one")
         #expect(windows[0].until != nil, "the first stretch never closed")
         #expect(windows[1].isOpen, "the second stretch is not open")
     }

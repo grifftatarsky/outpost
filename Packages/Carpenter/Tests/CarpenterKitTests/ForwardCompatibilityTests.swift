@@ -95,7 +95,7 @@ extension ForwardCompatibilityTests {
         state.uploadsLeftForOthers = [AttachmentID()]
         state.holesNoticed = [room: stamp.at]
         state.askedAutomatically = [room: stamp.at]
-        state.epochTurnsOwed = [room]
+        state.keyRotationsOwed = [room]
         state.outpostMediaOwed = [ParticipantID(rawValue: WideID.of([9]))]
         state.reviewsPostponed = [room: [ParticipantID(rawValue: WideID.of([9]))]]
         state.outpostSeenThrough = [ParticipantID(rawValue: WideID.of([9])): stamp.at]
@@ -110,7 +110,7 @@ extension ForwardCompatibilityTests {
         ]
         state.phraseNonces = ["Y29tbWl0bWVudA==": Data(repeating: 9, count: 32)]
         state.wantsWhatWasSaid = true
-        state.turnsEveryKeyAfterALoss = true
+        state.rotatesEveryKeyAfterALoss = true
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)
@@ -177,6 +177,29 @@ extension ForwardCompatibilityTests {
         #expect(
             decoded.acceptedInvitations.map(\.attestation) == [attestation],
             "an invitation confirmed on the build before the rename was dropped on upgrade")
+    }
+
+    @Test("A key rotation owed under the old field names is still owed after the upgrade")
+    func owedKeyRotationsSurviveTheRename() throws {
+        let room = RoomID()
+        var old = try #require(
+            try JSONSerialization.jsonObject(with: JSONEncoder().encode(PersistedState()))
+                as? [String: Any])
+        old.removeValue(forKey: "keyRotationsOwed")
+        old.removeValue(forKey: "rotatesEveryKeyAfterALoss")
+        old["epochTurnsOwed"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([room]))
+        old["turnsEveryKeyAfterALoss"] = true
+
+        let decoded = try JSONDecoder().decode(
+            PersistedState.self,
+            from: try JSONSerialization.data(withJSONObject: old))
+
+        #expect(
+            decoded.keyRotationsOwed == [room],
+            "a removal whose key rotation had not happened yet was forgotten on upgrade, so the removed member keeps reading")
+        #expect(
+            decoded.rotatesEveryKeyAfterALoss,
+            "a member who said a device was lost had the answer dropped on upgrade, so no key is rotated")
     }
 
     @Test func decodingPersistedStateKeepsEveryFieldItWasGiven() throws {

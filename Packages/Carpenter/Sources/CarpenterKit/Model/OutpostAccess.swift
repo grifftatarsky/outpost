@@ -16,8 +16,6 @@ public struct AccessWindow: Hashable, Sendable, Codable {
     }
 
     public var isOpen: Bool { until == nil }
-
-    public var isEverything: Bool { from == nil && until == nil }
 }
 
 public struct OutpostAccess: Hashable, Sendable, Codable {

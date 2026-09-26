@@ -127,7 +127,7 @@ struct SyncFromTheAppTests {
             joinerCode: bob.identityCode(), joining: room, mailbox: nil)
         try await bob.redeem(inviteCode: try invite.encoded())
 
-        #expect(alice.epoch(of: room) == .initial, "an invitation turned the key on its own")
+        #expect(alice.epoch(of: room) == .initial, "an invitation rotated the key on its own")
         #expect(alice.roster(of: room).members.count == 1, "the invitation alone admitted somebody")
 
         var received = SyncReport()
@@ -139,7 +139,7 @@ struct SyncFromTheAppTests {
 
         #expect(
             alice.epoch(of: room) == EpochNumber.initial.next,
-            "a membership change did not turn the key")
+            "a membership change did not rotate the key")
         #expect(alice.roster(of: room).members.count == 2, "confirming did not admit")
 
         #expect(received.grantsReceived.count == 1)
@@ -422,7 +422,7 @@ struct SyncFromTheAppTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let bobKeys = try #require(bob.enrolment?.identity.publicKeys)
+        _ = try #require(bob.enrolment?.identity.publicKeys)
         let attestation = try await alice.attest(code: try JoinerCode.decoded(from: bob.identityCode()), joining: room)
         try await alice.decide(on: attestation, admit: true)
 
@@ -451,7 +451,7 @@ struct SyncFromTheAppTests {
         #expect(!report.didAnything)
     }
 
-    @Test("Joining an open room turns the key, with nothing called by hand")
+    @Test("Joining an open room rotates the key, with nothing called by hand")
     func openInvitationAdvancesTheEpoch() async throws {
         let clock = TestClock(now: Date(timeIntervalSince1970: 1_786_635_000))
         let mailbox = InMemoryMailbox()
@@ -475,7 +475,7 @@ struct SyncFromTheAppTests {
             "a membership change left the key where it was")
     }
 
-    @Test("One join turns the key once, even if the inviter also decides")
+    @Test("One join rotates the key once, even if the inviter also decides")
     func oneJoinAdvancesOnce() async throws {
         let clock = TestClock(now: Date(timeIntervalSince1970: 1_786_635_000))
         let mailbox = InMemoryMailbox()
@@ -496,10 +496,10 @@ struct SyncFromTheAppTests {
         try await alice.decide(on: attestation, admit: true)
         #expect(
             alice.epoch(of: room) == EpochNumber.initial.next,
-            "one membership change turned the key twice")
+            "one membership change rotated the key twice")
     }
 
-    @Test("An approval before a confirmation still turns the key once")
+    @Test("An approval before a confirmation still rotates the key once")
     func approvalFirstAdvancesOnce() async throws {
         let clock = TestClock(now: Date(timeIntervalSince1970: 1_786_635_000))
         let mailbox = InMemoryMailbox()
@@ -528,7 +528,7 @@ struct SyncFromTheAppTests {
         #expect(alice.roster(of: room).members.contains(bobKeys.participantID))
         #expect(
             alice.epoch(of: room) == afterAdmission,
-            "one join turned the key twice because the approval arrived first")
+            "one join rotated the key twice because the approval arrived first")
     }
 
     @Test("Admitting somebody advances the room's epoch")
@@ -546,7 +546,7 @@ struct SyncFromTheAppTests {
         let room = try await alice.createRoom(named: "Hangar 7", access: .founder)
         #expect(alice.epoch(of: room) == EpochNumber.initial)
 
-        let bobKeys = try #require(bob.enrolment?.identity.publicKeys)
+        _ = try #require(bob.enrolment?.identity.publicKeys)
         let attestation = try await alice.attest(code: try JoinerCode.decoded(from: bob.identityCode()), joining: room)
         try await alice.decide(on: attestation, admit: true)
 

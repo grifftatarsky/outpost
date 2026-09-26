@@ -91,7 +91,7 @@ struct WhoHasReadItTests {
         let silent = try #require(readers.first { $0.member.id == others[1].enrolment?.identity.id })
         #expect(
             silent.report == .doesNotReport,
-            "somebody with receipts off was folded in with the reader who has them on")
+            "somebody with receipts off was lumped in with the reader who has them on")
     }
 
     @Test("A message nobody has reached yet says nothing yet, not nothing")

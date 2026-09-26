@@ -275,9 +275,9 @@ the same as losing everybody I have talked to.
 - **Done.** The keychain-reset case — a member who wiped their own Keychain — explained on its own. The same
   sentence, 2026-09-17.
 - **Done.** **What a restore does about the member's other devices** — decided, Griff, 2026-09-13: the restore
-  screen asks whether a device was lost or stolen, and a yes turns every room's key; nothing is
+  screen asks whether a device was lost or stolen, and a yes rotates every room's key; nothing is
   revoked automatically, and an old device is revoked from the device list
-  ([Decisions](../decisions.md#turning-every-rooms-key-on-a-restore-is-a-question-not-a-default)). This
+  ([Decisions](../decisions.md#rotating-every-rooms-key-on-a-restore-is-a-question-not-a-default)). This
   line read *undecided* until 2026-09-17.
 - **Changed.** *Require verification after recovery* — replaced by Griff's ruling of 2026-09-13 that the
   **person asked** decides: *hold until I check* keeps history back until the solo check passes with
@@ -352,9 +352,9 @@ silent is not great."
   check-up's `restoreAsks` / `restoreHold` pages.
 - **Done.** History goes by default and waits **only** for somebody who has said to wait. The round stamps
   `RestoreAskRecord(hold: .held)` only when this member holds; everybody else gets `.allowed`.
-- **Done.** The restore screen asks once whether a device was lost or stolen, and a yes turns every room's
+- **Done.** The restore screen asks once whether a device was lost or stolen, and a yes rotates every room's
   key. See
-  [the decision](../decisions.md#turning-every-rooms-key-on-a-restore-is-a-question-not-a-default).
+  [the decision](../decisions.md#rotating-every-rooms-key-on-a-restore-is-a-question-not-a-default).
 
 <!-- COPY END 6fa3803a -->
 

@@ -148,8 +148,10 @@ extension Payload {
         return Payload(type: .media, body: try encode(body), fallbackText: body.line)
     }
 
+    private static let bodyDecoder = JSONDecoder()
+
     public func decode<T: Decodable>(_ type: T.Type) throws -> T {
-        try JSONDecoder().decode(T.self, from: body)
+        try Self.bodyDecoder.decode(T.self, from: body)
     }
 
     private static func encode(_ value: some Encodable) throws -> Data {

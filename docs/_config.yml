@@ -47,32 +47,6 @@ callouts:
     color: blue
 # COPY END 9dcc1202
 
-# DESIGN ###############################################################
-# Every screen in this documentation points at a board rather than describing
-# one. Design details live on the board and nowhere else, so a ticket and a
-# drawing can never disagree — the ticket says what a member needs to be able
-# to do, the board says what it looks like.
-#
-# The set lives in this repository at docs/design/boards/ — 84 boards on the canvas,
-# plus two documents that are not optional reading:
-#
-#   Outpost Mockups.dc.html      the boards themselves
-#   Component Decisions.dc.html  twelve rulings where app and set disagreed,
-#                                and what each asks the app to change
-#   Component Blockers.dc.html   the exact values, and the accessibility
-#                                requirement for every board
-#
-# **The captions on the canvas are marketing copy, published verbatim. They are
-# not specifications.** Exact values and per-board accessibility requirements
-# exist only in Component Blockers. A story that cites a board without citing
-# the blockers page is citing prose.
-# Site-absolute, so one value works from every page regardless of depth. Always used as
-# `{{ site.baseurl }}{{ site.design_board }}` — the baseurl is not baked in here, so moving the
-# site does not mean editing sixty-two links.
-design_board: /design/boards/Outpost%20Mockups.dc.html
-design_decisions: /design/boards/Component%20Decisions.dc.html
-design_blockers: /design/boards/Component%20Blockers.dc.html
-
 # BUILD ################################################################
 plugins:
   - jekyll-relative-links

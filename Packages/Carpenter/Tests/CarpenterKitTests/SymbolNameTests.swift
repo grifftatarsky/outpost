@@ -7,11 +7,11 @@
     struct SymbolNameTests {
         private var sourceRoots: [URL] {
             let repository = URL(fileURLWithPath: #filePath)
-                .deletingLastPathComponent()  // CarpenterKitTests
-                .deletingLastPathComponent()  // Tests
-                .deletingLastPathComponent()  // Carpenter
-                .deletingLastPathComponent()  // Packages
-                .deletingLastPathComponent()  // <repository>
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
             return [
                 repository.appending(path: "Packages/Carpenter/Sources"),
                 repository.appending(path: "App"),

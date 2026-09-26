@@ -115,19 +115,19 @@ struct JoinConfirmationWireTests {
         #expect(!fallback.isEmpty)
     }
 
-    @Test("The fold renders it as itself, not as somebody's words")
-    func foldsAsPlumbing() throws {
+    @Test("It renders as itself, not as somebody's words")
+    func rendersAsPlumbing() throws {
         let (attestation, _, joiner) = try invitation()
         let payload = try Payload.joinConfirmed(
             try JoinConfirmedBody.signed(confirming: attestation, by: joiner))
 
         var relay = Author()
         let entry = try relay.append(payload, at: now)
-        let rendered = try #require(Fold.render([entry], using: relay.chain).first)
+        let rendered = try #require(LogRenderer.render([entry], using: relay.chain).first)
 
         #expect(rendered.type == PayloadType.joinConfirmed)
         guard case .unrenderable(let type, let fallback) = rendered.content else {
-            Issue.record("a confirmation folded as something a member said")
+            Issue.record("a confirmation rendered as something a member said")
             return
         }
         #expect(type == PayloadType.joinConfirmed)

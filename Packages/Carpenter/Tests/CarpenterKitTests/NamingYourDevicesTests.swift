@@ -142,8 +142,8 @@ struct RemovingSeveralDevicesTests {
         return (session, room, spares)
     }
 
-    @Test("One removal of many turns each room's key once")
-    func oneRemovalTurnsEachKeyOnce() async throws {
+    @Test("One removal of many rotates each room's key once")
+    func oneRemovalRotatesEachKeyOnce() async throws {
         let (session, room, spares) = try await sessionWithSpareDevices(3)
         let before = session.epochsHeld(in: room)
 
@@ -152,7 +152,7 @@ struct RemovingSeveralDevicesTests {
         #expect(
             session.epochsHeld(in: room) == before + 1,
             """
-            Removing three devices turned the room's key three times. Every turn is a burst of \
+            Removing three devices rotated the room's key three times. Every rotation is a burst of \
             rewrapping for everybody in the room, and one removal is one event.
             """)
         for spare in spares {
@@ -175,10 +175,10 @@ struct RemovingSeveralDevicesTests {
             session.devices.first { $0.id == spares[0] }?.isActive == true,
             """
             A batch containing this device cut off the others on the way to refusing. A removal \
-            that cannot be completed has to change nothing, or the member is left with a key turn \
+            that cannot be completed has to change nothing, or the member is left with a key rotation \
             and an error and no idea which devices went.
             """)
-        #expect(session.epochsHeld(in: room) == before, "a refused removal still turned the key")
+        #expect(session.epochsHeld(in: room) == before, "a refused removal still rotated the key")
     }
 
     @Test("Removing nobody does nothing at all")
@@ -186,6 +186,6 @@ struct RemovingSeveralDevicesTests {
         let (session, room, _) = try await sessionWithSpareDevices(1)
         let before = session.epochsHeld(in: room)
         try await session.revoke([])
-        #expect(session.epochsHeld(in: room) == before, "an empty removal turned every room's key")
+        #expect(session.epochsHeld(in: room) == before, "an empty removal rotated every room's key")
     }
 }

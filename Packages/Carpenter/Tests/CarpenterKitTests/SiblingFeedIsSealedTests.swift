@@ -148,3 +148,57 @@ struct SiblingFeedIsSealedTests {
         #expect(try Self.sealed().ciphertext != Self.sealed().ciphertext)
     }
 }
+
+@Suite("Sealing the feed between your devices")
+@MainActor
+struct SiblingFeedOffTheMainActorTests {
+    private final class Ticks {
+        var count = 0
+    }
+
+    private func longFeed(_ count: Int) throws -> (feed: SiblingFeed, identity: Identity, device: DeviceID) {
+        var alice = Author()
+        var entries: [Entry] = []
+        for step in 0..<count {
+            entries.append(try alice.post("\(step)", at: Date(timeIntervalSince1970: Double(step))))
+        }
+        let feed = SiblingFeed(
+            entries: entries, certificates: [alice.certificate], epochs: [], member: alice.identity.id,
+            writtenAt: Date(timeIntervalSince1970: 0), preferences: MemberPreferences())
+        return (feed, alice.identity, alice.device.id)
+    }
+
+    @Test("Sealed and opened in the background, a feed comes back whole, and only for the device it names")
+    func theBackgroundRoundTrip() async throws {
+        let (feed, identity, device) = try longFeed(20)
+
+        let sealed = try await SealedSiblingFeed.sealInBackground(feed, for: identity, on: device)
+
+        #expect(try await sealed.openInBackground(with: identity, from: device) == feed)
+        await #expect(throws: CryptoError.openFailed) {
+            try await sealed.openInBackground(with: identity, from: DeviceID(rawValue: Data(repeating: 1, count: 32)))
+        }
+    }
+
+    @Test("Sealing a long feed leaves the main actor free to draw")
+    func sealingLeavesTheMainActorFree() async throws {
+        let (feed, identity, device) = try longFeed(300)
+        let ticks = Ticks()
+        let ticker = Task { @MainActor in
+            while !Task.isCancelled {
+                ticks.count += 1
+                await Task.yield()
+            }
+        }
+
+        _ = try await SealedSiblingFeed.sealInBackground(feed, for: identity, on: device)
+        ticker.cancel()
+
+        #expect(
+            ticks.count > 0,
+            """
+            Nothing else ran on the main actor while the feed was sealed. Every send seals the \
+            whole feed, and on the main actor that is a frozen screen.
+            """)
+    }
+}

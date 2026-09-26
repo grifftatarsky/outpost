@@ -159,8 +159,8 @@ struct RemovalTests {
         #expect(roster.members.contains(alice.id), "the loser of the race removed the winner")
     }
 
-    @Test("Every device folding the same order agrees who is out")
-    func theFoldIsDeterministic() throws {
+    @Test("Every device reading the same order agrees who is out")
+    func theMemberListIsDeterministic() throws {
         let alice = Identity.generate()
         let sam = Identity.generate()
 
@@ -173,7 +173,7 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &two, hash: 90, at: 10)
 
         #expect(one.members == two.members)
-        #expect(one.members.contains(sam.id), "the second fold gave a different answer")
+        #expect(one.members.contains(sam.id), "the second pass gave a different answer")
         #expect(!one.members.contains(alice.id))
     }
 
@@ -351,7 +351,7 @@ struct SessionRemovalTests {
         return (alice, bob, room, keys.participantID)
     }
 
-    @Test("Removing somebody turns the room's key")
+    @Test("Removing somebody rotates the room's key")
     func removalAdvancesTheEpoch() async throws {
         let (alice, _, room, bob) = try await roomWithTwo()
         let before = try #require(alice.epoch(of: room))
@@ -469,7 +469,7 @@ struct RemovalEnforcementTests {
         }
     }
 
-    @Test("Once the removal has folded, that device's session declines the write")
+    @Test("Once the removal is in the log, that device's session declines the write")
     func theRemovedDeviceDeclines() async throws {
         let (alice, room, bob) = try await roomWithTwo()
         try await alice.remove(bob, from: room)

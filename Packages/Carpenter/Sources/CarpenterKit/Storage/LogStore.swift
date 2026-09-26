@@ -24,6 +24,8 @@ public struct LoadedLog: Sendable {
 
     public var wasTruncated: Bool { discardedTrailingBytes > 0 }
 
+    static let empty = LoadedLog(entries: [], discardedTrailingBytes: 0, termination: .complete)
+
     public init(entries: [Entry], discardedTrailingBytes: Int, termination: LogTermination) {
         self.entries = entries
         self.discardedTrailingBytes = discardedTrailingBytes
@@ -84,54 +86,71 @@ public actor FileLogStore: LogStore {
         }
     }
 
-    public func loadAll() throws -> LoadedLog {
-        guard fileManager.fileExists(atPath: url.path) else {
-            return LoadedLog(entries: [], discardedTrailingBytes: 0, termination: .complete)
-        }
+    public func loadAll() async throws -> LoadedLog {
+        guard let data = try contents() else { return .empty }
+        let framing = Framing(of: data, maximumRecordBytes: maximumRecordBytes)
+        return framing.loaded(await framing.records.inParallel { lane in Self.decoded(lane, of: data) })
+    }
 
-        let data = try Data(contentsOf: url)
+    private func readAll() throws -> LoadedLog {
+        guard let data = try contents() else { return .empty }
+        let framing = Framing(of: data, maximumRecordBytes: maximumRecordBytes)
+        return framing.loaded(Self.decoded(framing.records[...], of: data))
+    }
+
+    private func contents() throws -> Data? {
+        guard fileManager.fileExists(atPath: url.path) else { return nil }
+        return try Data(contentsOf: url)
+    }
+
+    private static func decoded(_ records: ArraySlice<Range<Int>>, of data: Data) -> [Entry?] {
         let decoder = JSONDecoder()
+        return records.map { try? decoder.decode(Entry.self, from: data[$0]) }
+    }
 
-        var entries: [Entry] = []
-        var cursor = 0
+    private struct Framing {
+        var records: [Range<Int>] = []
         var termination = LogTermination.complete
+        let size: Int
 
-        while cursor + 4 <= data.count {
-            let length = Int(
-                data[cursor..<(cursor + 4)].withUnsafeBytes {
-                    UInt32(bigEndian: $0.loadUnaligned(as: UInt32.self))
-                })
+        init(of data: Data, maximumRecordBytes: Int) {
+            size = data.count
+            var cursor = 0
+            while cursor + 4 <= data.count {
+                let length = Int(
+                    data[cursor..<(cursor + 4)].withUnsafeBytes {
+                        UInt32(bigEndian: $0.loadUnaligned(as: UInt32.self))
+                    })
 
-            let start = cursor + 4
-            guard length > 0, length <= maximumRecordBytes else {
-                termination = .recordTooLarge
-                break
+                let start = cursor + 4
+                guard length > 0, length <= maximumRecordBytes else {
+                    termination = .recordTooLarge
+                    break
+                }
+                guard start + length <= data.count else {
+                    termination = .tornTail
+                    break
+                }
+                records.append(start..<(start + length))
+                cursor = start + length
             }
-            guard start + length <= data.count else {
-                termination = .tornTail
-                break
-            }
-
-            guard let entry = try? decoder.decode(Entry.self, from: data[start..<(start + length)])
-            else {
-                termination = .undecodableRecord
-                break
-            }
-
-            entries.append(entry)
-            cursor = start + length
         }
 
-        if termination == .complete, cursor < data.count { termination = .tornTail }
-
-        return LoadedLog(
-            entries: entries,
-            discardedTrailingBytes: data.count - cursor,
-            termination: termination)
+        func loaded(_ decoded: [Entry?]) -> LoadedLog {
+            let readable = decoded.firstIndex { $0 == nil } ?? decoded.count
+            let cut = readable < records.count
+            let end = cut ? records[readable].lowerBound - 4 : records.last?.upperBound ?? 0
+            var termination = cut ? .undecodableRecord : termination
+            if termination == .complete, end < size { termination = .tornTail }
+            return LoadedLog(
+                entries: decoded[..<readable].compactMap(\.self),
+                discardedTrailingBytes: size - end,
+                termination: termination)
+        }
     }
 
     public func compact() throws {
-        let loaded = try loadAll()
+        let loaded = try readAll()
         guard loaded.wasTruncated else { return }
 
         try fileManager.removeItem(at: url)
@@ -146,7 +165,7 @@ public actor FileLogStore: LogStore {
     @discardableResult
     public func removeEntries(where shouldRemove: @escaping @Sendable (Entry) -> Bool) throws -> Int {
         try CrossProcessLock(forDirectory: url.deletingLastPathComponent()).whileLocked {
-            let loaded = try loadAll()
+            let loaded = try readAll()
             let kept = loaded.entries.filter { !shouldRemove($0) }
             let removed = loaded.entries.count - kept.count
             guard removed > 0 else { return 0 }

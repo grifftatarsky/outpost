@@ -137,7 +137,7 @@ struct ConnectionTests {
     }
 
     @Test("A name starting with an accent is filed under its letter")
-    func diacriticsFold() {
+    func diacriticsAreIgnored() {
         let me = person(1, "Me")
         let sections = connections(rosters: [[me, person(2, "Émile")]], viewer: me)
             .sectionedByInitial()

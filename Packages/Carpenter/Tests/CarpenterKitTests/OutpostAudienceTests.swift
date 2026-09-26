@@ -181,7 +181,7 @@ struct OutpostAudienceTests {
             "he was promised everything and given the words with a tile that never loads")
     }
 
-    @Test("The list is folded from the log and survives a relaunch")
+    @Test("The list is built from the log and survives a relaunch")
     func theListIsInTheLog() async throws {
         let keychain = InMemoryKeychainStore()
         let directory = URL.temporaryDirectory.appending(path: "carpenter-audience-\(UUID().uuidString)")
@@ -241,8 +241,8 @@ actor RefusingLogStore: LogStore {
 }
 
 @MainActor
-@Suite("A key turn that is owed", .serialized)
-struct OutpostKeyTurnTests {
+@Suite("A key rotation that is owed", .serialized)
+struct OutpostKeyRotationTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 5
     ) async throws {
@@ -251,10 +251,10 @@ struct OutpostKeyTurnTests {
         }
     }
 
-    @Test("A revocation whose key turn fails is finished by the next round")
-    func anOwedTurnIsRetried() async throws {
+    @Test("A revocation whose key rotation fails is finished by the next round")
+    func anOwedRotationIsRetried() async throws {
         let mailbox = InMemoryMailbox()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-turn-\(UUID().uuidString)")
+        let directory = URL.temporaryDirectory.appending(path: "carpenter-rotation-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let log = RefusingLogStore(url: directory.appending(path: "log.carpenter"))
 
@@ -286,11 +286,11 @@ struct OutpostKeyTurnTests {
         await #expect(throws: (any Error).self) { try await alice.revokeOutpost(bobID) }
         #expect(alice.outpostReaders().isEmpty, "the list moved him out, as it always did")
         #expect(
-            alice.outpostKeyTurnPending,
-            "nothing recorded that the key still has to turn, so nothing will ever turn it")
+            alice.outpostKeyRotationPending,
+            "nothing recorded that the key still has to be rotated, so nothing will ever rotate it")
 
         try await settle([alice, bob], through: mailbox)
-        #expect(!alice.outpostKeyTurnPending, "the turn was never retried")
+        #expect(!alice.outpostKeyRotationPending, "the rotation was never retried")
 
         try await alice.send("after the door shut", to: nil)
         try await settle([alice, bob], through: mailbox)

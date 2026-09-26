@@ -205,8 +205,8 @@ struct MailboxConvergenceTests {
     }
 
     private func meeting() throws -> (Party, Party) {
-        var alice = Author()
-        var bob = Author(chain: alice.chain)
+        let alice = Author()
+        let bob = Author(chain: alice.chain)
 
         let toBob = Peer(
             secret: try PairwiseSecret.derive(mine: alice.identity, theirs: bob.identity.publicKeys),
@@ -250,8 +250,8 @@ struct MailboxConvergenceTests {
         #expect(got.entriesRejected == 0)
 
         #expect(
-            Fold.render(bob.replica.ordered(), using: bob.author.chain)
-                == Fold.render(alice.replica.ordered(), using: alice.author.chain))
+            LogRenderer.render(bob.replica.ordered(), using: bob.author.chain)
+                == LogRenderer.render(alice.replica.ordered(), using: alice.author.chain))
     }
 
     @Test("Syncing again changes nothing and costs no writes")
@@ -265,12 +265,12 @@ struct MailboxConvergenceTests {
 
         _ = try await session.send(entries, to: [alice.peer], at: start)
         _ = try await session.receive(as: bob.peer, into: &bob.replica, at: start)
-        let before = Fold.render(bob.replica.ordered(), using: bob.author.chain)
+        let before = LogRenderer.render(bob.replica.ordered(), using: bob.author.chain)
 
         let second = try await session.receive(as: bob.peer, into: &bob.replica, at: start)
 
         #expect(second.packetsFetched == 0)
-        #expect(Fold.render(bob.replica.ordered(), using: bob.author.chain) == before)
+        #expect(LogRenderer.render(bob.replica.ordered(), using: bob.author.chain) == before)
         #expect(await mailbox.writeCount == 1)
     }
 

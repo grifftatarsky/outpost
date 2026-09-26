@@ -3,7 +3,6 @@ import SwiftUI
 
 public enum CarpenterMetrics {
     public static let screenMargin: CGFloat = 20
-    public static let rowVerticalPadding: CGFloat = 11
     public static let conversationGutter: CGFloat = 8
     public static let conversationRowPadding: CGFloat = 7
     public static let hairline: CGFloat = 0.5

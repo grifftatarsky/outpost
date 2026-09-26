@@ -360,7 +360,7 @@ out of the result bundle's activity tree.
 - **Contrast is a real finding and it disagrees with the existing contrast audit.** That audit is
   sixteen tests over the palette's *tokens*, and passes. This one measures *rendered pixels* — a
   token drawn at some opacity, over some ground, at some size — and fails five. Same lesson as the
-  render-cost guard that counted folds: a check on the wrong quantity reads as coverage.
+  render-cost guard that counted rebuilds: a check on the wrong quantity reads as coverage.
 - **The avatar initial not scaling** may be deliberate — it sits in a fixed-size disc — and if so
   it is a departure to record, not a bug.
 - **The two hit areas are fixed, 2026-09-16, and a re-run of the audit confirms both are gone.**
@@ -704,8 +704,7 @@ actually be there, so that I can find out how this works without hunting.
   cannot arrive without it and quietly reintroduce the gap.
 
 **Testing.** Not covered by the suite — it is a toolbar item behind a preference, which is the shape
-the UI tests exist for and those are not run. Not seen on the rig either. **Design.**
-[Design](../design.md) records the product decision that pointed here.
+the UI tests exist for and those are not run. Not seen on the rig either.
 
 </details>
 

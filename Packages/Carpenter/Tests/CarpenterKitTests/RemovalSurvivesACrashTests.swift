@@ -119,9 +119,9 @@ struct RemovalSurvivesACrashTests {
                 "a device that stayed still counts Carol in", sourceLocation: sourceLocation)
         }
 
-        let turned = try #require(alice.chains[room.id]?.highestKnownEpoch)
+        let rotated = try #require(alice.chains[room.id]?.highestKnownEpoch)
         #expect(
-            turned > room.epochBefore,
+            rotated > room.epochBefore,
             "every device agrees Carol is out, and the key she holds is still the room's key",
             sourceLocation: sourceLocation)
 
@@ -130,10 +130,10 @@ struct RemovalSurvivesACrashTests {
 
         #expect(
             room.bob.messages(in: room.id).map(\.body).contains("after Carol went"),
-            "the turned key never reached the member who stayed", sourceLocation: sourceLocation)
+            "the rotated key never reached the member who stayed", sourceLocation: sourceLocation)
         #expect(
-            room.carol.chains[room.id]?.knownEpochs.contains(turned) != true,
-            "the removed member holds the key the room turned to", sourceLocation: sourceLocation)
+            room.carol.chains[room.id]?.knownEpochs.contains(rotated) != true,
+            "the removed member holds the room's new key", sourceLocation: sourceLocation)
         #expect(
             !room.carol.messages(in: room.id).map(\.body).contains("after Carol went"),
             "a removed member went on reading the room", sourceLocation: sourceLocation)
@@ -142,8 +142,8 @@ struct RemovalSurvivesACrashTests {
             "removal reached backwards into what Carol already held", sourceLocation: sourceLocation)
     }
 
-    @Test("Cut off after the removal is written and before the key turns")
-    func cutOffBeforeTheTurn() async throws {
+    @Test("Cut off after the removal is written and before the key is rotated")
+    func cutOffBeforeTheRotation() async throws {
         let keychain = InMemoryKeychainStore()
         let directory = try Self.directory()
         let log = RefusingLogStore(url: directory.appending(path: "log.carpenter"))
@@ -162,7 +162,7 @@ struct RemovalSurvivesACrashTests {
         try await expectTheRemovalFinished(room, relaunched: relaunched)
     }
 
-    @Test("Cut off after the key turn is written and before its secret is kept")
+    @Test("Cut off after the key rotation is written and before its secret is kept")
     func cutOffBeforeTheSecretIsKept() async throws {
         let keychain = RefusingEpochKeychainStore()
         let room = try await roomOfThree(in: try Self.directory(), keychain: keychain)

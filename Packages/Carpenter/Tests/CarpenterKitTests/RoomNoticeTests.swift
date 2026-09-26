@@ -174,7 +174,7 @@ struct RoomNoticeTests {
         ]
 
         let projection = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: alice.chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: alice.chain))
         let kinds = projection.transcript(
             in: room,
             opening: { rendered in

@@ -22,7 +22,7 @@ struct ConvergenceTests {
             }
 
             #expect(!replica.hasDiverged, "seed \(seed): honest authors must not fork")
-            return Fold.render(replica.ordered(), using: history.chain)
+            return LogRenderer.render(replica.ordered(), using: history.chain)
         }
 
         let reference = try #require(renderings.first)
@@ -52,7 +52,7 @@ struct ConvergenceTests {
         for entry in shuffled[split...] { try piecewise.integrate(entry) }
         for entry in shuffled[..<split] { try piecewise.integrate(entry) }
 
-        #expect(Fold.render(piecewise.ordered(), using: history.chain) == Fold.render(wholesale.ordered(), using: history.chain))
+        #expect(LogRenderer.render(piecewise.ordered(), using: history.chain) == LogRenderer.render(wholesale.ordered(), using: history.chain))
     }
 
     @Test("Redelivering everything a second time changes nothing", arguments: seeds.prefix(10))
@@ -63,11 +63,11 @@ struct ConvergenceTests {
         for member in history.members { try replica.meet(member) }
         for entry in history.entries { try replica.integrate(entry) }
 
-        let once = Fold.render(replica.ordered(), using: history.chain)
+        let once = LogRenderer.render(replica.ordered(), using: history.chain)
 
         for entry in history.entries { try replica.integrate(entry) }
 
-        #expect(Fold.render(replica.ordered(), using: history.chain) == once)
+        #expect(LogRenderer.render(replica.ordered(), using: history.chain) == once)
         #expect(!replica.hasDiverged)
     }
 

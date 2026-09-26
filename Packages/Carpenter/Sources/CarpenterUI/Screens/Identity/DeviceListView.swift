@@ -201,7 +201,7 @@ public struct DeviceListView: View {
                                 bundle: .module)
                         } else {
                             Text(
-                                "They will not be able to read anything sent from now on. What they already sent stays. Every room turns its key once, however many you remove.",
+                                "They will not be able to read anything sent from now on. What they already sent stays. Every room's key is rotated once, however many you remove.",
                                 bundle: .module)
                         }
                     }
