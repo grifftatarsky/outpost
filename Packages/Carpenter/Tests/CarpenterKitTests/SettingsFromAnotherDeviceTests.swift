@@ -20,10 +20,10 @@ struct SettingsFromAnotherDeviceTests {
         let room = try await first.createRoom(named: "Kitchen")
         try await first.send("hello", to: room)
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let second = TestSession.make(keychain: keychain, clock: clock)
+        let second = TestSession.make(keychain: await keychain.sibling(), clock: clock)
         second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        try await first.approveNewDevice(second)
         await second.settleDeviceSync { second.messages(in: room).contains { $0.body == "hello" } }
         return (first, second, clock)
     }

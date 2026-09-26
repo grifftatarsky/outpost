@@ -26,7 +26,7 @@ extension AppRootView {
         #endif
         guard !UITestMode.isOn, testSession == nil else { return }
         guard case .start(let device) = DeviceSyncDecision.make(
-            device: session.enrolment?.device.id, startedFor: startedSyncFor)
+            device: session.thisDeviceID, startedFor: startedSyncFor)
         else { return }
         startedSyncFor = device
 

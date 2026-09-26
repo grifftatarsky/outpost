@@ -1,7 +1,6 @@
 import Foundation
 
 public enum RegistrationStall: Equatable, Sendable {
-    case accountHasAMember
     case accountUnreadable
     case accountOffline
     case keychainUnreadable

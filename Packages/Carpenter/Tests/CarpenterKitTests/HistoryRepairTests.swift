@@ -757,10 +757,10 @@ struct FinalRefusalThroughTheSessionTests {
         try await phone.createIdentity(displayName: "Alice")
         let room = try await phone.createRoom(named: "Lanterns")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let pad = session(sharing: keychain)
+        let pad = session(sharing: await keychain.sibling())
         pad.syncDevices(through: InMemoryEntrySync(relay: relay))
         await pad.load()
+        try await phone.approveNewDevice(pad)
         let deadline = Date().addingTimeInterval(5)
         while !pad.rooms.contains(where: { $0.id == room }), Date() < deadline {
             await phone.refreshDeviceSync()

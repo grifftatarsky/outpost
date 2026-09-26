@@ -15,21 +15,21 @@ public struct HowItWorksView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 26) {
-                        // COPY BEGIN 7d330d05 [NEEDS HUMAN REVIEW]
+                        // COPY BEGIN 7d330d05 [HUMAN REVIEWED, UNVERIFIED]
                         section(
                             "What is \(Branding.displayName)?",
                             [
-                                "A place for a group of friends to talk. Rooms for shared conversation, and an Outpost of your own for the things you want that group to see.",
+                                "\(Branding.displayName) is a messaging app with Rooms, Solos (Direct messaging), and a shareable page—your Outpost—for posts, photos, and more.",
                                 "\(Branding.displayName) is a peer-to-peer messaging app. Everything you write is stored only on the devices of the people you wrote it to, not in a server, on personal hardware.",
                             ]
                         )
                         // COPY END 7d330d05
 
-                        // COPY BEGIN 04884ac4 [NEEDS HUMAN REVIEW]
+                        // COPY BEGIN 04884ac4 [HUMAN REVIEWED, UNVERIFIED]
                         section(
                             "Your own iCloud as a Mailbox",
                             [
-                                "Messages have to get from your phone to theirs, and phones are not always awake. So there is a mailbox in the middle.",
+                                "\(Branding.displayName) uses your own iCloud as a mailbox, which passes messages to their recipients, sealed by encryption, and deletes them after receipt.",
                                 "The \(Branding.displayName) Dev has no server, and nothing to do with you after you download the app. Messages are placed inside your own iCloud, sealed and unreadable, addressed to a rotating code. Once all parties have retrieved the mail addressed to them, it's removed from the mailbox. Nobody—not even Apple—can read what passes through your mailbox.",
                                 "Media is treated the same, as a sealed file. This means the mailbox can see the compressed size; it can see nothing else. The only time any of your data is readable is on your, or your recipients', devices.",
                             ]
@@ -40,7 +40,7 @@ public struct HowItWorksView: View {
                         section(
                             "Account Free",
                             [
-                                "There is no sign-up, no password, and no e-mail address. Your phone makes a key and that key is you.",
+                                "\(Branding.displayName) uses your Keychain as its identity: there is no account and no personal information stored by anyone.",
                                 "Because your key, stored in iCloud Keychain, is your identity, there's no lookup. We do not integrate with Contacts.",
                             ]
                         )
@@ -54,38 +54,35 @@ public struct HowItWorksView: View {
                         section(
                             "Sync and Restore",
                             [
-                                "Your identity—through iCloud Keychain—is synced whenever you open the app on a new device signed into your iCloud account. If you lose your Keychain, your recovery key allows restoration of your identity, and a restored identity can notify and request the people you talk to for their copies of your conversations, backfilling your history.",
+                                "Your identity—through iCloud Keychain—is synced whenever you open the app on a new device signed into your iCloud account, and one of your other devices approves the new one before it can read anything. If you lose your Keychain, your recovery key allows restoration of your identity, and a restored identity can notify and request the people you talk to for their copies of your conversations, backfilling your history.",
                             ]
                         )
                         // COPY END b561c670
 
                         comparisons
 
-                        // COPY BEGIN 614f14c4 [NEEDS HUMAN REVIEW]
+                        // COPY BEGIN 614f14c4 [HUMAN REVIEWED, UNVERIFIED]
                         section(
                             "Source & Review",
                             [
-                                "The locks themselves are Apple's, and they are the same ones the apps above use. Nothing about the mathematics is homemade here — no cipher, no signature, no key exchange was written for this app.",
                                 "\(Branding.displayName) is open source, published under the Mozilla Public License 2.0. There are contributor instructions on GitHub for reviewing and contributing code. \(Branding.displayName) is scanned and tested for vulnerabilities thoroughly before releases. We take all feedback seriously, and we solicit external security reviews.",
                             ]
                         )
                         // COPY END 614f14c4
 
-                        // COPY BEGIN 1675ec4f [NEEDS HUMAN REVIEW]
+                        // COPY BEGIN 1675ec4f [HUMAN REVIEWED, UNVERIFIED]
                         section(
                             "Notifications",
                             [
-                                "\(Branding.displayName) asks for notifications so a message from somebody else can announce itself. There is no server watching for you; the banner is put together on your own device after it decrypts the message, and it says as much as you allow under Notifications.",
                                 "Notifications enable realtime banners, badges, and sounds to alert you of a new message, or configurable notifications for other events. If you decline notifications, you will see new messages when you open the app, and your devices will still sync. Notifications have full privacy controls.",
                             ]
                         )
                         // COPY END 1675ec4f
 
-                        // COPY BEGIN 85f818ac [NEEDS HUMAN REVIEW]
+                        // COPY BEGIN 85f818ac [HUMAN REVIEWED, UNVERIFIED]
                         section(
                             "Media",
                             [
-                                "It syncs when you open it. There is no background service keeping you current, so you learn about messages when you look — a deliberate choice, and the reason this works on iPhone at all when other attempts have not.",
                                 "Media is sent stripped of metadata, and sealed like any other message in the mailbox. Screening is on by default, using an on-device capability, and media is blurred until you decide to look at it. Toggled under Safety.",
                             ]
                         )
@@ -98,7 +95,7 @@ public struct HowItWorksView: View {
                 footer
             }
             .background(palette.background)
-            // COPY BEGIN 79e25afb [NEEDS HUMAN REVIEW]
+            // COPY BEGIN 79e25afb [HUMAN REVIEWED, UNVERIFIED]
             .navigationTitle(Text("How this works", bundle: .module))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -111,7 +108,7 @@ public struct HowItWorksView: View {
 
     private var comparisons: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // COPY BEGIN 07207d26 [NEEDS HUMAN REVIEW]
+            // COPY BEGIN 07207d26 [HUMAN REVIEWED, UNVERIFIED]
             Text("\(Branding.displayName) vs. The Others", bundle: .module)
                 .font(CarpenterFont.rowTitle)
                 .foregroundStyle(palette.primaryText)
@@ -139,7 +136,7 @@ public struct HowItWorksView: View {
                 "Encrypted in transit and at rest, WhatsApp is owned by Meta, which sees who you talk to and how often even when it cannot see what you say. That pattern—the words are private, the social graph is not—is what the rotating addresses here are for. Your data is part of the larger Meta ecosystem."
             )
             // COPY END 43e010c0
-            // COPY BEGIN 1b29af76 [NEEDS HUMAN REVIEW]
+            // COPY BEGIN 1b29af76 [HUMAN REVIEWED, UNVERIFIED]
             comparison(
                 "Facebook Messenger",
                 "Encrypted between people, but built around an account tied to your real identity and a company whose business is knowing about you. \(Branding.displayName) has no identity to tie anything to. There are no algorithms and no social media ecosystem to be a part of."
@@ -184,7 +181,7 @@ public struct HowItWorksView: View {
     }
 
     private var footer: some View {
-        // COPY BEGIN fb84afbe [NEEDS HUMAN REVIEW]
+        // COPY BEGIN fb84afbe [HUMAN REVIEWED, UNVERIFIED]
         Button {
             openURL(Self.website)
         } label: {

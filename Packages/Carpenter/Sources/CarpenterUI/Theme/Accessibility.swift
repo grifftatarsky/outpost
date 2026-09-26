@@ -120,7 +120,7 @@ public struct PasteCodeButton: View {
                 nothingToPaste = true
             }
         } label: {
-            // COPY BEGIN a3a2767a [NEEDS HUMAN REVIEW]
+            // COPY BEGIN a3a2767a [HUMAN REVIEWED, UNVERIFIED]
             Label {
                 Text("Paste", bundle: .module)
             } icon: {

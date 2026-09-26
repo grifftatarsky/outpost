@@ -130,6 +130,26 @@ struct AppRootView: View {
             } message: { problem in
                 Text(problem.detail)
             }
+            .alert(
+                Text("Approve a new device?"),
+                isPresented: Binding(
+                    get: { session.state == .ready && !session.deviceRequests.isEmpty },
+                    set: { _ in }),
+                presenting: session.deviceRequests.first
+            ) { request in
+                Button {
+                    Task {
+                        await attempting("That device was not approved", "approve") {
+                            try await session.approveDevice(request)
+                        }
+                    }
+                } label: { Text("Approve") }
+                Button(role: .cancel) {
+                    Task { await session.declineDevice(request) }
+                } label: { Text("Don't approve") }
+            } message: { request in
+                Text("Only approve it if it shows \(request.code).")
+            }
     }
     // COPY END 7740e80c
 
@@ -198,16 +218,7 @@ struct AppRootView: View {
                 }
                 .themed(.default)
                 .sheet(isPresented: $restoring) {
-                    NavigationStack {
-                        RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
-                            await reporting("restore from a recovery key") {
-                                try await session.restore(
-                                    fromRecoveryKey: key, askingPeers: asksPeers,
-                                    afterALoss: afterALoss)
-                            }
-                        })
-                    }
-                    .themed(.default)
+                    restoreSheet
                 }
 
             case .onboarding(.newIdentity) where !tourSeen:
@@ -227,16 +238,7 @@ struct AppRootView: View {
                 )
                 .themed(.default)
                 .sheet(isPresented: $restoring) {
-                    NavigationStack {
-                        RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
-                            await reporting("restore from a recovery key") {
-                                try await session.restore(
-                                    fromRecoveryKey: key, askingPeers: asksPeers,
-                                    afterALoss: afterALoss)
-                            }
-                        })
-                    }
-                    .themed(.default)
+                    restoreSheet
                 }
 
             case .onboarding(.nameOnly):
@@ -273,20 +275,22 @@ struct AppRootView: View {
             case .ready:
                 ready
 
+            case .awaitingApproval:
+                AwaitingApprovalView(code: session.approvalCode ?? "", onRecoveryKey: { restoring = true })
+                    .themed(.default)
+                    .sheet(isPresented: $restoring) { restoreSheet }
+                    .task {
+                        while session.state == .awaitingApproval, !Task.isCancelled {
+                            await session.refreshDeviceSync()
+                            try? await Task.sleep(for: .seconds(4))
+                        }
+                    }
+
             case .removed:
                 RemovedDeviceView(onRestore: { restoring = true })
                     .themed(.default)
                     .sheet(isPresented: $restoring) {
-                        NavigationStack {
-                            RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
-                                await reporting("restore from a recovery key") {
-                                    try await session.restore(
-                                        fromRecoveryKey: key, askingPeers: asksPeers,
-                                        afterALoss: afterALoss)
-                                }
-                            })
-                        }
-                        .themed(.default)
+                        restoreSheet
                     }
 
             case .failed(let reason):
@@ -299,6 +303,17 @@ struct AppRootView: View {
                 // COPY END 9c1a5749
             }
         }
+    }
+
+    var restoreSheet: some View {
+        NavigationStack {
+            RestoreFromKeyView(restore: { key, asksPeers in
+                await reporting("restore from a recovery key") {
+                    try await session.restore(fromRecoveryKey: key, askingPeers: asksPeers)
+                }
+            })
+        }
+        .themed(.default)
     }
 
     var content: some View {

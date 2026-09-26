@@ -42,7 +42,7 @@ public struct DeviceSyncedView: View {
 
             Spacer()
 
-            // COPY BEGIN e538fe8a [NEEDS HUMAN REVIEW]
+            // COPY BEGIN e538fe8a [HUMAN REVIEWED, UNVERIFIED]
             Button(action: onContinue) {
                 Text("Continue", bundle: .module)
                     .font(CarpenterFont.button)
@@ -57,7 +57,7 @@ public struct DeviceSyncedView: View {
         .background(palette.background)
     }
 
-    // COPY BEGIN d55c9d07 [NEEDS HUMAN REVIEW]
+    // COPY BEGIN d55c9d07 [HUMAN REVIEWED, UNVERIFIED]
     private var headline: Text {
         switch arrival {
         case .keychain:
@@ -68,7 +68,7 @@ public struct DeviceSyncedView: View {
     }
     // COPY END d55c9d07
 
-    // COPY BEGIN 269e7fcd [NEEDS HUMAN REVIEW]
+    // COPY BEGIN 269e7fcd [HUMAN REVIEWED, UNVERIFIED]
     private var detail: Text {
         switch arrival {
         case .keychain:

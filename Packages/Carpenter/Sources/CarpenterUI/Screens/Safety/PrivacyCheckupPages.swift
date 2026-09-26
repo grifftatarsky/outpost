@@ -339,7 +339,7 @@ struct StepPage: View {
                 icon: "person.crop.circle.badge.questionmark.fill",
                 title: Text("Being asked about people you meet", bundle: .module),
                 paragraph: Text(
-                    "When you end up in a room with somebody new, the room can ask once whether to let them read your Outpost. Off, nobody is ever offered it and you add readers yourself. Either way, nobody is let in until you say so — this only decides whether you are asked.",
+                    "When you end up in a room with somebody new, the room asks once whether to let them read your Outpost. Off, nobody is ever offered it and you add people yourself. Either way nobody is let in until you say so.",
                     bundle: .module))
             // COPY END 1b74f802
         }

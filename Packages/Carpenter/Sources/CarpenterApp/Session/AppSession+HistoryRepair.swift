@@ -59,27 +59,6 @@ extension AppSession {
         return true
     }
 
-    func rotateEveryKeyAfterALoss() async {
-        guard persisted.rotatesEveryKeyAfterALoss, enrolment != nil else { return }
-        let rotating = rooms.map(\.id).filter { chains[$0] != nil }
-        guard !rotating.isEmpty else { return }
-
-        for room in rotating {
-            do { try await oweKeyRotation(in: room) } catch {
-                Diagnostics.sync.error(
-                    """
-                    recovery: could not note a key rotation this room needs \
-                    (\(String(describing: error), privacy: .public))
-                    """)
-            }
-        }
-        persisted.rotatesEveryKeyAfterALoss = false
-        Diagnostics.sync.notice(
-            "recovery: rotating the key in \(rotating.count, privacy: .public) room(s) after a loss")
-    }
-
-    public var isRotatingEveryKeyAfterALoss: Bool { persisted.rotatesEveryKeyAfterALoss }
-
     func askEverybodyForWhatWasSaid() async {
         guard persisted.wantsWhatWasSaid, enrolment != nil else { return }
         let reachable = Set(peers().map(\.them))

@@ -31,6 +31,7 @@ extension AppSession {
             try await store.markRemoved()
         }
         try? await store.forgetDevice()
+        try? await store.forgetCertificate()
         try? await storage.log.removeAll()
 
         replica = Replica()

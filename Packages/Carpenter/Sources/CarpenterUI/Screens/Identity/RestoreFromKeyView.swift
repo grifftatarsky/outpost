@@ -5,22 +5,20 @@ public struct RestoreFromKeyView: View {
     @Environment(\.palette) private var palette
     @Environment(\.dismiss) private var dismiss
 
-    private let restore: (String, Bool, Bool) async -> String?
+    private let restore: (String, Bool) async -> String?
 
     @State private var key = ""
     @State private var asksPeers = true
-    @State private var lostOrStolen: Bool?
     @State private var working = false
     @State private var problem: String?
     @FocusState private var typing: Bool
 
-    public init(restore: @escaping (String, Bool, Bool) async -> String?) {
+    public init(restore: @escaping (String, Bool) async -> String?) {
         self.restore = restore
     }
 
     private var ready: Bool {
         !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !working
-            && lostOrStolen != nil
     }
 
     private func begin() {
@@ -28,7 +26,7 @@ public struct RestoreFromKeyView: View {
         working = true
         problem = nil
         Task {
-            let failure = await restore(key, asksPeers, lostOrStolen == true)
+            let failure = await restore(key, asksPeers)
             working = false
             if let failure {
                 problem = failure
@@ -40,7 +38,7 @@ public struct RestoreFromKeyView: View {
 
     public var body: some View {
         List {
-                // COPY BEGIN ef3ec642 [NEEDS HUMAN REVIEW]
+                // COPY BEGIN ef3ec642 [HUMAN REVIEWED, UNVERIFIED]
                 Section {
                     SettingsHeaderCard(
                         icon: "key.horizontal.fill",
@@ -53,7 +51,7 @@ public struct RestoreFromKeyView: View {
                 // COPY END ef3ec642
 
                 Section {
-                    // COPY BEGIN 8ac43771 [NEEDS HUMAN REVIEW]
+                    // COPY BEGIN 8ac43771 [HUMAN REVIEWED, UNVERIFIED]
                     TextField(
                         text: $key,
                         prompt: Text(verbatim: "\(RecoveryKey.header)…"),
@@ -81,36 +79,7 @@ public struct RestoreFromKeyView: View {
                 }
                 .groupedRowSurface()
 
-                // COPY BEGIN 48aa82d0 [NEEDS HUMAN REVIEW]
-                Section {
-                    ChoiceRow(
-                        title: Text("No", bundle: .module),
-                        isSelected: lostOrStolen == false,
-                        action: { lostOrStolen = false })
-                    ChoiceRow(
-                        title: Text("Yes", bundle: .module),
-                        isSelected: lostOrStolen == true,
-                        action: { lostOrStolen = true })
-                } header: {
-                    Text("Was a device lost or stolen?", bundle: .module).sectionHeading()
-                } footer: {
-                    switch lostOrStolen {
-                    case true:
-                        Text(
-                            "Conversations rotate keys, removing the lost or stolen device. Your other devices will need the recovery key.",
-                            bundle: .module)
-                    case false:
-                        EmptyView()
-                    default:
-                        Text(
-                            "This app cannot tell a new device from a stolen one, so if your device was lost or stolen your conversations will rotate keys.",
-                            bundle: .module)
-                    }
-                }
-                .groupedRowSurface()
-                // COPY END 48aa82d0
-
-                // COPY BEGIN 7b506c4b [NEEDS HUMAN REVIEW]
+                // COPY BEGIN 7b506c4b [HUMAN REVIEWED, UNVERIFIED]
                 Section {
                     SettingsToggle(
                         icon: "hand.wave.fill",
@@ -133,7 +102,7 @@ public struct RestoreFromKeyView: View {
             }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        // COPY BEGIN ad65cb88 [NEEDS HUMAN REVIEW]
+        // COPY BEGIN ad65cb88 [HUMAN REVIEWED, UNVERIFIED]
         .safeAreaInset(edge: .bottom) {
             Button(action: begin) {
                 Text("Restore this device", bundle: .module).primaryAction()
@@ -153,7 +122,7 @@ public struct RestoreFromKeyView: View {
 #if DEBUG
     #Preview("Restore from a key") {
         NavigationStack {
-            RestoreFromKeyView(restore: { _, _, _ in "That does not look like a recovery key." })
+            RestoreFromKeyView(restore: { _, _ in "That does not look like a recovery key." })
         }
         .themed(.default)
     }

@@ -16,7 +16,7 @@ public enum RecoveryKey {
         let signing = identity.signingSeed.base64EncodedString()
         let agreement = identity.agreementSeed.base64EncodedString()
         let made = ISO8601DateFormatter().string(from: createdAt)
-        // COPY BEGIN eb7806ac [NEEDS HUMAN REVIEW]
+        // COPY BEGIN eb7806ac [HUMAN REVIEWED, UNVERIFIED]
         return """
             \(header) v\(version)
 

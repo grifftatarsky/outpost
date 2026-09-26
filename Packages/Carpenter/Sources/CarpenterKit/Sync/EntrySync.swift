@@ -104,7 +104,7 @@ public actor InMemoryEntrySync: EntrySync {
 
     public func send(_ records: [SiblingRecord], deleting: [SiblingRecord.Name]) async throws {
         sent.append(contentsOf: records)
-        writers.formUnion(records.map(\.name.writer) + deleting.map(\.writer))
+        writers.formUnion(records.map(\.name.writer))
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         await relay.store(

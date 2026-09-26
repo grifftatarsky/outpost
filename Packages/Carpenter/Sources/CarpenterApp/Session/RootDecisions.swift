@@ -8,6 +8,7 @@ public enum RootScreen: Equatable, Sendable {
     case onboarding(Onboarding)
     case ready
     case failed(String)
+    case awaitingApproval
     case removed
 
     public enum Onboarding: Equatable, Sendable {
@@ -31,6 +32,8 @@ public enum RootScreen: Equatable, Sendable {
             return .ready
         case .failed(let reason):
             return .failed(reason)
+        case .awaitingApproval:
+            return .awaitingApproval
         case .removed:
             return .removed
         }

@@ -19,24 +19,22 @@ Settled decisions live in [Decisions](decisions.md).
 
 <!-- COPY BEGIN 1c346b30 [NEEDS HUMAN REVIEW] -->
 
-### Two things left to make removing a device stick
+### Should your identity stay in iCloud Keychain?
 
-Raised 2026-09-26. Removing a device now works for what it holds: every room key after the removal is
-sealed only to the member's remaining devices, and a removed device that hears about it erases what
-it holds and stops. See [Decisions](decisions.md#room-keys-are-sealed-to-each-device-and-a-removed-device-erases-itself).
-Two things are still open.
+Raised 2026-09-26. With approval in place, the copy of the identity in iCloud Keychain no longer
+lets a new device in by itself: it still has to be approved, or use the recovery key. What the
+iCloud Keychain copy still does is put the identity on any device signed in to the member's Apple
+Account. The app won't let that device in, but a reprogrammed app could use the identity the way
+the recovery key does. The member's devices would mark it as added with the recovery key, and it
+could remove their other devices.
 
-- **A new device joins without anybody approving it.** Your identity key is in iCloud Keychain, so a
-  removed phone that is still signed in to your Apple Account can come back as a "new device" and be
-  sealed into the next key like any other. Proposed: a new device has to be approved from one of
-  your existing devices, or with the recovery key. Waiting on Griff.
-- **The lost-or-stolen question on the restore screen.** It rotates every room's key but removes no
-  device, so it does not cut off the lost device. The new step after a recovery-key restore, which
-  offers to remove all or some of your other devices, does. Proposed: drop the question. Waiting on
-  Griff.
+Keeping the identity only on devices the member approved (approval already hands it over) would
+close that. The cost: losing every device without the recovery key would lose the account, where
+today a new phone on the same Apple Account at least holds the identity. Griff to decide.
 
-What even both of these cannot stop: somebody holding the phone unlocked and running a modified app
-can use the identity key to act as you. Only moving to a new identity stops that.
+What neither choice stops: a phone that was yours and was taken apart has its keys. Removing it
+stops it receiving, and anything it adds shows up on your other devices. It can still sign as you
+with a date before its removal, which is the limit every signed date in this app has.
 
 <!-- COPY END 1c346b30 -->
 

@@ -63,7 +63,7 @@ public struct OnboardingView: View {
                 OutpostMark(width: 260)
 
                 VStack(spacing: 18) {
-                    // COPY BEGIN b2ec607c [NEEDS HUMAN REVIEW]
+                    // COPY BEGIN b2ec607c [HUMAN REVIEWED, UNVERIFIED]
                     Text(
                         "Conversations should be owned by the people in them. With \(Branding.displayName), they are.",
                         bundle: .module
@@ -74,7 +74,7 @@ public struct OnboardingView: View {
                     .frame(maxWidth: 300)
                     // COPY END b2ec607c
 
-                    // COPY BEGIN 60beeaec [NEEDS HUMAN REVIEW]
+                    // COPY BEGIN 60beeaec [HUMAN REVIEWED, UNVERIFIED]
                     Button {
                         explaining = true
                     } label: {
@@ -90,7 +90,7 @@ public struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 12) {
-                // COPY BEGIN 5ff391a2 [NEEDS HUMAN REVIEW]
+                // COPY BEGIN 5ff391a2 [HUMAN REVIEWED, UNVERIFIED]
                 if invitePending {
                     Text(
                         "Give yourself a name and get started!",
@@ -104,7 +104,7 @@ public struct OnboardingView: View {
                 // COPY END 5ff391a2
 
                 TextField(text: $displayName) {
-                    // COPY BEGIN d945b6f7 [NEEDS HUMAN REVIEW]
+                    // COPY BEGIN d945b6f7 [HUMAN REVIEWED, UNVERIFIED]
                     Text("What your friends call you", bundle: .module)
                     // COPY END d945b6f7
                 }
@@ -125,7 +125,7 @@ public struct OnboardingView: View {
                 .onTapGesture { if !naming { naming = true } }
                 .onAppear { naming = true }
 
-                // COPY BEGIN 9c34697f [NEEDS HUMAN REVIEW]
+                // COPY BEGIN 9c34697f [HUMAN REVIEWED, UNVERIFIED]
                 Button(action: create) { 
                     Text("Create my identity", bundle: .module).primaryAction()
                 }
@@ -143,7 +143,7 @@ public struct OnboardingView: View {
                         .transition(.opacity)  // cross-fade only
                 }
 
-                // COPY BEGIN d9057934 [NEEDS HUMAN REVIEW]
+                // COPY BEGIN d9057934 [HUMAN REVIEWED, UNVERIFIED]
                 Button(action: redeemInvite) {
                     Text("I have an invite", bundle: .module)
                         .font(CarpenterFont.button)
@@ -155,7 +155,7 @@ public struct OnboardingView: View {
                 }
                 // COPY END d9057934
 
-                // COPY BEGIN ca234160 [NEEDS HUMAN REVIEW]
+                // COPY BEGIN ca234160 [HUMAN REVIEWED, UNVERIFIED]
                 Text(
                     "Your keys are generated on this device and stored in your iCloud Keychain. \(Branding.displayName) has no account.",
                     bundle: .module
@@ -167,7 +167,7 @@ public struct OnboardingView: View {
                 .padding(.horizontal, 6)
                 // COPY END ca234160
 
-                // COPY BEGIN 9121e797 [NEEDS HUMAN REVIEW]
+                // COPY BEGIN 9121e797 [HUMAN REVIEWED, UNVERIFIED]
                 if let restore {
                     Button(action: restore) {
                         Text("I have a recovery key", bundle: .module)

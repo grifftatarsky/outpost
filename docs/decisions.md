@@ -843,17 +843,60 @@ iCloud Keychain. The member's own devices pass room keys to each other the same 
 member's devices has no receiving key yet (a build from before this), keys go to the member as
 before, so one old device keeps the old behavior for everybody.
 
+A removal is signed by the device that made it as well as by the identity, and a removal made by a
+device that was itself removed earlier does not count, so a removed device can't remove yours.
+
 A removed device learns about it from its sibling's state record, erases its room keys, its own
 device key, its messages and its local state, and shows a screen that says it was removed. It stays
 removed across relaunches, and the recovery key brings it back as a new device. After a restore
 from the recovery key, the app offers to remove all or some of the member's other devices.
 
-The cost and the limits: a removed device that never hears about it can still collect a delivery
-first and keep it from the member's real device (tested, recorded as a known issue). Somebody with
-the identity key and a modified app can still act as the member. Tested in the package and on real
-CloudKit on one account; not yet on two real devices.
+A removed device that is running normally checks for its removal before it collects anything, and
+stops. One that never hears about it can still take a delivery addressed to the member. It can't
+read it, because the room keys after the removal aren't sealed to it, and the member's real device
+gets the message back through history repair the next time that person writes
+(`WhatRemovingADeviceCutsOffTests`). If they never write again, it stays missing.
+
+Tested in the package and on real CloudKit on one account; not yet on two real devices.
 
 <!-- COPY END b617bdbc -->
+
+<!-- COPY BEGIN bb86e179 [NEEDS HUMAN REVIEW] -->
+
+### A new device needs approval from one of your devices
+
+**RULED 2026-09-26 by Griff:** "New devices require confirmation by any other confirmed device, so,
+for the second device, the original must approve, then the second device can approve the third and
+so on."
+
+A device that isn't approved shows a six-character code and waits. It posts a request, holding only
+its public keys, to the member's iCloud. The member's approved devices show "Approve a new device?"
+with the same code. Approving signs the new device's certificate with the approving device's own key
+as well as the identity, and sends the new device the member's certificates and identity, sealed to
+the new device. Until then the new device can't read or send anything, friends don't seal room keys
+to it, and the member's other devices send it nothing. Any approved device can approve the next.
+
+The recovery key is the only other way in. A device restored with it doesn't need an approval, and
+the member's other devices mark it in the device list as added with the recovery key. It gets this
+member's own writing from them, not the whole history, because a restore gets its history from the
+people it talks to (and they can hold it). After a restore the app offers to remove the other
+devices.
+
+A device keeps its own certificate in its keychain, so reinstalling the app doesn't mean approving
+it again.
+
+What it costs: a new device needs one of the member's other devices open, or the recovery key.
+Losing every device without the recovery key loses the account. The identity key still travels
+through iCloud Keychain, so somebody signed in to the member's Apple Account on their own device
+gets it: the app won't let that device in without an approval, but a reprogrammed app could use the
+identity the way the recovery key does, and the member's devices would mark it. See
+[Open questions](open-questions.md#should-your-identity-stay-in-icloud-keychain).
+
+Tested in the package (`DeviceApprovalTests`, `ApprovingADeviceTests`, `DeviceEnrolmentTests`) and
+the request and approval records on real CloudKit on one account (`LiveSiblingFeedTests`). Not yet
+run on two real devices.
+
+<!-- COPY END bb86e179 -->
 
 <!-- COPY BEGIN 2a36739f [NEEDS HUMAN REVIEW] -->
 
@@ -2605,6 +2648,9 @@ exactly the shape worth telling somebody about.
 
 ### Rotating every room's key on a restore is a question, not a default
 
+**Superseded 2026-09-26 by Griff:** the question is removed. After a restore the app offers to
+remove the member's other devices, which is what cuts a lost one off.
+
 **RULED 2026-09-13 by Griff:** ask on the restore screen.
 
 Before this, nothing about a restore rotated a key. If a lost phone is in somebody else's hands it still
@@ -2770,6 +2816,8 @@ that pressed and dwelt on it did, and the rows in this work were exercised that 
 <!-- COPY BEGIN f03bb498 [NEEDS HUMAN REVIEW] -->
 
 ### The lost-or-stolen question is a choice with no default, not a switch
+
+**Superseded 2026-09-26:** Griff removed the question.
 
 `PROPOSED` — Claude, 2026-09-13, building [the ruling on rotating keys after a restore](#rotating-every-rooms-key-on-a-restore-is-a-question-not-a-default).
 

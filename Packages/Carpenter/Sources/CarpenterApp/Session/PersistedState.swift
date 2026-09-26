@@ -28,10 +28,10 @@ struct PersistedState: Codable, Equatable, Sendable {
     var acceptedInvitations: [AcceptedInvitation] = []
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
-    var rotatesEveryKeyAfterALoss = false
     var siblingMail = SiblingMail()
+    var devicesAddedWithTheRecoveryKey: Set<DeviceID> = []
 
-    private enum RetiredKeys: String, CodingKey { case awaitingJoin, epochTurnsOwed, turnsEveryKeyAfterALoss }
+    private enum RetiredKeys: String, CodingKey { case awaitingJoin, epochTurnsOwed }
     var knownKeys: [IdentityPublicKeys] = []
     var certificates: [DeviceCertificate] = []
     var revocations: [DeviceRevocation] = []
@@ -107,9 +107,8 @@ struct PersistedState: Codable, Equatable, Sendable {
             ?? MemberPreferences()
         wantsWhatWasSaid =
             try container.decodeIfPresent(Bool.self, forKey: .wantsWhatWasSaid) ?? false
-        rotatesEveryKeyAfterALoss =
-            try container.decodeIfPresent(Bool.self, forKey: .rotatesEveryKeyAfterALoss)
-            ?? retired.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
         siblingMail = try container.decodeIfPresent(SiblingMail.self, forKey: .siblingMail) ?? SiblingMail()
+        devicesAddedWithTheRecoveryKey =
+            try container.decodeIfPresent(Set<DeviceID>.self, forKey: .devicesAddedWithTheRecoveryKey) ?? []
     }
 }

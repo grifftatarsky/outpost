@@ -17,8 +17,8 @@ public struct DebugNukeButton: View {
             confirming = true
         } label: {
             Label {
-                // COPY BEGIN 4987e07b [NEEDS HUMAN REVIEW]
-                Text("Nuke this account", bundle: .module)
+                // COPY BEGIN 4987e07b [HUMAN REVIEWED, UNVERIFIED]
+                Text("Nuke", bundle: .module)
                     .font(CarpenterFont.button)
                 // COPY END 4987e07b
             } icon: {
@@ -38,10 +38,10 @@ public struct DebugNukeButton: View {
         .buttonStyle(.plain)
         .tint(palette.destructive)
         .disabled(running)
-        // COPY BEGIN 0303c9a1 [NEEDS HUMAN REVIEW]
-        .accessibilityHint(Text("Erases this Apple Account and starts over", bundle: .module))
+        // COPY BEGIN 0303c9a1 [HUMAN REVIEWED, UNVERIFIED]
+        .accessibilityHint(Text("Permanently erases all data for this Apple Account", bundle: .module))
         .alert(
-            Text("Erase this Apple Account?", bundle: .module),
+            Text("Erase all data permanently?", bundle: .module),
             isPresented: $confirming
         ) {
             Button(role: .destructive) {
@@ -51,19 +51,14 @@ public struct DebugNukeButton: View {
                     running = false
                 }
             } label: {
-                Text("Erase everything", bundle: .module)
+                Text("Confirm Nuke", bundle: .module)
             }
             Button(role: .cancel) {
             } label: {
                 Text("Cancel", bundle: .module)
             }
-        } message: {
-            Text(
-                "Erases the CloudKit zone, every key this app has stored, and the log on this device — then starts over. It reaches every device on this Apple Account, not just this one.",
-                bundle: .module
-            )
-        // COPY END 0303c9a1
         }
+        // COPY END 0303c9a1
     }
 }
 

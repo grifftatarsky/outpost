@@ -184,6 +184,74 @@ struct LiveSiblingFeedTests {
         try? await reader.forgetOwnContribution()
     }
 
+    @Test("A new device asks to join, an existing one approves it, and both records cross the real server")
+    func approvalCrossesTheServer() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let existing = DeviceKeys.generate()
+        let newcomer = DeviceKeys.generate()
+        let request = DeviceRequest(for: newcomer)
+
+        let asking = CloudKitEntrySync(container: .default(), device: newcomer.id, stateStore: store())
+        let approving = CloudKitEntrySync(container: .default(), device: existing.id, stateStore: store())
+        let seenByApprover = Records()
+        let seenByNewcomer = Records()
+        await approving.onIncoming { record in await seenByApprover.add(record) }
+        await asking.onIncoming { record in await seenByNewcomer.add(record) }
+        try await asking.start()
+        try await approving.start()
+
+        try await asking.send([try request.record()], deleting: [])
+        var arrived: DeviceRequest?
+        for _ in 0..<30 {
+            try? await approving.refresh()
+            arrived = await seenByApprover.all().compactMap(DeviceRequest.init(record:)).first {
+                $0.device == newcomer.id
+            }
+            if arrived != nil { break }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        let taken = try #require(arrived, "the request never reached the existing device over real CloudKit")
+        #expect(taken.code == request.code, "the two devices would show different codes")
+
+        let certificate = try DeviceCertificate.issue(
+            for: newcomer, by: identity, at: Date(), approvedBy: existing)
+        let approval = DeviceApproval(identity: identity, certificates: [certificate], revocations: [])
+        try await approving.send(
+            [try approval.record(from: existing.id, to: taken)],
+            deleting: [SiblingRecord.Name(writer: newcomer.id, kind: .request)])
+
+        var opened: DeviceApproval?
+        for _ in 0..<30 {
+            try? await asking.refresh()
+            for record in await seenByNewcomer.all() {
+                if case .approval(let target) = record.name.kind, target == newcomer.id {
+                    opened = try? DeviceApproval(record: record, opening: newcomer)
+                }
+            }
+            if opened != nil { break }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        let handed = try #require(opened, "the approval never reached the new device, or would not open")
+        #expect(try handed.identity().id == identity.id, "the new device was handed the wrong identity")
+        #expect(
+            (try? DeviceApproval(
+                record: SiblingRecord(
+                    name: SiblingRecord.Name(writer: existing.id, kind: .approval(for: newcomer.id)),
+                    sealed: try approval.record(from: existing.id, to: taken).sealed),
+                opening: DeviceKeys.generate())) == nil,
+            "another device opened an approval sealed to the new one")
+
+        try? await asking.forgetOwnContribution()
+        try? await approving.forgetOwnContribution()
+    }
+
+    private actor Records {
+        private var seen: [SiblingRecord] = []
+        func add(_ record: SiblingRecord) { seen.append(record) }
+        func all() -> [SiblingRecord] { seen }
+    }
+
     private actor Inbox {
         private var seen: [(SealedSiblingFeed, DeviceID)] = []
 

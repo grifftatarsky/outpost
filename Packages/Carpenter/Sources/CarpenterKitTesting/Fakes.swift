@@ -62,35 +62,67 @@ public struct SeededGenerator: RandomNumberGenerator {
 }
 
 public actor InMemoryKeychainStore: KeychainStore {
-    private struct Item {
-        let data: Data
-        let scope: KeychainScope
+    public actor Synced {
+        fileprivate var items: [KeychainKey: Data] = [:]
+
+        public init() {}
     }
 
-    private var items: [KeychainKey: Item] = [:]
+    private let synced: Synced
+    private var local: [KeychainKey: Data] = [:]
 
     public private(set) var writes = 0
 
-    public init() {}
-
-    public func data(for key: KeychainKey) throws -> Data? { items[key]?.data }
-
-    public func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) throws {
-        writes += 1
-        items[key] = Item(data: data, scope: scope)
+    public init(syncingThrough synced: Synced = Synced()) {
+        self.synced = synced
     }
 
-    public func remove(_ key: KeychainKey) throws { items[key] = nil }
+    public func sibling() -> InMemoryKeychainStore {
+        InMemoryKeychainStore(syncingThrough: synced)
+    }
 
-    public func removeAll() throws { items = [:] }
+    public func data(for key: KeychainKey) async throws -> Data? {
+        if let data = local[key] { return data }
+        return await synced.item(key)
+    }
 
-    public func scope(for key: KeychainKey) -> KeychainScope? { items[key]?.scope }
+    public func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) async throws {
+        writes += 1
+        switch scope {
+        case .synchronized:
+            local[key] = nil
+            await synced.set(data, for: key)
+        case .device:
+            local[key] = data
+            await synced.set(nil, for: key)
+        }
+    }
+
+    public func remove(_ key: KeychainKey) async throws {
+        local[key] = nil
+        await synced.set(nil, for: key)
+    }
+
+    public func removeAll() async throws {
+        local = [:]
+        await synced.clear()
+    }
+
+    public func scope(for key: KeychainKey) async -> KeychainScope? {
+        if local[key] != nil { return .device }
+        return await synced.item(key) == nil ? nil : .synchronized
+    }
 
     public var synchronizedItems: [KeychainKey: Data] {
-        items
-            .filter { $0.value.scope == .synchronized }
-            .mapValues(\.data)
+        get async { await synced.all() }
     }
+}
+
+extension InMemoryKeychainStore.Synced {
+    fileprivate func item(_ key: KeychainKey) -> Data? { items[key] }
+    fileprivate func set(_ data: Data?, for key: KeychainKey) { items[key] = data }
+    fileprivate func clear() { items = [:] }
+    fileprivate func all() -> [KeychainKey: Data] { items }
 }
 
 public actor InMemoryMailbox: Mailbox, MediaMailbox {

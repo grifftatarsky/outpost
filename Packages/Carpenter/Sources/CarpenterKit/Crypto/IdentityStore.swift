@@ -17,6 +17,7 @@ public actor IdentityStore {
     public static let identityKey = KeychainKey("identity.keys")
     public static let deviceKey = KeychainKey("device.signing")
     public static let removedKey = KeychainKey("device.removed")
+    public static let certificateKey = KeychainKey("device.certificate")
 
     private static let seedLength = 32
 
@@ -76,6 +77,21 @@ public actor IdentityStore {
 
     public func forgetDevice() async throws {
         try await keychain.remove(Self.deviceKey)
+    }
+
+    public func keepCertificate(_ certificate: DeviceCertificate) async throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        try await keychain.set(try encoder.encode(certificate), for: Self.certificateKey, scope: .device)
+    }
+
+    public func keptCertificate() async throws -> DeviceCertificate? {
+        guard let data = try await keychain.data(for: Self.certificateKey) else { return nil }
+        return try? JSONDecoder().decode(DeviceCertificate.self, from: data)
+    }
+
+    public func forgetCertificate() async throws {
+        try await keychain.remove(Self.certificateKey)
     }
 
     public func markRemoved() async throws {

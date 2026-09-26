@@ -9,7 +9,7 @@ extension AppSession {
     public func sync(
         through mailbox: any Mailbox, media: (any MediaMailbox)? = nil, mode: SyncMode = .full
     ) async throws -> SyncReport {
-        guard enrolment != nil else { throw AppSessionError.noIdentity }
+        guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
         let session = SyncSession(mailbox: mailbox, clock: clock)
 
         var report = SyncReport()
@@ -279,7 +279,6 @@ extension AppSession {
     }
 
     private func doWhatIsOwed(after report: SyncReport, through session: SyncSession) async {
-        await rotateEveryKeyAfterALoss()
         await askEverybodyForWhatWasSaid()
         await repairWhatHasNotFilledItself()
         await runRepairs(session, excluding: Set(report.written.flatMap(\.entries)))

@@ -31,11 +31,11 @@ struct EntrySyncTests {
         await original.load()
         try await original.createIdentity(displayName: "Griff")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let incoming = TestSession.make(keychain: keychain)
+        let incoming = TestSession.make(keychain: await keychain.sibling())
         let incomingSync = InMemoryEntrySync(relay: relay)
         incoming.syncDevices(through: incomingSync)
         await incoming.load()
+        try await original.approveNewDevice(incoming)
 
         let room = try await original.createRoom(named: "Kitchen")
         try await original.send("door code changed", to: room)
@@ -62,11 +62,11 @@ struct EntrySyncTests {
         await original.load()
         try await original.createIdentity(displayName: "Griff")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let incoming = TestSession.make(keychain: keychain)
+        let incoming = TestSession.make(keychain: await keychain.sibling())
         let incomingSync = InMemoryEntrySync(relay: relay)
         incoming.syncDevices(through: incomingSync)
         await incoming.load()
+        try await original.approveNewDevice(incoming)
 
         let room = try await original.createRoom(named: "Kitchen")
         try await original.send("door code changed", to: room)

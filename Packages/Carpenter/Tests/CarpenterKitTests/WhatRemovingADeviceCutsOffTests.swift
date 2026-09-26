@@ -4,9 +4,9 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What rotating every key after a loss cuts off", .serialized)
+@Suite("What removing a device cuts off", .serialized)
 @MainActor
-struct WhatALossRotationCutsOffTests {
+struct WhatRemovingADeviceCutsOffTests {
     private struct Rig {
         let stolen: AppSession
         let restored: AppSession
@@ -14,9 +14,10 @@ struct WhatALossRotationCutsOffTests {
         let room: RoomID
         let mailbox: InMemoryMailbox
         let rotatedFrom: Int
+        let clock: TestClock
     }
 
-    private func rig(afterALoss: Bool = true, announcing: Bool = true) async throws -> Rig {
+    private func rig(announcing: Bool = true) async throws -> Rig {
         let mailbox = InMemoryMailbox()
         let clock = TestClock(now: TestSession.now)
         let relay = InMemoryEntrySync.Relay(announces: announcing)
@@ -43,7 +44,7 @@ struct WhatALossRotationCutsOffTests {
         let restored = TestSession.make(keychain: InMemoryKeychainStore(), clock: clock)
         restored.syncDevices(through: InMemoryEntrySync(relay: relay))
         await restored.load()
-        try await restored.restore(fromRecoveryKey: key, afterALoss: afterALoss)
+        try await restored.restore(fromRecoveryKey: key)
         let deadline = Date().addingTimeInterval(5)
         while restored.rooms.isEmpty, Date() < deadline {
             await stolen.refreshDeviceSync()
@@ -56,45 +57,12 @@ struct WhatALossRotationCutsOffTests {
         }
         return Rig(
             stolen: stolen, restored: restored, peer: peer, room: room, mailbox: mailbox,
-            rotatedFrom: rotatedFrom)
-    }
-
-    @Test("The restored device reads what is said after the rotation")
-    func theRestoredDeviceReads() async throws {
-        let rig = try await rig()
-        #expect(rig.restored.epochsHeld(in: rig.room) > rig.rotatedFrom, "the loss did not rotate the key")
-
-        try await rig.peer.send("after the rotation", to: rig.room)
-        for _ in 0..<12 {
-            for session in [rig.peer, rig.restored] { try await session.sync(through: rig.mailbox) }
-        }
-
-        #expect(rig.restored.messages(in: rig.room).contains { $0.body == "after the rotation" })
-    }
-
-    @Test("A device that still holds the identity is not cut off by the rotation")
-    func aDeviceHoldingTheIdentityIsNotCutOff() async throws {
-        let rig = try await rig()
-
-        try await rig.peer.send("after the rotation", to: rig.room)
-        for _ in 0..<12 {
-            for session in [rig.peer, rig.stolen, rig.restored] { try await session.sync(through: rig.mailbox) }
-        }
-
-        withKnownIssue(
-            """
-            A grant is wrapped under the pairwise secret of two identities, so any device holding the \
-            identity opens it. Rotating every key after a loss cuts off nobody who kept the identity \
-            key and can reach the mailbox, and whichever device fetches first takes the delivery.
-            """
-        ) {
-            #expect(!rig.stolen.messages(in: rig.room).contains { $0.body == "after the rotation" })
-        }
+            rotatedFrom: rotatedFrom, clock: clock)
     }
 
     @Test("A device removed from the device list erases itself and reads nothing said afterwards")
     func aRevokedDeviceErasesItself() async throws {
-        let rig = try await rig(afterALoss: false)
+        let rig = try await rig()
         let stolenDevice = try #require(rig.stolen.enrolment?.device.id)
         try await rig.restored.revoke(stolenDevice)
         for _ in 0..<6 {
@@ -116,9 +84,9 @@ struct WhatALossRotationCutsOffTests {
         #expect(rig.restored.messages(in: rig.room).contains { $0.body == "after the removal" })
     }
 
-    @Test("A removed device that never hears it was removed still cannot open anything new")
+    @Test("A removed device that never hears it was removed can't read what it takes, and the real device gets it back")
     func aRevokedDeviceThatIsNotToldCannotRead() async throws {
-        let rig = try await rig(afterALoss: false, announcing: false)
+        let rig = try await rig(announcing: false)
         let stolenDevice = try #require(rig.stolen.enrolment?.device.id)
         try await rig.restored.revoke(stolenDevice)
         for _ in 0..<6 {
@@ -135,13 +103,19 @@ struct WhatALossRotationCutsOffTests {
         #expect(
             !rig.stolen.messages(in: rig.room).contains { $0.body == "after the removal" },
             "a removed device that kept running read a message sent after its removal")
-        withKnownIssue(
-            """
-            The removed device checked the mailbox first and took the delivery, so the member's real \
-            device never got the message. Deliveries are acknowledged per member, not per device.
-            """
-        ) {
-            #expect(rig.restored.messages(in: rig.room).contains { $0.body == "after the removal" })
+        try await rig.peer.send("and one more", to: rig.room)
+        for _ in 0..<6 {
+            for session in [rig.peer, rig.restored] { try await session.sync(through: rig.mailbox) }
         }
+        rig.clock.advance(by: AppSession.holeSettlingDelay + 1)
+        for _ in 0..<12 {
+            for session in [rig.peer, rig.restored] { try await session.sync(through: rig.mailbox) }
+        }
+        #expect(
+            rig.restored.messages(in: rig.room).contains { $0.body == "after the removal" },
+            """
+            The removed device took the delivery, and the member's real device never got the message \
+            back, even after the friend wrote again and the gap showed.
+            """)
     }
 }

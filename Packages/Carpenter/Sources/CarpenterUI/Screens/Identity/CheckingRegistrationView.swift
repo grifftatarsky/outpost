@@ -15,7 +15,7 @@ public struct CheckingRegistrationView: View {
 
             ProgressView()
 
-            // COPY BEGIN 6ea1adcc [NEEDS HUMAN REVIEW]
+            // COPY BEGIN 6ea1adcc [HUMAN REVIEWED, UNVERIFIED]
             Text("Checking Keychain for existing registration.", bundle: .module)
                 .font(CarpenterFont.rowDetail)
                 .foregroundStyle(palette.secondaryText)

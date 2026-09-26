@@ -96,10 +96,12 @@ struct RevocationReportingTests {
         await first.load()
         try await first.createIdentity(displayName: "Griff")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let second = TestSession.make(keychain: keychain)
+        let second = TestSession.make(keychain: InMemoryKeychainStore())
+        second.checkAccount(with: StubAccountRegistry(hasMember: true))
         second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        await second.settleRegistration(attempts: 1)
+        try await first.approveNewDevice(second)
 
         let other = try #require(second.enrolment?.device.id)
 

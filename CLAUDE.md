@@ -256,7 +256,13 @@ Read these before touching sync. Every one cost real time.
   key is in iCloud Keychain, so that includes a device the member removed. Room keys are sealed to
   each device that is not removed (`DeviceSeal`), and a removed device erases itself when it hears.
   Anything new that goes to a member has to be sealed the same way, or removing a device stops
-  meaning anything (`PerDeviceKeysTests`, `WhatALossRotationCutsOffTests`).
+  meaning anything (`PerDeviceKeysTests`, `WhatRemovingADeviceCutsOffTests`).
+- **A second device in a test has to be approved, the way a real one does.** `InMemoryKeychainStore`
+  keeps device-only items per device and shares only synchronized ones, through `sibling()`, like
+  iCloud Keychain. A test that hands two sessions one keychain, or removes the device key to fake a
+  new device, is testing something no phone does. Use `keychain.sibling()` and
+  `approveNewDevice(_:)`. The fake relay treated deletions as its own writes until 2026-09-26, which
+  silently stopped an approved device hearing from the device that approved it.
 - **A member's devices share one inbox.** A delivery is acknowledged by whichever of the member's
   devices collects it first, so the others see it only because that device passes it on in its
   mail to them. Anything a device receives for the member has to go through that mail, or the

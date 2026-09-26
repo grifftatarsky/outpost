@@ -29,6 +29,27 @@ struct PerDeviceKeysTests {
         try certificate.verify(against: identity.publicKeys)
     }
 
+    @Test("The device key and the approver are each named in what the identity signs")
+    func theNewFieldsAreTagged() throws {
+        let identity = Identity.generate()
+        let (device, approver) = (DeviceKeys.generate(), DeviceKeys.generate())
+        let certificate = try DeviceCertificate.issue(for: device, by: identity, at: issued, approvedBy: approver)
+
+        func field(_ bytes: Data) -> Data {
+            withUnsafeBytes(of: UInt32(bytes.count).bigEndian) { Data($0) } + bytes
+        }
+        let milliseconds = UInt64(issued.timeIntervalSince1970 * 1_000)
+        let written = field(Data("carpenter.device-certificate.v1".utf8))
+            + field(identity.id.rawValue) + field(device.id.rawValue) + field(device.publicKey)
+            + field(withUnsafeBytes(of: milliseconds.bigEndian) { Data($0) })
+            + field(Data("agreement-key".utf8)) + field(device.agreementPublicKey)
+            + field(Data("approved-by".utf8)) + field(approver.id.rawValue)
+
+        #expect(certificate.signingPayload == written)
+        #expect(certificate.isApproved(byKey: approver.publicKey))
+        #expect(!certificate.isApproved(byKey: device.publicKey))
+    }
+
     @Test("A certificate carrying a device key verifies, and changing the key breaks it")
     func theDeviceKeyIsSigned() throws {
         let identity = Identity.generate()

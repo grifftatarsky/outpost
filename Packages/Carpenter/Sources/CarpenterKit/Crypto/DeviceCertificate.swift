@@ -7,6 +7,8 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
     public var issuedAt: Date
     public var signature: Data
     public var agreementKey: Data?
+    public var approvedBy: DeviceID?
+    public var approval: Data?
 
     public init(
         participant: ParticipantID,
@@ -14,7 +16,9 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         devicePublicKey: Data,
         issuedAt: Date,
         signature: Data,
-        agreementKey: Data? = nil
+        agreementKey: Data? = nil,
+        approvedBy: DeviceID? = nil,
+        approval: Data? = nil
     ) {
         self.participant = participant
         self.device = device
@@ -22,10 +26,13 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         self.issuedAt = issuedAt
         self.signature = signature
         self.agreementKey = agreementKey
+        self.approvedBy = approvedBy
+        self.approval = approval
     }
 
     public static func issue(
-        for devicePublicKey: Data, agreementKey: Data? = nil, by identity: Identity, at issuedAt: Date
+        for devicePublicKey: Data, agreementKey: Data? = nil, by identity: Identity, at issuedAt: Date,
+        approvedBy approver: DeviceKeys? = nil
     ) throws -> DeviceCertificate {
         var certificate = DeviceCertificate(
             participant: identity.id,
@@ -33,29 +40,37 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
             devicePublicKey: devicePublicKey,
             issuedAt: issuedAt,
             signature: Data(),
-            agreementKey: agreementKey
+            agreementKey: agreementKey,
+            approvedBy: approver?.id
         )
         certificate.signature = try identity.sign(certificate.signingPayload)
+        if let approver {
+            certificate.approval = try approver.sign(certificate.signingPayload)
+        }
         return certificate
     }
 
-    public static func issue(for device: DeviceKeys, by identity: Identity, at issuedAt: Date) throws
-        -> DeviceCertificate
-    {
+    public static func issue(
+        for device: DeviceKeys, by identity: Identity, at issuedAt: Date,
+        approvedBy approver: DeviceKeys? = nil
+    ) throws -> DeviceCertificate {
         try issue(
-            for: device.publicKey, agreementKey: device.agreementPublicKey, by: identity, at: issuedAt)
+            for: device.publicKey, agreementKey: device.agreementPublicKey, by: identity, at: issuedAt,
+            approvedBy: approver)
     }
 
+    public var isRoot: Bool { approvedBy == nil }
+
     var signingPayload: Data {
-        CanonicalBytes.payload(
-            domain: Domain.deviceCertificate,
-            fields: [
-                participant.rawValue,
-                device.rawValue,
-                devicePublicKey,
-                CanonicalBytes.timestamp(issuedAt),
-            ] + (agreementKey.map { [$0] } ?? [])
-        )
+        var fields = [
+            participant.rawValue,
+            device.rawValue,
+            devicePublicKey,
+            CanonicalBytes.timestamp(issuedAt),
+        ]
+        if let agreementKey { fields += [Data("agreement-key".utf8), agreementKey] }
+        if let approvedBy { fields += [Data("approved-by".utf8), approvedBy.rawValue] }
+        return CanonicalBytes.payload(domain: Domain.deviceCertificate, fields: fields)
     }
 
     public func verify(against identityKeys: IdentityPublicKeys) throws {
@@ -65,9 +80,18 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         guard device == DeviceID(publicKey: devicePublicKey) else {
             throw CryptoError.deviceMismatch
         }
+        guard (approvedBy == nil) == (approval == nil) else {
+            throw CryptoError.badSignature
+        }
         guard try identityKeys.isValidSignature(signature, for: signingPayload) else {
             throw CryptoError.badSignature
         }
+    }
+
+    func isApproved(byKey approverPublicKey: Data) -> Bool {
+        guard let approval else { return false }
+        return (try? DeviceKeys.isValidSignature(approval, for: signingPayload, publicKey: approverPublicKey))
+            == true
     }
 }
 
@@ -76,49 +100,68 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
     public var device: DeviceID
     public var revokedAt: Date
     public var signature: Data
+    public var revokedBy: DeviceID?
+    public var revokerSignature: Data?
 
     public init(
         participant: ParticipantID,
         device: DeviceID,
         revokedAt: Date,
-        signature: Data
+        signature: Data,
+        revokedBy: DeviceID? = nil,
+        revokerSignature: Data? = nil
     ) {
         self.participant = participant
         self.device = device
         self.revokedAt = revokedAt
         self.signature = signature
+        self.revokedBy = revokedBy
+        self.revokerSignature = revokerSignature
     }
 
     public static func issue(
-        for device: DeviceID, by identity: Identity, at revokedAt: Date
+        for device: DeviceID, by identity: Identity, at revokedAt: Date,
+        from revoker: DeviceKeys? = nil
     ) throws -> DeviceRevocation {
         var revocation = DeviceRevocation(
             participant: identity.id,
             device: device,
             revokedAt: revokedAt,
-            signature: Data()
+            signature: Data(),
+            revokedBy: revoker?.id
         )
         revocation.signature = try identity.sign(revocation.signingPayload)
+        if let revoker {
+            revocation.revokerSignature = try revoker.sign(revocation.signingPayload)
+        }
         return revocation
     }
 
     var signingPayload: Data {
-        CanonicalBytes.payload(
-            domain: Domain.deviceRevocation,
-            fields: [
-                participant.rawValue,
-                device.rawValue,
-                CanonicalBytes.timestamp(revokedAt),
-            ]
-        )
+        var fields = [
+            participant.rawValue,
+            device.rawValue,
+            CanonicalBytes.timestamp(revokedAt),
+        ]
+        if let revokedBy { fields += [Data("revoked-by".utf8), revokedBy.rawValue] }
+        return CanonicalBytes.payload(domain: Domain.deviceRevocation, fields: fields)
     }
 
     public func verify(against identityKeys: IdentityPublicKeys) throws {
         guard participant == identityKeys.participantID else {
             throw CryptoError.participantMismatch
         }
+        guard (revokedBy == nil) == (revokerSignature == nil) else {
+            throw CryptoError.badSignature
+        }
         guard try identityKeys.isValidSignature(signature, for: signingPayload) else {
             throw CryptoError.badSignature
         }
+    }
+
+    func isSigned(byKey revokerPublicKey: Data) -> Bool {
+        guard let revokerSignature else { return false }
+        return (try? DeviceKeys.isValidSignature(
+            revokerSignature, for: signingPayload, publicKey: revokerPublicKey)) == true
     }
 }

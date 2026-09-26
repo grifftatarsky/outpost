@@ -36,6 +36,7 @@ public final class AppSession {
         case ready
         case failed(String)
         case registrationStalled(RegistrationStall)
+        case awaitingApproval
         case removed
     }
 
@@ -46,6 +47,15 @@ public final class AppSession {
     public internal(set) var organisation = RoomsListOrganisation()
 
     public internal(set) var enrolment: Enrolment?
+
+    public internal(set) var pendingDevice: DeviceKeys?
+    var pendingIdentity: Identity?
+    public internal(set) var deviceRequests: [DeviceRequest] = []
+    var declinedDeviceRequests: Set<DeviceID> = []
+
+    public var thisDeviceID: DeviceID? { enrolment?.device.id ?? pendingDevice?.id }
+
+    public var approvalCode: String? { pendingDevice.map { DeviceRequest(for: $0).code } }
 
     public internal(set) var forks: [Fork] = []
 
@@ -365,8 +375,11 @@ public final class AppSession {
                         DeviceCertificate.issue(for: enrolment.device, by: identity, at: standing.addedAt))
                     persisted.certificates = knownCertificates()
                 }
-            } else {
-                try replica.admit(DeviceCertificate.issue(for: enrolment.device, by: identity, at: clock.now))
+            } else if let earlier = persisted.certificates.first(where: {
+                $0.device == enrolment.device.id && $0.devicePublicKey == enrolment.device.publicKey
+                    && $0.isRoot
+            }) {
+                try replica.admit(DeviceCertificate.issue(for: enrolment.device, by: identity, at: earlier.issuedAt))
                 persisted.certificates = knownCertificates()
             }
         }

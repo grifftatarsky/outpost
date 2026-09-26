@@ -63,7 +63,7 @@ extension ConversationView {
         // COPY BEGIN 0790e13e [NEEDS HUMAN REVIEW]
         guard let picked else {
             problem = String(
-                localized: "That could not be read from your library.", bundle: .module,
+                localized: "Photo or video cannot be read", bundle: .module,
                 comment: "The picker handed back something that would not load")
             failures += 1
             return

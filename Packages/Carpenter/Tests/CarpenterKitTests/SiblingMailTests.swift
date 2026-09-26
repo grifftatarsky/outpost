@@ -24,10 +24,10 @@ struct SiblingMailTests {
         await original.load()
         try await original.createIdentity(displayName: "Griff")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let incoming = TestSession.make(keychain: keychain)
+        let incoming = TestSession.make(keychain: await keychain.sibling())
         incoming.syncDevices(through: InMemoryEntrySync(relay: relay))
         await incoming.load()
+        try await original.approveNewDevice(incoming)
 
         let room = try await original.createRoom(named: "Kitchen")
         await incoming.settleDeviceSync { incoming.rooms.contains { $0.id == room } }
@@ -110,10 +110,10 @@ struct SiblingMailTests {
         for step in 0..<8 { try await original.send("before the iPad \(step)", to: room) }
         await original.settleDeviceSync()
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let added = TestSession.make(keychain: keychain)
+        let added = TestSession.make(keychain: await keychain.sibling())
         added.syncDevices(through: InMemoryEntrySync(relay: relay))
         await added.load()
+        try await original.approveNewDevice(added)
         await added.settleDeviceSync { added.messages(in: room).count == 8 }
         for _ in 0..<4 {
             await added.settleDeviceSync()
@@ -137,10 +137,10 @@ struct SiblingMailTests {
         try await original.createIdentity(displayName: "Griff")
         let room = try await original.createRoom(named: "Kitchen")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let away = TestSession.make(keychain: keychain, clock: clock)
+        let away = TestSession.make(keychain: await keychain.sibling(), clock: clock)
         away.syncDevices(through: InMemoryEntrySync(relay: relay))
         await away.load()
+        try await original.approveNewDevice(away)
         for _ in 0..<6 {
             await original.refreshDeviceSync()
             await away.refreshDeviceSync()

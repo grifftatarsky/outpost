@@ -26,6 +26,8 @@ public struct SiblingRecord: Hashable, Sendable {
         case state
         case mail(Int)
         case catchUp(for: DeviceID)
+        case request
+        case approval(for: DeviceID)
     }
 
     public struct Name: Hashable, Sendable {
@@ -42,6 +44,8 @@ public struct SiblingRecord: Hashable, Sendable {
             case .state: "feed-\(Self.hex(writer.rawValue))"
             case .mail(let number): "mail-\(Self.hex(writer.rawValue))-\(number)"
             case .catchUp(let target): "catchup-\(Self.hex(writer.rawValue))-\(Self.hex(target.rawValue))"
+            case .request: "request-\(Self.hex(writer.rawValue))"
+            case .approval(let target): "approval-\(Self.hex(writer.rawValue))-\(Self.hex(target.rawValue))"
             }
         }
 
@@ -59,6 +63,11 @@ public struct SiblingRecord: Hashable, Sendable {
             case ("catchup", 3):
                 guard let target = Self.bytes(parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
                 self.init(writer: writer, kind: .catchUp(for: target))
+            case ("request", 2):
+                self.init(writer: writer, kind: .request)
+            case ("approval", 3):
+                guard let target = Self.bytes(parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
+                self.init(writer: writer, kind: .approval(for: target))
             default:
                 return nil
             }
@@ -98,6 +107,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         public let epochs: [HeldEpoch]
         public let forwarded: [ForwardedGrant]
         public let people: [IdentityPublicKeys]
+        public let carriesPreferences: Bool
     }
 
     public struct Plan: Sendable {
@@ -111,6 +121,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         fileprivate var sharedClock: [FeedKey: UInt64]
         fileprivate var sharedEpochs: Set<EpochMark>
         fileprivate var sharedPeople: Set<ParticipantID> = []
+        fileprivate var sharedPreferences: Data?
         fileprivate let now: Date
 
         public var deletions: [SiblingRecord.Kind] {
@@ -145,12 +156,13 @@ public struct SiblingMail: Hashable, Sendable, Codable {
     public private(set) var lastState: Data?
     private(set) var forwards: [ForwardedGrant] = []
     private(set) var sharedPeople: Set<ParticipantID> = []
+    private(set) var sharedPreferences: Data?
 
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
         case lastMail, sharedClock, sharedEpochs, outstanding, deletedThrough, collected, takenAbove
-        case catchUps, siblings, lastState, forwards, sharedPeople
+        case catchUps, siblings, lastState, forwards, sharedPeople, sharedPreferences
     }
 
     public init(from decoder: any Decoder) throws {
@@ -167,6 +179,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         lastState = try container.decodeIfPresent(Data.self, forKey: .lastState)
         forwards = try container.decodeIfPresent([ForwardedGrant].self, forKey: .forwards) ?? []
         sharedPeople = try container.decodeIfPresent(Set<ParticipantID>.self, forKey: .sharedPeople) ?? []
+        sharedPreferences = try container.decodeIfPresent(Data.self, forKey: .sharedPreferences)
     }
 
     public mutating func shared(_ people: [IdentityPublicKeys]) {
@@ -226,8 +239,8 @@ public struct SiblingMail: Hashable, Sendable, Codable {
     }
 
     public func plan(
-        entries all: [Entry], held: [HeldEpoch], people known: [IdentityPublicKeys] = [], me: DeviceID,
-        revoked: Set<DeviceID>, now: Date
+        entries all: [Entry], held: [HeldEpoch], people known: [IdentityPublicKeys] = [],
+        preferences: Data? = nil, me: DeviceID, revoked: Set<DeviceID>, now: Date
     ) -> Plan {
         let active = siblings.filter { id, seen in
             id != me && !revoked.contains(id) && now.timeIntervalSince(seen.at) < Self.keptFor
@@ -246,14 +259,19 @@ public struct SiblingMail: Hashable, Sendable, Codable {
 
         let people = known.filter { !sharedPeople.contains($0.participantID) }
         plan.sharedPeople = Set(people.map(\.participantID))
+        let preferencesChanged = preferences != nil && preferences != sharedPreferences
+        plan.sharedPreferences = preferences ?? sharedPreferences
 
-        if !entries.isEmpty || !epochs.isEmpty || !people.isEmpty || (!forwards.isEmpty && !active.isEmpty) {
+        if !entries.isEmpty || !epochs.isEmpty || !people.isEmpty || preferencesChanged
+            || (!forwards.isEmpty && !active.isEmpty)
+        {
             plan.through = lastMail + 1
             if active.isEmpty {
                 plan.skipped = plan.through
             } else {
                 plan.mail = Mail(
-                    number: plan.through, entries: entries, epochs: epochs, forwarded: forwards, people: people)
+                    number: plan.through, entries: entries, epochs: epochs, forwarded: forwards, people: people,
+                    carriesPreferences: preferencesChanged)
             }
         }
 
@@ -289,6 +307,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         for (feed, seq) in plan.sharedClock { sharedClock[feed] = Swift.max(sharedClock[feed] ?? 0, seq) }
         sharedEpochs.formUnion(plan.sharedEpochs)
         sharedPeople.formUnion(plan.sharedPeople)
+        sharedPreferences = plan.sharedPreferences
         for number in plan.mailsToDelete {
             outstanding[number] = nil
             deletedThrough = Swift.max(deletedThrough, number)
@@ -300,6 +319,12 @@ public struct SiblingMail: Hashable, Sendable, Codable {
 
     public var ownRecords: [SiblingRecord.Kind] {
         [.state] + outstanding.keys.sorted().map { .mail($0) } + catchUps.keys.map { .catchUp(for: $0) }
+    }
+
+    public static func digest(of preferences: MemberPreferences) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return Data(SHA256.hash(data: try encoder.encode(preferences)))
     }
 
     public static func digest(of state: SiblingFeed, on day: Date) throws -> Data {

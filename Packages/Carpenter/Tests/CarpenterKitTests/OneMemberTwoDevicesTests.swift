@@ -30,10 +30,10 @@ struct OneMemberTwoDevicesTests {
             for session in [phone, friend] { try await session.sync(through: mailbox) }
         }
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let tablet = TestSession.make(keychain: keychain)
+        let tablet = TestSession.make(keychain: await keychain.sibling())
         tablet.syncDevices(through: InMemoryEntrySync(relay: relay))
         await tablet.load()
+        try await phone.approveNewDevice(tablet)
         await tablet.settleDeviceSync { tablet.rooms.contains { $0.id == room } }
         for _ in 0..<4 {
             await phone.settleDeviceSync()
@@ -77,10 +77,10 @@ struct OneMemberTwoDevicesTests {
             for session in [friend, phone] { try await session.sync(through: mailbox) }
         }
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let tablet = TestSession.make(keychain: keychain)
+        let tablet = TestSession.make(keychain: await keychain.sibling())
         tablet.syncDevices(through: InMemoryEntrySync(relay: relay))
         await tablet.load()
+        try await phone.approveNewDevice(tablet)
         await tablet.settleDeviceSync { tablet.rooms.contains { $0.id == room } }
 
         let second = try await friend.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)

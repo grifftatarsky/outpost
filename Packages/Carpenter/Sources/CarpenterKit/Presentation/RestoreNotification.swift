@@ -13,7 +13,7 @@ public enum RestoreNotification {
         let who = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let room = roomName.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // COPY BEGIN c0841350 [NEEDS HUMAN REVIEW]
+        // COPY BEGIN c0841350 [HUMAN REVIEWED, UNVERIFIED]
         let title =
             level.showsSender && !who.isEmpty
             ? String(
@@ -25,7 +25,7 @@ public enum RestoreNotification {
         // COPY END c0841350
 
         let body: String
-        // COPY BEGIN f987b18d [NEEDS HUMAN REVIEW]
+        // COPY BEGIN f987b18d [HUMAN REVIEWED, UNVERIFIED]
         if level.showsRoom && !room.isEmpty {
             body = String(
                 localized: "New device requested history backfill of \(room)",

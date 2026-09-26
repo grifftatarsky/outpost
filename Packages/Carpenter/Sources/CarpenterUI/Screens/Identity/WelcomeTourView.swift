@@ -17,7 +17,7 @@ public struct WelcomeTourView: View {
         let icon: String
     }
 
-    // COPY BEGIN 92143e53 [NEEDS HUMAN REVIEW]
+    // COPY BEGIN 92143e53 [HUMAN REVIEWED, UNVERIFIED]
     private var panels: [Panel] {
         [
             Panel(
@@ -84,7 +84,7 @@ public struct WelcomeTourView: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        // COPY BEGIN a0ba5304 [NEEDS HUMAN REVIEW]
+                        // COPY BEGIN a0ba5304 [HUMAN REVIEWED, UNVERIFIED]
                         if panel.id == panels.count - 1 {
                             Text(
                                 "\(Branding.displayName) can be as complicated as you want it to be. But if you forget what your options are, there's Tutorial mode in the You page, which will add a ? on every screen to explain!",
@@ -109,7 +109,7 @@ public struct WelcomeTourView: View {
 
             Group {
                 if page == panels.count - 1 {
-                    // COPY BEGIN 70d3df21 [NEEDS HUMAN REVIEW]
+                    // COPY BEGIN 70d3df21 [HUMAN REVIEWED, UNVERIFIED]
                     Button(action: onContinue) {
                         Text("Start", bundle: .module)
                             .font(CarpenterFont.button)

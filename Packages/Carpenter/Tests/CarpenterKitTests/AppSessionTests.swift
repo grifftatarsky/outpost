@@ -62,7 +62,12 @@ struct AppSessionTests {
         let (storage, directory) = storage()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        _ = try await IdentityStore(keychain: storage.keychain).enrol()
+        let enrolled = try await IdentityStore(keychain: storage.keychain).enrol()
+        var state = PersistedState()
+        state.certificates = [
+            try DeviceCertificate.issue(for: enrolled.device, by: enrolled.identity, at: TestSession.now)
+        ]
+        try await storage.documents.save(state)
 
         let app = session(storage)
         await app.load()

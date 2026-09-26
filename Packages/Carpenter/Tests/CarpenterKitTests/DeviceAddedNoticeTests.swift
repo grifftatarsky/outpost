@@ -40,10 +40,10 @@ struct DeviceAddedNoticeTests {
         #expect(addedDevices(alice, room).isEmpty, "the phone Bob joined with was called an added device")
 
         clock.advance(by: 86_400)
-        try await bobKeychain.remove(IdentityStore.deviceKey)
-        let bobsSecond = TestSession.make(keychain: bobKeychain, clock: clock)
+        let bobsSecond = TestSession.make(keychain: await bobKeychain.sibling(), clock: clock)
         bobsSecond.syncDevices(through: InMemoryEntrySync(relay: relay))
         await bobsSecond.load()
+        try await bob.approveNewDevice(bobsSecond)
         let deadline = Date().addingTimeInterval(5)
         while bob.devices.count < 2, Date() < deadline {
             await bob.refreshDeviceSync()

@@ -218,7 +218,7 @@ struct PrivacyAndSafetySettingsView: View {
                 }
             } footer: {
                 Text(
-                    "Known abusers is a short list shipped inside the app, last changed \(denyListUpdated). Nothing is fetched. Somebody you block is never shown, in any room, and is not told.",
+                    "Known abusers is a short list shipped inside the app, last changed \(denyListUpdated). Nothing is fetched. Somebody on it is never shown, in any room, and is not told.",
                     bundle: .module)
             }
             .groupedRowSurface()

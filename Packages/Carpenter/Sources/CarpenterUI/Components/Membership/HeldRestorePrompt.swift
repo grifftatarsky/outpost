@@ -15,7 +15,7 @@ struct HeldRestorePrompt: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Image(systemName: "hand.raised.fingers.spread.fill")
                     .foregroundStyle(palette.secondaryText)
-                // COPY BEGIN 6cfdefff [NEEDS HUMAN REVIEW]
+                // COPY BEGIN 6cfdefff [HUMAN REVIEWED, UNVERIFIED]
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(held.personName) set up a new device", bundle: .module)
                         .font(CarpenterFont.rowTitle)
@@ -37,7 +37,7 @@ struct HeldRestorePrompt: View {
 
             HStack(spacing: 10) {
                 Spacer(minLength: 0)
-                // COPY BEGIN bab7e8ab [NEEDS HUMAN REVIEW]
+                // COPY BEGIN bab7e8ab [HUMAN REVIEWED, UNVERIFIED]
                 Button {
                     deciding = true
                     Task {

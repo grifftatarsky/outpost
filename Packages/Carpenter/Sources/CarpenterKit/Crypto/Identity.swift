@@ -200,6 +200,8 @@ enum Domain {
     static let deviceCertificate = "carpenter.device-certificate.v1"
     static let deviceAgreement = "carpenter.device-agreement.v1"
     static let deviceSeal = "carpenter.device-seal.v1"
+    static let deviceApproval = "carpenter.device-approval.v1"
+    static let deviceApprovalCode = "carpenter.device-approval-code.v1"
     static let deviceRevocation = "carpenter.device-revocation.v1"
     static let verificationPhrase = "carpenter.verification-phrase.v1"
     static let comparisonCode = "carpenter.comparison-code.v1"

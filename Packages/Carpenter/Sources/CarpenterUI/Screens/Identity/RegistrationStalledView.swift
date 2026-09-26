@@ -48,7 +48,7 @@ public struct RegistrationStalledView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
-            // COPY BEGIN fa05dc81 [NEEDS HUMAN REVIEW]
+            // COPY BEGIN fa05dc81 [HUMAN REVIEWED, UNVERIFIED]
             Button {
                 Task {
                     retrying = true
@@ -64,7 +64,7 @@ public struct RegistrationStalledView: View {
             .padding(.top, 6)
             // COPY END fa05dc81
 
-            // COPY BEGIN c1d22f7a [NEEDS HUMAN REVIEW]
+            // COPY BEGIN c1d22f7a [HUMAN REVIEWED, UNVERIFIED]
             if let onRestore, offersARecoveryKey {
                 Button(action: onRestore) {
                     Text("I have a recovery key", bundle: .module)
@@ -116,16 +116,14 @@ public struct RegistrationStalledView: View {
 
     private var offersARecoveryKey: Bool {
         switch stall {
-        case .accountHasAMember, .accountUnreadable, .accountOffline: true
+        case .accountUnreadable, .accountOffline: true
         case .keychainUnreadable: false
         }
     }
 
-    // COPY BEGIN 4f8229af [NEEDS HUMAN REVIEW]
+    // COPY BEGIN 4f8229af [HUMAN REVIEWED, UNVERIFIED]
     private var headline: Text {
         switch stall {
-        case .accountHasAMember:
-            Text("Apple Account cannot be used", bundle: .module)
         case .accountUnreadable:
             Text("Apple Account cannot be used", bundle: .module)
         case .accountOffline:
@@ -136,13 +134,9 @@ public struct RegistrationStalledView: View {
     }
     // COPY END 4f8229af
 
-    // COPY BEGIN 682b13fe [NEEDS HUMAN REVIEW]
+    // COPY BEGIN 682b13fe [HUMAN REVIEWED, UNVERIFIED]
     private var detail: Text {
         switch stall {
-        case .accountHasAMember:
-            Text(
-                "Key has not been collected from iCloud. Check that Passwords and Keychain sync is on for this device and return here. If the Keychain has been lost, use a recovery key.",
-                bundle: .module)
         case .accountUnreadable:
             Text(
                 "iCloud is unreadable.",
@@ -161,9 +155,9 @@ public struct RegistrationStalledView: View {
 }
 
 #if DEBUG
-    #Preview("Stalled — the account has a member") {
+    #Preview("Stalled — iCloud is offline") {
         RegistrationStalledView(
-            stall: .accountHasAMember, onRetry: {}, onRestore: {}, onNuke: {})
+            stall: .accountOffline, onRetry: {}, onRestore: {}, onNuke: {})
             .themed(.default)
             .preferredColorScheme(.dark)
     }

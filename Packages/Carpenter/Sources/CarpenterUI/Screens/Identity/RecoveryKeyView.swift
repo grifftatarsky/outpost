@@ -38,7 +38,7 @@ public struct RecoveryKeyView: View {
                 .groupedRowSurface()
                 // COPY END b4443225
 
-                // COPY BEGIN deee3b35 [NEEDS HUMAN REVIEW]
+                // COPY BEGIN deee3b35 [HUMAN REVIEWED, UNVERIFIED]
                 Section {
                     VerificationPhrase(fingerprint)
                         .frame(maxWidth: .infinity)
@@ -57,7 +57,7 @@ public struct RecoveryKeyView: View {
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
-                // COPY BEGIN d46cf88c [NEEDS HUMAN REVIEW]
+                // COPY BEGIN d46cf88c [HUMAN REVIEWED, UNVERIFIED]
                 ShareLink(
                     item: text,
                     preview: SharePreview(
@@ -69,7 +69,7 @@ public struct RecoveryKeyView: View {
                 .simultaneousGesture(TapGesture().onEnded { onSaved() })
                 // COPY END d46cf88c
 
-                // COPY BEGIN d3255589 [NEEDS HUMAN REVIEW]
+                // COPY BEGIN d3255589 [HUMAN REVIEWED, UNVERIFIED]
                 if onSkip != nil {
                     Button { confirming = true } label: {
                         Text("Not now", bundle: .module)
@@ -82,7 +82,7 @@ public struct RecoveryKeyView: View {
             .padding(.bottom, 20)
         }
         .background(palette.background)
-        // COPY BEGIN 62a19f8e [NEEDS HUMAN REVIEW]
+        // COPY BEGIN 62a19f8e [HUMAN REVIEWED, UNVERIFIED]
         .navigationTitle(Text("Recovery Key", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .confirmationDialog(

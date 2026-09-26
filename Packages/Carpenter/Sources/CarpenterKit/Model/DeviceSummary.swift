@@ -10,9 +10,11 @@ public struct DeviceSummary: Identifiable, Hashable, Sendable {
 
     public let name: String?
 
+    public let addedWithTheRecoveryKey: Bool
+
     public init(
         id: DeviceID, isCurrent: Bool, addedAt: Date?, revokedAt: Date? = nil,
-        hasSpoken: Bool = true, name: String? = nil
+        hasSpoken: Bool = true, name: String? = nil, addedWithTheRecoveryKey: Bool = false
     ) {
         self.id = id
         self.isCurrent = isCurrent
@@ -20,6 +22,7 @@ public struct DeviceSummary: Identifiable, Hashable, Sendable {
         self.revokedAt = revokedAt
         self.hasSpoken = hasSpoken
         self.name = name
+        self.addedWithTheRecoveryKey = addedWithTheRecoveryKey
     }
 
     public var isActive: Bool { revokedAt == nil }

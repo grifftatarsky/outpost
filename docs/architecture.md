@@ -118,6 +118,11 @@ member's private database. Each device writes three kinds of record (`SiblingRec
   is written for a device that is new, or that was away long enough to miss deleted mail, and it is
   deleted once that device has read it.
 
+Two more kinds carry approval: a new device writes a **request** (its public keys, not sealed), and
+an approving device answers with an **approval** sealed to the new device, which deletes both once
+it has read them. The state record holds certificates, removals and read cursors; the member's
+settings travel in mail and catch-ups instead, so a device that isn't approved can't read them.
+
 A device with no other devices writes only its state record. `SiblingMail` decides what to write and
 delete, and `SiblingMailTests` holds it: one message uploads about 1.7KB however long the history
 is, where it used to upload the whole history (71KB after 65 messages in the test). A new device is

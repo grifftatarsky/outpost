@@ -87,10 +87,10 @@ struct NamingYourDevicesTests {
         let me = try #require(first.enrolment?.device.id)
         await first.setDeviceName("The one in my pocket", for: me)
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let sibling = TestSession.make(keychain: keychain)
+        let sibling = TestSession.make(keychain: await keychain.sibling())
         sibling.syncDevices(through: InMemoryEntrySync(relay: relay))
         await sibling.load()
+        try await first.approveNewDevice(sibling)
 
         let deadline = Date().addingTimeInterval(5)
         while Date() < deadline, sibling.deviceName(me) == nil {

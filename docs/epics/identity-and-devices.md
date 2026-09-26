@@ -150,6 +150,29 @@ room epoch key. What is not:
 
 <!-- COPY END 15ae772a -->
 
+<!-- COPY BEGIN 7a739e20 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="a-new-device-waits-until-one-of-yours-approves-it">
+<summary><b>A new device waits until one of yours approves it</b> — Complete (hardware proof owed)</summary>
+
+**Story.** As a member, I want a new device to need my approval from a device I already have, so that
+somebody signed in to my Apple Account can't read my messages.
+
+**Built 2026-09-26.** The new device shows a six-character code and waits. My other devices ask
+"Approve a new device?" with the same code. Approving hands the new device my identity and its
+certificate, sealed to it. The recovery key is the only other way in, and a device let in that way
+is marked on my other devices. Removals are signed by the device that made them, and a removed device
+can't approve or remove anything. [Decisions](../decisions.md#a-new-device-needs-approval-from-one-of-your-devices).
+
+**Testing.** `DeviceApprovalTests` (which certificates count), `ApprovingADeviceTests` and
+`DeviceEnrolmentTests` (two devices through the relay), and a live CloudKit test for the request and
+approval records. Not yet on two real devices on one account; a simulator can now do this part,
+because the identity is handed over by the approval rather than by iCloud Keychain.
+
+</details>
+
+<!-- COPY END 7a739e20 -->
+
 <!-- COPY BEGIN 0b547f7e [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="your-devices-send-each-other-only-what-is-new">
@@ -297,11 +320,9 @@ the same as losing everybody I have talked to.
   way back, with *I have a recovery key* beneath.
 - **Done.** The keychain-reset case — a member who wiped their own Keychain — explained on its own. The same
   sentence, 2026-09-17.
-- **Done.** **What a restore does about the member's other devices** — decided, Griff, 2026-09-13: the restore
-  screen asks whether a device was lost or stolen, and a yes rotates every room's key; nothing is
-  revoked automatically, and an old device is revoked from the device list
-  ([Decisions](../decisions.md#rotating-every-rooms-key-on-a-restore-is-a-question-not-a-default)). This
-  line read *undecided* until 2026-09-17.
+- **Done.** **What a restore does about the member's other devices** — decided by Griff on 2026-09-26: after
+  a restore the app offers to remove all or some of the other devices. The lost-or-stolen question
+  that stood here from 2026-09-13 is removed.
 - **Changed.** *Require verification after recovery* — replaced by Griff's ruling of 2026-09-13 that the
   **person asked** decides: *hold until I check* keeps history back until the solo check passes with
   the restored device ([Decisions](../decisions.md#recovery-is-announced-and-both-sides-of-it-have-settings)).
@@ -359,7 +380,7 @@ silent is not great."
 **Acceptance criteria**
 
 - **Done.** **The recoverer** can choose not to ask peers for history at all. On by default; off restores the
-  identity and leaves the rooms empty. `RestoreFromKeyView` asks, `restore(_:askingPeers:afterALoss:)`
+  identity and leaves the rooms empty. `RestoreFromKeyView` asks, `restore(fromRecoveryKey:askingPeers:)`
   records it, and `askEverybodyForWhatWasSaid()` is gated on `wantsWhatWasSaid`.
 - **Done.** **The person asked** is told: a notification naming who restored and which conversation was asked
   for. Not a setting — everybody gets it. `RestoreNotification.ofAsk`, raised from the notification
@@ -375,9 +396,8 @@ silent is not great."
   check-up's `restoreAsks` / `restoreHold` pages.
 - **Done.** History goes by default and waits **only** for somebody who has said to wait. The round stamps
   `RestoreAskRecord(hold: .held)` only when this member holds; everybody else gets `.allowed`.
-- **Done.** The restore screen asks once whether a device was lost or stolen, and a yes rotates every room's
-  key. See
-  [the decision](../decisions.md#rotating-every-rooms-key-on-a-restore-is-a-question-not-a-default).
+- **Done.** After a restore, `OtherDevicesAfterRestoreView` offers to remove all or some of the member's
+  other devices. The lost-or-stolen question is gone (Griff, 2026-09-26).
 
 <!-- COPY END 6fa3803a -->
 

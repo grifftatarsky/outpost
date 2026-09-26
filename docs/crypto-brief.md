@@ -156,9 +156,8 @@ Three properties are worth naming because each is a decision:
 **Known weakness, named.** Authority is judged against a timestamp *the signing device itself wrote*.
 A malicious device that is about to be revoked can date its entries before its own revocation and
 they will verify. The mitigation in the product is that the sibling feed and the log make the
-back-dating visible rather than preventing it, and that rotating the room key after a loss
-(`rotateEveryKeyAfterALoss`) stops the device reading anything *new* regardless of what it claims to
-have written. This is the classic distributed-clock problem and it is not solved here; it is
+back-dating visible rather than preventing it, and that removing the device rotates the room keys and seals the new ones only to the member's
+remaining devices, so it stops reading anything *new* regardless of what it claims to have written. This is the classic distributed-clock problem and it is not solved here; it is
 bounded.
 
 **Each device also has a key for receiving** (since 2026-09-26). `DeviceKeys.agreementKey` is an
@@ -167,6 +166,21 @@ does. Its public half is in the certificate as `agreementKey`, appended to the s
 when present, so every older certificate signs exactly the bytes it always did
 (`PerDeviceKeysTests` pins it). A device's certificate from before this is re-issued with the same
 `issuedAt`, and `DeviceRegistry` accepts the replacement only when the date matches.
+
+**A device other than the first is approved by another device** (since 2026-09-26). Its certificate
+names `approvedBy` and carries `approval`, a signature by that device's key over the same bytes the
+identity signs. `DeviceRegistry` replays certificates and removals in time order: a certificate
+counts if it has no approver (the first device, or one restored with the recovery key) or if its
+approver counted at the certificate's date. A removal names `revokedBy` and is signed by that device
+too, and counts only if that device counted at the removal's date. Order of arrival doesn't matter
+(`DeviceApprovalTests`). The same self-reported-date limit applies: a device that was removed and
+reprogrammed can date an approval before its removal.
+
+**How a new device gets in.** It writes a `request` record holding only its two public keys, the one
+record in the zone that isn't sealed, because the device doesn't have the identity yet. The approving
+device answers with an `approval` record: the identity seeds, the certificates and the removals,
+sealed to the new device's receiving key with `DeviceSeal`. The six-character code both devices show
+is derived from the request's public keys (`DeviceRequest.code`).
 
 ---
 

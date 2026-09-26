@@ -27,7 +27,7 @@ public struct AvatarCropView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // COPY BEGIN d2ddcc67 [NEEDS HUMAN REVIEW]
+            // COPY BEGIN d2ddcc67 [HUMAN REVIEWED, UNVERIFIED]
             if let picture {
                 stage(picture)
             } else if couldNotRead {
@@ -105,7 +105,7 @@ public struct AvatarCropView: View {
             .onChange(of: circle) { _, _ in
                 offset = held(offset, within: room(drawn(image, at: zoom)))
             }
-            // COPY BEGIN 81ae5c18 [NEEDS HUMAN REVIEW]
+            // COPY BEGIN 81ae5c18 [HUMAN REVIEWED, UNVERIFIED]
             .accessibilityLabel(Text("Move and scale", bundle: .module))
             // COPY END 81ae5c18
         }
@@ -131,7 +131,7 @@ public struct AvatarCropView: View {
 
     private var buttons: some View {
         VStack(spacing: 10) {
-            // COPY BEGIN dcde4124 [NEEDS HUMAN REVIEW]
+            // COPY BEGIN dcde4124 [HUMAN REVIEWED, UNVERIFIED]
             Text("Drag to move, pinch to zoom.", bundle: .module)
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.secondaryText)
@@ -147,7 +147,7 @@ public struct AvatarCropView: View {
             .disabled(picture == nil)
             // COPY END dcde4124
 
-            // COPY BEGIN 2dcbfc89 [NEEDS HUMAN REVIEW]
+            // COPY BEGIN 2dcbfc89 [HUMAN REVIEWED, UNVERIFIED]
             Button {
                 dismiss()
             } label: {

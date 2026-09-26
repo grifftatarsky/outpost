@@ -195,7 +195,7 @@ public struct RedeemInviteView: View {
                 if !flow.read(using: read) {
                     flow.failed(
                         String(
-                            localized: "That is not a usable invite. It may have expired.",
+                            localized: "That invite is not usable. It may have expired.",
                             bundle: .module))
                     rejected += 1
                 }

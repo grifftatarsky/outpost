@@ -306,10 +306,10 @@ struct DeletingARoomTests {
         try await join(first, into: hangar, of: alice, through: mailbox)
         try await first.send("hello from the first phone", to: hangar)
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let second = TestSession.make(keychain: keychain, clock: clock)
+        let second = TestSession.make(keychain: await keychain.sibling(), clock: clock)
         second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        try await first.approveNewDevice(second)
 
         try await settle(first, second) { second.chains[hangar] != nil }
         try #require(second.chains[hangar] != nil, "the second device never received the room's key")

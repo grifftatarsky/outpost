@@ -173,7 +173,7 @@ public struct MessageRunView: View {
                 }
             } message: { _ in
                 Text(
-                    "Everybody stops seeing the words. Nothing is erased from anybody's device — each copy shows that a message was withdrawn.",
+                    "Everybody stops seeing the words. Nothing is erased from anybody's device — each copy shows that it was withdrawn.",
                     bundle: .module)
             }
             .alert(
