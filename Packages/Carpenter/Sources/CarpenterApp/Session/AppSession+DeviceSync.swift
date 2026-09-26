@@ -19,34 +19,58 @@ extension AppSession {
                 return
             }
 
-            await engine.onIncoming { [weak self] sealed, device in
-                await self?.take(sealed, from: device)
+            await engine.onIncoming { [weak self] record in
+                await self?.take(record)
             }
 
-            await self.sendOwnEntriesNow()
+            self.sendOwnEntries()
             try? await engine.refresh()
         }
     }
 
-    private func take(_ sealed: SealedSiblingFeed, from device: DeviceID) async {
+    private func take(_ record: SiblingRecord) async {
         guard let enrolment else { return }
-        guard let feed = try? await sealed.openInBackground(with: enrolment.identity, from: device) else {
+        let me = enrolment.device.id
+        let writer = record.name.writer
+        guard writer != me else { return }
+        if case .catchUp(let target) = record.name.kind, target != me { return }
+
+        guard
+            let feed = try? await record.sealed.openInBackground(
+                with: enrolment.identity, from: writer, as: record.name.kind)
+        else {
             integrity.unreadableSiblingFeeds += 1
             Diagnostics.sync.error(
-                "device sync: a sibling record would not open (\(Diagnostics.fingerprint(device.rawValue), privacy: .public))")
+                "device sync: a sibling record would not open (\(Diagnostics.fingerprint(writer.rawValue), privacy: .public))")
             return
         }
-        await take(feed)
+        guard await take(feed) else { return }
+
+        switch record.name.kind {
+        case .state:
+            persisted.siblingMail.noteState(
+                from: writer, cursors: feed.collected, at: feed.writtenAt ?? clock.now, me: me)
+        case .mail(let number):
+            persisted.siblingMail.took(mail: number, from: writer)
+        case .catchUp:
+            persisted.siblingMail.took(catchUpThrough: feed.through ?? 0, from: writer)
+        }
+        persisted.siblingMail.shared(feed.epochs)
+        await persistOrReport("what this device has collected from your other devices") {
+            try await saveState()
+        }
+        sendOwnEntries()
     }
 
-    private func take(_ feed: SiblingFeed) async {
-        guard let enrolment else { return }
+    @discardableResult
+    private func take(_ feed: SiblingFeed) async -> Bool {
+        guard let enrolment else { return false }
 
         if let member = feed.member, member != enrolment.identity.id {
             integrity.feedsFromOtherMembers += 1
             Diagnostics.sync.error(
                 "device sync: ignored a feed belonging to another member (\(Diagnostics.fingerprint(member.rawValue), privacy: .public))")
-            return
+            return false
         }
         if feed.member == nil {
             Diagnostics.sync.notice("device sync: a feed did not say whose it is; verifying entries")
@@ -120,7 +144,7 @@ extension AppSession {
                 }
                 refresh()
             }
-            return
+            return true
         }
 
         await persistOrReport("history from another of your devices") {
@@ -140,6 +164,7 @@ extension AppSession {
         }
 
         Diagnostics.sync.notice("took \(taken.count, privacy: .public) entries from another device")
+        return true
     }
 
     public func refreshDeviceSync() async {
@@ -149,25 +174,6 @@ extension AppSession {
         } catch {
             Diagnostics.sync.error(
                 "device sync refresh failed: \(String(describing: error), privacy: .public)")
-        }
-    }
-
-    private func sendOwnEntriesNow() async {
-        guard let deviceSync, let enrolment else { return }
-
-        let mine = replica.allEntries.filter { $0.device == enrolment.device.id }
-
-        do {
-            let feed = SiblingFeed(
-                entries: mine, certificates: knownCertificates(), epochs: heldEpochs(),
-                member: enrolment.identity.id, writtenAt: clock.now,
-                preferences: persisted.preferences)
-            let sealed = try await SealedSiblingFeed.sealInBackground(
-                feed, for: enrolment.identity, on: enrolment.device.id)
-            try await deviceSync.send(sealed, from: enrolment.device.id)
-        } catch {
-            Diagnostics.sync.error(
-                "device sync catch-up failed: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -197,19 +203,60 @@ extension AppSession {
         repeat {
             publishAgain = false
             guard let deviceSync, let enrolment else { return }
+            let me = enrolment.device.id
+            let now = clock.now
+            let own = replica.allEntries.filter { $0.device == me }
+            let held = heldEpochs()
+            let plan = persisted.siblingMail.plan(
+                own: own, held: held, me: me, revoked: Set(persisted.revocations.map(\.device)), now: now)
 
+            let state = SiblingFeed(
+                entries: [], certificates: knownCertificates(), member: enrolment.identity.id,
+                preferences: persisted.preferences, collected: persisted.siblingMail.cursors)
+            let digest = try? SiblingMail.digest(of: state, on: now)
+
+            var drafts: [(kind: SiblingRecord.Kind, feed: SiblingFeed)] = []
+            if digest == nil || digest != persisted.siblingMail.lastState {
+                drafts.append((.state, SiblingFeed(
+                    entries: [], certificates: state.certificates, member: state.member, writtenAt: now,
+                    preferences: state.preferences, collected: state.collected)))
+            }
+            if let mail = plan.mail {
+                drafts.append((.mail(mail.number), SiblingFeed(
+                    entries: mail.entries, certificates: [], epochs: mail.epochs,
+                    member: enrolment.identity.id, writtenAt: now)))
+            }
+            if !plan.catchUpsFor.isEmpty {
+                let everything = SiblingFeed(
+                    entries: own, certificates: state.certificates, epochs: held,
+                    member: enrolment.identity.id, writtenAt: now, preferences: state.preferences,
+                    through: plan.through)
+                for target in plan.catchUpsFor { drafts.append((.catchUp(for: target), everything)) }
+            }
+            let deleting = plan.deletions.map { SiblingRecord.Name(writer: me, kind: $0) }
+
+            let before = persisted.siblingMail
             do {
-                let feed = SiblingFeed(
-                    entries: replica.allEntries.filter { $0.device == enrolment.device.id },
-                    certificates: knownCertificates(), epochs: heldEpochs(),
-                    member: enrolment.identity.id, writtenAt: clock.now,
-                    preferences: persisted.preferences)
-                let sealed = try await SealedSiblingFeed.sealInBackground(
-                    feed, for: enrolment.identity, on: enrolment.device.id)
-                try await deviceSync.send(sealed, from: enrolment.device.id)
+                var records: [SiblingRecord] = []
+                for draft in drafts {
+                    records.append(SiblingRecord(
+                        name: SiblingRecord.Name(writer: me, kind: draft.kind),
+                        sealed: try await SealedSiblingFeed.sealInBackground(
+                            draft.feed, for: enrolment.identity, on: me, as: draft.kind)))
+                }
+                if !records.isEmpty || !deleting.isEmpty {
+                    try await deviceSync.send(records, deleting: deleting)
+                }
+                persisted.siblingMail.commit(
+                    plan, stateWritten: drafts.contains { $0.kind == .state } ? digest : nil)
             } catch {
                 Diagnostics.sync.error(
                     "device sync send failed: \(String(describing: error), privacy: .public)")
+            }
+            if persisted.siblingMail != before {
+                await persistOrReport("what this device has sent to your other devices") {
+                    try await saveState()
+                }
             }
         } while publishAgain
     }

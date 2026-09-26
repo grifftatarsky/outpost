@@ -250,12 +250,14 @@ struct DeviceEnrolmentTests {
         let impostor = InMemoryEntrySync(relay: relay)
         try await impostor.start()
         try await impostor.send(
-            try SealedSiblingFeed.seal(
-                SiblingFeed(
-                    entries: [], certificates: [], epochs: [],
-                    member: ParticipantID(rawValue: Data(repeating: 0x01, count: 32))),
-                for: identity, on: device),
-            from: device)
+            [SiblingRecord(
+                name: SiblingRecord.Name(writer: device, kind: .state),
+                sealed: try SealedSiblingFeed.seal(
+                    SiblingFeed(
+                        entries: [], certificates: [], epochs: [],
+                        member: ParticipantID(rawValue: Data(repeating: 0x01, count: 32))),
+                    for: identity, on: device))],
+            deleting: [])
 
         await settle(mine) { mine.integrity.feedsFromOtherMembers > 0 }
 
@@ -270,8 +272,7 @@ struct DeviceEnrolmentTests {
 
         let writing = InMemoryEntrySync.Relay()
         let first = TestSession.make(keychain: keychain)
-        let firstSync = InMemoryEntrySync(relay: writing)
-        first.syncDevices(through: firstSync)
+        first.syncDevices(through: InMemoryEntrySync(relay: writing))
         await first.load()
         try await first.createIdentity(displayName: "Griff")
         let room = try await first.createRoom(named: "Kitchen")
@@ -281,11 +282,15 @@ struct DeviceEnrolmentTests {
         let identity = try #require(try await store.loadIdentity())
         let firstDevice = try #require(try await store.loadDeviceKeys()).id
 
-        let published = await firstSync.sent
-            .compactMap { try? $0.open(with: identity, from: firstDevice) }
-        let entries = published.flatMap(\.entries)
-        let certificates = published.flatMap(\.certificates)
-        let epochs = published.flatMap(\.epochs)
+        let entries = first.replica.allEntries.filter { $0.device == firstDevice }
+        let certificates = first.knownCertificates()
+        let epochs = first.chains.flatMap { room, chain in
+            chain.knownEpochs.compactMap { epoch in
+                (try? chain.secret(for: epoch)).map {
+                    HeldEpoch(room: room, epoch: epoch, material: $0.material)
+                }
+            }
+        }
 
         let reading = InMemoryEntrySync.Relay()
         let second = try await secondDevice(sharing: keychain)
@@ -295,10 +300,12 @@ struct DeviceEnrolmentTests {
         let legacySibling = InMemoryEntrySync(relay: reading)
         try await legacySibling.start()
         try await legacySibling.send(
-            try SealedSiblingFeed.seal(
-                SiblingFeed(entries: entries, certificates: certificates, epochs: epochs),
-                for: identity, on: legacyDevice),
-            from: legacyDevice)
+            [SiblingRecord(
+                name: SiblingRecord.Name(writer: legacyDevice, kind: .state),
+                sealed: try SealedSiblingFeed.seal(
+                    SiblingFeed(entries: entries, certificates: certificates, epochs: epochs),
+                    for: identity, on: legacyDevice))],
+            deleting: [])
 
         await settle(second) { second.entryCount > 0 }
 

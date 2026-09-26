@@ -150,6 +150,29 @@ room epoch key. What is not:
 
 <!-- COPY END 15ae772a -->
 
+<!-- COPY BEGIN 0b547f7e [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="your-devices-send-each-other-only-what-is-new">
+<summary><b>Your devices send each other only what is new</b> — Complete (tested)</summary>
+
+**Story.** As a member, I want the app to keep in my iCloud only what my other devices still need,
+not a copy of everything I have written and every key I hold.
+
+**Built 2026-09-26.** Each message used to re-upload everything the device had ever written, every
+room key and the settings, as one record that stayed in iCloud for good. Now a device sends only what
+is new as mail, deletes it once its other devices have read it, and hands a new device everything
+once. [Architecture](../architecture.md#device-sync) describes the records.
+
+**Testing.** `SiblingMailTests`: a send uploads the same amount however long the history (it failed
+before the change, 7KB growing to 71KB), read mail is deleted, a lone device writes only its state
+record, a new device gets everything once, and a device away for over a month is caught up.
+`LiveSiblingFeedTests` writes, reads and deletes a mail record on a real account. Not yet run on two
+real devices on one account, which a simulator cannot be.
+
+</details>
+
+<!-- COPY END 0b547f7e -->
+
 <!-- COPY BEGIN 9c880262 [NEEDS HUMAN REVIEW] -->
 
 - `epochs: [HeldEpoch]` — `heldEpochs()` writes `chain.secret(for: epoch).material`, the **actual

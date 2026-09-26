@@ -60,27 +60,6 @@ sync round is never rotated, and the member's own Outpost is never rotated.
 
 <!-- COPY END 1c346b30 -->
 
-<!-- COPY BEGIN 8623086e [NEEDS HUMAN REVIEW] -->
-
-### Should the feed between your own devices stop being re-sent whole?
-
-Answered by Griff on 2026-09-26: nothing goes into iCloud that doesn't have to. See
-[Decisions](decisions.md#nothing-goes-into-icloud-that-doesnt-have-to).
-
-Checked against the code the same day: this is not fixed. What was fixed on 2026-09-13 is that the
-feed is sealed before it is written; before that it went up unencrypted. It is still sent whole.
-Every time a device writes anything (a message, a reaction, an edit), it uploads everything it has
-ever written, every room key it holds and its settings, as one sealed record, and that record stays
-in iCloud. At 2,000 entries that is about 1.8MB for each message sent, and each of your other devices
-downloads it again.
-
-The fix, not built: send only what is new, as a small sealed record like any other mail, and delete
-it once your other devices have collected it. A room key goes to a new device of yours once, when
-the device first appears. Nothing on the member's own devices can be tested on the rig, because a
-simulator can't get the identity key from iCloud Keychain; it needs two real devices on one account.
-
-<!-- COPY END 8623086e -->
-
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
 
 ### Who can send your device a room key it can't check yet?

@@ -1,0 +1,264 @@
+import CryptoKit
+import Foundation
+
+public struct SiblingCursor: Hashable, Sendable, Codable {
+    public let device: DeviceID
+    public let mail: Int
+
+    public init(device: DeviceID, mail: Int) {
+        self.device = device
+        self.mail = mail
+    }
+}
+
+public struct SiblingRecord: Hashable, Sendable {
+    public enum Kind: Hashable, Sendable {
+        case state
+        case mail(Int)
+        case catchUp(for: DeviceID)
+    }
+
+    public struct Name: Hashable, Sendable {
+        public let writer: DeviceID
+        public let kind: Kind
+
+        public init(writer: DeviceID, kind: Kind) {
+            self.writer = writer
+            self.kind = kind
+        }
+
+        public var recordName: String {
+            switch kind {
+            case .state: "feed-\(Self.hex(writer.rawValue))"
+            case .mail(let number): "mail-\(Self.hex(writer.rawValue))-\(number)"
+            case .catchUp(let target): "catchup-\(Self.hex(writer.rawValue))-\(Self.hex(target.rawValue))"
+            }
+        }
+
+        public init?(recordName: String) {
+            let parts = recordName.split(separator: "-", omittingEmptySubsequences: false).map(String.init)
+            guard parts.count >= 2, let writer = Self.bytes(parts[1]).map(DeviceID.init(rawValue:)) else {
+                return nil
+            }
+            switch (parts[0], parts.count) {
+            case ("feed", 2):
+                self.init(writer: writer, kind: .state)
+            case ("mail", 3):
+                guard let number = Int(parts[2]), number > 0 else { return nil }
+                self.init(writer: writer, kind: .mail(number))
+            case ("catchup", 3):
+                guard let target = Self.bytes(parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
+                self.init(writer: writer, kind: .catchUp(for: target))
+            default:
+                return nil
+            }
+        }
+
+        private static func hex(_ data: Data) -> String {
+            data.map { String(format: "%02x", $0) }.joined()
+        }
+
+        private static func bytes(_ digits: String) -> Data? {
+            let characters = Array(digits)
+            guard !characters.isEmpty, characters.count % 2 == 0 else { return nil }
+            var bytes = Data()
+            for pair in stride(from: 0, to: characters.count, by: 2) {
+                guard let byte = UInt8(String(characters[pair...pair + 1]), radix: 16) else { return nil }
+                bytes.append(byte)
+            }
+            return bytes
+        }
+    }
+
+    public let name: Name
+    public let sealed: SealedSiblingFeed
+
+    public init(name: Name, sealed: SealedSiblingFeed) {
+        self.name = name
+        self.sealed = sealed
+    }
+}
+
+public struct SiblingMail: Hashable, Sendable, Codable {
+    public static let keptFor: TimeInterval = 30 * 24 * 60 * 60
+
+    public struct Mail: Sendable {
+        public let number: Int
+        public let entries: [Entry]
+        public let epochs: [HeldEpoch]
+    }
+
+    public struct Plan: Sendable {
+        public fileprivate(set) var mail: Mail?
+        public fileprivate(set) var catchUpsFor: [DeviceID] = []
+        public fileprivate(set) var mailsToDelete: [Int] = []
+        public fileprivate(set) var catchUpsToDelete: [DeviceID] = []
+        public fileprivate(set) var through: Int
+        fileprivate var skipped: Int?
+        fileprivate var sharedThrough: UInt64
+        fileprivate var sharedEpochs: Set<EpochMark>
+        fileprivate let now: Date
+
+        public var deletions: [SiblingRecord.Kind] {
+            mailsToDelete.map { .mail($0) } + catchUpsToDelete.map { .catchUp(for: $0) }
+        }
+    }
+
+    struct EpochMark: Hashable, Sendable, Codable {
+        let room: RoomID
+        let epoch: EpochNumber
+    }
+
+    struct Seen: Hashable, Sendable, Codable {
+        var hasOfMine: Int?
+        var at: Date
+    }
+
+    struct Sent: Hashable, Sendable, Codable {
+        var through: Int
+        var at: Date
+    }
+
+    private(set) var lastMail = 0
+    private(set) var sharedThrough: UInt64 = 0
+    private(set) var sharedEpochs: Set<EpochMark> = []
+    private(set) var outstanding: [Int: Date] = [:]
+    private(set) var deletedThrough = 0
+    private(set) var collected: [DeviceID: Int] = [:]
+    private(set) var takenAbove: [DeviceID: Set<Int>] = [:]
+    private(set) var catchUps: [DeviceID: Sent] = [:]
+    private(set) var siblings: [DeviceID: Seen] = [:]
+    public private(set) var lastState: Data?
+
+    public init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case lastMail, sharedThrough, sharedEpochs, outstanding, deletedThrough, collected, takenAbove
+        case catchUps, siblings, lastState
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        lastMail = try container.decodeIfPresent(Int.self, forKey: .lastMail) ?? 0
+        sharedThrough = try container.decodeIfPresent(UInt64.self, forKey: .sharedThrough) ?? 0
+        sharedEpochs = try container.decodeIfPresent(Set<EpochMark>.self, forKey: .sharedEpochs) ?? []
+        outstanding = try container.decodeIfPresent([Int: Date].self, forKey: .outstanding) ?? [:]
+        deletedThrough = try container.decodeIfPresent(Int.self, forKey: .deletedThrough) ?? 0
+        collected = try container.decodeIfPresent([DeviceID: Int].self, forKey: .collected) ?? [:]
+        takenAbove = try container.decodeIfPresent([DeviceID: Set<Int>].self, forKey: .takenAbove) ?? [:]
+        catchUps = try container.decodeIfPresent([DeviceID: Sent].self, forKey: .catchUps) ?? [:]
+        siblings = try container.decodeIfPresent([DeviceID: Seen].self, forKey: .siblings) ?? [:]
+        lastState = try container.decodeIfPresent(Data.self, forKey: .lastState)
+    }
+
+    // MARK: What this device has taken
+
+    public var cursors: [SiblingCursor] {
+        collected.map { SiblingCursor(device: $0.key, mail: $0.value) }
+            .sorted { $0.device.rawValue.lexicographicallyPrecedes($1.device.rawValue) }
+    }
+
+    public mutating func noteState(
+        from sibling: DeviceID, cursors: [SiblingCursor], at: Date, me: DeviceID
+    ) {
+        guard sibling != me else { return }
+        siblings[sibling] = Seen(hasOfMine: cursors.first { $0.device == me }?.mail, at: at)
+    }
+
+    public mutating func took(mail number: Int, from sibling: DeviceID) {
+        let cursor = collected[sibling] ?? 0
+        var above = takenAbove[sibling] ?? []
+        if number > cursor { above.insert(number) }
+        advance(sibling, from: cursor, above: above)
+    }
+
+    public mutating func took(catchUpThrough through: Int, from sibling: DeviceID) {
+        let cursor = Swift.max(collected[sibling] ?? 0, through)
+        advance(sibling, from: cursor, above: (takenAbove[sibling] ?? []).filter { $0 > cursor })
+    }
+
+    public mutating func shared(_ epochs: [HeldEpoch]) {
+        sharedEpochs.formUnion(epochs.map { EpochMark(room: $0.room, epoch: $0.epoch) })
+    }
+
+    private mutating func advance(_ sibling: DeviceID, from start: Int, above: Set<Int>) {
+        var cursor = start
+        var above = above
+        while above.remove(cursor + 1) != nil { cursor += 1 }
+        collected[sibling] = cursor
+        takenAbove[sibling] = above.isEmpty ? nil : above
+    }
+
+    // MARK: What this device writes and deletes
+
+    public func plan(
+        own: [Entry], held: [HeldEpoch], me: DeviceID, revoked: Set<DeviceID>, now: Date
+    ) -> Plan {
+        let active = siblings.filter { id, seen in
+            id != me && !revoked.contains(id) && now.timeIntervalSince(seen.at) < Self.keptFor
+        }
+        var plan = Plan(
+            through: lastMail, sharedThrough: sharedThrough, sharedEpochs: sharedEpochs, now: now)
+
+        let entries = own.filter { $0.device == me && $0.seq > sharedThrough }
+        let epochs = held.filter { !sharedEpochs.contains(EpochMark(room: $0.room, epoch: $0.epoch)) }
+        plan.sharedThrough = Swift.max(sharedThrough, entries.map(\.seq).max() ?? 0)
+        plan.sharedEpochs.formUnion(epochs.map { EpochMark(room: $0.room, epoch: $0.epoch) })
+
+        if !entries.isEmpty || !epochs.isEmpty {
+            plan.through = lastMail + 1
+            if active.isEmpty {
+                plan.skipped = plan.through
+            } else {
+                plan.mail = Mail(number: plan.through, entries: entries, epochs: epochs)
+            }
+        }
+
+        for (number, writtenAt) in outstanding.sorted(by: { $0.key < $1.key }) {
+            let everyoneHasIt = active.values.allSatisfy { ($0.hasOfMine ?? 0) >= number }
+            guard everyoneHasIt || now.timeIntervalSince(writtenAt) >= Self.keptFor else { break }
+            plan.mailsToDelete.append(number)
+        }
+        let gone = Swift.max(deletedThrough, plan.mailsToDelete.max() ?? 0, plan.skipped ?? 0)
+
+        for (id, seen) in active where catchUps[id] == nil {
+            if (seen.hasOfMine ?? -1) < gone || seen.hasOfMine == nil {
+                plan.catchUpsFor.append(id)
+            }
+        }
+        for (id, sent) in catchUps {
+            let taken = (siblings[id]?.hasOfMine ?? -1) >= sent.through
+            if taken || active[id] == nil || now.timeIntervalSince(sent.at) >= Self.keptFor {
+                plan.catchUpsToDelete.append(id)
+            }
+        }
+        plan.catchUpsFor.sort { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
+        return plan
+    }
+
+    public mutating func commit(_ plan: Plan, stateWritten digest: Data?) {
+        lastMail = Swift.max(lastMail, plan.through)
+        if let mail = plan.mail { outstanding[mail.number] = plan.now }
+        if let skipped = plan.skipped { deletedThrough = Swift.max(deletedThrough, skipped) }
+        sharedThrough = Swift.max(sharedThrough, plan.sharedThrough)
+        sharedEpochs.formUnion(plan.sharedEpochs)
+        for number in plan.mailsToDelete {
+            outstanding[number] = nil
+            deletedThrough = Swift.max(deletedThrough, number)
+        }
+        for id in plan.catchUpsToDelete { catchUps[id] = nil }
+        for id in plan.catchUpsFor { catchUps[id] = Sent(through: plan.through, at: plan.now) }
+        if let digest { lastState = digest }
+    }
+
+    public var ownRecords: [SiblingRecord.Kind] {
+        [.state] + outstanding.keys.sorted().map { .mail($0) } + catchUps.keys.map { .catchUp(for: $0) }
+    }
+
+    public static func digest(of state: SiblingFeed, on day: Date) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let bucket = Int(day.timeIntervalSince1970 / (24 * 60 * 60))
+        return Data(SHA256.hash(data: try encoder.encode(state) + Data("\(bucket)".utf8)))
+    }
+}

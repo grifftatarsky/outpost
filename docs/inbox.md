@@ -222,13 +222,6 @@ device.
 **Nothing cleans up bells.** One record per channel, overwritten, never deleted, because a delete would
 ring the bell.
 
-**The sibling feed is one record that only grows.** `CloudKitEntrySync` writes a device's whole sealed
-feed, every entry, certificate and room key it holds and the member's preferences, into one field and
-republishes it after every write. CloudKit accepted 16MB in a field, so it is not a wall yet, but a
-member's hundredth message republishes the first ninety-nine to every device. Measured 2026-09-26:
-about 900 bytes an entry once sealed, so 1.8MB a send at 2,000 entries, and 16MB at about 18,000.
-[Open questions](open-questions.md) asks what to do about it.
-
 <!-- COPY END b81482a3 -->
 
 <!-- COPY BEGIN 9a32fa33 [NEEDS HUMAN REVIEW] -->

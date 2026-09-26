@@ -35,11 +35,19 @@ struct LiveSiblingFeedTests {
             member: nil, writtenAt: Date())
     }
 
-    private func record(for device: DeviceID) async throws -> CKRecord? {
-        let name = "feed-" + device.rawValue.map { String(format: "%02x", $0) }.joined()
+    private func record(_ name: SiblingRecord.Name) async throws -> CKRecord? {
         let id = CKRecord.ID(
-            recordName: name, zoneID: CKRecordZone.ID(zoneName: Self.zoneName))
+            recordName: name.recordName, zoneID: CKRecordZone.ID(zoneName: Self.zoneName))
         return try? await CKContainer.default().privateCloudDatabase.record(for: id)
+    }
+
+    private func mail(_ number: Int, from device: DeviceID, carrying material: Data, for identity: Identity)
+        throws -> SiblingRecord
+    {
+        SiblingRecord(
+            name: SiblingRecord.Name(writer: device, kind: .mail(number)),
+            sealed: try SealedSiblingFeed.seal(
+                feed(carrying: material), for: identity, on: device, as: .mail(number)))
     }
 
     @Test("What reaches the server is ciphertext, and the epoch secret is not in it")
@@ -49,17 +57,17 @@ struct LiveSiblingFeedTests {
         let mine = device()
         let material = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
 
-        let sealed = try SealedSiblingFeed.seal(
-            feed(carrying: material), for: identity, on: mine)
+        let sent = try mail(1, from: mine, carrying: material, for: identity)
+        let sealed = sent.sealed
 
         let sync = CloudKitEntrySync(
             container: .default(), device: mine, stateStore: store())
         try await sync.start()
-        try await sync.send(sealed, from: mine)
+        try await sync.send([sent], deleting: [])
 
         var found: CKRecord?
         for _ in 0..<30 {
-            if let record = try await record(for: mine) {
+            if let record = try await record(sent.name) {
                 found = record
                 break
             }
@@ -89,20 +97,21 @@ struct LiveSiblingFeedTests {
             payload == sealed.ciphertext,
             "the bytes on the server are not the ciphertext the app sealed")
 
-        let reopened = try SealedSiblingFeed(ciphertext: payload).open(with: identity, from: mine)
+        let reopened = try SealedSiblingFeed(ciphertext: payload).open(
+            with: identity, from: mine, as: .mail(1))
         #expect(reopened.epochs.first?.material == material, "the round trip lost the secret")
         #expect(
             throws: (any Error).self,
             "a stranger's identity opened a feed read back off the real server"
         ) {
             try SealedSiblingFeed(ciphertext: payload).open(
-                with: Identity.generate(), from: mine)
+                with: Identity.generate(), from: mine, as: .mail(1))
         }
 
         try? await sync.forgetOwnContribution()
     }
 
-    @Test("A second device on the same account is handed the feed, still sealed")
+    @Test("A second device on the same account is handed the mail, still sealed, and it is then deleted")
     func aSiblingReceivesIt() async throws {
         guard LiveCloudKit.isAsked else { return }
         let identity = Identity.generate()
@@ -113,13 +122,12 @@ struct LiveSiblingFeedTests {
         let writer = CloudKitEntrySync(
             container: .default(), device: first, stateStore: store())
         try await writer.start()
-        try await writer.send(
-            try SealedSiblingFeed.seal(feed(carrying: material), for: identity, on: first),
-            from: first)
+        let sent = try mail(1, from: first, carrying: material, for: identity)
+        try await writer.send([sent], deleting: [])
 
         var landed = false
         for _ in 0..<30 {
-            if try await record(for: first) != nil {
+            if try await record(sent.name) != nil {
                 landed = true
                 break
             }
@@ -133,8 +141,8 @@ struct LiveSiblingFeedTests {
         let inbox = Inbox()
         let reader = CloudKitEntrySync(
             container: .default(), device: second, stateStore: store())
-        await reader.onIncoming { sealed, from in
-            await inbox.record(sealed, from)
+        await reader.onIncoming { record in
+            await inbox.record(record.sealed, record.name.writer)
         }
         try await reader.start()
 
@@ -156,10 +164,21 @@ struct LiveSiblingFeedTests {
             """)
         #expect(from == first, "the feed was attributed to the wrong device")
 
-        let opened = try sealed.open(with: identity, from: first)
+        let opened = try sealed.open(with: identity, from: first, as: .mail(1))
         #expect(
             opened.epochs.first?.material == material,
             "the sibling received the record but could not read the epoch out of it")
+
+        try await writer.send([], deleting: [sent.name])
+        var gone = false
+        for _ in 0..<30 {
+            if try await record(sent.name) == nil {
+                gone = true
+                break
+            }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        #expect(gone, "mail its writer deleted was still on the server a minute later")
 
         try? await writer.forgetOwnContribution()
         try? await reader.forgetOwnContribution()

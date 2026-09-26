@@ -103,8 +103,15 @@ product free to run at any number of users.
 
 Claude's reading of it: iCloud holds only what another device needs and hasn't collected yet. A copy
 of a member's whole history, or of every key they hold, kept in iCloud in case a device wants it,
-does not qualify, sealed or not. The feed between a member's own devices breaks this today; see
-[Open questions](open-questions.md#should-the-feed-between-your-own-devices-stop-being-re-sent-whole).
+does not qualify, sealed or not.
+
+Built 2026-09-26 for the feed between a member's own devices, which used to re-upload everything a
+device had written, and every room key it held, with each message, and keep it in iCloud. Now a
+device sends only what is new, as mail, and deletes it once its other devices have read it (see
+[Architecture](architecture.md#device-sync)). The cost: a new device, or one away for more than 30
+days, gets its history from another of your devices, so it waits until one of them is open. A
+catch-up for a device with a long history is still one record, so it has the same size limit the
+old feed had. Tested in the package and on real CloudKit; not yet on two real devices on one account.
 
 <!-- COPY END 109a34c2 -->
 

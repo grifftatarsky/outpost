@@ -1,9 +1,9 @@
 import Foundation
 
 public protocol EntrySync: Sendable {
-    func send(_ feed: SealedSiblingFeed, from device: DeviceID) async throws
+    func send(_ records: [SiblingRecord], deleting: [SiblingRecord.Name]) async throws
 
-    func onIncoming(_ handler: @escaping @Sendable (SealedSiblingFeed, DeviceID) async -> Void) async
+    func onIncoming(_ handler: @escaping @Sendable (SiblingRecord) async -> Void) async
 
     func start() async throws
 
@@ -15,12 +15,8 @@ public protocol EntrySync: Sendable {
 public actor InMemoryEntrySync: EntrySync {
     public actor Relay {
         private var members: [UUID: InMemoryEntrySync] = [:]
-        private var records: [UUID: Record] = [:]
-
-        struct Record: Sendable {
-            let bytes: Data
-            let device: DeviceID
-        }
+        private var records: [String: Data] = [:]
+        private var written: [DeviceID: Int] = [:]
 
         private let announces: Bool
 
@@ -28,33 +24,64 @@ public actor InMemoryEntrySync: EntrySync {
             self.announces = announces
         }
 
+        public func bytesWritten(by device: DeviceID) -> Int { written[device, default: 0] }
+
+        public func bytesHeld(from device: DeviceID) -> Int {
+            records.filter { SiblingRecord.Name(recordName: $0.key)?.writer == device }
+                .reduce(0) { $0 + $1.value.count }
+        }
+
+        public func names(from device: DeviceID) -> [SiblingRecord.Name] {
+            records.keys.compactMap(SiblingRecord.Name.init(recordName:)).filter { $0.writer == device }
+        }
+
+        public func place(_ name: SiblingRecord.Name, _ sealed: SealedSiblingFeed) throws {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .sortedKeys
+            records[name.recordName] = try encoder.encode(sealed)
+        }
+
         func join(_ id: UUID, _ member: InMemoryEntrySync) {
             members[id] = member
         }
 
-        func store(_ record: Record, from sender: UUID) async {
-            records[sender] = record
+        func store(
+            _ stored: [(name: SiblingRecord.Name, bytes: Data)], deleting: [SiblingRecord.Name], from sender: UUID
+        ) async {
+            for name in deleting { records[name.recordName] = nil }
+            for record in stored {
+                records[record.name.recordName] = record.bytes
+                written[record.name.writer, default: 0] += record.bytes.count
+            }
             guard announces else { return }
 
             for (id, member) in members where id != sender {
-                await member.deliver(record)
+                for record in stored { await member.deliver(record.name, record.bytes) }
             }
         }
 
-        func withdraw(_ sender: UUID) {
-            records[sender] = nil
+        func withdraw(_ writers: Set<DeviceID>) {
+            records = records.filter { key, _ in
+                SiblingRecord.Name(recordName: key).map { !writers.contains($0.writer) } ?? true
+            }
         }
 
-        func everything(except sender: UUID) -> [Record] {
-            records.filter { $0.key != sender }.map(\.value)
+        func everything(exceptFrom writers: Set<DeviceID>) -> [(SiblingRecord.Name, Data)] {
+            records.sorted { $0.key < $1.key }.compactMap { key, bytes in
+                guard let name = SiblingRecord.Name(recordName: key), !writers.contains(name.writer) else {
+                    return nil
+                }
+                return (name, bytes)
+            }
         }
     }
 
     private let id = UUID()
     private let relay: Relay
-    private var handler: (@Sendable (SealedSiblingFeed, DeviceID) async -> Void)?
+    private var handler: (@Sendable (SiblingRecord) async -> Void)?
+    private var writers: Set<DeviceID> = []
 
-    public private(set) var sent: [SealedSiblingFeed] = []
+    public private(set) var sent: [SiblingRecord] = []
 
     public init(relay: Relay) {
         self.relay = relay
@@ -64,34 +91,34 @@ public actor InMemoryEntrySync: EntrySync {
         await relay.join(id, self)
     }
 
-    public func onIncoming(_ handler: @escaping @Sendable (SealedSiblingFeed, DeviceID) async -> Void)
-        async
-    {
+    public func onIncoming(_ handler: @escaping @Sendable (SiblingRecord) async -> Void) async {
         self.handler = handler
     }
 
-    fileprivate func deliver(_ record: Relay.Record) async {
-        guard let sealed = try? JSONDecoder().decode(SealedSiblingFeed.self, from: record.bytes)
+    fileprivate func deliver(_ name: SiblingRecord.Name, _ bytes: Data) async {
+        guard !writers.contains(name.writer),
+            let sealed = try? JSONDecoder().decode(SealedSiblingFeed.self, from: bytes)
         else { return }
-        await handler?(sealed, record.device)
+        await handler?(SiblingRecord(name: name, sealed: sealed))
     }
 
-    public func send(_ feed: SealedSiblingFeed, from device: DeviceID) async throws {
-        sent.append(feed)
+    public func send(_ records: [SiblingRecord], deleting: [SiblingRecord.Name]) async throws {
+        sent.append(contentsOf: records)
+        writers.formUnion(records.map(\.name.writer) + deleting.map(\.writer))
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         await relay.store(
-            Relay.Record(bytes: try encoder.encode(feed), device: device), from: id)
+            try records.map { ($0.name, try encoder.encode($0.sealed)) }, deleting: deleting, from: id)
     }
 
     public func refresh() async throws {
-        for record in await relay.everything(except: id) {
-            await deliver(record)
+        for (name, bytes) in await relay.everything(exceptFrom: writers) {
+            await deliver(name, bytes)
         }
     }
 
     public func forgetOwnContribution() async throws {
         sent = []
-        await relay.withdraw(id)
+        await relay.withdraw(writers)
     }
 }

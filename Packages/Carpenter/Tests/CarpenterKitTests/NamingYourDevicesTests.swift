@@ -87,6 +87,7 @@ struct NamingYourDevicesTests {
         let me = try #require(first.enrolment?.device.id)
         await first.setDeviceName("The one in my pocket", for: me)
 
+        try await keychain.remove(IdentityStore.deviceKey)
         let sibling = TestSession.make(keychain: keychain)
         sibling.syncDevices(through: InMemoryEntrySync(relay: relay))
         await sibling.load()

@@ -25,8 +25,12 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
 
     public let preferences: MemberPreferences
 
+    public let collected: [SiblingCursor]
+
+    public let through: Int?
+
     private enum CodingKeys: String, CodingKey {
-        case member, writtenAt, entries, certificates, epochs, preferences
+        case member, writtenAt, entries, certificates, epochs, preferences, collected, through
     }
 
     public init(from decoder: any Decoder) throws {
@@ -40,6 +44,8 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         preferences =
             try container.decodeIfPresent(MemberPreferences.self, forKey: .preferences)
             ?? MemberPreferences()
+        collected = try container.decodeIfPresent([SiblingCursor].self, forKey: .collected) ?? []
+        through = try container.decodeIfPresent(Int.self, forKey: .through)
     }
 
     public init(
@@ -48,7 +54,9 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         epochs: [HeldEpoch] = [],
         member: ParticipantID? = nil,
         writtenAt: Date? = nil,
-        preferences: MemberPreferences = MemberPreferences()
+        preferences: MemberPreferences = MemberPreferences(),
+        collected: [SiblingCursor] = [],
+        through: Int? = nil
     ) {
         self.member = member
         self.writtenAt = writtenAt
@@ -56,6 +64,8 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         self.certificates = certificates
         self.epochs = epochs
         self.preferences = preferences
+        self.collected = collected
+        self.through = through
     }
 }
 
@@ -76,42 +86,61 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
                 outputByteCount: 32))
     }
 
-    private static func context(member: ParticipantID, device: DeviceID) -> Data {
-        CanonicalBytes.payload(
-            domain: Domain.siblingFeed, fields: [member.rawValue, device.rawValue])
+    private static func context(
+        member: ParticipantID, device: DeviceID, kind: SiblingRecord.Kind
+    ) -> Data {
+        switch kind {
+        case .state:
+            CanonicalBytes.payload(
+                domain: Domain.siblingFeed, fields: [member.rawValue, device.rawValue])
+        case .mail(let number):
+            CanonicalBytes.payload(
+                domain: Domain.siblingFeed,
+                fields: [member.rawValue, device.rawValue, Data("mail \(number)".utf8)])
+        case .catchUp(let target):
+            CanonicalBytes.payload(
+                domain: Domain.siblingFeed,
+                fields: [member.rawValue, device.rawValue, Data("catch-up".utf8), target.rawValue])
+        }
     }
 
-    public static func seal(_ feed: SiblingFeed, for identity: Identity, on device: DeviceID) throws
-        -> SealedSiblingFeed
-    {
+    public static func seal(
+        _ feed: SiblingFeed, for identity: Identity, on device: DeviceID,
+        as kind: SiblingRecord.Kind = .state
+    ) throws -> SealedSiblingFeed {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         let box = try ChaChaPoly.seal(
             try encoder.encode(feed),
             using: key(for: identity),
-            authenticating: context(member: identity.id, device: device))
+            authenticating: context(member: identity.id, device: device, kind: kind))
         return SealedSiblingFeed(ciphertext: box.combined)
     }
 
     @concurrent
     public static func sealInBackground(
-        _ feed: SiblingFeed, for identity: Identity, on device: DeviceID
+        _ feed: SiblingFeed, for identity: Identity, on device: DeviceID,
+        as kind: SiblingRecord.Kind = .state
     ) async throws -> SealedSiblingFeed {
-        try seal(feed, for: identity, on: device)
+        try seal(feed, for: identity, on: device, as: kind)
     }
 
     @concurrent
-    public func openInBackground(with identity: Identity, from device: DeviceID) async throws -> SiblingFeed {
-        try open(with: identity, from: device)
+    public func openInBackground(
+        with identity: Identity, from device: DeviceID, as kind: SiblingRecord.Kind = .state
+    ) async throws -> SiblingFeed {
+        try open(with: identity, from: device, as: kind)
     }
 
-    public func open(with identity: Identity, from device: DeviceID) throws -> SiblingFeed {
+    public func open(
+        with identity: Identity, from device: DeviceID, as kind: SiblingRecord.Kind = .state
+    ) throws -> SiblingFeed {
         guard let box = try? ChaChaPoly.SealedBox(combined: ciphertext) else {
             throw CryptoError.openFailed
         }
         guard let plaintext = try? ChaChaPoly.open(
             box, using: Self.key(for: identity),
-            authenticating: Self.context(member: identity.id, device: device))
+            authenticating: Self.context(member: identity.id, device: device, kind: kind))
         else {
             throw CryptoError.openFailed
         }

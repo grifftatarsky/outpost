@@ -111,6 +111,11 @@ extension ForwardCompatibilityTests {
         state.phraseNonces = ["Y29tbWl0bWVudA==": Data(repeating: 9, count: 32)]
         state.wantsWhatWasSaid = true
         state.rotatesEveryKeyAfterALoss = true
+        var mail = SiblingMail()
+        let sibling = DeviceID(rawValue: Data(repeating: 0x5B, count: 32))
+        mail.noteState(from: sibling, cursors: [], at: Date(timeIntervalSince1970: 1_786_635_000), me: DeviceID(rawValue: Data(repeating: 0x5A, count: 32)))
+        mail.took(mail: 2, from: sibling)
+        state.siblingMail = mail
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)

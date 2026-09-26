@@ -29,6 +29,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
     var rotatesEveryKeyAfterALoss = false
+    var siblingMail = SiblingMail()
 
     private enum RetiredKeys: String, CodingKey { case awaitingJoin, epochTurnsOwed, turnsEveryKeyAfterALoss }
     var knownKeys: [IdentityPublicKeys] = []
@@ -109,5 +110,6 @@ struct PersistedState: Codable, Equatable, Sendable {
         rotatesEveryKeyAfterALoss =
             try container.decodeIfPresent(Bool.self, forKey: .rotatesEveryKeyAfterALoss)
             ?? retired.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
+        siblingMail = try container.decodeIfPresent(SiblingMail.self, forKey: .siblingMail) ?? SiblingMail()
     }
 }

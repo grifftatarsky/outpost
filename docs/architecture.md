@@ -108,13 +108,26 @@ new invitation to a closed room reopens it, so its history can be asked for agai
 ## Device sync
 
 A member's own devices converge separately, through `CKSyncEngine` over a `SiblingFeeds` zone in the
-member's private database. There is one record per device, holding that device's entries, the device
-certificates, the epoch keys it holds and the member's preferences.
+member's private database. Each device writes three kinds of record (`SiblingRecord.Kind`):
 
-The record is sealed on the device before it is written: ChaChaPoly under a key derived from the
-identity with HKDF-SHA256, with the member and the writing device as associated data, so a record
-cannot be replayed into another device's slot. `EntrySync` carries `SealedSiblingFeed` and nothing
-else, so the unsealed type cannot reach a transport.
+- **A state record**, one per device: the device certificates, the member's preferences, and how far
+  this device has read each of its siblings' mail. It is rewritten when one of those changes.
+- **Mail**: what this device wrote since its last mail, and any room keys it got since then. It is
+  deleted once every other active device of the member has read it, or after 30 days.
+- **A catch-up** for one device: everything this device has written and every room key it holds. It
+  is written for a device that is new, or that was away long enough to miss deleted mail, and it is
+  deleted once that device has read it.
+
+A device with no other devices writes only its state record. `SiblingMail` decides what to write and
+delete, and `SiblingMailTests` holds it: one message uploads about 1.7KB however long the history
+is, where it used to upload the whole history (71KB after 65 messages in the test). A new device is
+caught up by another of your devices, so it waits until one of them is open.
+
+Every record is sealed on the device before it is written: ChaChaPoly under a key derived from the
+identity with HKDF-SHA256, with the member, the writing device and the record's kind as associated
+data, so a record cannot be replayed into another device's slot or passed off as another kind.
+`EntrySync` carries `SealedSiblingFeed` and nothing else, so the unsealed type cannot reach a
+transport.
 
 **The app seals it rather than using `CKRecord.encryptedValues`.** Apple's encrypted fields are
 end-to-end only when the member has Advanced Data Protection on; otherwise Apple holds the keys. And

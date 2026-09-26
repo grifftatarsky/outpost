@@ -42,7 +42,9 @@ struct SiblingFeedIsSealedTests {
             epochs: [HeldEpoch(room: room, epoch: .initial, material: epochMaterial)],
             member: identity.id,
             writtenAt: Date(timeIntervalSince1970: 4_000),
-            preferences: prefs)
+            preferences: prefs,
+            collected: [SiblingCursor(device: keys.id, mail: 41)],
+            through: 37)
     }
 
     private static func sealed() throws -> SealedSiblingFeed {

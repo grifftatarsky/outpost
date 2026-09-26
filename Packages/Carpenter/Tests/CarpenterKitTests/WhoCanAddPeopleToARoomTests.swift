@@ -87,6 +87,25 @@ struct WhoCanAddPeopleToARoomTests {
         #expect(room.roster.requests[joiner.id] == nil)
     }
 
+    @Test("A removed member cannot finish an invitation they sent while they were in the room")
+    func aRemovedInviterCannotConfirm() throws {
+        let (founder, removed, puppet) = (Identity.generate(), Identity.generate(), Identity.generate())
+        var room = try founded(by: founder, access: .open)
+        _ = try room.invite(removed, by: founder)
+        let invite = try TestInvite.issue(
+            joining: self.room, joinerKeys: puppet.publicKeys, by: removed, at: start)
+        room.write(removed, .joinRequest, try Payload.joinRequest(invite))
+        room.write(founder, .removal, try Payload.removal(of: removed.id))
+
+        room.write(
+            removed, .joinConfirmed,
+            try Payload.joinConfirmed(try JoinConfirmedBody.signed(confirming: invite, by: puppet)))
+
+        #expect(
+            !room.roster.members.contains(puppet.id),
+            "somebody removed from the room posted the confirmation for their own invitation, and it counted")
+    }
+
     @Test("A vote from outside the room does not admit anybody")
     func aStrangersVoteDoesNotCount() throws {
         let (founder, stranger, joiner) = (Identity.generate(), Identity.generate(), Identity.generate())

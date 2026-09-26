@@ -51,7 +51,7 @@ struct EntrySyncTests {
         #expect(incoming.messages(in: room).contains { $0.body == "door code changed" })
     }
 
-    @Test("Opening the app is enough, even if nothing announced itself")
+    @Test("Opening the app on both devices is enough, even if nothing announced itself")
     func openingTheAppFetchesWithoutBeingTold() async throws {
         let relay = InMemoryEntrySync.Relay(announces: false)
         let keychain = InMemoryKeychainStore()
@@ -75,9 +75,14 @@ struct EntrySyncTests {
             incoming.messages(in: room).isEmpty,
             "arrived without being fetched — this relay does not announce")
 
-        await settle(incoming) {
-            incoming.rooms.first?.name == "Kitchen"
-                && incoming.messages(in: room).contains { $0.body == "door code changed" }
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline,
+            !(incoming.rooms.first?.name == "Kitchen"
+                && incoming.messages(in: room).contains { $0.body == "door code changed" })
+        {
+            await original.refreshDeviceSync()
+            await incoming.refreshDeviceSync()
+            try? await Task.sleep(for: .milliseconds(25))
         }
 
         #expect(incoming.rooms.first?.name == "Kitchen")
