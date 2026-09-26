@@ -43,6 +43,7 @@ public enum CanonicalBytes {
 
 public enum CryptoError: Error, Hashable, Sendable {
     case malformedKey
+    case notSealedForThisDevice
     case malformedSignature
     case badSignature
     case participantMismatch

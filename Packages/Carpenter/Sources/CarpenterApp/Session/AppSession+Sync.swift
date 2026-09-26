@@ -171,6 +171,7 @@ extension AppSession {
             do {
                 try await storage.log.append(owed)
                 entriesNotWrittenDown = []
+                sendOwnEntries()
             } catch {
                 entriesNotWrittenDown = owed
                 integrity.writesFailed += 1

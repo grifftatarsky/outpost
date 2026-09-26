@@ -30,6 +30,12 @@ public struct DeviceRegistry: Hashable, Sendable {
             guard existing.publicKey == certificate.devicePublicKey else {
                 throw CryptoError.deviceMismatch
             }
+            if existing.certificate.agreementKey == nil, certificate.agreementKey != nil,
+                certificate.issuedAt == existing.issuedAt
+            {
+                devices[certificate.device] = Enrolment(
+                    certificate: certificate, revokedAt: existing.revokedAt)
+            }
             return
         }
 
@@ -52,6 +58,14 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public func standing(of device: DeviceID) -> (addedAt: Date, revokedAt: Date?)? {
         devices[device].map { ($0.issuedAt, $0.revokedAt) }
+    }
+
+    public func agreementKey(for device: DeviceID) -> Data? {
+        devices[device]?.certificate.agreementKey
+    }
+
+    public var activeDevices: Set<DeviceID> {
+        Set(devices.filter { $0.value.revokedAt == nil }.keys)
     }
 
     public func signingKey(for device: DeviceID) -> Data? {

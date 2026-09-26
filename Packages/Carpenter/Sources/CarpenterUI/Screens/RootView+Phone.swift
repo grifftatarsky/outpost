@@ -212,6 +212,7 @@ extension RootView {
             }
             .badge(youNeedsAttention ? Text(verbatim: "!") : nil)
         }
+        .tabViewSearchActivation(.searchTabSelection)
         .themed(theme.accent)
         .environment(\.showsAvatars, preferences.showsAvatars)
         .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)

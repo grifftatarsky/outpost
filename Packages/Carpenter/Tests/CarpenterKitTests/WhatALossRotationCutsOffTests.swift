@@ -16,10 +16,10 @@ struct WhatALossRotationCutsOffTests {
         let rotatedFrom: Int
     }
 
-    private func rig(afterALoss: Bool = true) async throws -> Rig {
+    private func rig(afterALoss: Bool = true, announcing: Bool = true) async throws -> Rig {
         let mailbox = InMemoryMailbox()
         let clock = TestClock(now: TestSession.now)
-        let relay = InMemoryEntrySync.Relay()
+        let relay = InMemoryEntrySync.Relay(announces: announcing)
 
         let stolen = TestSession.make(keychain: InMemoryKeychainStore(), clock: clock)
         let peer = TestSession.make(clock: clock)
@@ -44,7 +44,13 @@ struct WhatALossRotationCutsOffTests {
         restored.syncDevices(through: InMemoryEntrySync(relay: relay))
         await restored.load()
         try await restored.restore(fromRecoveryKey: key, afterALoss: afterALoss)
-        await restored.settleDeviceSync { !restored.rooms.isEmpty }
+        let deadline = Date().addingTimeInterval(5)
+        while restored.rooms.isEmpty, Date() < deadline {
+            await stolen.refreshDeviceSync()
+            await stolen.settleDeviceSync()
+            await restored.refreshDeviceSync()
+            await restored.settleDeviceSync()
+        }
         for _ in 0..<12 {
             for session in [restored, peer] { try await session.sync(through: mailbox) }
         }
@@ -86,28 +92,55 @@ struct WhatALossRotationCutsOffTests {
         }
     }
 
-    @Test("A device removed from the device list reads nothing said afterwards")
-    func aRevokedDeviceReadsNothingNew() async throws {
+    @Test("A device removed from the device list erases itself and reads nothing said afterwards")
+    func aRevokedDeviceErasesItself() async throws {
         let rig = try await rig(afterALoss: false)
         let stolenDevice = try #require(rig.stolen.enrolment?.device.id)
         try await rig.restored.revoke(stolenDevice)
-        for _ in 0..<12 {
-            for session in [rig.restored, rig.peer, rig.stolen] { try await session.sync(through: rig.mailbox) }
+        for _ in 0..<6 {
+            for session in [rig.restored, rig.peer] { try await session.sync(through: rig.mailbox) }
+            try? await rig.stolen.sync(through: rig.mailbox)
+            await rig.restored.settleDeviceSync()
+            await rig.stolen.settleDeviceSync()
         }
+        #expect(rig.stolen.state == .removed, "the removed device never noticed it was removed")
+
+        try await rig.peer.send("after the removal", to: rig.room)
+        for _ in 0..<12 {
+            try await rig.peer.sync(through: rig.mailbox)
+            try? await rig.stolen.sync(through: rig.mailbox)
+            try await rig.restored.sync(through: rig.mailbox)
+        }
+
+        #expect(!rig.stolen.messages(in: rig.room).contains { $0.body == "after the removal" })
+        #expect(rig.restored.messages(in: rig.room).contains { $0.body == "after the removal" })
+    }
+
+    @Test("A removed device that never hears it was removed still cannot open anything new")
+    func aRevokedDeviceThatIsNotToldCannotRead() async throws {
+        let rig = try await rig(afterALoss: false, announcing: false)
+        let stolenDevice = try #require(rig.stolen.enrolment?.device.id)
+        try await rig.restored.revoke(stolenDevice)
+        for _ in 0..<6 {
+            for session in [rig.restored, rig.peer] { try await session.sync(through: rig.mailbox) }
+            await rig.restored.settleDeviceSync()
+        }
+        #expect(rig.stolen.state != .removed, "precondition: the removed device has not been told")
 
         try await rig.peer.send("after the removal", to: rig.room)
         for _ in 0..<12 {
             for session in [rig.peer, rig.stolen, rig.restored] { try await session.sync(through: rig.mailbox) }
         }
 
+        #expect(
+            !rig.stolen.messages(in: rig.room).contains { $0.body == "after the removal" },
+            "a removed device that kept running read a message sent after its removal")
         withKnownIssue(
             """
-            New room keys are sent to the member, not to a device, so a removed device that still has \
-            the identity key opens them. It checked the mailbox first here, so it read the message and \
-            took the delivery, and the member's real device never got it.
+            The removed device checked the mailbox first and took the delivery, so the member's real \
+            device never got the message. Deliveries are acknowledged per member, not per device.
             """
         ) {
-            #expect(!rig.stolen.messages(in: rig.room).contains { $0.body == "after the removal" })
             #expect(rig.restored.messages(in: rig.room).contains { $0.body == "after the removal" })
         }
     }

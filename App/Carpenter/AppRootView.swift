@@ -30,6 +30,7 @@ struct AppRootView: View {
     @State var arrivingCode: ArrivingCode?
     @AppStorage("onboarding.tourSeen") var tourSeen = false
     @AppStorage("onboarding.syncedSplashSeen") var syncedSplashSeen = false
+    @State var otherDevicesAsked = false
     @State var syncing = false
     @State var syncAgain = false
     @State var lastRendezvous = Date.distantPast
@@ -257,11 +258,36 @@ struct AppRootView: View {
                 }
                 .themed(.default)
 
+            case .ready
+            where session.cameBackFromARecoveryKey && !otherDevicesAsked
+                && session.devices.contains(where: { $0.isActive && !$0.isCurrent }):
+                OtherDevicesAfterRestoreView(
+                    devices: session.devices, onRevoke: { await revokeDevices($0) },
+                    onDone: { otherDevicesAsked = true }
+                )
+                .themed(.default)
+
             case .ready where session.needsPrivacyCheckup:
                 privacyCheckup
 
             case .ready:
                 ready
+
+            case .removed:
+                RemovedDeviceView(onRestore: { restoring = true })
+                    .themed(.default)
+                    .sheet(isPresented: $restoring) {
+                        NavigationStack {
+                            RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
+                                await reporting("restore from a recovery key") {
+                                    try await session.restore(
+                                        fromRecoveryKey: key, askingPeers: asksPeers,
+                                        afterALoss: afterALoss)
+                                }
+                            })
+                        }
+                        .themed(.default)
+                    }
 
             case .failed(let reason):
                 // COPY BEGIN 9c1a5749 [NEEDS HUMAN REVIEW]

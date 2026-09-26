@@ -17,6 +17,12 @@ struct SiblingFeedIsSealedTests {
     private static let room = RoomID()
     private static let keys = DeviceKeys.generate()
 
+    private static let friend = Identity.generate().publicKeys
+
+    private static let forwardedGrant = try! EpochGrant.issue(
+        EpochSecret(material: epochMaterial), at: .initial, in: room, link: nil,
+        to: PairwiseSecret.derive(mine: Identity.generate(), theirs: Identity.generate().publicKeys))
+
     private static func populated() -> SiblingFeed {
         let stamp = OrganisationStamp(at: Date(timeIntervalSince1970: 1_000), device: device)
         var prefs = MemberPreferences()
@@ -44,7 +50,14 @@ struct SiblingFeedIsSealedTests {
             writtenAt: Date(timeIntervalSince1970: 4_000),
             preferences: prefs,
             collected: [SiblingCursor(device: keys.id, mail: 41)],
-            through: 37)
+            through: 37,
+            revocations: [
+                DeviceRevocation(
+                    participant: identity.id, device: keys.id,
+                    revokedAt: Date(timeIntervalSince1970: 5_000), signature: Data(repeating: 0x0F, count: 64))
+            ],
+            forwarded: [ForwardedGrant(from: identity.id, grant: forwardedGrant)],
+            people: [friend])
     }
 
     private static func sealed() throws -> SealedSiblingFeed {

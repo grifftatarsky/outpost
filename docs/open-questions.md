@@ -19,44 +19,24 @@ Settled decisions live in [Decisions](decisions.md).
 
 <!-- COPY BEGIN 1c346b30 [NEEDS HUMAN REVIEW] -->
 
-### Removing a device, or rotating keys after a loss, doesn't lock that device out
+### Two things left to make removing a device stick
 
-Raised 2026-09-26. Measured in the test suite, not on the rig.
+Raised 2026-09-26. Removing a device now works for what it holds: every room key after the removal is
+sealed only to the member's remaining devices, and a removed device that hears about it erases what
+it holds and stops. See [Decisions](decisions.md#room-keys-are-sealed-to-each-device-and-a-removed-device-erases-itself).
+Two things are still open.
 
-Your identity key is the key the recovery key restores. The app saves it to iCloud Keychain, so each
-of your devices keeps its own copy in its own keychain. New room keys are sent to you as a person,
-not to one of your devices, so every device that has your identity key can open them.
+- **A new device joins without anybody approving it.** Your identity key is in iCloud Keychain, so a
+  removed phone that is still signed in to your Apple Account can come back as a "new device" and be
+  sealed into the next key like any other. Proposed: a new device has to be approved from one of
+  your existing devices, or with the recovery key. Waiting on Griff.
+- **The lost-or-stolen question on the restore screen.** It rotates every room's key but removes no
+  device, so it does not cut off the lost device. The new step after a recovery-key restore, which
+  offers to remove all or some of your other devices, does. Proposed: drop the question. Waiting on
+  Griff.
 
-So neither of the two ways the app offers to shut out a device works against a device that still has
-the identity key and can still reach your iCloud:
-
-- Answering "a device was lost or stolen" when you restore rotates every room's key. The lost device
-  opens the new keys too.
-- Removing a device from the device list rotates every room's key. The removed device opens the new
-  keys too.
-
-On top of that, a message from somebody else goes to whichever of your devices checks the mailbox
-first. If the lost or removed device checks first, it reads the message and your real device never
-gets it. `WhatALossRotationCutsOffTests` shows all of this as known issues. That is the test mailbox;
-it has not been seen on real CloudKit.
-
-The recovery key only comes into it when a new device can't get the identity key from iCloud
-Keychain. That doesn't mean your other devices lost their copy, because each one keeps its own. It
-happens two ways:
-
-- iCloud Keychain is off. The key never left your iPad, so a new iPhone needs the recovery key, and
-  the iPad keeps working. That is fine: it is your iPad.
-- Your phone was stolen. It still has the key in its keychain, and while it is signed in to your
-  Apple Account it can keep reading.
-
-What locks a stolen phone out today is Apple's side: erasing it with Find My, or removing it from
-your Apple Account, which ends its access to your iCloud.
-
-The question for Griff: should room keys be sent to each device instead of to the person, so that
-removing a device leaves it out of the next key? That changes how every key is sent. Until then, the
-restore screen and the device list should say that Find My is what locks a stolen phone out. Two
-smaller gaps, found by reading and not tested: after a loss, a room that comes back after the first
-sync round is never rotated, and the member's own Outpost is never rotated.
+What even both of these cannot stop: somebody holding the phone unlocked and running a modified app
+can use the identity key to act as you. Only moving to a new identity stops that.
 
 <!-- COPY END 1c346b30 -->
 

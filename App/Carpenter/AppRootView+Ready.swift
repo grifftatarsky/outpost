@@ -244,38 +244,7 @@ extension AppRootView {
             onAppIconChange: { await applyAppIcon($0) },
             appIconIsSupported: AppIconSwitching.isSupported,
             devices: session.devices,
-            onRevokeDevice: { going in
-                do {
-                    try await session.revoke(going.map(\.id))
-                } catch let error as AppSessionError {
-                    // COPY BEGIN 5d951e6c [NEEDS HUMAN REVIEW]
-                    if case .keyNotRotated(let rooms) = error {
-                        Diagnostics.identity.error(
-                            "revoke: \(rooms, privacy: .public) room(s) did not rotate their key")
-                        problem = ActionProblem(
-                            title: String(localized: "The device is out, but its key is still good"),
-                            detail: String(
-                                localized:
-                                    "\(rooms) room(s) could not change their key, so that device can still read what is said in them until the next membership change. Try syncing, then remove it again."
-                            ))
-                    } else {
-                        Diagnostics.identity.error(
-                            "revoke failed: \(String(describing: error), privacy: .public)")
-                        problem = ActionProblem(
-                            title: String(localized: "Those devices were not removed"),
-                            detail: SessionProblem.sentence(for: error))
-                    }
-                    // COPY END 5d951e6c
-                } catch {
-                    Diagnostics.identity.error(
-                        "revoke failed: \(String(describing: error), privacy: .public)")
-                    // COPY BEGIN 0350cd68 [NEEDS HUMAN REVIEW]
-                    problem = ActionProblem(
-                        title: String(localized: "That device was not removed"),
-                        detail: SessionProblem.sentence(for: error))
-                    // COPY END 0350cd68
-                }
-            },
+            onRevokeDevice: { await revokeDevices($0) },
             onRenameDevice: { device, name in
                 await session.setDeviceName(name, for: device.id)
             },
@@ -530,5 +499,38 @@ extension AppRootView {
                 },
             checkedAt: checkedAt,
             devicesAddedSince: checkedAt.map { session.devicesAdded(by: person, after: $0) } ?? [])
+    }
+
+    func revokeDevices(_ going: [DeviceSummary]) async {
+        do {
+            try await session.revoke(going.map(\.id))
+        } catch let error as AppSessionError {
+            // COPY BEGIN 5d951e6c [NEEDS HUMAN REVIEW]
+            if case .keyNotRotated(let rooms) = error {
+                Diagnostics.identity.error(
+                    "revoke: \(rooms, privacy: .public) room(s) did not rotate their key")
+                problem = ActionProblem(
+                    title: String(localized: "The device is out, but its key is still good"),
+                    detail: String(
+                        localized:
+                            "\(rooms) room(s) could not change their key, so that device can still read what is said in them until the next membership change. Try syncing, then remove it again."
+                    ))
+            } else {
+                Diagnostics.identity.error(
+                    "revoke failed: \(String(describing: error), privacy: .public)")
+                problem = ActionProblem(
+                    title: String(localized: "Those devices were not removed"),
+                    detail: SessionProblem.sentence(for: error))
+            }
+            // COPY END 5d951e6c
+        } catch {
+            Diagnostics.identity.error(
+                "revoke failed: \(String(describing: error), privacy: .public)")
+            // COPY BEGIN 0350cd68 [NEEDS HUMAN REVIEW]
+            problem = ActionProblem(
+                title: String(localized: "That device was not removed"),
+                detail: SessionProblem.sentence(for: error))
+            // COPY END 0350cd68
+        }
     }
 }

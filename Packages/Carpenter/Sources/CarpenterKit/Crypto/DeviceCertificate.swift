@@ -6,33 +6,44 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
     public var devicePublicKey: Data
     public var issuedAt: Date
     public var signature: Data
+    public var agreementKey: Data?
 
     public init(
         participant: ParticipantID,
         device: DeviceID,
         devicePublicKey: Data,
         issuedAt: Date,
-        signature: Data
+        signature: Data,
+        agreementKey: Data? = nil
     ) {
         self.participant = participant
         self.device = device
         self.devicePublicKey = devicePublicKey
         self.issuedAt = issuedAt
         self.signature = signature
+        self.agreementKey = agreementKey
     }
 
     public static func issue(
-        for devicePublicKey: Data, by identity: Identity, at issuedAt: Date
+        for devicePublicKey: Data, agreementKey: Data? = nil, by identity: Identity, at issuedAt: Date
     ) throws -> DeviceCertificate {
         var certificate = DeviceCertificate(
             participant: identity.id,
             device: DeviceID(publicKey: devicePublicKey),
             devicePublicKey: devicePublicKey,
             issuedAt: issuedAt,
-            signature: Data()
+            signature: Data(),
+            agreementKey: agreementKey
         )
         certificate.signature = try identity.sign(certificate.signingPayload)
         return certificate
+    }
+
+    public static func issue(for device: DeviceKeys, by identity: Identity, at issuedAt: Date) throws
+        -> DeviceCertificate
+    {
+        try issue(
+            for: device.publicKey, agreementKey: device.agreementPublicKey, by: identity, at: issuedAt)
     }
 
     var signingPayload: Data {
@@ -43,7 +54,7 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
                 device.rawValue,
                 devicePublicKey,
                 CanonicalBytes.timestamp(issuedAt),
-            ]
+            ] + (agreementKey.map { [$0] } ?? [])
         )
     }
 

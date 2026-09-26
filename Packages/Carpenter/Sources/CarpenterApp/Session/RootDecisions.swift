@@ -8,6 +8,7 @@ public enum RootScreen: Equatable, Sendable {
     case onboarding(Onboarding)
     case ready
     case failed(String)
+    case removed
 
     public enum Onboarding: Equatable, Sendable {
         case newIdentity
@@ -30,6 +31,8 @@ public enum RootScreen: Equatable, Sendable {
             return .ready
         case .failed(let reason):
             return .failed(reason)
+        case .removed:
+            return .removed
         }
     }
 }

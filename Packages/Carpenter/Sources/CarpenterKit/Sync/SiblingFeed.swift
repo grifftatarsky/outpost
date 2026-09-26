@@ -29,8 +29,15 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
 
     public let through: Int?
 
+    public let revocations: [DeviceRevocation]
+
+    public let forwarded: [ForwardedGrant]
+
+    public let people: [IdentityPublicKeys]
+
     private enum CodingKeys: String, CodingKey {
         case member, writtenAt, entries, certificates, epochs, preferences, collected, through
+        case revocations, forwarded, people
     }
 
     public init(from decoder: any Decoder) throws {
@@ -46,6 +53,9 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
             ?? MemberPreferences()
         collected = try container.decodeIfPresent([SiblingCursor].self, forKey: .collected) ?? []
         through = try container.decodeIfPresent(Int.self, forKey: .through)
+        revocations = try container.decodeIfPresent([DeviceRevocation].self, forKey: .revocations) ?? []
+        forwarded = try container.decodeIfPresent([ForwardedGrant].self, forKey: .forwarded) ?? []
+        people = try container.decodeIfPresent([IdentityPublicKeys].self, forKey: .people) ?? []
     }
 
     public init(
@@ -56,7 +66,10 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         writtenAt: Date? = nil,
         preferences: MemberPreferences = MemberPreferences(),
         collected: [SiblingCursor] = [],
-        through: Int? = nil
+        through: Int? = nil,
+        revocations: [DeviceRevocation] = [],
+        forwarded: [ForwardedGrant] = [],
+        people: [IdentityPublicKeys] = []
     ) {
         self.member = member
         self.writtenAt = writtenAt
@@ -66,6 +79,9 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         self.preferences = preferences
         self.collected = collected
         self.through = through
+        self.revocations = revocations
+        self.forwarded = forwarded
+        self.people = people
     }
 }
 
@@ -106,44 +122,74 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
 
     public static func seal(
         _ feed: SiblingFeed, for identity: Identity, on device: DeviceID,
-        as kind: SiblingRecord.Kind = .state
+        as kind: SiblingRecord.Kind = .state, to recipients: [DeviceRecipient] = []
     ) throws -> SealedSiblingFeed {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
-        let box = try ChaChaPoly.seal(
-            try encoder.encode(feed),
-            using: key(for: identity),
-            authenticating: context(member: identity.id, device: device, kind: kind))
-        return SealedSiblingFeed(ciphertext: box.combined)
+        let context = context(member: identity.id, device: device, kind: kind)
+        let inner = try ChaChaPoly.seal(
+            try encoder.encode(feed), using: key(for: identity), authenticating: context
+        ).combined
+        guard !recipients.isEmpty else { return SealedSiblingFeed(ciphertext: inner) }
+
+        let content = SymmetricKey(size: .bits256)
+        let envelope = Envelope(
+            seals: try recipients.map {
+                try DeviceSeal.seal(content.withUnsafeBytes { Data($0) }, to: $0, context: context)
+            },
+            box: try ChaChaPoly.seal(inner, using: content, authenticating: context).combined)
+        return SealedSiblingFeed(ciphertext: Self.envelopeMark + (try encoder.encode(envelope)))
     }
 
     @concurrent
     public static func sealInBackground(
         _ feed: SiblingFeed, for identity: Identity, on device: DeviceID,
-        as kind: SiblingRecord.Kind = .state
+        as kind: SiblingRecord.Kind = .state, to recipients: [DeviceRecipient] = []
     ) async throws -> SealedSiblingFeed {
-        try seal(feed, for: identity, on: device, as: kind)
+        try seal(feed, for: identity, on: device, as: kind, to: recipients)
     }
 
     @concurrent
     public func openInBackground(
-        with identity: Identity, from device: DeviceID, as kind: SiblingRecord.Kind = .state
+        with identity: Identity, from device: DeviceID, as kind: SiblingRecord.Kind = .state,
+        reading reader: DeviceKeys? = nil
     ) async throws -> SiblingFeed {
-        try open(with: identity, from: device, as: kind)
+        try open(with: identity, from: device, as: kind, reading: reader)
     }
 
     public func open(
-        with identity: Identity, from device: DeviceID, as kind: SiblingRecord.Kind = .state
+        with identity: Identity, from device: DeviceID, as kind: SiblingRecord.Kind = .state,
+        reading reader: DeviceKeys? = nil
     ) throws -> SiblingFeed {
-        guard let box = try? ChaChaPoly.SealedBox(combined: ciphertext) else {
-            throw CryptoError.openFailed
+        let context = Self.context(member: identity.id, device: device, kind: kind)
+        var inner = ciphertext
+        if ciphertext.starts(with: Self.envelopeMark) {
+            guard
+                let envelope = try? JSONDecoder().decode(
+                    Envelope.self, from: ciphertext.dropFirst(Self.envelopeMark.count))
+            else { throw CryptoError.openFailed }
+            guard let reader, let seal = envelope.seals.first(where: { $0.device == reader.id }) else {
+                throw CryptoError.notSealedForThisDevice
+            }
+            let content = SymmetricKey(data: try seal.open(with: reader, context: context))
+            guard let box = try? ChaChaPoly.SealedBox(combined: envelope.box),
+                let opened = try? ChaChaPoly.open(box, using: content, authenticating: context)
+            else { throw CryptoError.openFailed }
+            inner = opened
         }
-        guard let plaintext = try? ChaChaPoly.open(
-            box, using: Self.key(for: identity),
-            authenticating: Self.context(member: identity.id, device: device, kind: kind))
+        guard let box = try? ChaChaPoly.SealedBox(combined: inner),
+            let plaintext = try? ChaChaPoly.open(
+                box, using: Self.key(for: identity), authenticating: context)
         else {
             throw CryptoError.openFailed
         }
         return try JSONDecoder().decode(SiblingFeed.self, from: plaintext)
     }
+
+    private struct Envelope: Codable {
+        let seals: [DeviceSeal]
+        let box: Data
+    }
+
+    private static let envelopeMark = Data("carpenter.devices.v1\n".utf8)
 }

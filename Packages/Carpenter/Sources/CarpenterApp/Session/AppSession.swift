@@ -36,6 +36,7 @@ public final class AppSession {
         case ready
         case failed(String)
         case registrationStalled(RegistrationStall)
+        case removed
     }
 
     public internal(set) var state: State = .loading
@@ -356,13 +357,18 @@ public final class AppSession {
         for keys in persisted.knownKeys { replica.introduce(keys) }
         for certificate in persisted.certificates { try? replica.admit(certificate) }
 
-        if let enrolment,
-            replica.registry(for: identity.id)?.standing(of: enrolment.device.id) == nil
-        {
-            try replica.admit(
-                DeviceCertificate.issue(
-                    for: enrolment.device.publicKey, by: identity, at: clock.now))
-            persisted.certificates = knownCertificates()
+        if let enrolment {
+            let registry = replica.registry(for: identity.id)
+            if let standing = registry?.standing(of: enrolment.device.id) {
+                if registry?.agreementKey(for: enrolment.device.id) == nil {
+                    try replica.admit(
+                        DeviceCertificate.issue(for: enrolment.device, by: identity, at: standing.addedAt))
+                    persisted.certificates = knownCertificates()
+                }
+            } else {
+                try replica.admit(DeviceCertificate.issue(for: enrolment.device, by: identity, at: clock.now))
+                persisted.certificates = knownCertificates()
+            }
         }
         for revocation in persisted.revocations { try? replica.revoke(revocation) }
         replica.restore(spent: persisted.spentEntries, closing: persisted.preferences.roomsDeleted)

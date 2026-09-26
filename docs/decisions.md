@@ -827,6 +827,54 @@ check who sent it a key; see
 
 <!-- COPY END 328f81d7 -->
 
+<!-- COPY BEGIN b617bdbc [NEEDS HUMAN REVIEW] -->
+
+### Room keys are sealed to each device, and a removed device erases itself
+
+`PROPOSED` by Claude, 2026-09-26, after Griff said removing a device needs a per-device key that can
+be revoked. The per-device key is his; the mechanics below are Claude's.
+
+Each device has its own key for receiving, derived from its device signing key and published in its
+certificate. When somebody hands a member a room key, it is still wrapped under the pair's shared
+secret, and that wrapped key is then sealed again to each of the member's devices that is not
+removed. Opening it needs both the member's identity and that device's key, so a removed device
+cannot open anything handed over after its removal, even though it still has the identity key from
+iCloud Keychain. The member's own devices pass room keys to each other the same way. If any of a
+member's devices has no receiving key yet (a build from before this), keys go to the member as
+before, so one old device keeps the old behavior for everybody.
+
+A removed device learns about it from its sibling's state record, erases its room keys, its own
+device key, its messages and its local state, and shows a screen that says it was removed. It stays
+removed across relaunches, and the recovery key brings it back as a new device. After a restore
+from the recovery key, the app offers to remove all or some of the member's other devices.
+
+The cost and the limits: a removed device that never hears about it can still collect a delivery
+first and keep it from the member's real device (tested, recorded as a known issue). Somebody with
+the identity key and a modified app can still act as the member. Tested in the package and on real
+CloudKit on one account; not yet on two real devices.
+
+<!-- COPY END b617bdbc -->
+
+<!-- COPY BEGIN 2a36739f [NEEDS HUMAN REVIEW] -->
+
+### Search is a separate button beside the tab bar
+
+**RULED 2026-09-26 by Griff:** he wants the search bubble separate from the tab bar, "because that
+looks nice".
+
+On iOS 27 a search tab draws inside the bar with the other tabs unless selecting it activates the
+search field. The app sets `.tabViewSearchActivation(.searchTabSelection)`, which is Apple's
+"button appearance" for a search tab: it sits apart from the other tabs, tapping it puts the cursor
+in the field with the keyboard up, and leaving search goes back to the tab you were on. Checked by
+rendering the app shell on an iOS 27 simulator through Xcode. `TabRole.prominent`, new in iOS 27,
+does not do this: it moves the separate button to whichever tab has that role and puts search back
+in the bar.
+
+The cost, from Apple's search guidance: there is no search page to browse before typing. What the
+search screen shows before a query appears under the keyboard.
+
+<!-- COPY END 2a36739f -->
+
 <!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
 ## Cryptography

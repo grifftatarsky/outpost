@@ -15,6 +15,11 @@ extension AppSession {
                 return
             }
             let identity = try await store.loadIdentity()!
+            if try await store.wasRemoved() {
+                state = .removed
+                Diagnostics.identity.notice("load: this device was removed; waiting for a recovery key")
+                return
+            }
 
             let existingDevice = try await store.loadDeviceKeys()
             let device = existingDevice ?? DeviceKeys.generate()
@@ -159,7 +164,7 @@ extension AppSession {
         replica = Replica()
         replica.introduce(enrolled.identity.publicKeys)
         let founding = try DeviceCertificate.issue(
-            for: enrolled.device.publicKey, by: enrolled.identity, at: clock.now)
+            for: enrolled.device, by: enrolled.identity, at: clock.now)
         try replica.admit(founding)
         persisted.certificates = knownCertificates()
 
@@ -176,15 +181,18 @@ extension AppSession {
     ) async throws {
         let store = IdentityStore(keychain: storage.keychain)
 
-        if try await store.loadIdentity() != nil {
-            throw RestoreFailure.thisDeviceAlreadyHasAMember
-        }
-
         let identity: Identity
         do {
             identity = try RecoveryKey.identity(from: text)
         } catch let failure as RecoveryKey.Failure {
             throw RestoreFailure.keyRefused(failure)
+        }
+
+        if let existing = try await store.loadIdentity() {
+            guard try await store.wasRemoved(), existing.id == identity.id else {
+                throw RestoreFailure.thisDeviceAlreadyHasAMember
+            }
+            try await store.clearRemoved()
         }
 
         try await store.save(identity)
@@ -194,8 +202,7 @@ extension AppSession {
         replica = Replica()
         replica.introduce(enrolled.identity.publicKeys)
         try replica.admit(
-            DeviceCertificate.issue(
-                for: enrolled.device.publicKey, by: enrolled.identity, at: clock.now))
+            DeviceCertificate.issue(for: enrolled.device, by: enrolled.identity, at: clock.now))
         persisted.certificates = knownCertificates()
 
         Diagnostics.sync.notice(

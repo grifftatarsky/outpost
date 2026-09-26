@@ -1,0 +1,36 @@
+import SwiftUI
+
+public struct RemovedDeviceView: View {
+    @Environment(\.palette) private var palette
+
+    private let onRestore: () -> Void
+
+    public init(onRestore: @escaping () -> Void) {
+        self.onRestore = onRestore
+    }
+
+    public var body: some View {
+        ContentUnavailableView {
+            // COPY BEGIN ca91d2d2 [NEEDS HUMAN REVIEW]
+            Label {
+                Text("This device was removed", bundle: .module)
+            } icon: {
+                Image(systemName: "iphone.slash")
+            }
+        } description: {
+            Text(
+                "Another of your devices removed this one. What it held has been erased, and it no longer receives your messages. To use it again, restore it with your recovery key.",
+                bundle: .module)
+        } actions: {
+            Button(action: onRestore) {
+                Text("Use my recovery key", bundle: .module)
+                    .font(CarpenterFont.button)
+                    .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(palette.accentFill)
+            // COPY END ca91d2d2
+        }
+        .background(palette.background)
+    }
+}

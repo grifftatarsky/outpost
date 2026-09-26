@@ -161,6 +161,13 @@ back-dating visible rather than preventing it, and that rotating the room key af
 have written. This is the classic distributed-clock problem and it is not solved here; it is
 bounded.
 
+**Each device also has a key for receiving** (since 2026-09-26). `DeviceKeys.agreementKey` is an
+X25519 key derived from the device's signing seed with HKDF, so it lives only where the signing key
+does. Its public half is in the certificate as `agreementKey`, appended to the signed fields only
+when present, so every older certificate signs exactly the bytes it always did
+(`PerDeviceKeysTests` pins it). A device's certificate from before this is re-issued with the same
+`issuedAt`, and `DeviceRegistry` accepts the replacement only when the date matches.
+
 ---
 
 <!-- COPY END aed4d113 -->
@@ -294,6 +301,13 @@ wrapped: try peer.wrap(secret.material, context: Self.context(room: room, epoch:
 
 `adopt` refuses a grant for the wrong room before opening it. The filter on `links` is the access
 boundary in code form — whatever is left out of that array is history the recipient cannot reach.
+
+When every device of the recipient that is not removed has a receiving key, the pairwise-wrapped
+secret is sealed again to each of them (`DeviceSeal`: a fresh X25519 key, HKDF-SHA256, ChaChaPoly,
+with the room, epoch and device bound in) and the plain pairwise copy is left empty. Opening needs
+the pairwise secret and the device key, so a removed device, which still has the identity, gets
+nothing. A device that finds a grant sealed only for its siblings passes it on to them
+(`ForwardedGrant`).
 
 **Known weakness, named.** A grant's `links` array is the *only* thing standing between a reader and
 the whole room. It is a list somebody has to get right, in a filter, in one place. There is no
@@ -615,6 +629,11 @@ HKDF<SHA256>.deriveKey(
 with `(member, device)` as the AEAD's associated data. Only the holder of both seeds can derive it,
 which is exactly right — a device restored from the recovery key can reopen its own feed, and
 nothing else can.
+
+Mail and catch-ups, which carry room keys, are sealed a second time around that: a random content
+key, sealed to each of the member's devices that is not removed with `DeviceSeal`. The small state
+record, which carries certificates, revocations and settings, is sealed under the identity only, so
+a new device can be read before anybody knows its receiving key.
 
 **Named because a reviewer will ask:** this uses an Ed25519 *seed* as HKDF input keying material, and
 key separation orthodoxy says do not use a signing key for anything but signing. It is safe here —

@@ -252,6 +252,15 @@ Read these before touching sync. Every one cost real time.
   refused, an Outpost's key is taken only from its owner, and a key never replaces one already held
   (`WhoCanSendYouAKeyTests`); what a device that cannot read the room yet should trust is an open
   question.
+- **Anything addressed to a person reaches every device that holds their identity key.** The identity
+  key is in iCloud Keychain, so that includes a device the member removed. Room keys are sealed to
+  each device that is not removed (`DeviceSeal`), and a removed device erases itself when it hears.
+  Anything new that goes to a member has to be sealed the same way, or removing a device stops
+  meaning anything (`PerDeviceKeysTests`, `WhatALossRotationCutsOffTests`).
+- **A member's devices share one inbox.** A delivery is acknowledged by whichever of the member's
+  devices collects it first, so the others see it only because that device passes it on in its
+  mail to them. Anything a device receives for the member has to go through that mail, or the
+  member's other devices never get it (`OneMemberTwoDevicesTests`, measured 2026-09-26).
 - **A dictionary keyed by recipient holds one value.** `SyncEngine.pack` addressed epoch grants into
   `[RecipientTag: Data]` with a plain subscript, so a round owing one person keys to two rooms
   delivered the last and dropped the rest — and the sender then marked every owed grant issued,

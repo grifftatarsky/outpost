@@ -11,6 +11,16 @@ public struct SiblingCursor: Hashable, Sendable, Codable {
     }
 }
 
+public struct ForwardedGrant: Hashable, Sendable, Codable {
+    public let from: ParticipantID
+    public let grant: EpochGrant
+
+    public init(from: ParticipantID, grant: EpochGrant) {
+        self.from = from
+        self.grant = grant
+    }
+}
+
 public struct SiblingRecord: Hashable, Sendable {
     public enum Kind: Hashable, Sendable {
         case state
@@ -86,6 +96,8 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         public let number: Int
         public let entries: [Entry]
         public let epochs: [HeldEpoch]
+        public let forwarded: [ForwardedGrant]
+        public let people: [IdentityPublicKeys]
     }
 
     public struct Plan: Sendable {
@@ -94,9 +106,11 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         public fileprivate(set) var mailsToDelete: [Int] = []
         public fileprivate(set) var catchUpsToDelete: [DeviceID] = []
         public fileprivate(set) var through: Int
+        public fileprivate(set) var recipients: [DeviceID] = []
         fileprivate var skipped: Int?
-        fileprivate var sharedThrough: UInt64
+        fileprivate var sharedClock: [FeedKey: UInt64]
         fileprivate var sharedEpochs: Set<EpochMark>
+        fileprivate var sharedPeople: Set<ParticipantID> = []
         fileprivate let now: Date
 
         public var deletions: [SiblingRecord.Kind] {
@@ -120,7 +134,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
     }
 
     private(set) var lastMail = 0
-    private(set) var sharedThrough: UInt64 = 0
+    private(set) var sharedClock: [FeedKey: UInt64] = [:]
     private(set) var sharedEpochs: Set<EpochMark> = []
     private(set) var outstanding: [Int: Date] = [:]
     private(set) var deletedThrough = 0
@@ -129,18 +143,20 @@ public struct SiblingMail: Hashable, Sendable, Codable {
     private(set) var catchUps: [DeviceID: Sent] = [:]
     private(set) var siblings: [DeviceID: Seen] = [:]
     public private(set) var lastState: Data?
+    private(set) var forwards: [ForwardedGrant] = []
+    private(set) var sharedPeople: Set<ParticipantID> = []
 
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case lastMail, sharedThrough, sharedEpochs, outstanding, deletedThrough, collected, takenAbove
-        case catchUps, siblings, lastState
+        case lastMail, sharedClock, sharedEpochs, outstanding, deletedThrough, collected, takenAbove
+        case catchUps, siblings, lastState, forwards, sharedPeople
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         lastMail = try container.decodeIfPresent(Int.self, forKey: .lastMail) ?? 0
-        sharedThrough = try container.decodeIfPresent(UInt64.self, forKey: .sharedThrough) ?? 0
+        sharedClock = try container.decodeIfPresent([FeedKey: UInt64].self, forKey: .sharedClock) ?? [:]
         sharedEpochs = try container.decodeIfPresent(Set<EpochMark>.self, forKey: .sharedEpochs) ?? []
         outstanding = try container.decodeIfPresent([Int: Date].self, forKey: .outstanding) ?? [:]
         deletedThrough = try container.decodeIfPresent(Int.self, forKey: .deletedThrough) ?? 0
@@ -149,6 +165,17 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         catchUps = try container.decodeIfPresent([DeviceID: Sent].self, forKey: .catchUps) ?? [:]
         siblings = try container.decodeIfPresent([DeviceID: Seen].self, forKey: .siblings) ?? [:]
         lastState = try container.decodeIfPresent(Data.self, forKey: .lastState)
+        forwards = try container.decodeIfPresent([ForwardedGrant].self, forKey: .forwards) ?? []
+        sharedPeople = try container.decodeIfPresent(Set<ParticipantID>.self, forKey: .sharedPeople) ?? []
+    }
+
+    public mutating func shared(_ people: [IdentityPublicKeys]) {
+        sharedPeople.formUnion(people.map(\.participantID))
+    }
+
+    public mutating func forward(_ grant: ForwardedGrant) {
+        guard !forwards.contains(grant) else { return }
+        forwards.append(grant)
     }
 
     // MARK: What this device has taken
@@ -191,26 +218,42 @@ public struct SiblingMail: Hashable, Sendable, Codable {
 
     // MARK: What this device writes and deletes
 
+    public mutating func shared(_ entries: [Entry]) {
+        for entry in entries {
+            let feed = FeedKey(author: entry.author, device: entry.device)
+            sharedClock[feed] = Swift.max(sharedClock[feed] ?? 0, entry.seq)
+        }
+    }
+
     public func plan(
-        own: [Entry], held: [HeldEpoch], me: DeviceID, revoked: Set<DeviceID>, now: Date
+        entries all: [Entry], held: [HeldEpoch], people known: [IdentityPublicKeys] = [], me: DeviceID,
+        revoked: Set<DeviceID>, now: Date
     ) -> Plan {
         let active = siblings.filter { id, seen in
             id != me && !revoked.contains(id) && now.timeIntervalSince(seen.at) < Self.keptFor
         }
         var plan = Plan(
-            through: lastMail, sharedThrough: sharedThrough, sharedEpochs: sharedEpochs, now: now)
+            through: lastMail, sharedClock: sharedClock, sharedEpochs: sharedEpochs, now: now)
+        plan.recipients = active.keys.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
 
-        let entries = own.filter { $0.device == me && $0.seq > sharedThrough }
+        let entries = all.filter { $0.seq > sharedClock[FeedKey(author: $0.author, device: $0.device)] ?? 0 }
         let epochs = held.filter { !sharedEpochs.contains(EpochMark(room: $0.room, epoch: $0.epoch)) }
-        plan.sharedThrough = Swift.max(sharedThrough, entries.map(\.seq).max() ?? 0)
+        for entry in entries {
+            let feed = FeedKey(author: entry.author, device: entry.device)
+            plan.sharedClock[feed] = Swift.max(plan.sharedClock[feed] ?? 0, entry.seq)
+        }
         plan.sharedEpochs.formUnion(epochs.map { EpochMark(room: $0.room, epoch: $0.epoch) })
 
-        if !entries.isEmpty || !epochs.isEmpty {
+        let people = known.filter { !sharedPeople.contains($0.participantID) }
+        plan.sharedPeople = Set(people.map(\.participantID))
+
+        if !entries.isEmpty || !epochs.isEmpty || !people.isEmpty || (!forwards.isEmpty && !active.isEmpty) {
             plan.through = lastMail + 1
             if active.isEmpty {
                 plan.skipped = plan.through
             } else {
-                plan.mail = Mail(number: plan.through, entries: entries, epochs: epochs)
+                plan.mail = Mail(
+                    number: plan.through, entries: entries, epochs: epochs, forwarded: forwards, people: people)
             }
         }
 
@@ -238,10 +281,14 @@ public struct SiblingMail: Hashable, Sendable, Codable {
 
     public mutating func commit(_ plan: Plan, stateWritten digest: Data?) {
         lastMail = Swift.max(lastMail, plan.through)
-        if let mail = plan.mail { outstanding[mail.number] = plan.now }
+        if let mail = plan.mail {
+            outstanding[mail.number] = plan.now
+            forwards.removeAll { mail.forwarded.contains($0) }
+        }
         if let skipped = plan.skipped { deletedThrough = Swift.max(deletedThrough, skipped) }
-        sharedThrough = Swift.max(sharedThrough, plan.sharedThrough)
+        for (feed, seq) in plan.sharedClock { sharedClock[feed] = Swift.max(sharedClock[feed] ?? 0, seq) }
         sharedEpochs.formUnion(plan.sharedEpochs)
+        sharedPeople.formUnion(plan.sharedPeople)
         for number in plan.mailsToDelete {
             outstanding[number] = nil
             deletedThrough = Swift.max(deletedThrough, number)

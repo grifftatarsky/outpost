@@ -16,6 +16,7 @@ public struct Enrolment: Sendable {
 public actor IdentityStore {
     public static let identityKey = KeychainKey("identity.keys")
     public static let deviceKey = KeychainKey("device.signing")
+    public static let removedKey = KeychainKey("device.removed")
 
     private static let seedLength = 32
 
@@ -75,5 +76,17 @@ public actor IdentityStore {
 
     public func forgetDevice() async throws {
         try await keychain.remove(Self.deviceKey)
+    }
+
+    public func markRemoved() async throws {
+        try await keychain.set(Data([1]), for: Self.removedKey, scope: .device)
+    }
+
+    public func wasRemoved() async throws -> Bool {
+        try await keychain.data(for: Self.removedKey) != nil
+    }
+
+    public func clearRemoved() async throws {
+        try await keychain.remove(Self.removedKey)
     }
 }

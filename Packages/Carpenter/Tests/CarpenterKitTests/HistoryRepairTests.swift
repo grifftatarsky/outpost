@@ -745,7 +745,7 @@ struct FinalRefusalThroughTheSessionTests {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox()
         let keychain = InMemoryKeychainStore()
-        let relay = InMemoryEntrySync.Relay()
+        let relay = InMemoryEntrySync.Relay(announces: false)
 
         func session(sharing keychain: any KeychainStore = InMemoryKeychainStore()) -> AppSession {
             AppSession(storage: TestSession.storage(keychain: keychain), clock: clock)
@@ -761,7 +761,12 @@ struct FinalRefusalThroughTheSessionTests {
         let pad = session(sharing: keychain)
         pad.syncDevices(through: InMemoryEntrySync(relay: relay))
         await pad.load()
-        await settle(pad) { pad.rooms.contains { $0.id == room } }
+        let deadline = Date().addingTimeInterval(5)
+        while !pad.rooms.contains(where: { $0.id == room }), Date() < deadline {
+            await phone.refreshDeviceSync()
+            await pad.refreshDeviceSync()
+            try? await Task.sleep(for: .milliseconds(25))
+        }
         #expect(pad.rooms.contains { $0.id == room }, "precondition: the pad has the room")
 
         let bob = session()
@@ -779,6 +784,13 @@ struct FinalRefusalThroughTheSessionTests {
                 invite.attestation, from: try #require(phone.enrolment?.identity.publicKeys))
         }
 
+        for _ in 0..<4 {
+            for one in [phone, pad, bob, carol] { try await one.sync(through: mailbox) }
+            for one in [phone, pad] {
+                await one.refreshDeviceSync()
+                await one.settleDeviceSync()
+            }
+        }
         try await pad.send("from the pad, while allowed", to: room)
         for _ in 0..<8 {
             for one in [phone, pad, bob, carol] { try await one.sync(through: mailbox) }

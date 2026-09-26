@@ -35,10 +35,15 @@ extension AppSession {
         guard writer != me else { return }
         if case .catchUp(let target) = record.name.kind, target != me { return }
 
-        guard
-            let feed = try? await record.sealed.openInBackground(
-                with: enrolment.identity, from: writer, as: record.name.kind)
-        else {
+        let feed: SiblingFeed
+        do {
+            feed = try await record.sealed.openInBackground(
+                with: enrolment.identity, from: writer, as: record.name.kind, reading: enrolment.device)
+        } catch CryptoError.notSealedForThisDevice {
+            Diagnostics.sync.notice(
+                "device sync: a record from another of your devices was not sealed for this one")
+            return
+        } catch {
             integrity.unreadableSiblingFeeds += 1
             Diagnostics.sync.error(
                 "device sync: a sibling record would not open (\(Diagnostics.fingerprint(writer.rawValue), privacy: .public))")
@@ -56,6 +61,12 @@ extension AppSession {
             persisted.siblingMail.took(catchUpThrough: feed.through ?? 0, from: writer)
         }
         persisted.siblingMail.shared(feed.epochs)
+        persisted.siblingMail.shared(feed.entries)
+        persisted.siblingMail.shared(feed.people)
+        for forwarded in feed.forwarded {
+            guard let secret = pairwiseSecret(with: forwarded.from) else { continue }
+            try? await adopt(forwarded.grant, from: Peer(secret: secret, them: forwarded.from, me: enrolment.identity.id))
+        }
         await persistOrReport("what this device has collected from your other devices") {
             try await saveState()
         }
@@ -82,6 +93,10 @@ extension AppSession {
         }
 
         replica.introduce(enrolment.identity.publicKeys)
+        for keys in feed.people where keys.participantID != enrolment.identity.id {
+            replica.introduce(keys)
+            if !persisted.knownKeys.contains(keys) { persisted.knownKeys.append(keys) }
+        }
         let certificatesBefore = Set(knownCertificates())
         for certificate in feed.certificates {
             do {
@@ -91,6 +106,12 @@ extension AppSession {
                 Diagnostics.sync.error(
                     "device sync: refused a certificate for one of your own devices — entries it signed cannot verify here (\(String(describing: error), privacy: .public))")
             }
+        }
+
+        takeRevocations(feed.revocations)
+        if thisDeviceWasRemoved {
+            await eraseAfterRemoval()
+            return false
         }
 
         let deletedAfterMerge = persisted.preferences.merged(with: feed.preferences).roomsDeleted
@@ -177,6 +198,27 @@ extension AppSession {
         }
     }
 
+    private func siblingRecipients(for kind: SiblingRecord.Kind, among active: [DeviceID]) -> [DeviceRecipient] {
+        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return [] }
+        let devices: [DeviceID]
+        switch kind {
+        case .state: return []
+        case .mail: devices = active
+        case .catchUp(let target): devices = [target]
+        }
+        let recipients = devices.compactMap { device in
+            registry.agreementKey(for: device).map { DeviceRecipient(device: device, agreementKey: $0) }
+        }
+        return recipients.count == devices.count ? recipients : []
+    }
+
+    func takeRevocations(_ revocations: [DeviceRevocation]) {
+        for revocation in revocations where !persisted.revocations.contains(revocation) {
+            guard (try? replica.revoke(revocation)) != nil else { continue }
+            persisted.revocations.append(revocation)
+        }
+    }
+
     private func heldEpochs() -> [HeldEpoch] {
         chains.flatMap { room, chain in
             chain.knownEpochs.compactMap { epoch in
@@ -207,30 +249,36 @@ extension AppSession {
             let now = clock.now
             let own = replica.allEntries.filter { $0.device == me }
             let held = heldEpochs()
+            let people = replica.knownParticipants.compactMap { replica.registry(for: $0)?.identity }
+                .sorted { $0.participantID.rawValue.lexicographicallyPrecedes($1.participantID.rawValue) }
             let plan = persisted.siblingMail.plan(
-                own: own, held: held, me: me, revoked: Set(persisted.revocations.map(\.device)), now: now)
+                entries: replica.allEntries, held: held, people: people, me: me,
+                revoked: Set(persisted.revocations.map(\.device)), now: now)
 
             let state = SiblingFeed(
                 entries: [], certificates: knownCertificates(), member: enrolment.identity.id,
-                preferences: persisted.preferences, collected: persisted.siblingMail.cursors)
+                preferences: persisted.preferences, collected: persisted.siblingMail.cursors,
+                revocations: persisted.revocations)
             let digest = try? SiblingMail.digest(of: state, on: now)
 
             var drafts: [(kind: SiblingRecord.Kind, feed: SiblingFeed)] = []
             if digest == nil || digest != persisted.siblingMail.lastState {
                 drafts.append((.state, SiblingFeed(
                     entries: [], certificates: state.certificates, member: state.member, writtenAt: now,
-                    preferences: state.preferences, collected: state.collected)))
+                    preferences: state.preferences, collected: state.collected,
+                    revocations: state.revocations)))
             }
             if let mail = plan.mail {
                 drafts.append((.mail(mail.number), SiblingFeed(
                     entries: mail.entries, certificates: [], epochs: mail.epochs,
-                    member: enrolment.identity.id, writtenAt: now)))
+                    member: enrolment.identity.id, writtenAt: now, forwarded: mail.forwarded,
+                    people: mail.people)))
             }
             if !plan.catchUpsFor.isEmpty {
                 let everything = SiblingFeed(
                     entries: own, certificates: state.certificates, epochs: held,
                     member: enrolment.identity.id, writtenAt: now, preferences: state.preferences,
-                    through: plan.through)
+                    through: plan.through, people: people)
                 for target in plan.catchUpsFor { drafts.append((.catchUp(for: target), everything)) }
             }
             let deleting = plan.deletions.map { SiblingRecord.Name(writer: me, kind: $0) }
@@ -242,7 +290,8 @@ extension AppSession {
                     records.append(SiblingRecord(
                         name: SiblingRecord.Name(writer: me, kind: draft.kind),
                         sealed: try await SealedSiblingFeed.sealInBackground(
-                            draft.feed, for: enrolment.identity, on: me, as: draft.kind)))
+                            draft.feed, for: enrolment.identity, on: me, as: draft.kind,
+                            to: siblingRecipients(for: draft.kind, among: plan.recipients))))
                 }
                 if !records.isEmpty || !deleting.isEmpty {
                     try await deviceSync.send(records, deleting: deleting)

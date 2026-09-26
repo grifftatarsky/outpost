@@ -102,12 +102,22 @@ extension AppSession {
                     (
                         to: Peer(secret: pairwise, them: target, me: enrolment.identity.id),
                         grant: try EpochGrant.issue(
-                            secret, at: epoch, in: room, link: link, links: links, to: pairwise),
+                            secret, at: epoch, in: room, link: link, links: links, to: pairwise,
+                            devices: deviceRecipients(of: target)),
                         receipt: receipt
                     ))
             }
         }
         return owed
+    }
+
+    func deviceRecipients(of participant: ParticipantID) -> [DeviceRecipient] {
+        guard let registry = replica.registry(for: participant) else { return [] }
+        let devices = registry.activeDevices.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
+        let recipients = devices.compactMap { device in
+            registry.agreementKey(for: device).map { DeviceRecipient(device: device, agreementKey: $0) }
+        }
+        return recipients.count == devices.count ? recipients : []
     }
 
     private static func grantReceipt(
@@ -141,7 +151,13 @@ extension AppSession {
         let held = chains[grant.room]
         var chain = held ?? EpochChain(room: grant.room)
         do {
-            try chain.adopt(grant, using: peer.secret)
+            try chain.adopt(grant, using: peer.secret, as: enrolment?.device)
+        } catch CryptoError.notSealedForThisDevice {
+            persisted.siblingMail.forward(ForwardedGrant(from: peer.them, grant: grant))
+            Diagnostics.sync.notice(
+                "adopt: a room key was sealed for this member's other devices, not this one; passing it on")
+            sendOwnEntries()
+            return
         } catch {
             Diagnostics.sync.error(
                 "adopt: could not open the epoch key for a room (epoch \(grant.epoch.rawValue, privacy: .public)) — \(String(describing: error), privacy: .public)")
