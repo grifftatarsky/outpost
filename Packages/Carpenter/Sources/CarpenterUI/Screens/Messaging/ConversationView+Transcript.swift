@@ -72,6 +72,7 @@ extension ConversationView {
     @ViewBuilder
     private var hiddenNotice: some View {
         if let onRevealHidden {
+            // COPY BEGIN d6ec7219 [NEEDS HUMAN REVIEW]
             Button {
                 Task { await onRevealHidden() }
             } label: {
@@ -85,6 +86,7 @@ extension ConversationView {
                 Text("Show \(hiddenCount) messages you hid in this conversation", bundle: .module))
         } else {
             stamp(Text("\(hiddenCount) hidden by you. Nobody else is affected.", bundle: .module))
+            // COPY END d6ec7219
         }
     }
 
@@ -100,6 +102,7 @@ extension ConversationView {
         stamp(Text(text))
     }
 
+    // COPY BEGIN 9e0c1aab [NEEDS HUMAN REVIEW]
     private func dayHeading(for date: Date) -> String {
         let formatter = RelativeTimestampFormatter()
         let day = formatter.roomsList(for: date, now: clock.now)
@@ -108,7 +111,9 @@ extension ConversationView {
             ? String(localized: "Today \(time)", bundle: .module, comment: "Transcript day heading")
             : "\(day) \(time)"
     }
+    // COPY END 9e0c1aab
 
+    // COPY BEGIN ef0e3f33 [NEEDS HUMAN REVIEW]
     func removedNotice(by remover: Member) -> some View {
         ComposerNotice(
             symbol: "person.crop.circle.badge.xmark",
@@ -117,7 +122,9 @@ extension ConversationView {
                 "\(remover.displayName) removed you. Everything already here is still yours to read. You will not receive anything new.",
                 bundle: .module))
     }
+    // COPY END ef0e3f33
 
+    // COPY BEGIN afb31611 [NEEDS HUMAN REVIEW]
     var leftNotice: some View {
         ComposerNotice(
             symbol: "figure.walk.departure",
@@ -126,4 +133,5 @@ extension ConversationView {
                 "Everything already here is still yours to read. You will not receive anything new, and the room has been told you left.",
                 bundle: .module))
     }
+    // COPY END afb31611
 }

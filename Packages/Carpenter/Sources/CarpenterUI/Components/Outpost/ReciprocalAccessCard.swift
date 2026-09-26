@@ -11,6 +11,7 @@ struct ReciprocalAccessCard: View {
         VStack(alignment: .leading, spacing: 16) {
             header
             Divider().overlay(palette.separator)
+            // COPY BEGIN 098dd2a9 [NEEDS HUMAN REVIEW]
             VStack(alignment: .leading, spacing: 18) {
                 direction(
                     title: Text("You can read", bundle: .module), windows: access.youCanRead
@@ -23,6 +24,7 @@ struct ReciprocalAccessCard: View {
                     yourControl
                 }
             }
+            // COPY END 098dd2a9
         }
         .padding(16)
         .background(palette.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -55,6 +57,7 @@ struct ReciprocalAccessCard: View {
             title
                 .sectionHeading()
             HStack(alignment: .firstTextBaseline, spacing: 12) {
+                // COPY BEGIN aa656dde [NEEDS HUMAN REVIEW]
                 VStack(alignment: .leading, spacing: 2) {
                     if windows.isEmpty {
                         Text("Nothing", bundle: .module)
@@ -67,12 +70,14 @@ struct ReciprocalAccessCard: View {
                 .font(CarpenterFont.rowDetail)
                 .foregroundStyle(palette.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
+                // COPY END aa656dde
                 Spacer(minLength: 0)
                 control()
             }
         }
     }
 
+    // COPY BEGIN 7c7fa483 [NEEDS HUMAN REVIEW]
     private var theirDecision: some View {
         Text("Their decision", bundle: .module)
             .font(CarpenterFont.rowDetail)
@@ -82,7 +87,9 @@ struct ReciprocalAccessCard: View {
                     "Their decision. Only they can change what you can read.",
                     bundle: .module))
     }
+    // COPY END 7c7fa483
 
+    // COPY BEGIN 0270d618 [NEEDS HUMAN REVIEW]
     @ViewBuilder private var yourControl: some View {
         if let onChange {
             Button(action: onChange) { Text("Change", bundle: .module) }
@@ -91,6 +98,7 @@ struct ReciprocalAccessCard: View {
                 .font(CarpenterFont.rowDetail)
         }
     }
+    // COPY END 0270d618
 }
 
 #if DEBUG

@@ -118,6 +118,7 @@ public struct RedeemInviteView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(palette.background)
+            // COPY BEGIN 5490f783 [NEEDS HUMAN REVIEW]
             .navigationTitle(isRefused ? Text("Stop", bundle: .module) : Text("Join a room", bundle: .module))
             .toolbar {
                 if !isRefused {
@@ -136,6 +137,7 @@ public struct RedeemInviteView: View {
                 rejected += 1
             }
         }
+            // COPY END 5490f783
         .haptic(.refusal, trigger: rejected)
         .haptic(trigger: settled) { _, new in
             guard new != nil else { return nil }
@@ -145,13 +147,16 @@ public struct RedeemInviteView: View {
 
     private var entry: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // COPY BEGIN f4406cdc [NEEDS HUMAN REVIEW]
             Text(
                 "Paste the invite someone sent you. Nothing is accepted until you have checked it.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)
             .foregroundStyle(palette.secondaryText)
+            // COPY END f4406cdc
 
+            // COPY BEGIN 6ad587a4 [NEEDS HUMAN REVIEW]
             TextField(
                 text: Binding(get: { flow.code }, set: { flow.paste($0) }), axis: .vertical
             ) {
@@ -164,6 +169,7 @@ public struct RedeemInviteView: View {
             .background(
                 palette.elevatedSurface,
                 in: .rect(cornerRadius: CarpenterMetrics.cardRadius, style: .continuous))
+            // COPY END 6ad587a4
 
             #if os(iOS)
                 InviteCodeButtons(
@@ -184,6 +190,7 @@ public struct RedeemInviteView: View {
                     .foregroundStyle(palette.destructive)
             }
 
+            // COPY BEGIN f9846858 [NEEDS HUMAN REVIEW]
             Button {
                 if !flow.read(using: read) {
                     flow.failed(
@@ -197,6 +204,7 @@ public struct RedeemInviteView: View {
             }
             .prominentActionButton()
             .disabled(flow.code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            // COPY END f9846858
 
             #if os(iOS)
                 InviteScanningQuestion(wantsToScan: $wantsToScan)
@@ -205,6 +213,7 @@ public struct RedeemInviteView: View {
         }
     }
 
+    // COPY BEGIN 9ad91753 [NEEDS HUMAN REVIEW]
     private func warning(_ offer: InviteOffer) -> some View {
         RefusedCheck(
             placement: .screen,
@@ -227,6 +236,7 @@ public struct RedeemInviteView: View {
             .prominentActionButton()
         }
     }
+    // COPY END 9ad91753
 
     private var isRefused: Bool {
         if case .refused = flow.step { return true }
@@ -236,6 +246,7 @@ public struct RedeemInviteView: View {
     private func review(_ offer: InviteOffer) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
+                // COPY BEGIN cd6b1f5e [NEEDS HUMAN REVIEW]
                 if let inviterName = offer.inviterName {
                     Text("\(inviterName) invited you", bundle: .module)
                         .font(CarpenterFont.rowTitle)
@@ -245,6 +256,7 @@ public struct RedeemInviteView: View {
                         .font(CarpenterFont.rowTitle)
                         .foregroundStyle(palette.primaryText)
                 }
+                // COPY END cd6b1f5e
 
                 if let roomName = offer.roomName {
                     Text(roomName)
@@ -256,12 +268,14 @@ public struct RedeemInviteView: View {
             VerificationPhrase(offer.phrase)
                 .frame(maxWidth: .infinity)
 
+            // COPY BEGIN e001c0f0 [NEEDS HUMAN REVIEW]
             Text(
                 "You have never met this room before, so there is nothing on this device to check the invite against. If the characters do not match what they read out, someone else sent this.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)
             .foregroundStyle(palette.secondaryText)
+            // COPY END e001c0f0
 
             if let problem = flow.problem {
                 Text(problem)
@@ -270,6 +284,7 @@ public struct RedeemInviteView: View {
             }
 
             AdaptiveStack(spacing: 10) {
+                // COPY BEGIN 92be2316 [NEEDS HUMAN REVIEW]
                 Button {
                     flow.refuse()
                     rejected += 1
@@ -284,6 +299,7 @@ public struct RedeemInviteView: View {
                 }
                 .foregroundStyle(palette.primaryText)
                 .disabled(accepting)
+                // COPY END 92be2316
 
                 Button {
                     accepting = true
@@ -296,18 +312,22 @@ public struct RedeemInviteView: View {
                         if flow.problem == nil { dismiss() }
                     }
                 } label: {
+                    // COPY BEGIN bc03bc04 [NEEDS HUMAN REVIEW]
                     Text("They match", bundle: .module).primaryAction()
+                    // COPY END bc03bc04
                 }
                 .prominentActionButton()
                 .disabled(accepting)
             }
 
+            // COPY BEGIN 38a05363 [NEEDS HUMAN REVIEW]
             Text(
                 "Confirming tells them the characters matched and opens the way to their outbox. The room appears once whoever is in it has let you in.",
                 bundle: .module
             )
             .font(CarpenterFont.caption)
             .foregroundStyle(palette.quaternaryText)
+            // COPY END 38a05363
         }
     }
 }

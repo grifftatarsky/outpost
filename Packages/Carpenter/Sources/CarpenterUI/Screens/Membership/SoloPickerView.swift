@@ -17,6 +17,7 @@ struct SoloPickerView: View {
         NavigationStack {
             Group {
                 if connections.isEmpty {
+                    // COPY BEGIN afed241f [NEEDS HUMAN REVIEW]
                     ContentUnavailableView {
                         Label {
                             Text("Nobody to send to yet", bundle: .module)
@@ -29,6 +30,7 @@ struct SoloPickerView: View {
                             bundle: .module)
                     }
                     .background(palette.background)
+                    // COPY END afed241f
                 } else {
                     List {
                         ForEach(sections, id: \.title) { section in
@@ -52,6 +54,7 @@ struct SoloPickerView: View {
                             .sectionIndexLabel(section.title)
                         }
                     }
+                    // COPY BEGIN ea4a9406 [NEEDS HUMAN REVIEW]
                     .searchable(text: $query, prompt: Text("Search people", bundle: .module))
                     .autocorrectionDisabled()
                     .overlay {
@@ -69,11 +72,13 @@ struct SoloPickerView: View {
                             }
                             .background(palette.background)
                         }
+                    // COPY END ea4a9406
                     }
                     .scrollContentBackground(.hidden)
                     .background(palette.background)
                 }
             }
+            // COPY BEGIN acf401c6 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("New solo", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -81,6 +86,7 @@ struct SoloPickerView: View {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
                 }
             }
+            // COPY END acf401c6
         }
     }
 }

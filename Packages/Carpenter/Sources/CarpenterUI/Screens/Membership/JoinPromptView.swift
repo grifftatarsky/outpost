@@ -30,6 +30,7 @@ public struct JoinPromptView: View {
                 .padding(.bottom, 12)
             }
 
+            // COPY BEGIN 1d5a50c3 [NEEDS HUMAN REVIEW]
             Button {
                 Task {
                     opening = true
@@ -44,6 +45,7 @@ public struct JoinPromptView: View {
             .disabled(opening)
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
+            // COPY END 1d5a50c3
         }
         .background(palette.background)
     }
@@ -55,6 +57,7 @@ public struct JoinPromptView: View {
                 .foregroundStyle(palette.primaryText)
                 .heading()
 
+            // COPY BEGIN 38611d9f [NEEDS HUMAN REVIEW]
             if greeting.isDirect {
                 Text("Started a solo with you", bundle: .module)
                     .font(CarpenterFont.footnote)
@@ -68,15 +71,19 @@ public struct JoinPromptView: View {
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
             }
+            // COPY END 38611d9f
         }
     }
 
     private var people: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // COPY BEGIN 142dc75a [NEEDS HUMAN REVIEW]
             Text("^[\(greeting.members.count) member](inflect: true)", bundle: .module)
                 .sectionHeading()
+            // COPY END 142dc75a
 
             VStack(spacing: 10) {
+                // COPY BEGIN 10b8a3c7 [NEEDS HUMAN REVIEW]
                 ForEach(greeting.members) { member in
                     PersonRow(
                         name: member.displayName,
@@ -86,6 +93,7 @@ public struct JoinPromptView: View {
                             ? Text("Has not published a name", bundle: .module) : nil)
                         .padding(.horizontal, 14)
                 }
+                // COPY END 10b8a3c7
             }
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -102,7 +110,9 @@ public struct JoinPromptView: View {
 
     private var settings: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // COPY BEGIN a44122f1 [NEEDS HUMAN REVIEW]
             Text("How people get in", bundle: .module).sectionHeading()
+            // COPY END a44122f1
 
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "lock")

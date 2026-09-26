@@ -1,5 +1,7 @@
+# COPY BEGIN 3f403a5d [NEEDS HUMAN REVIEW]
 title: Outpost
 description: Group messaging for iPhone with no Outpost server. How it works, what is built, and what has been proved.
+# COPY END 3f403a5d
 
 theme: just-the-docs
 
@@ -15,17 +17,22 @@ search:
 
 # NAV / CHROME #########################################################
 heading_anchors: true
+# COPY BEGIN 4325d3a9 [NEEDS HUMAN REVIEW]
 aux_links:
   "Source on GitHub": "https://github.com/grifftatarsky/outpost"
   "outpostmessaging.com": "https://outpostmessaging.com"
+# COPY END 4325d3a9
 aux_links_new_tab: true
 
+# COPY BEGIN 6ca5e421 [NEEDS HUMAN REVIEW]
 footer_content: "Licensed under the Mozilla Public License 2.0." 
+# COPY END 6ca5e421
 
 # CALLOUTS #############################################################
 # `unbuilt` is red on purpose. The copy guide's first rule is that present
 # tense means it is in the build; this is the visual form of that rule, so a
 # page cannot quietly describe something that does not exist.
+# COPY BEGIN 9dcc1202 [NEEDS HUMAN REVIEW]
 callouts:
   important:
     title: Important
@@ -38,6 +45,7 @@ callouts:
     color: purple
   inbox:
     color: blue
+# COPY END 9dcc1202
 
 # DESIGN ###############################################################
 # Every screen in this documentation points at a board rather than describing

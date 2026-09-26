@@ -22,7 +22,9 @@ struct FocusMessageSheet: View {
                     HStack(spacing: 12) {
                         IconTile("moon.fill", fill: palette.tileFill(.feature))
                         TextField(text: $draft) {
+                            // COPY BEGIN 4a92d43a [NEEDS HUMAN REVIEW]
                             Text("Do Not Disturb", bundle: .module)
+                            // COPY END 4a92d43a
                         }
                         .textFieldStyle(.plain)
                         .foregroundStyle(palette.primaryText)
@@ -39,17 +41,20 @@ struct FocusMessageSheet: View {
                         }
                     }
                 } header: {
+                    // COPY BEGIN 46368c3d [NEEDS HUMAN REVIEW]
                     Text("What it says", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
                         "\(draft.count) of \(FocusStatusBody.messageLimit). The people you write to see this while you have a Focus on, where you share that. Empty is the plain Do Not Disturb.",
                         bundle: .module)
+                    // COPY END 46368c3d
                 }
                 .groupedRowSurface()
             }
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
             .background(palette.background)
+            // COPY BEGIN a3982255 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Do Not Disturb", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .task { writing = true }
@@ -66,6 +71,7 @@ struct FocusMessageSheet: View {
                     }
                 }
             }
+            // COPY END a3982255
         }
     }
 

@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 8a92586a [NEEDS HUMAN REVIEW]
 title: Desktop roadmap
 layout: default
 nav_order: 6
@@ -12,6 +13,10 @@ The Mac and iPad, as their own product, after the iPhone is on TestFlight.
 
 1. TOC
 {:toc}
+
+<!-- COPY END 8a92586a -->
+
+<!-- COPY BEGIN 221e9d56 [NEEDS HUMAN REVIEW] -->
 
 ## Why this is a separate page
 
@@ -33,6 +38,10 @@ The long form — the stories, the acceptance criteria, what was observed and wh
 [the desktop epic](epics/desktop.md). This page is only the status of record, and it uses the same
 statuses as [the roadmap](roadmap.md#how-to-read-this).
 
+<!-- COPY END 221e9d56 -->
+
+<!-- COPY BEGIN ee7237c0 [NEEDS HUMAN REVIEW] -->
+
 ## What stands today
 
 The Mac **runs**: a window, three columns, a folding sidebar, and a keychain that behaves like iOS's
@@ -42,6 +51,10 @@ not offered, described or supported, and no member has ever been shown it.
 
 The iPad has never been drawn.
 
+<!-- COPY END ee7237c0 -->
+
+<!-- COPY BEGIN 85ffc42c [NEEDS HUMAN REVIEW] -->
+
 ## Tickets
 
 | Ticket | Status | Evidence |
@@ -50,6 +63,10 @@ The iPad has never been drawn.
 | The app icon on macOS | Not started | Dark fringing at Dock sizes. |
 | The desktop wall | Not started | Unblocked 2026-09-07 when per-person Outpost access landed. |
 | Draw the platforms the set claims | Not started | Design work: two platforms, neither drawn. |
+
+<!-- COPY END 85ffc42c -->
+
+<!-- COPY BEGIN c2b1725b [NEEDS HUMAN REVIEW] -->
 
 ## What it would cost to offer them
 
@@ -67,3 +84,5 @@ the bill. The rest is what a second platform always is:
   never been seen working on real hardware.
 
 None of that is hard. All of it is a second product's worth of care, which is why it waits.
+
+<!-- COPY END c2b1725b -->

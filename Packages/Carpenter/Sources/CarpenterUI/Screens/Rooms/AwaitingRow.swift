@@ -7,6 +7,7 @@ struct AwaitingRow: View {
     let admission: AwaitingAdmission
     let diameter: CGFloat
 
+    // COPY BEGIN 8bf7377f [NEEDS HUMAN REVIEW]
     var body: some View {
         PersonRow(
             name: admission.invitedBy.displayName,
@@ -33,6 +34,7 @@ struct AwaitingRow: View {
                     "\(admission.invitedBy.displayName) invited you. Waiting to be let in. The characters to check are \(spoken).",
                     bundle: .module))
     }
+    // COPY END 8bf7377f
 
     private var spoken: String {
         (admission.phrase ?? "").map(String.init).joined(separator: ", ")

@@ -40,6 +40,7 @@ public struct RoomTagsSheet: View {
                 }
 
                 Section {
+                    // COPY BEGIN 3c5db788 [NEEDS HUMAN REVIEW]
                     HStack {
                         TextField(text: $newTagName) {
                             Text("New tag", bundle: .module)
@@ -53,8 +54,10 @@ public struct RoomTagsSheet: View {
                         .disabled(trimmedNewTag.isEmpty)
                         .accessibilityLabel(Text("Add this tag", bundle: .module))
                     }
+                    // COPY END 3c5db788
                 }
 
+                // COPY BEGIN 06dc732a [NEEDS HUMAN REVIEW]
                 Section {
                 } footer: {
                     Text(
@@ -62,14 +65,17 @@ public struct RoomTagsSheet: View {
                         bundle: .module
                     )
                 }
+                // COPY END 06dc732a
             }
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(room.name)
+            // COPY BEGIN 9df5d8f0 [NEEDS HUMAN REVIEW]
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 9df5d8f0
         }
     }
 
@@ -121,12 +127,14 @@ public struct ManageTagsView: View {
 
                             Spacer(minLength: 12)
 
+                            // COPY BEGIN d74873f5 [NEEDS HUMAN REVIEW]
                             Text(
                                 organisation.roomCount(taggedWith: tag.id) == 1
                                     ? "1 room" : "\(organisation.roomCount(taggedWith: tag.id)) rooms",
                                 bundle: .module
                             )
                             .foregroundStyle(palette.tertiaryText)
+                            // COPY END d74873f5
                         }
                     }
                     .onDelete { offsets in
@@ -136,14 +144,17 @@ public struct ManageTagsView: View {
                     }
                     .onMove(perform: move)
                 } header: {
+                    // COPY BEGIN c804d116 [NEEDS HUMAN REVIEW]
                     Text(
                         "Your tags, on your devices. Order here is the order of the filter row on the rooms list.",
                         bundle: .module
                     )
                     .textCase(nil)
+                    // COPY END c804d116
                 }
 
                 Section {
+                    // COPY BEGIN dcb8174e [NEEDS HUMAN REVIEW]
                     HStack {
                         TextField(text: $newTagName) {
                             Text("New tag", bundle: .module)
@@ -162,8 +173,10 @@ public struct ManageTagsView: View {
                         "Deleting a tag removes it from your rooms. It does not leave, mute or change any room.",
                         bundle: .module
                     )
+                    // COPY END dcb8174e
                 }
 
+                // COPY BEGIN 0eb8debe [NEEDS HUMAN REVIEW]
                 Section {
                     Toggle(isOn: filterStyleBinding) {
                         Text("Filter from a menu", bundle: .module)
@@ -174,15 +187,18 @@ public struct ManageTagsView: View {
                         bundle: .module
                     )
                 }
+                // COPY END 0eb8debe
             }
             .alwaysEditing()
             .scrollDismissesKeyboard(.interactively)
+            // COPY BEGIN 6e9a2954 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Tags", bundle: .module))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 6e9a2954
         }
     }
 

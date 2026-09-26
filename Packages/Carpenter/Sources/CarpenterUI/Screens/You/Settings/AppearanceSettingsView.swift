@@ -15,13 +15,16 @@ struct AppearanceSettingsView: View {
 
     var body: some View {
         List {
+            // COPY BEGIN fce672ac [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "paintpalette.fill",
                 title: Text("Appearance", bundle: .module),
                 paragraph: Text(
                     "How the app looks on this device. Color, the icon and where conversations are filed are yours alone; nobody else sees a choice you make here.",
                     bundle: .module))
+            // COPY END fce672ac
 
+            // COPY BEGIN 25eed54c [NEEDS HUMAN REVIEW]
             Section {
                 NavigationLink {
                     AccentPickerView(accent: $accent)
@@ -54,7 +57,9 @@ struct AppearanceSettingsView: View {
                     detail: Text("\(tagCount)", bundle: .module))
             }
             .groupedRowSurface()
+            // COPY END 25eed54c
 
+            // COPY BEGIN 98ee174f [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "person.crop.circle.fill",
@@ -65,10 +70,13 @@ struct AppearanceSettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 98ee174f
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 5d404f69 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Appearance", bundle: .module))
+        // COPY END 5d404f69
         .toolbarTitleDisplayMode(.inline)
     }
 }

@@ -15,6 +15,7 @@ struct HeldRestorePrompt: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Image(systemName: "hand.raised.fingers.spread.fill")
                     .foregroundStyle(palette.secondaryText)
+                // COPY BEGIN 6cfdefff [NEEDS HUMAN REVIEW]
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(held.personName) set up a new device", bundle: .module)
                         .font(CarpenterFont.rowTitle)
@@ -27,6 +28,7 @@ struct HeldRestorePrompt: View {
                         .foregroundStyle(palette.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                // COPY END 6cfdefff
             }
 
             if let phrase = held.phrase {
@@ -35,6 +37,7 @@ struct HeldRestorePrompt: View {
 
             HStack(spacing: 10) {
                 Spacer(minLength: 0)
+                // COPY BEGIN bab7e8ab [NEEDS HUMAN REVIEW]
                 Button {
                     deciding = true
                     Task {
@@ -57,6 +60,7 @@ struct HeldRestorePrompt: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(palette.accentFill)
+                // COPY END bab7e8ab
             }
             .font(CarpenterFont.footnote)
             .disabled(deciding)

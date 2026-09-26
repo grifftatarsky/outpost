@@ -14,6 +14,7 @@ struct OutpostReviewPrompt: View {
                 Image(systemName: "person.2.badge.key.fill")
                     .foregroundStyle(palette.secondaryText)
                     .accessibilityHidden(true)
+                // COPY BEGIN e3a9a588 [NEEDS HUMAN REVIEW]
                 VStack(alignment: .leading, spacing: 4) {
                     Text(
                         "^[\(review.undecided.count) person](inflect: true) here can't see your Outpost",
@@ -27,10 +28,12 @@ struct OutpostReviewPrompt: View {
                         .foregroundStyle(palette.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                // COPY END e3a9a588
             }
 
             HStack(spacing: 10) {
                 Spacer(minLength: 0)
+                // COPY BEGIN a86f48fd [NEEDS HUMAN REVIEW]
                 Button { Task { await onLater() } } label: {
                     Text("Later", bundle: .module)
                         .frame(minWidth: CarpenterMetrics.hitTarget, minHeight: CarpenterMetrics.hitTarget)
@@ -43,6 +46,7 @@ struct OutpostReviewPrompt: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(palette.accentFill)
+                // COPY END a86f48fd
             }
             .font(CarpenterFont.footnote)
         }
@@ -55,12 +59,15 @@ struct OutpostReviewPrompt: View {
     }
 
     private var explanation: Text {
+        // COPY BEGIN 3ad3b268 [NEEDS HUMAN REVIEW]
         let base = Text(
             "That is the default, and it stays that way until you choose otherwise.",
             bundle: .module)
+        // COPY END 3ad3b268
         let allowed = review.alreadyAllowed
         guard !allowed.isEmpty else { return base }
 
+        // COPY BEGIN 47309c86 [NEEDS HUMAN REVIEW]
         if allowed.count == 1, let only = allowed.first {
             if let decidedIn = only.decidedIn {
                 return Text(
@@ -72,6 +79,7 @@ struct OutpostReviewPrompt: View {
         }
         let names = allowed.map(\.member.displayName).formatted(.list(type: .and))
         return Text("\(base) \(names) already have access and keep it.", bundle: .module)
+        // COPY END 47309c86
     }
 }
 

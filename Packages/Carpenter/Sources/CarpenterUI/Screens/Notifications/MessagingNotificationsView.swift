@@ -35,6 +35,7 @@ public struct MessagingNotificationsView: View {
 
     public var body: some View {
         List {
+            // COPY BEGIN 409ce86f [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "bell.badge.fill",
@@ -48,6 +49,7 @@ public struct MessagingNotificationsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 409ce86f
 
             if choices.wantsMessages {
                 Section {
@@ -59,15 +61,18 @@ public struct MessagingNotificationsView: View {
                         ) { change { $0.level = level } }
                     }
                 } header: {
+                    // COPY BEGIN e1a8506a [NEEDS HUMAN REVIEW]
                     Text("What a message says", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
                         "This is what somebody reading over your shoulder can see on a locked screen.",
                         bundle: .module)
+                    // COPY END e1a8506a
                 }
                 .groupedRowSurface()
             }
 
+            // COPY BEGIN 5b69624a [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "person.2.badge.gearshape.fill",
@@ -83,6 +88,7 @@ public struct MessagingNotificationsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 5b69624a
 
             if choices.wantsRoomUpdates {
                 Section {
@@ -94,14 +100,17 @@ public struct MessagingNotificationsView: View {
                         ) { change { $0.roomUpdateLevel = level } }
                     }
                 } header: {
+                    // COPY BEGIN b5facd29 [NEEDS HUMAN REVIEW]
                     Text("What a room change says", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
                         "Each of these is the banner you would actually get.", bundle: .module)
+                    // COPY END b5facd29
                 }
                 .groupedRowSurface()
             }
 
+            // COPY BEGIN f6b865c9 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "app.badge.fill",
@@ -119,9 +128,11 @@ public struct MessagingNotificationsView: View {
                 BadgeMeaningLine(meaning: badges.meaning)
             }
             .groupedRowSurface()
+            // COPY END f6b865c9
 
             if systemAllows == false {
                 Section {
+                    // COPY BEGIN 3a61f89f [NEEDS HUMAN REVIEW]
                     if let onOpenSystemSettings {
                         Button(action: onOpenSystemSettings) {
                             SettingsRow(
@@ -134,18 +145,22 @@ public struct MessagingNotificationsView: View {
                         "Notifications are off for \(Branding.displayName) in Settings, so none of these will arrive until that is turned back on. What you choose here is kept either way.",
                         bundle: .module)
                         .foregroundStyle(palette.destructive)
+                    // COPY END 3a61f89f
                 }
                 .groupedRowSurface()
             }
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN b7e217e5 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Messaging notifications", bundle: .module))
+        // COPY END b7e217e5
         .toolbarTitleDisplayMode(.inline)
     }
 }
 
 extension RoomUpdateLevel {
+    // COPY BEGIN 00c57a6d [NEEDS HUMAN REVIEW]
     public var example: LocalizedStringKey {
         switch self {
         case .whoAndWhere: "Alice has been added to FIFO Squad"
@@ -154,7 +169,9 @@ extension RoomUpdateLevel {
         case .nothing: "New room update"
         }
     }
+    // COPY END 00c57a6d
 
+    // COPY BEGIN a68d11ea [NEEDS HUMAN REVIEW]
     public var detail: LocalizedStringKey {
         switch self {
         case .whoAndWhere: "Who it was, and which room."
@@ -163,4 +180,5 @@ extension RoomUpdateLevel {
         case .nothing: "That something changed, and nothing else."
         }
     }
+    // COPY END a68d11ea
 }

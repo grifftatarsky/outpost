@@ -119,11 +119,13 @@ public final class MediaLoader {
         }
     }
 
+    // COPY BEGIN 8bbbb833 [NEEDS HUMAN REVIEW]
     private static var undecodable: String {
         String(
             localized: "This could not be decoded.", bundle: .module,
             comment: "Bytes arrived, and are not a photo or a clip this device can draw")
     }
+    // COPY END 8bbbb833
 
     private func verdict(imageData data: Data) async -> ScreeningVerdict {
         await verdict { screen in try await screen.isSensitive(image: data) }

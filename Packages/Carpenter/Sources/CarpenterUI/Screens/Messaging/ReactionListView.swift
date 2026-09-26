@@ -57,6 +57,7 @@ public struct ReactionListView: View {
                                 Text(verbatim: row.emoji)
                                     .font(.system(size: emoji))
                                     .frame(width: emoji * 1.4)
+                                // COPY BEGIN 12f1fadc [NEEDS HUMAN REVIEW]
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(verbatim: row.person.displayName)
                                         .font(CarpenterFont.rowTitle)
@@ -67,9 +68,11 @@ public struct ReactionListView: View {
                                         .font(CarpenterFont.caption)
                                         .foregroundStyle(palette.secondaryText)
                                 }
+                                // COPY END 12f1fadc
                                 Spacer()
                             }
                         }
+                        // COPY BEGIN 4e74c4dc [NEEDS HUMAN REVIEW]
                         .accessibilityLabel(
                             row.isMine
                                 ? Text("\(row.emoji), you. Removes your reaction.", bundle: .module)
@@ -77,11 +80,13 @@ public struct ReactionListView: View {
                     }
                 } header: {
                     Text("^[\(rows.count) reaction](inflect: true)", bundle: .module).sectionHeading()
+                        // COPY END 4e74c4dc
                 }
                 .groupedRowSurface()
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN 6a7b7028 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Reactions", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -89,6 +94,7 @@ public struct ReactionListView: View {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 6a7b7028
         }
     }
 }

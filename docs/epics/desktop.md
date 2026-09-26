@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN a3999eb4 [NEEDS HUMAN REVIEW]
 title: Desktop
 layout: default
 parent: Roadmap
@@ -13,6 +14,10 @@ The Mac and iPad as first-class, rather than a stretched phone.
 
 1. TOC
 {:toc}
+
+<!-- COPY END a3999eb4 -->
+
+<!-- COPY BEGIN 1529957c [NEEDS HUMAN REVIEW] -->
 
 ## Where this stands
 
@@ -33,6 +38,10 @@ on another epic.
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END 1529957c -->
+
+<!-- COPY BEGIN 1c6a9b46 [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -65,6 +74,10 @@ behaviors the set does not draw.
 
 </details>
 
+<!-- COPY END 1c6a9b46 -->
+
+<!-- COPY BEGIN 97e459ec [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="the-app-icon-on-macos">
 <summary><b>The app icon on macOS</b> — Not started</summary>
 
@@ -82,6 +95,10 @@ that the app does not look unfinished before it opens.
 a home screen that should not announce what the app is, which the board names as the only reason the
 feature is worth having.
 
+<!-- COPY END 97e459ec -->
+
+<!-- COPY BEGIN e5045a76 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — the mark exists, and one naming inconsistency</summary>
 
@@ -97,6 +114,10 @@ sets from source. Rename the files.
 </details>
 
 </details>
+
+<!-- COPY END e5045a76 -->
+
+<!-- COPY BEGIN 5f3bda8f [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-desktop-wall">
 <summary><b>The desktop wall</b> — Not started</summary>
@@ -118,6 +139,10 @@ board 90 asked for; what is missing is the third column that would hold it. **De
 
 </details>
 
+<!-- COPY END 5f3bda8f -->
+
+<!-- COPY BEGIN a99c2c94 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="draw-the-platforms-the-set-claims">
 <summary><b>Draw the platforms the set claims</b> — Not started</summary>
 
@@ -138,6 +163,10 @@ implementation and there is nothing to check it against, which is a live risk ra
 complaint about coverage.
 
 </details>
+
+<!-- COPY END a99c2c94 -->
+
+<!-- COPY BEGIN fd081092 [NEEDS HUMAN REVIEW] -->
 
 ## Test plan
 
@@ -161,6 +190,12 @@ touched. `scenePhase` does not reliably flip on macOS, which is why this is a li
 
 </details>
 
+<!-- COPY END fd081092 -->
+
+<!-- COPY BEGIN 590f3109 [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** A Mac and a phone that are the same member and disagree about their
 rooms. A message that arrives on one platform and not the other. A Mac left open that never learns
 anything.
+
+<!-- COPY END 590f3109 -->

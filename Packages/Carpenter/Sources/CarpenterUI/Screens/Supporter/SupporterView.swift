@@ -15,6 +15,7 @@ struct SupporterView: View {
 
     var body: some View {
         List {
+            // COPY BEGIN 66eb4921 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "party.popper.fill",
                 title: Text("Supporter", bundle: .module),
@@ -33,8 +34,10 @@ struct SupporterView: View {
                 }
                 .groupedRowSurface()
             }
+            // COPY END 66eb4921
 
             Section {
+                // COPY BEGIN ede6da95 [NEEDS HUMAN REVIEW]
                 Label {
                     Text(
                         "Supporters pay for the time it takes to build what comes next, starting with Packs.",
@@ -51,12 +54,15 @@ struct SupporterView: View {
                 }
             } header: {
                 Text("What it pays for", bundle: .module).sectionHeading()
+                // COPY END ede6da95
             }
             .groupedRowSurface()
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 06717d83 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Supporter", bundle: .module))
+        // COPY END 06717d83
         .toolbarTitleDisplayMode(.inline)
         .onChange(of: showsBadge) { _, shows in
             Task { await settings.onShowBadge(shows) }

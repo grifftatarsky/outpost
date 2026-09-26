@@ -46,13 +46,16 @@ public struct OutpostNotificationsView: View {
     public var body: some View {
         List {
             Section {
+                // COPY BEGIN 6fe80849 [NEEDS HUMAN REVIEW]
                 ChoiceRow(
                     title: Text("All posts", bundle: .module),
                     detail: Text(
                         "Every Outpost you can read, whatever each one is set to.", bundle: .module),
                     isSelected: choices.newPosts == .all
                 ) { chooseNewPosts(.all) }
+                // COPY END 6fe80849
 
+                // COPY BEGIN 7cdccc32 [NEEDS HUMAN REVIEW]
                 ChoiceRow(
                     title: Text("By Outpost", bundle: .module),
                     detail: Text(
@@ -60,7 +63,9 @@ public struct OutpostNotificationsView: View {
                         bundle: .module),
                     isSelected: choices.newPosts == .each
                 ) { chooseNewPosts(.each) }
+                // COPY END 7cdccc32
 
+                // COPY BEGIN 012666d9 [NEEDS HUMAN REVIEW]
                 ChoiceRow(
                     title: Text("None", bundle: .module),
                     detail: Text(
@@ -74,9 +79,11 @@ public struct OutpostNotificationsView: View {
                 Text(
                     "Each Outpost has its own switch on its page. This is what happens across all of them.",
                     bundle: .module)
+                // COPY END 012666d9
             }
             .groupedRowSurface()
 
+            // COPY BEGIN 3363bc8e [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "bubble.left.and.text.bubble.right.fill",
@@ -98,7 +105,9 @@ public struct OutpostNotificationsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 3363bc8e
 
+            // COPY BEGIN a72b9fcb [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "heart.fill",
@@ -112,7 +121,9 @@ public struct OutpostNotificationsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END a72b9fcb
 
+            // COPY BEGIN 989c60d9 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "app.badge.fill",
@@ -130,9 +141,11 @@ public struct OutpostNotificationsView: View {
                 BadgeMeaningLine(meaning: badges.meaning)
             }
             .groupedRowSurface()
+            // COPY END 989c60d9
 
             if systemAllows == false {
                 Section {
+                    // COPY BEGIN 4e0adfc9 [NEEDS HUMAN REVIEW]
                     if let onOpenSystemSettings {
                         Button(action: onOpenSystemSettings) {
                             SettingsRow(
@@ -145,13 +158,16 @@ public struct OutpostNotificationsView: View {
                         "Notifications are off for \(Branding.displayName) in Settings, so none of these will arrive until that is turned back on. What you choose here is kept either way.",
                         bundle: .module)
                         .foregroundStyle(palette.destructive)
+                    // COPY END 4e0adfc9
                 }
                 .groupedRowSurface()
             }
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 6387b6ba [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Outpost notifications", bundle: .module))
+        // COPY END 6387b6ba
         .toolbarTitleDisplayMode(.inline)
     }
 }
@@ -163,6 +179,7 @@ public struct BadgeMeaningLine: View {
         self.meaning = meaning
     }
 
+    // COPY BEGIN 4f764fb2 [NEEDS HUMAN REVIEW]
     public var body: some View {
         switch meaning {
         case .both:
@@ -181,4 +198,5 @@ public struct BadgeMeaningLine: View {
             Text("Your app icon shows no number at all.", bundle: .module)
         }
     }
+    // COPY END 4f764fb2
 }

@@ -31,18 +31,21 @@ public struct OutpostAccessSheet: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN db799b17 [NEEDS HUMAN REVIEW]
                 SettingsHeaderCard(
                     icon: "person.2.badge.key.fill",
                     title: Text(verbatim: person.displayName),
                     paragraph: Text(
                         "Nobody reads your Outpost unless you say so. What somebody can read is a set of periods — each choice below opens one or closes one.",
                         bundle: .module))
+                // COPY END db799b17
 
                 record
                 changes
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN f6ceaf23 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Their access", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -79,12 +82,14 @@ public struct OutpostAccessSheet: View {
             } message: {
                 Text(verbatim: problem ?? "")
             }
+            // COPY END f6ceaf23
         }
     }
 
     @ViewBuilder private var record: some View {
         Section {
             if windows.isEmpty {
+                // COPY BEGIN 4c645cc7 [NEEDS HUMAN REVIEW]
                 Text("Nothing. They have never collected a post from here.", bundle: .module)
                     .font(CarpenterFont.rowDetail)
                     .foregroundStyle(palette.secondaryText)
@@ -112,6 +117,7 @@ public struct OutpostAccessSheet: View {
                     "More than one period means they were let in, stopped, and let in again. What falls between is sealed to them.",
                     bundle: .module)
             }
+                // COPY END 4c645cc7
         }
         .groupedRowSurface()
     }
@@ -132,13 +138,16 @@ public struct OutpostAccessSheet: View {
                     })
             }
         } header: {
+            // COPY BEGIN d41a9cd7 [NEEDS HUMAN REVIEW]
             Text("Change it", bundle: .module).sectionHeading()
+            // COPY END d41a9cd7
         } footer: {
             footer
         }
         .groupedRowSurface()
     }
 
+    // COPY BEGIN ec98fe9a [NEEDS HUMAN REVIEW]
     private var footer: Text {
         switch standing {
         case .everything:
@@ -151,7 +160,9 @@ public struct OutpostAccessSheet: View {
                 bundle: .module)
         }
     }
+    // COPY END ec98fe9a
 
+    // COPY BEGIN b03cf0b7 [NEEDS HUMAN REVIEW]
     private func title(for choice: OutpostAccessChoice) -> Text {
         switch choice {
         case .fromNow: return Text("Let them see from now on", bundle: .module)
@@ -159,7 +170,9 @@ public struct OutpostAccessSheet: View {
         case .no: return Text("Stop them seeing anything new", bundle: .module)
         }
     }
+    // COPY END b03cf0b7
 
+    // COPY BEGIN f8dc8c81 [NEEDS HUMAN REVIEW]
     private func consequence(for choice: OutpostAccessChoice) -> Text {
         switch choice {
         case .fromNow:
@@ -176,6 +189,7 @@ public struct OutpostAccessSheet: View {
                 bundle: .module)
         }
     }
+    // COPY END f8dc8c81
 
     private func apply(_ choice: OutpostAccessChoice) {
         working = true

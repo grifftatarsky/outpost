@@ -17,6 +17,7 @@ import SwiftUI
 
 extension AppRootView {
     func attach(_ picked: PickedMedia, caption: String?, to room: RoomID) async -> String? {
+        // COPY BEGIN c7bf5484 [NEEDS HUMAN REVIEW]
         do {
             try await session.send(try await prepare(picked, caption: caption), to: room, through: media)
             discardSources([picked])
@@ -30,6 +31,7 @@ extension AppRootView {
             Diagnostics.sync.error("attach failed: \(String(describing: error), privacy: .public)")
             return SessionProblem.sentence(for: error)
         }
+        // COPY END c7bf5484
     }
 
     func post(_ picked: [PickedMedia], caption: String?) async -> String? {
@@ -43,9 +45,11 @@ extension AppRootView {
             return nil
         } catch VideoPreparer.Failure.tooLong(let seconds) {
             let length = Duration.seconds(seconds.rounded()).formatted(.time(pattern: .minuteSecond))
+            // COPY BEGIN 6f398e13 [NEEDS HUMAN REVIEW]
             return String(
                 localized: "Clips up to a minute long can be posted. One of these runs \(length).",
                 comment: "A clip longer than the limit was picked for a post")
+            // COPY END 6f398e13
         } catch {
             Diagnostics.sync.error("post attach failed: \(String(describing: error), privacy: .public)")
             return SessionProblem.sentence(for: error)

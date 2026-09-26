@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 080608e1 [NEEDS HUMAN REVIEW]
 title: Decisions
 layout: default
 nav_order: 4
@@ -11,6 +12,10 @@ nav_order: 4
 The decisions that still bind, grouped by subject. Each says what was chosen, what it costs, and what
 would change it. A decision that was replaced is listed under [Superseded](#superseded) with what
 replaced it; the full history is in git.
+
+<!-- COPY END 080608e1 -->
+
+<!-- COPY BEGIN 57934a25 [NEEDS HUMAN REVIEW] -->
 
 ## Read this before citing anything below
 
@@ -37,6 +42,10 @@ Griff worked through the value calls in this file on 2026-09-12 and confirmed mo
 marked `RULED 2026-09-12` with his reasoning where he gave it. The ones he has not seen are
 `PROPOSED`, honestly — including several that were previously attributed to him.
 
+<!-- COPY END 57934a25 -->
+
+<!-- COPY BEGIN 04ff7536 [NEEDS HUMAN REVIEW] -->
+
 ## What a good entry contains
 
 What was chosen · what it costs · what would change it · whether it is **built**, **partial** or
@@ -46,6 +55,10 @@ project has recorded more than once. When a decision is replaced, the old entry 
 
 1. TOC
 {:toc}
+
+<!-- COPY END 04ff7536 -->
+
+<!-- COPY BEGIN df9a31a9 [NEEDS HUMAN REVIEW] -->
 
 ## The product and what it claims
 
@@ -62,6 +75,10 @@ load-bearing word is *Outpost*. Keep that word wherever this is stated.
 
 **Cost:** delivery depends on iCloud being reachable, and on both people having an Apple Account.
 
+<!-- COPY END df9a31a9 -->
+
+<!-- COPY BEGIN b6df5a91 [NEEDS HUMAN REVIEW] -->
+
 ### Storage bills the member, not the developer
 
 **RULED 2026-09-12.** Kept, and Griff asked for the failure to be handled properly. It is: a send
@@ -75,6 +92,10 @@ the developer — is never touched.
 
 **What would change it:** nothing short of abandoning the premise. This is the decision that makes the
 product free to run at any number of users.
+
+<!-- COPY END b6df5a91 -->
+
+<!-- COPY BEGIN da72cc7c [NEEDS HUMAN REVIEW] -->
 
 ### A mark is only ever what was observed
 
@@ -97,6 +118,10 @@ collected. That record was in memory only, so every relaunch lit both marks on m
 touched, and the first sync then turned them off again — a mark going backwards, which is the one
 direction it may never go. It is written down now, beside the log.
 
+<!-- COPY END da72cc7c -->
+
+<!-- COPY BEGIN 670d2f16 [NEEDS HUMAN REVIEW] -->
+
 ### The product is an iPhone app until TestFlight
 
 **RULED 2026-09-13 by Griff.**
@@ -109,6 +134,10 @@ The Mac window keeps working — it runs in three columns and its keychain behav
 Griff uses it. It is not offered, described, or supported.
 
 **What would change it:** somebody to draw the other two platforms for.
+
+<!-- COPY END 670d2f16 -->
+
+<!-- COPY BEGIN 2383d503 [NEEDS HUMAN REVIEW] -->
 
 ### The version says what a build can read, and the alpha says so out loud
 
@@ -144,6 +173,10 @@ about and does not forgive one they were not.
 **Cost.** Two TestFlight groups to keep honest — one that takes every build, one that takes only
 releases — and the discipline that a breaking change is a minor bump even when it feels like a fix.
 
+<!-- COPY END 2383d503 -->
+
+<!-- COPY BEGIN 5f122ea7 [NEEDS HUMAN REVIEW] -->
+
 ### The source is published under the Mozilla Public License 2.0
 
 `PROPOSED` by Claude, 2026-09-17, on Griff's "make a license" — a default, and easy to change until
@@ -166,6 +199,10 @@ publicly available under a license that allows redistribution. Three families we
 header is added — the license allows the notice to live in a `LICENSE` file, and this repository has
 no comments. The license covers copyright; it grants no right to the name *Outpost*.
 
+<!-- COPY END 5f122ea7 -->
+
+<!-- COPY BEGIN 177908f0 [NEEDS HUMAN REVIEW] -->
+
 ### Supporter before TestFlight: a free year, and a badge a member chooses to show
 
 `RULED` — Griff, 2026-09-17:
@@ -181,6 +218,10 @@ no comments. The license covers copyright; it grants no right to the name *Outpo
 - The price will be $12 a year or $1 a month, with no discounts.
 
 `PROPOSED` by Claude, 2026-09-17 — defaults, not constraints:
+
+<!-- COPY END 177908f0 -->
+
+<!-- COPY BEGIN 616952ec [NEEDS HUMAN REVIEW] -->
 
 - **The year starts the first time an App Store build opens**, not on the day of the claim, since a
   year counted from a beta day would be spent before there was anything to support. On TestFlight the
@@ -208,6 +249,10 @@ no comments. The license covers copyright; it grants no right to the name *Outpo
 - **The App Store purchase is not built.** Nothing in a TestFlight build can reach it, so it waits
   for the release; see [Open questions](open-questions.md#not-built).
 
+<!-- COPY END 616952ec -->
+
+<!-- COPY BEGIN b1e2381e [NEEDS HUMAN REVIEW] -->
+
 **What it costs.** A build older than this one draws a badge entry as a line it cannot read, because
 an unknown payload type falls into the transcript. No such build has left the rig, but after
 TestFlight a new payload type has that cost, and reusing a plumbing type is the way around it. A badge
@@ -215,6 +260,10 @@ is the member's own claim. The source is public and nothing but the
 member's own devices keeps the record, so a modified build can show one without paying, and no other
 member can tell. The badge says somebody chose to show it, and nothing more is claimed for it.
 Detecting TestFlight through `AppTransaction` has not run on a TestFlight build yet.
+
+<!-- COPY END b1e2381e -->
+
+<!-- COPY BEGIN 7bf69a42 [NEEDS HUMAN REVIEW] -->
 
 ### App icons are a white drawing on a color, in three drawings
 
@@ -236,6 +285,10 @@ agreeing.
 Home Screen until they choose again, and the picker shows the default selected meanwhile.
 `AppIcon.appiconset` still carries Mac sizes from the earlier drawing; the Mac is not offered.
 
+<!-- COPY END 7bf69a42 -->
+
+<!-- COPY BEGIN edf3e583 [NEEDS HUMAN REVIEW] -->
+
 ## Sync and the log
 
 ### Sync is pull-based; push is an accelerant
@@ -251,6 +304,10 @@ Push only makes those happen sooner.
 no part of delivery depends on a permission a member may reasonably refuse. The app must never present
 missing notification permission as an error.
 
+<!-- COPY END edf3e583 -->
+
+<!-- COPY BEGIN cb82af87 [NEEDS HUMAN REVIEW] -->
+
 ### The share is a transport boundary, not a security one
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -265,6 +322,10 @@ sits at a name computed for a known peer and opens under that peer's secret.
 
 **Cost, unmitigated:** anybody holding the URL can still write records into that zone and consume its
 owner's storage.
+
+<!-- COPY END cb82af87 -->
+
+<!-- COPY BEGIN daea3ec2 [NEEDS HUMAN REVIEW] -->
 
 ### A round is as many packets as fit, and a packet that lands is never forgotten
 
@@ -285,6 +346,10 @@ them as collected. The first packet failing still throws, because nothing was wr
 **Cost:** several writes per round when a round is large, which is exactly the traffic the size
 represents; and a round that stops short leaves its later messages unannounced until the next.
 
+<!-- COPY END daea3ec2 -->
+
+<!-- COPY BEGIN 5d098792 [NEEDS HUMAN REVIEW] -->
+
 ### A packet is acknowledged only when everything in it landed
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -300,6 +365,10 @@ yet — so the packet is left outstanding and the next round tries again.
 **Cost:** a packet that can never integrate stays in the sender's outbox, and its delivery mark stays
 honestly uncollected. That is the safe direction to fail in; the other one loses the message silently
 on both ends.
+
+<!-- COPY END 5d098792 -->
+
+<!-- COPY BEGIN 1032e2e1 [NEEDS HUMAN REVIEW] -->
 
 ### A photo travels beside the packet, keyed by the entry, and lives as long as it is in flight
 
@@ -336,6 +405,10 @@ upload, because a sibling's entry may still be in flight.
 point "deleted on last collection" becomes "deleted after N days" and the late arrival gets the
 bytes from a peer instead.
 
+<!-- COPY END 1032e2e1 -->
+
+<!-- COPY BEGIN 59a61b44 [NEEDS HUMAN REVIEW] -->
+
 #### A clip is a minute, sealed whole, and plays from a file
 
 A video is the same entry and the same attachment, re-encoded at 960 × 540 H.264 through Apple's
@@ -353,6 +426,10 @@ loader that decrypts on demand would remove this and is not built. Said here rat
 **Screened as a file, and not drawn until the verdict is in.** The system's video analysis reads
 the whole clip — seconds for a minute — and the bubble shows the placeholder until it has answered,
 because a clip must not start playing before anybody has looked at it.
+
+<!-- COPY END 59a61b44 -->
+
+<!-- COPY BEGIN 59a2d479 [NEEDS HUMAN REVIEW] -->
 
 ### The rendezvous heals itself
 
@@ -386,6 +463,10 @@ arrived — among them a reaction sent five hours earlier. Exercised on purpose 
 the debug row *Rotate mailbox share*: retraction, fresh offer, acceptance and a message each way,
 in about ninety seconds. The rig doc has the procedure.
 
+<!-- COPY END 59a2d479 -->
+
+<!-- COPY BEGIN 52a7b44a [NEEDS HUMAN REVIEW] -->
+
 ### A repair rides the packet and asks for exactly what is missing
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -409,6 +490,10 @@ a peer who holds nothing of what was asked is a round trip that ends in *nobody 
 asks peers on its own when a hole appears, which is a product question about how much traffic a
 quiet room should make.
 
+<!-- COPY END 52a7b44a -->
+
+<!-- COPY BEGIN f6dc7e37 [NEEDS HUMAN REVIEW] -->
+
 ### A grant carries every link the granter holds
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -425,6 +510,10 @@ epochs back still cannot use — the walk stalls where it always did until the i
 
 **What would change it:** sealing each `epochChange` under the epoch it announces instead, which
 would let the log carry the walk on its own and is a format change for every existing room.
+
+<!-- COPY END f6dc7e37 -->
+
+<!-- COPY BEGIN 61d93524 [NEEDS HUMAN REVIEW] -->
 
 ### A packet carries the keys its certificates name
 
@@ -452,6 +541,10 @@ device's certificate and a valid signature.
 A member who has met a hundred people carries about six kilobytes; the packet budget is seven
 hundred.
 
+<!-- COPY END 61d93524 -->
+
+<!-- COPY BEGIN 36884ab0 [NEEDS HUMAN REVIEW] -->
+
 **What it does not do: widen who this device writes to.** Being able to check somebody's signature
 is not a relationship with them, and for a while it was treated as one. `peers()` was
 `knownParticipants`, a set that used to grow only through this member's own acts — an invitation, an
@@ -475,6 +568,10 @@ done here.
 
 **What would change it:** a transport where a packet is addressed to one recipient with no
 forwarding, at which point vouching stops being how anybody meets anybody.
+
+<!-- COPY END 36884ab0 -->
+
+<!-- COPY BEGIN 99892dca [NEEDS HUMAN REVIEW] -->
 
 ### One question about attachments was answering two
 
@@ -501,6 +598,10 @@ recipient with no age filter at all — the fake was *easier* than the real thin
 repository already knows costs more than no test. The live target caught it on the day it existed,
 and the assertion that catches it is mutation-proven: restoring the filter fails that test alone.
 
+<!-- COPY END 99892dca -->
+
+<!-- COPY BEGIN 814a0298 [NEEDS HUMAN REVIEW] -->
+
 ### The app syncs on a loop wherever you are, not only inside a conversation
 
 `PROPOSED` — Claude, 2026-09-14, measured on the rig between two Apple Accounts.
@@ -525,6 +626,10 @@ The cost is a CloudKit round every twenty seconds while the app is in the foregr
 screen. That is the price of not depending on a push that demonstrably does not always come, and the
 rig is where it was demonstrated: a green suite said nothing about it, because no test drives a
 `.task`.
+
+<!-- COPY END 814a0298 -->
+
+<!-- COPY BEGIN 5579f38c [NEEDS HUMAN REVIEW] -->
 
 ### What comes out of a zone is put in the order it was written
 
@@ -551,6 +656,10 @@ the same millisecond still order the same way on every device. The cost is a sor
 nothing next to the round trip. `packetsComeBackInWriteOrder` is the guard and it runs against a real
 account, because this is not a property a fake can have an opinion about.
 
+<!-- COPY END 5579f38c -->
+
+<!-- COPY BEGIN fd29dd05 [NEEDS HUMAN REVIEW] -->
+
 ### The record ceiling is the app's own, and CloudKit never asked for it
 
 `FACT` — measured by Claude against a live account, 2026-09-14.
@@ -573,6 +682,10 @@ with the same `MailboxError.recordTooLarge`.
 What is **not** measured: where CloudKit actually stops. The probe walked to 16MB and was retired
 rather than pushed further — the number is somewhere above that, and nothing in the app needs to know
 where.
+
+<!-- COPY END fd29dd05 -->
+
+<!-- COPY BEGIN 1b5a47c5 [NEEDS HUMAN REVIEW] -->
 
 ### A key handed over carries the way back, or it hands over nothing
 
@@ -604,6 +717,10 @@ secrets rather than to stop rebuilding them.
 `entriesDelivered=7 entriesReceived=0 alreadyHad=7 rooms=0` — every entry present and the room
 absent — and then, once `adopt` was made to say so, `link absent`.
 
+<!-- COPY END 1b5a47c5 -->
+
+<!-- COPY BEGIN fce6a062 [NEEDS HUMAN REVIEW] -->
+
 ### Somebody who stays turns the key after somebody leaves
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -629,6 +746,10 @@ new epoch go out on the next one.
 
 **What would change it:** a way for the leaver to mint a secret they demonstrably cannot keep. Absent
 that, the alternative is not rotating at all, which is what leaving did before it did anything.
+
+<!-- COPY END fce6a062 -->
+
+<!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
 ## Cryptography
 
@@ -672,6 +793,10 @@ open, and the brief describes it.
 reason, and there was none. There is now: `Scripts/scan-for-vulnerabilities.sh` checks dependencies,
 runs the static analyzer and scans for secrets, and ran clean on 2026-09-15 (see
 [Before TestFlight](pre-testflight.md#a-scan-for-known-vulnerabilities)).
+
+<!-- COPY END 3db4b458 -->
+
+<!-- COPY BEGIN 9952a160 [NEEDS HUMAN REVIEW] -->
 
 ### What the crypto brief found
 
@@ -718,6 +843,10 @@ uses, parked in the [Inbox](inbox.md).
 analysis, no side-channel work on the composition, no fuzzing of the membership state machine, no
 post-quantum anything, and the three-party cryptographic cases still need a third Apple Account.
 
+<!-- COPY END 9952a160 -->
+
+<!-- COPY BEGIN 270f2119 [NEEDS HUMAN REVIEW] -->
+
 ### The verification phrase gets ten characters and a commitment
 
 `RULED` — Griff, 2026-09-15, answering the one finding in
@@ -751,6 +880,10 @@ so signing last buys the inviter nothing. See
 
 **Two findings fall out of designing it, both recorded here rather than done quietly.**
 
+<!-- COPY END 270f2119 -->
+
+<!-- COPY BEGIN c5d4ee9c [NEEDS HUMAN REVIEW] -->
+
 - **The signature does not belong in the transcript.** The phrase derives over
   `signingPayload + signature`. Two valid signatures over one payload mean the same thing — the
   signature is verified separately — so including it attests nothing extra and hands the attacker
@@ -777,6 +910,10 @@ the joiner's **public identity keys** have already reached whoever was in the mi
 information has been accessed" would overstate it. The refusal screen says nothing was joined and
 nothing was shared.
 
+<!-- COPY END c5d4ee9c -->
+
+<!-- COPY BEGIN f400759e [NEEDS HUMAN REVIEW] -->
+
 ### Identity stays in the envelope, and the seal is the wrong place for it
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -793,6 +930,10 @@ per recipient".
 
 **Taking it out of the entry is a re-architecture, not a field move.** Three things block it, and
 each was checked in the source rather than assumed:
+
+<!-- COPY END f400759e -->
+
+<!-- COPY BEGIN a8bd99d0 [NEEDS HUMAN REVIEW] -->
 
 - **The clock is the whole social graph, in the clear, on every entry.** `AppSession.append` stamps
   `clock: replica.frontier`, and `Replica.frontier` is every feed this device holds — every room,
@@ -821,9 +962,17 @@ vector clock naming every feed their device had seen, `seq`, `previous`, `wallTi
 and the ciphertext length. Two comments by one stranger still carry one key and always will under
 this decision.
 
+<!-- COPY END a8bd99d0 -->
+
+<!-- COPY BEGIN 101af0d9 [NEEDS HUMAN REVIEW] -->
+
 **What would change it.** All three of: a per-scope vector clock and per-scope feeds; an answer for
 blocking and the deny list that does not depend on a stable author; and a third Apple Account,
 because the triangle cannot be observed on a two-account rig.
+
+<!-- COPY END 101af0d9 -->
+
+<!-- COPY BEGIN d9b15824 [NEEDS HUMAN REVIEW] -->
 
 ## Rooms, invitations and verification
 
@@ -838,6 +987,10 @@ accumulates as the log folds rather than being recomputed from the current setti
 
 **Why:** a room that quietly drops members when a setting changes is worse than one that has to ask
 again.
+
+<!-- COPY END d9b15824 -->
+
+<!-- COPY BEGIN c6b32346 [NEEDS HUMAN REVIEW] -->
 
 ### An invite travels as a link, and the link changes nothing about the invite
 
@@ -864,6 +1017,10 @@ installed, and some apps do not linkify one in plain text. A universal link need
 **What would change it:** shipping that file on the marketing domain. `InviteLink` takes the scheme as
 a parameter and parses both spellings, so the change is additive.
 
+<!-- COPY END c6b32346 -->
+
+<!-- COPY BEGIN 4c31631b [NEEDS HUMAN REVIEW] -->
+
 ### A room announces what happened to it, in its own transcript
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -880,6 +1037,10 @@ read as "never show the member", which is a different claim. Receipts, policies 
 stay hidden — those really are machinery.
 
 Leaving is one of them, as of 2026-09-02: **"Beta left this room"**, with nobody named beside them.
+
+<!-- COPY END 4c31631b -->
+
+<!-- COPY BEGIN 1cf325bf [NEEDS HUMAN REVIEW] -->
 
 ### Leaving and being removed are two acts, and never one with a flag
 
@@ -905,6 +1066,10 @@ care, and it is deliberately the exception.
 
 **What would change it:** nothing short of deciding the two are the same thing to a member, which is
 the claim the epic exists to refuse.
+
+<!-- COPY END 1cf325bf -->
+
+<!-- COPY BEGIN 92b5a29e [NEEDS HUMAN REVIEW] -->
 
 ### An invitation is an offer, not an admission
 
@@ -933,6 +1098,10 @@ they are being let into, so their confirmation cannot go into it. It travels **i
 the epoch grants**, and the inviter relays it in as an entry of their own — the same relay an
 invitation takes (Build Decision D28). That is two sync rounds where there used to be none, and
 there is no shortcut: the confirmation has to reach somebody who can put it in the room.
+
+<!-- COPY END 92b5a29e -->
+
+<!-- COPY BEGIN 83e2ff04 [NEEDS HUMAN REVIEW] -->
 
 **In the packet rather than on the joiner's own feed, and that was not the first answer.** Writing
 it as an entry on their own wall works and is wrong: it would be that member's *first entry ever*,
@@ -968,6 +1137,10 @@ So the warning goes where the knowledge is: the joiner is told, on the screen wh
 and told to ring the person by voice. The inviter is told the one thing that is observable — the
 invitation was **never accepted**. Weaker, and not a lie.
 
+<!-- COPY END 83e2ff04 -->
+
+<!-- COPY BEGIN e532aff9 [NEEDS HUMAN REVIEW] -->
+
 **Which makes the invitation's own controls load-bearing.** With nothing coming back, an invitation
 the inviter cannot end is an invitation they cannot take back: they choose the expiry when they make
 it, they can see what is outstanding, and they can purge one by hand at any time.
@@ -995,6 +1168,10 @@ permanent for every unanswered invitation rather than only for indefinite ones. 
 is capped**: this device cannot tell an offer that ran out from one the room refused, because a
 refusal deliberately does not travel, so the sentence stops at the date passing and names the way
 back. It never implies either reading.
+
+<!-- COPY END e532aff9 -->
+
+<!-- COPY BEGIN 38be9c61 [NEEDS HUMAN REVIEW] -->
 
 **An invitation can be taken back, and taking it back reaches nobody.** `PayloadType.invitationRescinded`
 = 22. Whoever holds the link still holds it and can still confirm; the room folds the withdrawal and
@@ -1024,6 +1201,10 @@ It also frees an invitation nobody could reach. Removing or losing a member clea
 the room — so an indefinite invitation from a departed member sat on the one screen whose job is
 saying what the room is waiting on, for ever, with nobody able to clear it.
 
+<!-- COPY END 38be9c61 -->
+
+<!-- COPY BEGIN e7133f5c [NEEDS HUMAN REVIEW] -->
+
 **Cost.** A quiet, cheap veto in every member's hands: `rescind` appends and returns, with no key turn
 and no round trip, where removal is loud and expensive. A transcript line is not a notification, so a
 member scrolling a busy room may never see it. And **the way back is not symmetrical** — `rescinded`
@@ -1038,6 +1219,10 @@ and minting a secret would put two on one epoch number for one membership change
 **What would change it.** A way for a joiner to reach an inviter without trusting them first. There
 is none today and there may never be — attaching to the mailbox of somebody you have decided to talk
 to is the architecture. See [Who you are talking to](verification.md).
+
+<!-- COPY END e7133f5c -->
+
+<!-- COPY BEGIN 063ecea9 [NEEDS HUMAN REVIEW] -->
 
 ### An invitation's lifetime bounds the offer up to the confirmation, and the room is not where it is asked
 
@@ -1067,6 +1252,10 @@ left is the room's own `RoomAccess` rule.
 
 So it is enforced at three writes, all on the device that is about to do something:
 
+<!-- COPY END 063ecea9 -->
+
+<!-- COPY BEGIN 14168ef7 [NEEDS HUMAN REVIEW] -->
+
 | Where | What it stops |
 |---|---|
 | `AppSession.inspect` / `accept` | The device holding the link redeeming or confirming a dead offer. |
@@ -1090,6 +1279,10 @@ therefore *a courtesy honoured*, not a credential revoked, and no copy may imply
 why the inviter's row stopped saying an offer ran out "with nothing back". Something may well have
 come back and been declined, and this device keeps no record of which.
 
+<!-- COPY END 14168ef7 -->
+
+<!-- COPY BEGIN 2b3f6e4e [NEEDS HUMAN REVIEW] -->
+
 **A taken-but-unapproved offer stays admissible indefinitely.** A confirmation folded in March can be
 approved in September, for as long as the offer it answers is the one on the table. The remedy is to
 take the invitation back, and that is why a confirmed offer stays in `pendingInvitations` even past
@@ -1105,6 +1298,10 @@ again. What it enforces is an inviter's expressed intention, which is what the p
 **What would change it.** A time signed by the joiner inside `JoinConfirmedBody`, which would let a
 device tell a late *answer* from a late *delivery* and refuse only the first. That is a canonical-form
 change to a body that is already signed, so it is not free — see the `CanonicalBytes.optional` trap.
+
+<!-- COPY END 2b3f6e4e -->
+
+<!-- COPY BEGIN 559bf7ce [NEEDS HUMAN REVIEW] -->
 
 ### A confirmation answers one invitation, not one person
 
@@ -1142,6 +1339,10 @@ signed the fresh confirmation and offered it to nobody. It asks membership now.
 fresh `.joinRequest` is sealed under a key the removed member does not hold: their device cannot see
 the offer at all. What they can answer is whether the room counts them.
 
+<!-- COPY END 559bf7ce -->
+
+<!-- COPY BEGIN 33603eb1 [NEEDS HUMAN REVIEW] -->
+
 **Spent as well as forgotten, because the question can be re-asked.** The fold checks nothing about a
 `.joinRequest` beyond the room it names, so any member could re-append the ended invitation's own
 bytes — already in the log — and the removed member's device, which keeps every invitation it ever
@@ -1163,6 +1364,10 @@ discarding each one — the cost already accepted for an invitation nobody honor
 
 **What would change it.** Keying `requests` by signature too, so a person may hold two live offers at
 once. Today the room holds one, and any member may decide which by appending it — see the inbox.
+
+<!-- COPY END 33603eb1 -->
+
+<!-- COPY BEGIN 4300c60e [NEEDS HUMAN REVIEW] -->
 
 ### A tag the app keeps is derived, never filed
 
@@ -1188,6 +1393,10 @@ room this member is waiting to be let into are opposites — and the rows say wh
 words — but the question a *filter* answers is the same one: what is still in the air. Two chips for
 that would be two chips to learn.
 
+<!-- COPY END 4300c60e -->
+
+<!-- COPY BEGIN 64607ceb [NEEDS HUMAN REVIEW] -->
+
 ### A conversation with one person is a solo, founded as one
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -1207,6 +1416,10 @@ as a room; a solo has no name of its own, so it cannot be renamed; and a second 
 added to one — the conversation's invite action is withheld for a solo, because a three-person solo
 is a room that lies about itself. What would change it: a demand for solos that grow into rooms,
 which would want a kind that can change and a rule for who may change it.
+
+<!-- COPY END 64607ceb -->
+
+<!-- COPY BEGIN c05bfa3d [NEEDS HUMAN REVIEW] -->
 
 ### A solo is verified, not admitted
 
@@ -1234,6 +1447,10 @@ closed. That is what the fold does, and the screens now offer it: the refusal ca
 standing question and the answer to it. Until that was wired, the way out existed only in the model
 and a refusal was permanent on both devices. Costs: two people who both refuse must both, eventually,
 ask and confirm; blocking is the other exit, offered on the same card.
+
+<!-- COPY END c05bfa3d -->
+
+<!-- COPY BEGIN c72b8bd5 [NEEDS HUMAN REVIEW] -->
 
 ### Verifying somebody later: a shared code, a note to yourself, and a line when they add a device
 
@@ -1265,6 +1482,10 @@ already produces the *sets up again* notice. There is no "same person, new key" 
   the phone they joined with, and anything they already had, never shows. It is dated by the
   certificate, which their own device signed.
 
+<!-- COPY END c72b8bd5 -->
+
+<!-- COPY BEGIN 55c0bced [NEEDS HUMAN REVIEW] -->
+
 ### Leaving a room is an action sheet, because the HIG says so
 
 `RULED` — Griff, 2026-09-14, on the shape; the component follows from Apple's guidance.
@@ -1294,6 +1515,10 @@ step-of-how-many counter, which belonged to a flow that no longer exists.
 **Note for the drawings.** The boards specified this as a multi-step flow. The boards predate Liquid
 Glass and do not cite the HIG, so from 2026-09-14 the acceptance criteria say what the screen does in
 words and cite Apple where a component is being chosen, rather than pointing at a drawing.
+
+<!-- COPY END 55c0bced -->
+
+<!-- COPY BEGIN fd4be9dd [NEEDS HUMAN REVIEW] -->
 
 ## Outposts
 
@@ -1334,6 +1559,10 @@ packet at launch is cheaper than a wish that silently never arrived.
 **What would change it:** a push channel a device can subscribe to on somebody else's behalf, which
 CloudKit does not offer.
 
+<!-- COPY END fd4be9dd -->
+
+<!-- COPY BEGIN ce9426ec [NEEDS HUMAN REVIEW] -->
+
 ### Access to a wall is a set of periods, and only one change is one-way
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -1368,6 +1597,10 @@ key that was not collected may be gone — and it is stated rather than papered 
 **What would change it:** a way to un-send, which this architecture does not have and is not
 getting.
 
+<!-- COPY END ce9426ec -->
+
+<!-- COPY BEGIN cabd25e9 [NEEDS HUMAN REVIEW] -->
+
 ### A wall is sealed to an allow-list, and where a reader came in is an epoch
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -1394,6 +1627,10 @@ what somebody collected is theirs, and no screen may imply otherwise.
 
 **What would change it:** per-post keys, which would let an arbitrary date be honored exactly and
 would cost a key per post to everybody who can read it.
+
+<!-- COPY END cabd25e9 -->
+
+<!-- COPY BEGIN 1d4a3d72 [NEEDS HUMAN REVIEW] -->
 
 ### A comment belongs to the wall it lands on
 
@@ -1422,6 +1659,10 @@ writer's wall, which is the only place that entry ever was.
 
 **What would change it.** A wall whose readers are segmented — several epochs alive at once for
 different stretches — would make "the wall's epoch" ambiguous. It is not, today.
+
+<!-- COPY END 1d4a3d72 -->
+
+<!-- COPY BEGIN 1c3d9817 [NEEDS HUMAN REVIEW] -->
 
 ### Everybody you have not met is one person
 
@@ -1463,6 +1704,10 @@ their Do Not Disturb message, all three of which they did hold before that chang
 always a number. A reaction *list* — which only messages have — would have to collapse them, and
 messages are between people who have met.
 
+<!-- COPY END 1c3d9817 -->
+
+<!-- COPY BEGIN 0436a708 [NEEDS HUMAN REVIEW] -->
+
 ### A wall carries its own picture pointer, at the wall's own address
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -1498,6 +1743,10 @@ borrow, and who is exactly the member this feature is for.
 **What would change it.** A way for a reader to tell *withheld* from *lost* would make the
 duplicate upload worth removing. Nothing else here is worth revisiting.
 
+<!-- COPY END 0436a708 -->
+
+<!-- COPY BEGIN e908d15b [NEEDS HUMAN REVIEW] -->
+
 ## People, names and faces
 
 ### Names and faces are shared by choice, both ways, and start off
@@ -1516,6 +1765,10 @@ name, does come back — see the entry below — which the footer says too. What
 the privacy check-up, after the name, which asks once with examples rather than switches — two
 presets and a walkthrough — so the default is a choice rather than a silence. Skipping it is a
 choice too, and is not asked again; Privacy & Safety offers it whenever they like.
+
+<!-- COPY END e908d15b -->
+
+<!-- COPY BEGIN 7a674a70 [NEEDS HUMAN REVIEW] -->
 
 ### A shared photo is a standing attachment, not a log entry
 
@@ -1539,6 +1792,10 @@ is owed; one record fetch per person per change on the collecting side; and a st
 device that has not collected since the takedown, which lets go on its next round. What would
 change it: a transport with a standing record type of its own, which would drop the pointer.
 
+<!-- COPY END 7a674a70 -->
+
+<!-- COPY BEGIN a8ad2d40 [NEEDS HUMAN REVIEW] -->
+
 ### Silence is shared like a name: by choice, both ways, and the app never reads the room
 
 **RULED 2026-09-12.** Kept. Griff also asked for **Notify anyway**, a way to break through a Focus. That
@@ -1560,6 +1817,10 @@ in every room; and a simulator that cannot show any of it, so the rig has a debu
 system would be. What would change it: Focus's allowed-people matching reaching people who are not
 in Contacts, at which point the banner's sender could carry a handle the system can match.
 
+<!-- COPY END a8ad2d40 -->
+
+<!-- COPY BEGIN 01fb44df [NEEDS HUMAN REVIEW] -->
+
 ### What you call somebody is yours, and so is the face you give them
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -1577,6 +1838,10 @@ that later changes, which the page also shows; and a photo picked on the phone i
 Mac. What would change it: a sibling feed that can carry a small sealed attachment, at which point
 the photo would follow the nickname.
 
+<!-- COPY END 01fb44df -->
+
+<!-- COPY BEGIN c3e5e1ad [NEEDS HUMAN REVIEW] -->
+
 ### Which picture is drawn for somebody, in one place
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -1592,6 +1857,10 @@ the others compiles, draws a face, and quietly draws a different one from the sc
 
 **What it costs.** One more environment value (`viewerID`) that every screen drawing a person now
 depends on. **What would change it.** Nothing; if a fifth rung ever appears it goes here.
+
+<!-- COPY END c3e5e1ad -->
+
+<!-- COPY BEGIN 4e7c225c [NEEDS HUMAN REVIEW] -->
 
 ## Notifications and marks
 
@@ -1610,6 +1879,10 @@ cannot ring.
 **What this replaced:** an unscoped visible subscription on the shared database, which fired on every
 write to every accepted zone. In a room of three, one message produced one banner plus one more for
 each other member's acknowledgment of it.
+
+<!-- COPY END 4e7c225c -->
+
+<!-- COPY BEGIN 3e357a75 [NEEDS HUMAN REVIEW] -->
 
 ### Notifications are sorted by what rings them, and the badge is told what to count
 
@@ -1637,6 +1910,10 @@ opens the pages inherits five defaults nobody has tested on them.
 **What would change it:** a member finding the two pages harder to reason about than one list. The
 structure is Griff's; the defaults inside it are not, and those are the part to change first.
 
+<!-- COPY END 3e357a75 -->
+
+<!-- COPY BEGIN 5def8c6a [NEEDS HUMAN REVIEW] -->
+
 ### A seen mark is the first receipt that covered it
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -1656,6 +1933,10 @@ honest direction, since the app reports the earliest moment it can prove.
 
 **What it costs.** The instants are other people's clocks, compared with each other only to choose
 which to draw. Nothing orders history by a clock; `CausalOrder` does that.
+
+<!-- COPY END 5def8c6a -->
+
+<!-- COPY BEGIN 73c8ed6d [NEEDS HUMAN REVIEW] -->
 
 ### A message is only pending when nobody has it
 
@@ -1686,6 +1967,10 @@ Griff's rules, which say when waiting stops being ordinary:
 **What it costs.** A member who turns the timeout off and talks to somebody who has stopped opening
 the app will never be told that nothing is arriving. That is the setting doing what it says.
 
+<!-- COPY END 73c8ed6d -->
+
+<!-- COPY BEGIN 42c9e128 [NEEDS HUMAN REVIEW] -->
+
 ### A room that has not chosen waits three days
 
 `PROPOSED` — Claude, 2026-09-16, building the not-sent mark.
@@ -1703,6 +1988,10 @@ get a settings screen of their own, it moves there.
 
 **What it costs.** A message in a room nobody has set can sit for three days before anything is
 said, unless newer messages prove it wrong sooner.
+
+<!-- COPY END 42c9e128 -->
+
+<!-- COPY BEGIN 8f50a774 [NEEDS HUMAN REVIEW] -->
 
 ### The app does not set an interruption level, because it is a messaging app
 
@@ -1734,6 +2023,10 @@ ones.
 > a notification works and gives people a way to turn it off** if they don't agree that the
 > information requires their immediate attention.
 
+<!-- COPY END 8f50a774 -->
+
+<!-- COPY BEGIN f125f740 [NEEDS HUMAN REVIEW] -->
+
 That is the *recipient's* device explaining it at the moment of the interruption, with an off switch.
 An in-app sheet could not match it and would be asking the wrong person — the sender is not the one
 being interrupted.
@@ -1756,6 +2049,10 @@ a small gain. **(b) was proposed and is built**: the Notifications page says a F
 like anything else and that the app can be allowed in a Focus. (c) is not proposed, and Griff parked
 it on 2026-09-15 ([After TestFlight](after-testflight.md#whether-a-member-can-be-written-into-contacts)).
 
+<!-- COPY END f125f740 -->
+
+<!-- COPY BEGIN cd29fd11 [NEEDS HUMAN REVIEW] -->
+
 ### The notification extension writes nothing to the container it shares
 
 `PROPOSED` by Claude, 2026-09-17 — a default, not a constraint.
@@ -1774,6 +2071,10 @@ reload discards that.
 
 **What it costs.** Opening the app from a banner shows the message once the app's own round has
 collected it, not from what the extension already held — a round the app runs as it comes forward.
+
+<!-- COPY END cd29fd11 -->
+
+<!-- COPY BEGIN 1ff23478 [NEEDS HUMAN REVIEW] -->
 
 ## Safety
 
@@ -1797,6 +2098,10 @@ criterion 4 of the trust and safety design, and it has a test.
 **Cost:** for most members the filter does nothing until they turn a system setting on, and the
 App Review reply must not overstate coverage. The footer says exactly where the setting is.
 
+<!-- COPY END 1ff23478 -->
+
+<!-- COPY BEGIN cb07501c [NEEDS HUMAN REVIEW] -->
+
 ### A report is words, and cannot be anything else
 
 **RULED 2026-09-12, and the reasoning here was wrong.** Griff: the report goes to **abuse@outpostmessaging.com**, not to the member themselves. The reason is not tidiness, it is liability — "I don't want to be in the legal mire of holding potentially illegal things. Report and pass to the authority." Whoever handles it contacts the reporter using the contact details they supplied. The app must never hold illicit material, which is why `AbuseReport` has no field that could carry any.
@@ -1816,6 +2121,10 @@ to break it.
 **Cost:** a report lands in a third-party mailbox, which is the open problem in
 [trust-and-safety.md](trust-and-safety.md#where-report-records-live) and is an operational fix, not a code one.
 
+<!-- COPY END cb07501c -->
+
+<!-- COPY BEGIN d3f131cb [NEEDS HUMAN REVIEW] -->
+
 ### Blocking is local, immediate, silent, and reversible
 
 **RULED 2026-09-12.**
@@ -1834,6 +2143,10 @@ keys, media or bells from this member. See
 [Blocking stops the key handover](#blocking-stops-the-key-handover-and-stopping-it-is-the-whole-point).
 It is still not the membership refusal `RoomRoster` records, which the room can see.
 
+<!-- COPY END d3f131cb -->
+
+<!-- COPY BEGIN a8e50c19 [NEEDS HUMAN REVIEW] -->
+
 ### The deny list ships in the binary
 
 **RULED 2026-09-12.**
@@ -1846,6 +2159,10 @@ endpoint, in an app whose whole claim is that nothing observes its members.
 
 **Cost:** propagation is one release cycle. Local blocking is the immediate remedy, and the settings
 footer shows the list's date so a member can see how old what they rely on is.
+
+<!-- COPY END a8e50c19 -->
+
+<!-- COPY BEGIN cc43f296 [NEEDS HUMAN REVIEW] -->
 
 ### Blocking stops the key handover, and stopping it is the whole point
 
@@ -1881,6 +2198,10 @@ addresses a person: `peers()`, the two `rewrapTargets` call sites, the media upl
 - **The Outpost is the one place a block ends access outright**, because a wall has a single owner
   and there is nobody else to hand its key over.
 
+<!-- COPY END cc43f296 -->
+
+<!-- COPY BEGIN 345ebb39 [NEEDS HUMAN REVIEW] -->
+
 **And one thing that turned out to be ceremony.** This entry first said blocking must also turn the
 room's epoch, on the reasoning that a stable room never re-keys so the blocked person reads on with
 the key they hold. Building it showed that is wrong in both directions, so it was not built:
@@ -1905,6 +2226,10 @@ would disagree about who is in a room. It goes at the `CarpenterApp` call sites.
 key from anybody and are removed in effect while the roster still lists them as a member. That is the
 sum of individual choices rather than a removal, and the member list will keep showing them.
 
+<!-- COPY END 345ebb39 -->
+
+<!-- COPY BEGIN 96af041c [NEEDS HUMAN REVIEW] -->
+
 ## Deleting and hiding
 
 ### Deletion is shared ownership
@@ -1922,6 +2247,10 @@ member silently rewrite what everybody else can see.
 
 Removing a message from other people needs their agreement. See
 [Advanced data etiquette](epics/data-etiquette.md).
+
+<!-- COPY END 96af041c -->
+
+<!-- COPY BEGIN 1c2848f9 [NEEDS HUMAN REVIEW] -->
 
 ### A purge is a tombstone, and the link survives it
 
@@ -1951,6 +2280,10 @@ TestFlight on 2026-09-14.
 statement over the removed entry's hash, folded in its place. That is a tombstone with extra steps,
 which is the argument for starting here.
 
+<!-- COPY END 1c2848f9 -->
+
+<!-- COPY BEGIN 23c06702 [NEEDS HUMAN REVIEW] -->
+
 ### Silence in a consensus delete is silence
 
 **RULED 2026-09-13 by Griff.** Somebody who never answers a consensus request does not consent and
@@ -1962,6 +2295,10 @@ week away is a vote against; silence-consents destroys somebody's copy on the st
 looking at their phone, which is the one outcome this feature exists to prevent.
 
 **Cost:** a request can stay open for ever, and the initiator has to close it by hand.
+
+<!-- COPY END 23c06702 -->
+
+<!-- COPY BEGIN 4cb2e186 [NEEDS HUMAN REVIEW] -->
 
 ### A deletion leaves a line in the transcript, not a notice that fades
 
@@ -1988,6 +2325,10 @@ did not tell them**, and there is no way for them to go back and check.
 [pushed out](after-testflight.md) and there is no consensus code in the source at all. This is
 recorded so the form is settled before the work starts rather than under pressure during it.
 
+<!-- COPY END 4cb2e186 -->
+
+<!-- COPY BEGIN 9c279946 [NEEDS HUMAN REVIEW] -->
+
 ### Hiding a message reaches your own devices
 
 **RULED 2026-09-13 by Griff.** Hiding was per device: hide something on a phone and it was still on
@@ -1999,6 +2340,10 @@ under their identity, so what they chose not to see is not readable by the trans
 
 **Cost:** a hidden flag is one more thing in a feed that is already the largest record this app
 writes.
+
+<!-- COPY END 9c279946 -->
+
+<!-- COPY BEGIN 3bd22383 [NEEDS HUMAN REVIEW] -->
 
 ### Nothing this app holds is deleted without being asked
 
@@ -2013,6 +2358,10 @@ being asked, to solve a problem it decided they had. That is the opposite of eve
 app takes about somebody's own history.
 
 **Cost:** a phone can fill up, and the app will say so rather than fix it quietly.
+
+<!-- COPY END 3bd22383 -->
+
+<!-- COPY BEGIN 9a5f8bb3 [NEEDS HUMAN REVIEW] -->
 
 ### Deleting a conversation reaches every device, waits for the leaving, and leaves photos for others
 
@@ -2039,6 +2388,10 @@ record what is finished, built once. These are the calls made building it.
   item that leads to it is destructive, with the trash symbol, and last, as Context menus asks.
 - **Unavailable items are hidden, not dimmed**, which is what Context menus says for a context menu.
   That also stopped *Leave* being offered on a room already left.
+
+<!-- COPY END 9a5f8bb3 -->
+
+<!-- COPY BEGIN 49d48388 [NEEDS HUMAN REVIEW] -->
 
 ## Recovery and devices
 
@@ -2086,6 +2439,10 @@ nothing is automatic.
 **What would change it.** Nothing short of a party who can vouch for a member without being able to
 impersonate them, which the architecture does not have.
 
+<!-- COPY END 49d48388 -->
+
+<!-- COPY BEGIN 8aab962a [NEEDS HUMAN REVIEW] -->
+
 ### Recovery is announced, and both sides of it have settings
 
 **RULED 2026-09-13 by Griff.** He rejected a silent restore: "you're requesting to fill history
@@ -2116,6 +2473,10 @@ is the price of the setting being theirs.
 such thing today — a restored device is a new device key signing as a known identity, which is
 exactly the shape worth telling somebody about.
 
+<!-- COPY END 8aab962a -->
+
+<!-- COPY BEGIN ed40492b [NEEDS HUMAN REVIEW] -->
+
 ### Turning every room's key on a restore is a question, not a default
 
 **RULED 2026-09-13 by Griff:** ask on the restore screen.
@@ -2135,6 +2496,10 @@ is revoked from the device list, which now shows a real arrival date for each.
 **Why not automatic.** A key turn is not free and not reversible, and "I restored onto a new laptop"
 is not the same event as "my phone was taken". The app does not know which happened and must not
 guess.
+
+<!-- COPY END ed40492b -->
+
+<!-- COPY BEGIN 8f0e3c78 [NEEDS HUMAN REVIEW] -->
 
 ### A restored device asks its peers for what was said
 
@@ -2164,6 +2529,10 @@ sender's bookkeeping and would re-send to every device a member ever had, includ
 **The automatic repair does not cover this**, and that is why it was missed: `repairWhatHasNotFilledItself`
 fires on a named hole — a gap *between* entries a device holds. A restored device has no holes. Its
 frontier is simply short, and a feed it has never seen cannot be a gap.
+
+<!-- COPY END 8f0e3c78 -->
+
+<!-- COPY BEGIN f75fc044 [NEEDS HUMAN REVIEW] -->
 
 ### A restore says so, and the person asked is told what was observed
 
@@ -2202,6 +2571,10 @@ history` and answered with three entries.
 **Not measured:** the banner itself. The preference was staged on disk rather than turned on through
 its row, and no push was delivered to a device a person was holding.
 
+<!-- COPY END f75fc044 -->
+
+<!-- COPY BEGIN 9c73eefb [NEEDS HUMAN REVIEW] -->
+
 ### The hold is on the backfill, not on the conversation
 
 `PROPOSED` — Claude, 2026-09-13, building the *hold until I check* half of [the ruling on announcing a recovery](#recovery-is-announced-and-both-sides-of-it-have-settings).
@@ -2234,6 +2607,10 @@ the attestation that made *you* a member. Looking only one way, which is what th
 
 **Not measured:** the setting turned on through its own row; it was staged on disk.
 
+<!-- COPY END 9c73eefb -->
+
+<!-- COPY BEGIN 4daf6eb5 [NEEDS HUMAN REVIEW] -->
+
 ### Asking for your history back is the recoverer's own choice, made at the restore
 
 `PROPOSED` — Claude, 2026-09-13, completing [the ruling on announcing a recovery](#recovery-is-announced-and-both-sides-of-it-have-settings).
@@ -2262,6 +2639,10 @@ that pressed and dwelt on it did, and the rows in this work were exercised that 
 **Not measured on the rig:** changing your mind afterwards. Covered by a test that fails without the
 `wantsWhatWasSaid` reset.
 
+<!-- COPY END 4daf6eb5 -->
+
+<!-- COPY BEGIN f03bb498 [NEEDS HUMAN REVIEW] -->
+
 ### The lost-or-stolen question is a choice with no default, not a switch
 
 `PROPOSED` — Claude, 2026-09-13, building [the ruling on turning keys after a restore](#turning-every-rooms-key-on-a-restore-is-a-question-not-a-default).
@@ -2288,6 +2669,10 @@ the member who is still there.
 **What answering no costs.** An old device keeps reading along until it is revoked from the device
 list, which does show a real arrival date for each — checked on the rig
 2026-09-13 with eight devices, every one carrying the minute it was added.
+
+<!-- COPY END f03bb498 -->
+
+<!-- COPY BEGIN 9968c070 [NEEDS HUMAN REVIEW] -->
 
 ### A device has a name, and the name is the member's alone
 
@@ -2317,6 +2702,10 @@ people compare, and a name the member invented cannot do that job.
 **Measured on the rig 2026-09-13:** this device named itself `iPhone18,1` on first launch; renaming
 another to *The phone I lost* through the swipe action put the name in the row with its code and date
 beneath.
+
+<!-- COPY END 9968c070 -->
+
+<!-- COPY BEGIN 8eecc3a9 [NEEDS HUMAN REVIEW] -->
 
 ### Removing devices is a selection, not a button in every row
 
@@ -2356,6 +2745,10 @@ the sentence about what removal costs.
 rendered as its own raw markup on screen, while the same string inside the dialog's button inflected
 correctly. Found on the rig. The title picks between two written sentences instead.
 
+<!-- COPY END 8eecc3a9 -->
+
+<!-- COPY BEGIN fdea4f71 [NEEDS HUMAN REVIEW] -->
+
 ### The removal confirmation is a bottom sheet, not a dialog
 
 `RULED 2026-09-13 by Griff`, on seeing it: "Use a bottom sheet, this looks awful."
@@ -2367,6 +2760,10 @@ removal costs, then the destructive action and Cancel. Apple's **Sheets** page i
 sheet helps people perform a scoped task that's closely related to their current context"* — and its
 rule that a confirming button is always paired with Cancel is why Cancel is there rather than relying
 on the drag indicator.
+
+<!-- COPY END fdea4f71 -->
+
+<!-- COPY BEGIN 7f2b89ad [NEEDS HUMAN REVIEW] -->
 
 ### Being told a restore asked for your history is on unless you turn it off
 
@@ -2394,6 +2791,10 @@ fails.
 *Complete (QA required)* with twenty-three passing tests, which is exactly the shape of a claim this
 project has been wrong about before.
 
+<!-- COPY END 7f2b89ad -->
+
+<!-- COPY BEGIN 9bce0b05 [NEEDS HUMAN REVIEW] -->
+
 ### A first launch that cannot reach iCloud waits
 
 `RULED` — Griff, 2026-09-16: wait until it can check.
@@ -2407,6 +2808,10 @@ counts as unreachable too, so the erase-everything path now asks the account the
 
 **What it costs.** A first launch with no connection cannot set up. The app cannot do anything
 useful without iCloud anyway.
+
+<!-- COPY END 9bce0b05 -->
+
+<!-- COPY BEGIN 11f7b396 [NEEDS HUMAN REVIEW] -->
 
 ## Interface
 
@@ -2427,6 +2832,10 @@ animated the selection and two did not, and the selection idiom differed between
 looked fine in isolation, which is exactly why nobody noticed they disagreed. They are one `Section`
 of `ChoiceRow` now, and `lint-branding.sh` rejects a hand-drawn row separator so a fourth cannot
 start quietly.
+
+<!-- COPY END 11f7b396 -->
+
+<!-- COPY BEGIN 9de81d9f [NEEDS HUMAN REVIEW] -->
 
 #### Liquid Glass belongs in a container, and custom glass answers a finger
 
@@ -2472,6 +2881,10 @@ What stays custom is what the system has no opinion about, and each of these ear
 — a grouped list's top inset is wrong for a masthead, and `.tint()` still does not reach
 `searchable()`. Each is answered where it comes up rather than by drawing the whole component again.
 
+<!-- COPY END 9de81d9f -->
+
+<!-- COPY BEGIN b73f09be [NEEDS HUMAN REVIEW] -->
+
 ### The Human Interface Guidelines are the reference, and a departure is a decision
 
 **RULED 2026-09-12 by Griff**, who proposed the rule. Extended the same day: Apple's *intention* is in scope, not only their components.
@@ -2497,6 +2910,10 @@ question to answer first is *what is the scope of this search*, and that a searc
 section belongs inline under the title, with placeholder text that names what is being searched:
 the Music-library pattern, not the collapsed magnifier. That reading was itself overturned the same
 day, as the next entry records: the app's main search became a tab.
+
+<!-- COPY END b73f09be -->
+
+<!-- COPY BEGIN 35bfcc35 [NEEDS HUMAN REVIEW] -->
 
 ### Search is a tab at the trailing end, and the inline field is for sub-views
 
@@ -2536,6 +2953,10 @@ inside You, which is the Music-library case exactly.
 call was written down, so it could be read back against the page and found wrong. A summary of a
 video is not the page — see it, or do not cite it.
 
+<!-- COPY END 35bfcc35 -->
+
+<!-- COPY BEGIN ff74a2db [NEEDS HUMAN REVIEW] -->
+
 ### The reaction picker is drawn here, and it is the one place the system offers nothing
 
 **RULED 2026-09-13 by Griff**, after the first answer was wrong and he asked for it to be relitigated.
@@ -2559,6 +2980,10 @@ retired the hand-maintained twenty — with the difference that a table is data 
 characters were a guess. Searching by name is the thing the keyboard cannot do and the reason people
 reach for these pickers.
 
+<!-- COPY END ff74a2db -->
+
+<!-- COPY BEGIN cd50a35d [NEEDS HUMAN REVIEW] -->
+
 ### The rooms list row is Messages', and board 53 is overruled
 
 **RULED 2026-09-13 by Griff**, ratifying a change Claude made on 2026-09-05 without asking.
@@ -2570,6 +2995,10 @@ against Messages on the same simulator — 45pt avatar, 8pt gutter with the unre
 **Why.** Drawing the name as a pill above the preview pushed the row to three lines, and Messages is
 the reference the rest of this app already uses for presentation. **What it costs:** in a group, who
 said the last thing is one of the things the row is for, and it is not there.
+
+<!-- COPY END cd50a35d -->
+
+<!-- COPY BEGIN 5e45184b [NEEDS HUMAN REVIEW] -->
 
 ### The mark stands where You's title would be, and that is a departure
 
@@ -2610,6 +3039,10 @@ Left as it is, because reversing it is Griff's call and the entry above is his. 
 if it is ever wanted: keep the mark and give the tab an empty-looking inline title that VoiceOver
 still reads. Nothing has been changed on the strength of this measurement.
 
+<!-- COPY END 5e45184b -->
+
+<!-- COPY BEGIN ea2a20cb [NEEDS HUMAN REVIEW] -->
+
 ### The camera is asked for when it is first wanted, and never at launch
 
 `RULED` — Griff, 2026-09-14, on adding camera scanning of an invite QR.
@@ -2638,6 +3071,10 @@ else, because nothing else is true.
 **What it costs.** A permission the app did not previously need, and a review question to answer. The
 ask-first shape spends one extra tap to avoid spending the system's single permission prompt on
 somebody who did not want the feature.
+
+<!-- COPY END ea2a20cb -->
+
+<!-- COPY BEGIN f40a9300 [NEEDS HUMAN REVIEW] -->
 
 #### How the ask and the HIG's pre-alert rules both hold
 
@@ -2674,6 +3111,10 @@ Settings app, and the app says so.
 **Sibling, fixed 2026-09-16.** The notification explainer is a pre-alert. It already had one button;
 it could still be swiped away, which it no longer can.
 
+<!-- COPY END f40a9300 -->
+
+<!-- COPY BEGIN bd8650f0 [NEEDS HUMAN REVIEW] -->
+
 ### A disabled button keeps the system's look
 
 `RULED` — Griff, 2026-09-16: keep Apple's look.
@@ -2687,6 +3128,10 @@ corrected rather than the control.
 
 **What it costs.** Apple's audit will go on flagging every disabled prominent button.
 
+<!-- COPY END bd8650f0 -->
+
+<!-- COPY BEGIN fa3b6480 [NEEDS HUMAN REVIEW] -->
+
 ### The accent retint fades, and the tab bar leads it
 
 `RULED` — Griff, 2026-09-16: keep the fade.
@@ -2695,6 +3140,10 @@ The accent is set inside one 0.2s `withAnimation`. Recorded frame by frame, ever
 crosses together; the tab bar iOS draws takes the new tint on the first frame, about 85ms ahead,
 because a SwiftUI transaction does not reach it. The alternative was no fade at all, so every surface
 changes on one frame.
+
+<!-- COPY END fa3b6480 -->
+
+<!-- COPY BEGIN 53e475f6 [NEEDS HUMAN REVIEW] -->
 
 ### Secondary actions are bordered, with a label darker than their tint
 
@@ -2722,6 +3171,10 @@ action sits on, for every accent, and to stay recognizably the accent rather tha
 style rather than per button, because a single bordered button among five glass ones would be the
 inconsistency the HIG's hierarchy rule is about.
 
+<!-- COPY END 53e475f6 -->
+
+<!-- COPY BEGIN 1f3716db [NEEDS HUMAN REVIEW] -->
+
 ### What stays a fixed size when text grows
 
 `PROPOSED` — Claude, 2026-09-16, in the Dynamic Type pass.
@@ -2744,6 +3197,10 @@ to all font sizes", "Increase the size of meaningful interface icons as font siz
 
 **What it costs.** Somebody at an accessibility size sees small initials and small reaction chips.
 The name and the reactions are available at full size one step away.
+
+<!-- COPY END 1f3716db -->
+
+<!-- COPY BEGIN 83e5d4b3 [NEEDS HUMAN REVIEW] -->
 
 ### A spinner is a claim, and it has to stop when the work does
 
@@ -2776,6 +3233,10 @@ things that can stop the check. A fifth reason means a fifth sentence, and the c
 **What would change it:** a signal from iCloud Keychain that an identity arrived. There is none, which
 is why any of this exists.
 
+<!-- COPY END 83e5d4b3 -->
+
+<!-- COPY BEGIN af80433b [NEEDS HUMAN REVIEW] -->
+
 ### A wait must be able to end by itself
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -2796,6 +3257,10 @@ staring at a spinner — the first is the silent corruption the wait exists to p
 is irreversible. The correction is that the waiting is bounded by something that keeps looking, and
 that a signal which cannot resolve is treated as a bug in the signal.
 
+<!-- COPY END af80433b -->
+
+<!-- COPY BEGIN f928ccf4 [NEEDS HUMAN REVIEW] -->
+
 ### Silence is a claim, and usually the wrong one
 
 **PROPOSED by Claude** — a default, not a constraint. He has not ruled on this.
@@ -2811,6 +3276,10 @@ So: a state that **cannot resolve on its own** must be drawn. `pending` may stay
 lasts seconds and ends by itself. `noRecipients` and `notReported` are drawn because they can last
 days and end only when somebody else does something. The test is not how important the state is, it
 is whether waiting quietly will ever stop.
+
+<!-- COPY END f928ccf4 -->
+
+<!-- COPY BEGIN 1420c901 [NEEDS HUMAN REVIEW] -->
 
 ### A failure the member could act on is reported to the member
 
@@ -2837,6 +3306,10 @@ reading "Nothing wrong". `SilentFailureTests` holds both halves.
 **Cost:** an integrity screen that can now be non-clean for a reason the member cannot fix
 themselves. That is the right direction: the honesty rule would rather they see something wrong than a
 convincingly empty screen.
+
+<!-- COPY END 1420c901 -->
+
+<!-- COPY BEGIN f914e127 [NEEDS HUMAN REVIEW] -->
 
 ### A post that did not go says so, the way a message does
 
@@ -2872,6 +3345,10 @@ out when it did not, which is the one thing this product is not allowed to do.
 `reporting` returns the sentence for a reason. Anywhere its result is dropped, a member is being
 told something worked on the strength of nothing.
 
+<!-- COPY END f914e127 -->
+
+<!-- COPY BEGIN c1666768 [NEEDS HUMAN REVIEW] -->
+
 ## Accessibility and color
 
 ### An accessibility floor is measured against what is actually behind the thing
@@ -2889,6 +3366,10 @@ against the fill that carries it.
 So: when a token is introduced that sits *between* two others, the audit gains the new pair in the
 same change. A swatch that exists only so the audit can composite it is not dead code, and deleting
 it removes a guarantee rather than a line.
+
+<!-- COPY END c1666768 -->
+
+<!-- COPY BEGIN e800f8c6 [NEEDS HUMAN REVIEW] -->
 
 ### A color is measured on every ground it is drawn on, in both appearances
 
@@ -2942,6 +3423,10 @@ did not already hold. What it changed:
   photo (4.76:1 measured; 35% gives 2.4:1). Glass has no fixed value, so the dimming is the part that
   is measured. The loading spinner lost its white tint and takes the system's.
 
+<!-- COPY END e800f8c6 -->
+
+<!-- COPY BEGIN 9ac51fe7 [NEEDS HUMAN REVIEW] -->
+
 What stays, deliberately:
 
 - **Black and white over a photo in the composer and the crop screen** — the clip length, the remove
@@ -2957,6 +3442,10 @@ What stays, deliberately:
   the 3:1 a graphic needs, and what Settings itself draws.
 - **Quaternary gray on a chip** stays where it is an illustration — the inbox-arrangement miniatures —
   or a disabled control in the post composer, both of which WCAG exempts.
+
+<!-- COPY END 9ac51fe7 -->
+
+<!-- COPY BEGIN c1a71fa9 [NEEDS HUMAN REVIEW] -->
 
 ### Five accents move off the board so they can be read as text
 
@@ -2980,6 +3469,10 @@ buttons, links, the selected tab. Adding that one check found five failures at o
 | Cobalt | dark | `#3E7BFA` | 4.39 | `#4D85FA` | 4.90 |
 | Oxblood | dark | `#C6555A` | 3.93 | `#CE6C70` | 4.86 |
 
+<!-- COPY END c1a71fa9 -->
+
+<!-- COPY BEGIN 44d8b8b4 [NEEDS HUMAN REVIEW] -->
+
 Each moved by the smallest hue-preserving lightness step that clears 4.5:1 on every surface with a
 margin, darker in light mode and lighter in dark. The other eleven pairs already passed and did not
 move. **This is a departure from the design board**, recorded because `AccentTests` pinned the
@@ -2999,6 +3492,10 @@ Neither touches `secondaryText` or `neutralFill`, which color much else.
 **What Apple's own audit said afterwards**, run on every accent in both appearances
 (`AccentContrastAuditTests`, one method per accent, `-theme.accent` at launch), and measured in the
 audit's own screenshots rather than read off the summary:
+
+<!-- COPY END 44d8b8b4 -->
+
+<!-- COPY BEGIN 50e6f851 [NEEDS HUMAN REVIEW] -->
 
 - **Dark mode: every accent-driven failure is gone.** *I have an invite* and *Send a Solo* no longer
   appear on any accent.
@@ -3020,6 +3517,10 @@ audit's own screenshots rather than read off the summary:
 a documented bar of 4.5:1. Every change here was verified by measurement; nothing further is being
 changed to satisfy a threshold the documentation does not describe.
 
+<!-- COPY END 50e6f851 -->
+
+<!-- COPY BEGIN 221da48f [NEEDS HUMAN REVIEW] -->
+
 ### The VoiceOver walk waits for TestFlight
 
 `RULED` — Griff, 2026-09-17: skip the walk until the app is on TestFlight; the app uses system
@@ -3032,6 +3533,10 @@ done on a phone from the first TestFlight build instead.
 
 **What it costs.** Reading order, grouping, and anything read twice or skipped are unheard until
 then. The rig heard the first stop on each screen it tried, and every one was right.
+
+<!-- COPY END 221da48f -->
+
+<!-- COPY BEGIN 46a2000e [NEEDS HUMAN REVIEW] -->
 
 ### A view split across files declares Reduce Motion once and uses it everywhere
 
@@ -3048,6 +3553,10 @@ It now also accepts a file that *consults* the value as `reduceMotion ?`. Matchi
 than a bare name is deliberate: a local variable that happened to be called `reduceMotion` would not
 excuse a file. The one animation in the composer that was excused by the old file-level rule without
 consulting anything — the problem notice's fade — now consults it.
+
+<!-- COPY END 46a2000e -->
+
+<!-- COPY BEGIN 99407c4c [NEEDS HUMAN REVIEW] -->
 
 ## Engineering rules
 
@@ -3073,6 +3582,10 @@ knowledge, and destroying the thing is not how that duty is discharged.
 The service takes the app's own report plus the reporter's words, stores the report in Postgres and
 mails a formatted notification.
 
+<!-- COPY END 99407c4c -->
+
+<!-- COPY BEGIN 269c5778 [NEEDS HUMAN REVIEW] -->
+
 The upload check is over content, never the content type or the extension, because both are whatever
 the browser was told to send. Strict UTF-8 with control characters refused kills an image, a PDF, an
 archive and a video — a PDF matters here because it opens with readable ASCII, so a check on the
@@ -3097,6 +3610,10 @@ is *Open the report form*, from `APP_REPORT_FORM_URL` in the xcconfig — the UR
 name, so it belongs with the addresses rather than in Swift. Seen on the rig: the share sheet offers
 *Outpost report 038E3D 2026-09-17* with Save to Files.
 
+<!-- COPY END 269c5778 -->
+
+<!-- COPY BEGIN 3c0eb8b7 [NEEDS HUMAN REVIEW] -->
+
 **Mail stays the first action on the report screen, and the form is beside it.** The form is the
 better intake — it refuses material a mailbox cannot, and a report through it lands in Postgres
 rather than in a third-party mailbox, which is what § 2258A(h)(3) actually asks for. It is
@@ -3118,6 +3635,10 @@ is the signal rather than a silent widening of what the intake accepts.
 names a message by a one-way fingerprint and carries none of its content, and the intake refuses
 everything that is not that report — so the database holds an account of an event rather than the
 thing complained about, which is the whole reason the form exists.
+
+<!-- COPY END 3c0eb8b7 -->
+
+<!-- COPY BEGIN adc5f4d7 [NEEDS HUMAN REVIEW] -->
 
 ### The marketing site is photographed, not drawn
 
@@ -3146,6 +3667,10 @@ screen is a claim nobody checks; a screenshot is a claim that fails loudly.
 Titans character names, which cannot go on a public site. `Fixtures` — the airship club, the Carcosa
 names — was written for previews and is neutral, so it is what the host draws.
 
+<!-- COPY END adc5f4d7 -->
+
+<!-- COPY BEGIN 2f8ccdc5 [NEEDS HUMAN REVIEW] -->
+
 ### A Focus filter's preview switch reaches a post, and its room list does not
 
 `PROPOSED` — Claude, 2026-09-17, found while making the notification extension's decisions testable.
@@ -3167,6 +3692,10 @@ on the same private `withoutPreviews`.
 wordless. The way to stop those is the Outposts notification setting, which is where the choice about
 *which* posts notify already lives. Nothing here can distinguish "quiet because of this Focus" from
 "quiet always", so this is the smaller of two wrong answers rather than a clean one.
+
+<!-- COPY END 2f8ccdc5 -->
+
+<!-- COPY BEGIN 8842bec0 [NEEDS HUMAN REVIEW] -->
 
 ### The number on the app icon is one property, and it obeys the switches
 
@@ -3202,6 +3731,10 @@ switch changed itself to the Outposts-only wording. Turning it back on restored 
 Outpost authors. `RootView` already called it on every render to draw the rail, so this is a second
 walk on a path that had one, not a new cost on a quiet path. `ProjectionCostTests` still passes.
 
+<!-- COPY END 8842bec0 -->
+
+<!-- COPY BEGIN 231a4f1a [NEEDS HUMAN REVIEW] -->
+
 ### What the notification extension decides is one function, and it is tested
 
 `PROPOSED` — Claude, 2026-09-17.
@@ -3229,6 +3762,10 @@ test can build one. They are read-only value types, so the cost is API surface r
 to be wrong. What is still not proved is delivery: no push has reached the extension on this rig, and
 that is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
 
+<!-- COPY END 231a4f1a -->
+
+<!-- COPY BEGIN 6ccbd5b9 [NEEDS HUMAN REVIEW] -->
+
 ### The kit takes no framework dependency
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -3243,6 +3780,10 @@ same wire mapping the real transport uses, and counts every server operation rat
 
 **The rule this leaves behind:** where a fake diverges from the real implementation is where the next
 defect will live. Close it in the fake, not in a comment.
+
+<!-- COPY END 6ccbd5b9 -->
+
+<!-- COPY BEGIN 32974f0d [NEEDS HUMAN REVIEW] -->
 
 ### The fold is kept, and the state it is derived from says when it changes
 
@@ -3280,6 +3821,10 @@ is visible to the next read.
 **What would change it:** nothing foreseeable. If a third piece of state ever feeds the fold, it
 needs the same `didSet`, and the tests will not notice on their own.
 
+<!-- COPY END 32974f0d -->
+
+<!-- COPY BEGIN 679419f4 [NEEDS HUMAN REVIEW] -->
+
 ### A nil check does not survive an `await`, and an actor is reentrant
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -3306,6 +3851,10 @@ or not it has been caught happening. `Scripts/lint/reentrancy.py` fails the lint
 separated from its assignment by an `await`; a site that has thought about it says
 `reentrancy considered`.
 
+<!-- COPY END 679419f4 -->
+
+<!-- COPY BEGIN 31efc05b [NEEDS HUMAN REVIEW] -->
+
 ### Main-actor state is never copied across an `await`
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -3329,6 +3878,10 @@ it. `ReplicaRaceTests` fails against the old code with exactly the two symptoms.
 **Cost:** the convenience `receive(as:into:)` still has the old shape and survives for tests, whose
 replicas are reached from nowhere else. Nothing in the app calls it.
 
+<!-- COPY END 31efc05b -->
+
+<!-- COPY BEGIN bde27ff5 [NEEDS HUMAN REVIEW] -->
+
 ### Two processes, one container
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
@@ -3342,6 +3895,10 @@ unreadable. Since 2026-09-17 the extension writes nothing at all; see
 When the App Group is unavailable, an extension's fallback directory is inside its **own** container.
 That is a second private copy that is permanently behind, and it looks exactly like slowness. Both
 processes log which container they resolved.
+
+<!-- COPY END bde27ff5 -->
+
+<!-- COPY BEGIN 758ddfe5 [NEEDS HUMAN REVIEW] -->
 
 ### Stored shapes are read forward, never assumed
 
@@ -3366,6 +3923,10 @@ Two failures are worth separating. A file that cannot be read strands one member
 which is recoverable — nothing is overwritten, because the load failure path only sets the error
 state. A packet that cannot be opened is worse: it strands the *sender's* messages on every peer
 running an older build, and no amount of updating the receiver fixes it.
+
+<!-- COPY END 758ddfe5 -->
+
+<!-- COPY BEGIN 00237a6d [NEEDS HUMAN REVIEW] -->
 
 ### The fake is held to the real mailbox's contract
 
@@ -3403,6 +3964,10 @@ implements it, and a missing one is a compile error. Removing it immediately sur
 that had never been considered. **Do not add a protocol extension default to this seam again** — a
 default is exactly how a fake drifts from the thing it stands in for.
 
+<!-- COPY END 00237a6d -->
+
+<!-- COPY BEGIN eb9de51f [NEEDS HUMAN REVIEW] -->
+
 ### Choosing what was already the default is still an answer
 
 `PROPOSED` — Claude, 2026-09-14, found on the rig taking *Familiar and open* on a fresh account.
@@ -3437,6 +4002,10 @@ device and then reading the file.** Fixing the nine single setters was not the w
 question for a room. Measured after the fix, on an erased device driven through the whole check-up:
 all fourteen settings on disk, none missing.
 
+<!-- COPY END eb9de51f -->
+
+<!-- COPY BEGIN 5daa0a8a [NEEDS HUMAN REVIEW] -->
+
 ### One writer for the state file, and it reads the state when its turn comes
 
 `PROPOSED` — Claude, 2026-09-14, found reading `updateOrganisation` during the big review.
@@ -3459,6 +4028,10 @@ is the guard, and it fails three times out of three without the chain.
 
 The cost is that a save waits for the save before it, which on a file this size is nothing, and that
 a failing write now delays the next one rather than racing it.
+
+<!-- COPY END 5daa0a8a -->
+
+<!-- COPY BEGIN bdba7276 [NEEDS HUMAN REVIEW] -->
 
 ### Every route to a person is a form, and no address is published
 
@@ -3491,6 +4064,10 @@ has never been the app's.
 now says *Keep it yourself* — a report names a message by a fingerprint, and the fingerprint only
 means anything while the message is still on the reporter's device.
 
+<!-- COPY END bdba7276 -->
+
+<!-- COPY BEGIN 46e83996 [NEEDS HUMAN REVIEW] -->
+
 ### A category decides where a report goes, and the routing is published first
 
 `RULED` — Griff, 2026-09-17, for the category; `PROPOSED` — Claude, same day, for publishing the
@@ -3519,6 +4096,62 @@ later, because `pg_dumpall` keeps three. And a report is passed to an authority 
 there*, not always — "all reports will be passed along" would have promised every question about a
 display name to the FBI.
 
+<!-- COPY END 46e83996 -->
+
+<!-- COPY BEGIN 97a3a139 [NEEDS HUMAN REVIEW] -->
+
+### Copy carries a review marker, and only a person moves it
+
+**RULED 2026-09-25.** Griff asked for every piece of copy in the docs and the app to be wrapped in a
+comment tagged `NEEDS HUMAN REVIEW`, `HUMAN REVIEWED, UNVERIFIED` or `HUMAN REVIEWED & VERIFIED`,
+with an end comment and an identifier, so the team can go through all of it piece by piece, edit it
+and verify it.
+
+**Built.** 1,582 chunks were placed on 2026-09-25, every one at `NEEDS HUMAN REVIEW`:
+
+| Where | Chunks | Marker |
+|---|---|---|
+| Swift, 133 files: every string a member reads, including accessibility labels, error sentences, notification and Focus filter copy, and the recovery key file | 730 | `// COPY BEGIN <id> [<status>]` … `// COPY END <id>` |
+| The documentation pages and the READMEs | 673 | `<!-- … -->`, with a blank line either side |
+| The design boards: the two decision documents, and the canvas's turn headings, group titles and captions | 172 | `<!-- … -->` |
+| `Info.plist` permission prompts, the display name in `Branding.xcconfig`, and the site title, links, footer and callout names in `_config.yml` | 7 | the file's own comment |
+
+The status on the BEGIN line is the only thing a reviewer edits. `python3 Scripts/copy-review.py
+report` counts chunks by status, `list` names every chunk still open, and `new-id` gives an id for new
+copy.
+
+**PROPOSED** (Claude, 2026-09-25), everything about how:
+
+- Chunks follow the structure, not a line count. In the docs there is one per heading, `<details>`
+  ticket or board, and a long section is cut at a paragraph boundary, never inside a list, table or
+  callout. In Swift there is one per statement or settings section, and a run of rows is split where
+  the source has a blank line or where it passes about a thousand characters of copy.
+- A page's first chunk opens inside its front matter, above `title:`, and closes after the lede, so
+  the nav title, the H1 and the opening are read together. A comment before the H1 would have made
+  just-the-docs index every page twice in search. Measured by building the site with and without the
+  markers: the output is identical apart from the comments and whitespace between tags.
+- Ids are eight random hex digits. The lint fails on a marker that is unpaired, nested, duplicated or
+  misspelled.
+- A chunk whose words change goes back to `NEEDS HUMAN REVIEW`, and new copy gets a new pair. Nothing
+  checks either.
+
+**Not covered:** `docs/TESTFLIGHT_LICENCE.txt`, which is pasted into App Store Connect as it stands,
+so a marker would go with it. The three string catalogs, because JSON takes no comments and the words
+are written in the source. The mock screens inside the canvas's device frames. Debug-only screens,
+previews, and the demo room and demo Outpost. `parlor-design.md` and `CLAUDE.md`.
+
+**Cost:** about 4,500 lines of comments in a repository whose rule is that there are none. The Swift
+markers are mechanism, like `cross-fade only`, and `CLAUDE.md` says so. A marker records where the
+copy was when it was placed. Copy added later is not wrapped unless somebody wraps it, because the
+lint checks that pairs match, not that all the copy is covered.
+
+**What would change it:** the review finishing, when the markers can come out in one commit. Or new
+copy arriving unwrapped often enough to need a check that fails on it.
+
+<!-- COPY END 97a3a139 -->
+
+<!-- COPY BEGIN da54c3de [NEEDS HUMAN REVIEW] -->
+
 ## Superseded
 
 Kept briefly so nobody re-derives them.
@@ -3537,6 +4170,10 @@ Kept briefly so nobody re-derives them.
   2026-09-15 by [a permanent line in the transcript](#a-deletion-leaves-a-line-in-the-transcript-not-a-notice-that-fades),
   after the HIG's Alerts page pointed away from a notice that fades. Opening the room the purge
   happened in still stands.
+
+<!-- COPY END da54c3de -->
+
+<!-- COPY BEGIN 6f6de412 [NEEDS HUMAN REVIEW] -->
 
 #### ~~A search is scoped to its screen, and says so where it stands~~
 
@@ -3570,3 +4207,5 @@ search*, and both answer against the bottom toolbar here:
 
 **What would change it.** A single search over everything. That is a dedicated search tab, and it
 is a different feature — not a modifier. It would also be the right call if the tab bar went away.
+
+<!-- COPY END 6f6de412 -->

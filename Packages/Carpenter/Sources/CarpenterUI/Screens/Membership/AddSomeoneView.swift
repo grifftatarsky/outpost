@@ -48,6 +48,7 @@ public struct AddSomeoneView: View {
                         .disabled(working != nil)
                     }
                 } header: {
+                    // COPY BEGIN f915f58f [NEEDS HUMAN REVIEW]
                     Text("Add them to", bundle: .module)
                 } footer: {
                     if let problem {
@@ -58,8 +59,10 @@ public struct AddSomeoneView: View {
                             "They are not in until they accept the invite you send back.",
                             bundle: .module)
                     }
+                    // COPY END f915f58f
                 }
 
+                // COPY BEGIN 2977169c [NEEDS HUMAN REVIEW]
                 Section {
                     Button {
                         naming = true
@@ -72,9 +75,11 @@ public struct AddSomeoneView: View {
                     }
                     .disabled(working != nil)
                 }
+                // COPY END 2977169c
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN dd19f949 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Somebody sent their code", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -82,6 +87,7 @@ public struct AddSomeoneView: View {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
                 }
             }
+            // COPY END dd19f949
             .sheet(item: $issued) { presented in
                 InviteView(
                     roomName: presented.roomName, invite: presented.invite,
@@ -99,6 +105,7 @@ public struct AddSomeoneView: View {
     private func row(_ room: RoomSummary) -> some View {
         HStack(spacing: 12) {
             AvatarView(initials: room.initials, diameter: CarpenterMetrics.messageAvatar)
+            // COPY BEGIN 142c43fd [NEEDS HUMAN REVIEW]
             VStack(alignment: .leading, spacing: 2) {
                 Text(room.name)
                     .font(CarpenterFont.rowTitle)
@@ -107,6 +114,7 @@ public struct AddSomeoneView: View {
                     .font(CarpenterFont.rowDetail)
                     .foregroundStyle(palette.tertiaryText)
             }
+            // COPY END 142c43fd
             Spacer()
             if working == room.id {
                 ProgressView()
@@ -115,6 +123,7 @@ public struct AddSomeoneView: View {
         .contentShape(.rect)
     }
 
+    // COPY BEGIN 87a8718f [NEEDS HUMAN REVIEW]
     private func add(to room: RoomSummary) {
         working = room.id
         problem = nil
@@ -128,6 +137,7 @@ public struct AddSomeoneView: View {
             issued = PresentedInvite(roomName: room.name, invite: invite)
         }
     }
+    // COPY END 87a8718f
 }
 
 #if DEBUG

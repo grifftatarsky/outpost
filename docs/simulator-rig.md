@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 44fcc393 [NEEDS HUMAN REVIEW]
 title: The simulator rig
 layout: default
 nav_order: 8
@@ -13,6 +14,10 @@ them without taking over the Mac.
 
 1. TOC
 {:toc}
+
+<!-- COPY END 44fcc393 -->
+
+<!-- COPY BEGIN ca11c7ca [NEEDS HUMAN REVIEW] -->
 
 ## The devices
 
@@ -57,6 +62,10 @@ fail, the last obscurely on the `@Entry` macro. Point it at Xcode:
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 
+<!-- COPY END ca11c7ca -->
+
+<!-- COPY BEGIN ec0d72fb [NEEDS HUMAN REVIEW] -->
+
 ## Driving the devices without taking the Mac
 
 **Use XCUITest, one step per test, one device per run.** It runs headless and takes no focus from
@@ -100,6 +109,10 @@ Reading a device's log:
 xcrun simctl spawn <udid> log show --last 3m --predicate 'subsystem CONTAINS "microgpt"' --style compact --info --debug
 ```
 
+<!-- COPY END ec0d72fb -->
+
+<!-- COPY BEGIN 704a6a43 [NEEDS HUMAN REVIEW] -->
+
 ## What a simulator can actually do
 
 Measured on this Mac on 2026-09-01 and since.
@@ -117,6 +130,10 @@ Measured on this Mac on 2026-09-01 and since.
 | A Focus | no | `INFocusStatusCenter` always says not focused. Use You › Debug › *Pretend a Focus is on*. |
 | **An iCloud Keychain hand-off** | **no** | See below. |
 
+<!-- COPY END 704a6a43 -->
+
+<!-- COPY BEGIN d1e1366a [NEEDS HUMAN REVIEW] -->
+
 ### No iCloud Keychain hand-off
 
 A simulator cannot join the account's Octagon trust circle. Every keychain sync view stays in
@@ -129,6 +146,10 @@ A simulator cannot join the account's Octagon trust circle. Every keychain sync 
 
 It reaches Apple's servers fine; it just never becomes trusted, because it has no Secure Enclave or
 device attestation. So one member on two devices needs two real phones.
+
+<!-- COPY END d1e1366a -->
+
+<!-- COPY BEGIN 695e0ba3 [NEEDS HUMAN REVIEW] -->
 
 ### Advanced Data Protection makes a simulator useless
 
@@ -155,6 +176,10 @@ Two things about ADP are true for real members:
   yields sealed packets.
 - **An app cannot read whether ADP is on**, so the app never says either way.
 
+<!-- COPY END 695e0ba3 -->
+
+<!-- COPY BEGIN 8d16f4ce [NEEDS HUMAN REVIEW] -->
+
 ## When a device will not let you in
 
 A first launch checks whether the Apple Account already has a member before offering to make one,
@@ -170,6 +195,10 @@ answers one of four things, and only `empty` leads to onboarding:
 
 Before 2026-09-16 a failure to read the account became "empty", so a network blip offered onboarding
 on an account that already had a member.
+
+<!-- COPY END 8d16f4ce -->
+
+<!-- COPY BEGIN 0ec9fe5e [NEEDS HUMAN REVIEW] -->
 
 ### An account that remembers dead devices
 
@@ -198,6 +227,10 @@ exists.
 **A simulator's iCloud can drop into `Account Temporarily Unavailable`** (CKError 36) and stay there
 until the password is entered again in Settings. Only the account owner can do that.
 
+<!-- COPY END 0ec9fe5e -->
+
+<!-- COPY BEGIN 29af1dda [NEEDS HUMAN REVIEW] -->
+
 ## A quiet peer is usually a dead share
 
 On 2026-09-04 beta read only its own zone all day, and a message from alpha was never found, because
@@ -214,6 +247,10 @@ To cause it on purpose: You › Debug › **Rotate mailbox share** on one device
 within the minute so the other reads the dead offer. The other logs `1 failed` with *Zone does not
 exist*, retracts the offer, and shows `[own]`. Relaunch the first, and within about 90 seconds the
 other reads `found 1 offer(s)` and `2 zone(s) reachable`.
+
+<!-- COPY END 29af1dda -->
+
+<!-- COPY BEGIN fb141a22 [NEEDS HUMAN REVIEW] -->
 
 ## Members without an Apple Account
 
@@ -249,6 +286,10 @@ the fold, keys, invitations, confirmations, and what a third or fourth member ch
 it: zones, shares, the change feed, CloudKit's eventual consistency or push. A result from these
 devices is **proved above the mailbox** and has to be written down in those words.
 
+<!-- COPY END fb141a22 -->
+
+<!-- COPY BEGIN 9596e0ef [NEEDS HUMAN REVIEW] -->
+
 ### What these devices have shown
 
 - **Three members, 2026-09-09.** Griff (alpha, on an account) invited Trig (gamma, no account). Both
@@ -263,6 +304,10 @@ devices is **proved above the mailbox** and has to be written down in those word
   key. And a round acknowledged packets before writing them to disk, so terminating a device mid-round
   lost a comment on both ends; that comment is still gone.
 
+<!-- COPY END 9596e0ef -->
+
+<!-- COPY BEGIN b526cfb5 [NEEDS HUMAN REVIEW] -->
+
 ## What the rig cannot prove
 
 A second Apple Account can accept a share; nothing else on this Mac can. A third party over CloudKit
@@ -271,3 +316,5 @@ what shipping without them costs, on [Proofs a rig cannot run](proofs-a-rig-cann
 
 Anything that crosses the network is unproven until it has run on two accounts, and a simulator is
 weaker evidence than a phone for anything involving the keychain or the extension. Say which was used.
+
+<!-- COPY END b526cfb5 -->

@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN beb62329 [NEEDS HUMAN REVIEW]
 title: The crypto, written down
 layout: default
 nav_order: 13
@@ -21,6 +22,10 @@ things out, the technical version is where the claims are checkable.
 
 ---
 
+<!-- COPY END beb62329 -->
+
+<!-- COPY BEGIN 0fbbbfe6 [NEEDS HUMAN REVIEW] -->
+
 ## The honest limit, stated first
 
 Nobody outside this project has reviewed this protocol. Being **open to inspection is not the same
@@ -34,6 +39,10 @@ in the composition**, and all three are described in [What has already gone
 wrong](#what-has-already-gone-wrong) with what each one teaches about where to look next.
 
 ---
+
+<!-- COPY END 0fbbbfe6 -->
+
+<!-- COPY BEGIN 7a37938b [NEEDS HUMAN REVIEW] -->
 
 ## What is Apple's, and what is ours
 
@@ -74,6 +83,10 @@ separately, and each is validated as its own key type at construction.
 
 ---
 
+<!-- COPY END 7a37938b -->
+
+<!-- COPY BEGIN 907fc48f [NEEDS HUMAN REVIEW] -->
+
 ## Who you are
 
 **In plain words.** There is no account. When the app first runs it makes two keys and those keys
@@ -104,6 +117,10 @@ attestation. Everything else — every message, every post, every acknowledgment
 without the person's identity changing.
 
 ---
+
+<!-- COPY END 907fc48f -->
+
+<!-- COPY BEGIN aed4d113 [NEEDS HUMAN REVIEW] -->
 
 ## Your devices, and how one is disowned
 
@@ -145,6 +162,10 @@ have written. This is the classic distributed-clock problem and it is not solved
 bounded.
 
 ---
+
+<!-- COPY END aed4d113 -->
+
+<!-- COPY BEGIN 307b3aab [NEEDS HUMAN REVIEW] -->
 
 ## The one secret each pair of people share
 
@@ -190,6 +211,10 @@ key](#the-recovery-key-is-the-whole-of-you-in-a-text-file).
 
 ---
 
+<!-- COPY END 307b3aab -->
+
+<!-- COPY BEGIN 754a4244 [NEEDS HUMAN REVIEW] -->
+
 ## The room key, and the chain behind it
 
 This is the least conventional part of the design and the part most worth attacking.
@@ -233,6 +258,10 @@ for unwrapping the link, `…epoch-sealing.v1` for opening messages — with `(r
 the `info`. So an epoch's message key cannot be used as its link key, and an epoch's keys are useless
 in another room even if the secret somehow escaped.
 
+<!-- COPY END 754a4244 -->
+
+<!-- COPY BEGIN 4684735d [NEEDS HUMAN REVIEW] -->
+
 ### Three properties this shape gives you
 
 - **Post-compromise security: yes.** Knowing epoch *N* tells you nothing about epoch *N+1*. The link
@@ -248,6 +277,10 @@ in another room even if the secret somehow escaped.
   and **nothing below K, cryptographically**. That is how "a period you close can be opened again,
   and what falls between stays sealed to them" is implemented. The app is not filtering what it
   shows; the reader genuinely cannot derive the key. Sharpest single idea in the codebase.
+
+<!-- COPY END 4684735d -->
+
+<!-- COPY BEGIN 5aa0f0f6 [NEEDS HUMAN REVIEW] -->
 
 ### Handing somebody a key
 
@@ -276,6 +309,10 @@ different devices, members would hold different secrets for the same epoch numbe
 stop opening for somebody, with no error that names the cause.
 
 ---
+
+<!-- COPY END 5aa0f0f6 -->
+
+<!-- COPY BEGIN 8c1d2503 [NEEDS HUMAN REVIEW] -->
 
 ## Sealing what somebody actually wrote
 
@@ -310,6 +347,10 @@ a concern, but it is an assumption rather than a guarantee, and it would stop be
 were ever made long-lived and high-volume at once.
 
 ---
+
+<!-- COPY END 8c1d2503 -->
+
+<!-- COPY BEGIN 3be1484d [NEEDS HUMAN REVIEW] -->
 
 ## Signing what was written, and why the order matters
 
@@ -353,6 +394,10 @@ trade for this architecture and it should never be described as if it were not.
 
 ---
 
+<!-- COPY END 3be1484d -->
+
+<!-- COPY BEGIN 2523f808 [NEEDS HUMAN REVIEW] -->
+
 ## The bytes everything is signed and sealed over
 
 This file is forty lines long and has caused more damage than any other in the project.
@@ -382,6 +427,10 @@ there are **twenty-four** distinct domains in `Domain`, one per construction. Th
 shape and it is applied consistently.
 
 **The trap, which has already been sprung.** `CanonicalBytes.optional` emits a **presence byte**:
+
+<!-- COPY END 2523f808 -->
+
+<!-- COPY BEGIN 0d446b56 [NEEDS HUMAN REVIEW] -->
 
 ```swift
 public static func optional(_ value: Data?) -> [Data] {
@@ -413,6 +462,10 @@ concatenation with **no length prefixes**:
 var canonicalBytes: Data { author.rawValue + device.rawValue }
 ```
 
+<!-- COPY END 0d446b56 -->
+
+<!-- COPY BEGIN b714b1c4 [NEEDS HUMAN REVIEW] -->
+
 This is currently unambiguous only because both are SHA256 digests and therefore always 32 bytes.
 But `ParticipantID(rawValue:)` and `DeviceID(rawValue:)` are **public initializers taking arbitrary
 `Data`**, so the fixed width is a convention rather than an invariant. Nothing in the shipping path
@@ -426,6 +479,10 @@ anything other than 32 bytes at the boundary, the container shape is unchanged, 
 shape so the encoding side cannot drift away from it silently (`IdentifierWidthTests`).
 
 ---
+
+<!-- COPY END b714b1c4 -->
+
+<!-- COPY BEGIN 91adb9e0 [NEEDS HUMAN REVIEW] -->
 
 ## Addressing somebody without naming them
 
@@ -459,6 +516,10 @@ days, but the daily grouping is real and is the price of the eight-window lookba
 delivery reliable.
 
 ---
+
+<!-- COPY END 91adb9e0 -->
+
+<!-- COPY BEGIN 1d459d56 [NEEDS HUMAN REVIEW] -->
 
 ## What the relay is actually handed
 
@@ -502,6 +563,10 @@ because it was broken once, and that is the next section.
 
 ---
 
+<!-- COPY END 1d459d56 -->
+
+<!-- COPY BEGIN 109ba01f [NEEDS HUMAN REVIEW] -->
+
 ## Photos and clips
 
 **In plain words.** A photo is sealed with a key of its own before it leaves, and that key travels
@@ -526,6 +591,10 @@ thumbnail made from it. That is not cryptography but it is in the same threat: i
 that would have leaked past the seal.
 
 ---
+
+<!-- COPY END 109ba01f -->
+
+<!-- COPY BEGIN 3f67ec76 [NEEDS HUMAN REVIEW] -->
 
 ## Your own devices talking to each other
 
@@ -559,6 +628,10 @@ JSON. See below.
 
 ---
 
+<!-- COPY END 3f67ec76 -->
+
+<!-- COPY BEGIN 346c1b82 [NEEDS HUMAN REVIEW] -->
+
 ## The characters two people read to each other
 
 **In plain words.** When somebody invites you, you each see ten characters and read them aloud. If
@@ -582,6 +655,10 @@ bytes of 240 and above discarded so every symbol is equally likely.
 
 The rest of this section is the finding that produced this shape. The six-character version it
 describes is the one that shipped before 2026-09-15.
+
+<!-- COPY END 346c1b82 -->
+
+<!-- COPY BEGIN 8beef492 [NEEDS HUMAN REVIEW] -->
 
 ### Finding: the phrase can be ground out offline
 
@@ -612,6 +689,10 @@ can emit unlimited distinct valid signatures over one unchanged payload. Each at
 one fixed-base scalar multiplication, which is the most GPU-friendly operation in the whole
 primitive set.
 
+<!-- COPY END 8beef492 -->
+
+<!-- COPY BEGIN e9c10dad [NEEDS HUMAN REVIEW] -->
+
 ### What the length actually buys
 
 Expected work is half the space. Rates below are one signature-and-hash per attempt: a tuned CPU core
@@ -639,6 +720,10 @@ permanently, not "days at most". But twenty characters read aloud will be misrea
 get wrong or skip is worse than a short one they actually perform. That is the reason to stop at ten
 and fix the structure instead.
 
+<!-- COPY END e9c10dad -->
+
+<!-- COPY BEGIN faf0512d [NEEDS HUMAN REVIEW] -->
+
 ### What was built
 
 - **Ten characters** by default, twenty if either side asks. `PhraseLength` travels **inside the
@@ -659,6 +744,10 @@ and fix the structure instead.
 `PhraseCommitmentTests`, eleven of them: the inviter is blind until the joiner opens, both sides
 agree afterwards, a substituted nonce is refused, the nonce cannot be swapped in transit, twenty
 codes carry twenty commitments, and every combination of the two length settings.
+
+<!-- COPY END faf0512d -->
+
+<!-- COPY BEGIN 25ab60d8 [NEEDS HUMAN REVIEW] -->
 
 ### What a commitment does, and what it costs
 
@@ -693,6 +782,10 @@ already hold, so matching the two sides becomes a **birthday** search at 2^(n/2)
 preimage search at 2ⁿ. At ten characters that is ~2²⁴·⁵, about 24 million — trivial. A pair
 fingerprint must never be the phrase.
 
+<!-- COPY END 25ab60d8 -->
+
+<!-- COPY BEGIN d70f9397 [NEEDS HUMAN REVIEW] -->
+
 ### Twenty characters, for somebody who wants them
 
 Off by default, under Privacy & Safety. It is **not** a claim that ten is insufficient — with a
@@ -705,6 +798,10 @@ The two lengths are not alternatives. A phrase comes off one deterministic strea
 characters of a twenty-character phrase are exactly the ten-character phrase** — which is what makes
 a mixed pair work without negotiation, and what makes the copy able to say honestly that the extra
 ten are added rather than that the whole thing changes.
+
+<!-- COPY END d70f9397 -->
+
+<!-- COPY BEGIN 7606009f [NEEDS HUMAN REVIEW] -->
 
 ### The modulo bias, fixed 2026-09-15
 
@@ -725,6 +822,10 @@ frequency check. Worth knowing that **only the arithmetic test would have caught
 53.3% to 53.1%, which no realistic frequency test distinguishes from noise.
 
 ---
+
+<!-- COPY END 7606009f -->
+
+<!-- COPY BEGIN f75c8b46 [NEEDS HUMAN REVIEW] -->
 
 ## The code two people compare later
 
@@ -753,6 +854,10 @@ the keys Carol sees for Alice, so they need any two codes that collide — a bir
 keys whose half equals **Carol's real half**, which is a full second-preimage search of 2⁴⁹, and it
 has to be done again for Carol's side.
 
+<!-- COPY END f75c8b46 -->
+
+<!-- COPY BEGIN d5b61974 [NEEDS HUMAN REVIEW] -->
+
 **Why 4,096 rounds.** A half is static — the same every time these two people look — so there is no
 commitment to take the grinding away, the way the invitation now has. The rounds make every attempt
 cost 4,096 hashes on top of a key generation, about 2¹² more work: roughly 2⁶¹ per side. On the
@@ -774,6 +879,10 @@ say. It says the keys your phone holds for them are the keys their phone holds f
 comparison as matching is a note to yourself; it is not sent to anybody.
 
 ---
+
+<!-- COPY END d5b61974 -->
+
+<!-- COPY BEGIN 1470b595 [NEEDS HUMAN REVIEW] -->
 
 ## The recovery key is the whole of you, in a text file
 
@@ -804,6 +913,10 @@ noting it here so it is on the record as a known, unaddressed cost.
 
 ---
 
+<!-- COPY END 1470b595 -->
+
+<!-- COPY BEGIN 4b91a7f5 [NEEDS HUMAN REVIEW] -->
+
 ## Where keys actually live
 
 **In plain words.** Your identity lives in your iCloud Keychain so a new phone can pick it up. The
@@ -829,9 +942,17 @@ hardware-enforced passcode attempt limits) rather than on anything this app does
 
 ---
 
+<!-- COPY END 4b91a7f5 -->
+
+<!-- COPY BEGIN 6442968d [NEEDS HUMAN REVIEW] -->
+
 ## What has already gone wrong
 
 Every one of these was in the composition. Each is here for the pattern, not the anecdote.
+
+<!-- COPY END 6442968d -->
+
+<!-- COPY BEGIN 4df34683 [NEEDS HUMAN REVIEW] -->
 
 ### 1. The sibling feed went to CloudKit in the clear, for four weeks
 
@@ -845,6 +966,10 @@ difference, because the fake never produced bytes.
 **The pattern: a fake that is easier than the real thing proves less than nothing.** Every seam's
 fake was audited against that rule on 2026-09-14, and the relay holds encoded `Data` now.
 
+<!-- COPY END 4df34683 -->
+
+<!-- COPY BEGIN e904e0e2 [NEEDS HUMAN REVIEW] -->
+
 ### 2. Two optional fields changed every signature ever taken
 
 Described in full under [canonical bytes](#the-bytes-everything-is-signed-and-sealed-over). Every
@@ -853,6 +978,10 @@ to accounts with months of history.
 
 **The pattern: a round-trip test cannot catch a wire-format change, because it seals and opens with
 the same build.** Pin the old layout by hand.
+
+<!-- COPY END e904e0e2 -->
+
+<!-- COPY BEGIN 00c78bcc [NEEDS HUMAN REVIEW] -->
 
 ### 3. A map keyed on the person, not the thing
 
@@ -864,6 +993,10 @@ the same shape. They key on the invitation being answered now.
 is really about *this invitation*, the key has to be the invitation.
 
 ---
+
+<!-- COPY END 00c78bcc -->
+
+<!-- COPY BEGIN b88342c5 [NEEDS HUMAN REVIEW] -->
 
 ## What this brief does not cover
 
@@ -883,6 +1016,10 @@ Stated so that nobody mistakes its silence for a clean bill.
   is not, and nothing in the product should imply otherwise.
 
 ---
+
+<!-- COPY END b88342c5 -->
+
+<!-- COPY BEGIN 2bd43643 [NEEDS HUMAN REVIEW] -->
 
 ## Where to start reading, if you want to break it
 
@@ -904,3 +1041,5 @@ The tests worth reading alongside: `SealBindingTests` (pins the wire format by h
 `SiblingFeedIsSealedTests`, `EpochDistributionTests`, `DeviceTrustTests`, `CanonicalBytesTests`, and
 `App/CarpenterTests/LiveSiblingFeedTests.swift`, which fetches a record back off real CloudKit and
 asserts it contains no epoch secret.
+
+<!-- COPY END 2bd43643 -->

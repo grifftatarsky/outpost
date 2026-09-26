@@ -119,9 +119,11 @@ extension AppRootView {
         } catch {
             Diagnostics.identity.error(
                 "outpost avatar: could not prepare or keep (\(String(describing: error), privacy: .public))")
+            // COPY BEGIN f00ccbf5 [NEEDS HUMAN REVIEW]
             problem = ActionProblem(
                 title: String(localized: "Your Outpost picture was not changed"),
                 detail: SessionProblem.sentence(for: error))
+            // COPY END f00ccbf5
             return false
         }
     }

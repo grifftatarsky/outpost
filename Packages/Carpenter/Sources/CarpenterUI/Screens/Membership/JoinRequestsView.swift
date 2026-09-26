@@ -56,6 +56,7 @@ public struct JoinRequestsView: View {
         NavigationStack {
             Group {
                 if joins().isEmpty {
+                    // COPY BEGIN d6825c61 [NEEDS HUMAN REVIEW]
                     ContentUnavailableView {
                         Text("Nothing to check", bundle: .module)
                     } description: {
@@ -63,6 +64,7 @@ public struct JoinRequestsView: View {
                             "Joins you have not answered, and people who took your invitation, appear here.",
                             bundle: .module)
                     }
+                    // COPY END d6825c61
                 } else {
                     ScrollView {
                         VStack(spacing: 16) {
@@ -77,6 +79,7 @@ public struct JoinRequestsView: View {
             }
             .background(palette.background)
             .navigationTitle(roomName)
+            // COPY BEGIN fd7f32b1 [NEEDS HUMAN REVIEW]
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
@@ -84,6 +87,7 @@ public struct JoinRequestsView: View {
                         .barIconLargeContent(Text("Close", bundle: .module), systemImage: "xmark")
                 }
             }
+            // COPY END fd7f32b1
         }
         .haptic(.commit, trigger: decisions)
     }
@@ -96,6 +100,7 @@ public struct JoinRequestsView: View {
                     Text(join.joiner.displayName)
                         .font(CarpenterFont.rowTitle)
                         .foregroundStyle(palette.primaryText)
+                    // COPY BEGIN 94193b69 [NEEDS HUMAN REVIEW]
                     join.isAlreadyIn
                         ? Text("Joined on your invitation", bundle: .module)
                             .font(CarpenterFont.rowDetail)
@@ -103,7 +108,9 @@ public struct JoinRequestsView: View {
                         : Text("Invited by \(join.inviter.displayName)", bundle: .module)
                             .font(CarpenterFont.rowDetail)
                             .foregroundStyle(palette.secondaryText)
+                    // COPY END 94193b69
 
+                    // COPY BEGIN 03e0ade6 [NEEDS HUMAN REVIEW]
                     if !join.isAlreadyIn, !join.isIndefinite {
                         Text(
                             "Runs out \(join.expiresAt.formatted(.relative(presentation: .named)))",
@@ -111,12 +118,14 @@ public struct JoinRequestsView: View {
                             .font(CarpenterFont.rowDetail)
                             .foregroundStyle(palette.tertiaryText)
                     }
+                    // COPY END 03e0ade6
                 }
             }
 
             VerificationPhrase(join.phrase)
                 .frame(maxWidth: .infinity)
 
+            // COPY BEGIN ec2f3dc1 [NEEDS HUMAN REVIEW]
             join.isAlreadyIn
                 ? Text(
                     "You invited them, and this room lets anybody in on an invitation — so nobody was asked to approve and they are already here. This is the one check nothing else does: the same characters were shown to both of you, so if theirs match, the person who joined is the person you meant to invite. If they do not, somebody else used your invitation. Saying so stops you sending them the room's key from now on; it does not remove them, and only you are asked.",
@@ -130,7 +139,9 @@ public struct JoinRequestsView: View {
                 )
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.secondaryText)
+            // COPY END ec2f3dc1
 
+            // COPY BEGIN 129eb001 [NEEDS HUMAN REVIEW]
             if !join.refusedBy.isEmpty {
                 Label {
                     Text(
@@ -143,6 +154,7 @@ public struct JoinRequestsView: View {
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.secondaryText)
             }
+            // COPY END 129eb001
 
             HStack(spacing: 10) {
                 Button {
@@ -150,6 +162,7 @@ public struct JoinRequestsView: View {
                     decisions += 1
                     Task { await onDecide(join, false) }
                 } label: {
+                    // COPY BEGIN cbfa08f3 [NEEDS HUMAN REVIEW]
                     (join.isAlreadyIn
                         ? Text("Does not match", bundle: .module)
                         : Text("Refuse", bundle: .module))
@@ -159,9 +172,11 @@ public struct JoinRequestsView: View {
                             palette.neutralFill,
                             in: .rect(
                                 cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                    // COPY END cbfa08f3
                 }
                 .foregroundStyle(palette.primaryText)
 
+                // COPY BEGIN f427f1b3 [NEEDS HUMAN REVIEW]
                 Button {
                     decided = true
                     decisions += 1
@@ -172,6 +187,7 @@ public struct JoinRequestsView: View {
                         : Text("Admit", bundle: .module)).primaryAction()
                 }
                 .prominentActionButton()
+                // COPY END f427f1b3
             }
         }
         .padding(16)

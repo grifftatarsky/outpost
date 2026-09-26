@@ -103,13 +103,16 @@ public struct PrivacyCheckupView: View {
 
     private var doors: some View {
         List {
+            // COPY BEGIN 8b797091 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "hand.raised.fill",
                 title: Text("Who sees what", bundle: .module),
                 paragraph: Text(
                     "Before you talk to anybody, choose what this device tells other people. Nothing leaves it until you send something, and everything here can be changed later under You › Privacy & Safety.",
                     bundle: .module))
+            // COPY END 8b797091
 
+            // COPY BEGIN cdc76582 [NEEDS HUMAN REVIEW]
             Section {
                 NavigationLink(value: Route.preset(.familiar)) {
                     SettingsRow(
@@ -131,7 +134,9 @@ public struct PrivacyCheckupView: View {
                 Text("Each one shows you what it looks like before you take it.", bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END cdc76582
 
+            // COPY BEGIN 8e657e4d [NEEDS HUMAN REVIEW]
             Section {
                 NavigationLink(value: Route.step(.shareName)) {
                     SettingsRow(
@@ -141,6 +146,7 @@ public struct PrivacyCheckupView: View {
                 }
             }
             .groupedRowSurface()
+            // COPY END 8e657e4d
 
             if let onSkip {
                 Section {
@@ -152,22 +158,27 @@ public struct PrivacyCheckupView: View {
                             finishing = false
                         }
                     } label: {
+                        // COPY BEGIN 54acfdf8 [NEEDS HUMAN REVIEW]
                         Text("Decide later", bundle: .module)
                             .font(CarpenterFont.footnote)
                             .foregroundStyle(palette.secondaryText)
                             .frame(maxWidth: .infinity)
+                        // COPY END 54acfdf8
                     }
                     .buttonStyle(.plain)
                     .listRowBackground(Color.clear)
                 } footer: {
+                    // COPY BEGIN 0f96b211 [NEEDS HUMAN REVIEW]
                     Text("Until you decide, everything stays off.", bundle: .module)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
+                    // COPY END 0f96b211
                 }
             }
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN a6e6b5c1 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Privacy", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
@@ -177,6 +188,7 @@ public struct PrivacyCheckupView: View {
                 }
             }
         }
+        // COPY END a6e6b5c1
         .disabled(finishing)
     }
 }

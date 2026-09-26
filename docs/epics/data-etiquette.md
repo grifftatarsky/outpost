@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 8236ab14 [NEEDS HUMAN REVIEW]
 title: Advanced data etiquette
 layout: default
 parent: Roadmap
@@ -14,6 +15,10 @@ Deletion as a shared decision, and what it costs to keep that true.
 1. TOC
 {:toc}
 
+<!-- COPY END 8236ab14 -->
+
+<!-- COPY BEGIN 61216cb2 [NEEDS HUMAN REVIEW] -->
+
 ## The principle
 
 > You can tell someone you never want something again. We require that behavior to use this system.
@@ -23,6 +28,10 @@ Deletion as a shared decision, and what it costs to keep that true.
 Two rules follow, and every decision here comes from them: **refusal is unilateral and always
 available**, and **removal from somebody else is never unilateral.** Using rooms means opting into
 this pattern, and that is the price of the second rule being real rather than advisory.
+
+<!-- COPY END 61216cb2 -->
+
+<!-- COPY BEGIN 39479a49 [NEEDS HUMAN REVIEW] -->
 
 ## Where this stands
 
@@ -35,6 +44,10 @@ on the [Roadmap](../roadmap.md#how-to-read-this).
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END 39479a49 -->
+
+<!-- COPY BEGIN e1c8e5af [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -64,6 +77,10 @@ sent to the wrong room is not permanent.
   message offered neither; a three-minute-old message offered Edit and not Withdraw, a two-hour-old
   one neither.
 
+<!-- COPY END e1c8e5af -->
+
+<!-- COPY BEGIN f51951a8 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — why withdrawing is not deleting, and two defects the rig found</summary>
 
@@ -88,6 +105,10 @@ persisted field the encoder writes is not read back.
 
 </details>
 
+<!-- COPY END f51951a8 -->
+
+<!-- COPY BEGIN 464ee107 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="hiding-follows-the-member-not-the-device">
 <summary><b>Hiding follows the member, not the device</b> — Complete (hardware proof owed)</summary>
 
@@ -110,6 +131,10 @@ thing I did not want to see is not waiting on my iPad.
 - Hardware only: a second device on one account has not been seen taking the flag.
 
 **Design.** Boards 76, 77.
+
+<!-- COPY END 464ee107 -->
+
+<!-- COPY BEGIN cc13669c [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — the bug this turned up, what it unblocked, and the known cost</summary>
@@ -134,6 +159,10 @@ answer is a separate record rather than a bigger feed.
 </details>
 
 </details>
+
+<!-- COPY END cc13669c -->
+
+<!-- COPY BEGIN c9b1d211 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="hiding-as-the-set-draws-it">
 <summary><b>Hiding, as the set draws it</b> — Complete (tested)</summary>
@@ -166,6 +195,10 @@ Boards 76 (Delete for me: the paragraph must refuse the reading people bring to 
 messages).
 
 </details>
+
+<!-- COPY END c9b1d211 -->
+
+<!-- COPY BEGIN 2f036bef [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="consensus-hard-delete">
 <summary><b>Consensus hard delete</b> — Pushed out</summary>
@@ -203,6 +236,10 @@ dependency, was built 2026-09-06. Nothing here is blocked; none of it is built.
 
 </details>
 
+<!-- COPY END 2f036bef -->
+
+<!-- COPY BEGIN b6983e32 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="hard-delete-and-desync-quietly">
 <summary><b>Hard delete and desync quietly</b> — Pushed out</summary>
 
@@ -219,6 +256,10 @@ so that I am not forced to keep re-receiving a thing I have refused.
 
 </details>
 
+<!-- COPY END b6983e32 -->
+
+<!-- COPY BEGIN e0f3445e [NEEDS HUMAN REVIEW] -->
+
 ## What is still open
 
 The question that blocked this epic, what a purge does to the hash chain, was answered on 2026-09-09:
@@ -228,6 +269,10 @@ reached.* push opens the room and leaves a permanent line in the transcript; a m
 answers does not consent and does not refuse, so the request stays open until its starter closes it;
 and hiding reaches a member's own devices. See [Decisions](../decisions.md#deleting-and-hiding). What
 is left is building consensus deletion, [after TestFlight](../after-testflight.md#consensus-hard-delete).
+
+<!-- COPY END e0f3445e -->
+
+<!-- COPY BEGIN 7352c45f [NEEDS HUMAN REVIEW] -->
 
 ## Test plan
 
@@ -249,7 +294,13 @@ with the setting off still receives and can answer a request.
 
 </details>
 
+<!-- COPY END 7352c45f -->
+
+<!-- COPY BEGIN 6f786fa8 [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** A message destroyed on somebody's device without their agreement. A
 "consensus reached" push that identifies what it was about. A history that fails to load after a
 purge. The last is the one to watch: it is the hash chain, and it is why the open question comes
 first.
+
+<!-- COPY END 6f786fa8 -->

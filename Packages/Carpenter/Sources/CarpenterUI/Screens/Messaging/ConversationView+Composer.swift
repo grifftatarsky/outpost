@@ -12,6 +12,7 @@ extension ConversationView {
         let steps = CompositionPlan.steps(text: outgoing, itemCount: items.count)
         guard !steps.isEmpty else { return }
 
+        // COPY BEGIN 21ed86cf [NEEDS HUMAN REVIEW]
         if items.contains(where: { $0.needsTrim(limit: VideoPreparer.maximumDuration) }) {
             problem = String(
                 localized: "Trim the video to a minute before sending.", bundle: .module,
@@ -19,6 +20,7 @@ extension ConversationView {
             failures += 1
             return
         }
+        // COPY END 21ed86cf
 
         draft = ""
         staged = []
@@ -58,6 +60,7 @@ extension ConversationView {
         } else {
             picked = (try? await item.loadTransferable(type: Data.self)).map { .image($0) }
         }
+        // COPY BEGIN 0790e13e [NEEDS HUMAN REVIEW]
         guard let picked else {
             problem = String(
                 localized: "That could not be read from your library.", bundle: .module,
@@ -65,6 +68,7 @@ extension ConversationView {
             failures += 1
             return
         }
+        // COPY END 0790e13e
 
         switch picked {
         case .image(let data):
@@ -89,6 +93,7 @@ extension ConversationView {
 
     var composer: some View {
         VStack(alignment: .leading, spacing: 6) {
+            // COPY BEGIN 78c653db [NEEDS HUMAN REVIEW]
             if let partnerFocus {
                 HStack(spacing: 6) {
                     Image(systemName: "moon.fill")
@@ -114,6 +119,7 @@ extension ConversationView {
                 .padding(.horizontal, 12)
                 .transition(.opacity)
             }
+            // COPY END 78c653db
             if let cannotSend = notGoneHelp.reason {
                 Label {
                     Text(verbatim: cannotSend)
@@ -178,6 +184,7 @@ extension ConversationView {
     private var composerControls: some View {
         HStack(alignment: .bottom, spacing: CarpenterMetrics.composerSpacing) {
             if onAttach != nil {
+                // COPY BEGIN 814da02a [NEEDS HUMAN REVIEW]
                 Button {
                     Diagnostics.sync.notice("media: asking for the photo picker")
                     if photosExplained { pickingPhotos = true } else { explainingPhotos = true }
@@ -199,11 +206,13 @@ extension ConversationView {
                 .glassEffect(.regular, in: Circle())
                 .tappable()
                 .accessibilityLabel(Text("Add a photo", bundle: .module))
+                // COPY END 814da02a
             }
 
             VStack(alignment: .leading, spacing: 0) {
             if !staged.isEmpty { stagedStrip }
             HStack(alignment: .bottom, spacing: 4) {
+                // COPY BEGIN 74e6a94a [NEEDS HUMAN REVIEW]
                 TextField(text: $draft, axis: .vertical) {
                     Text("Message", bundle: .module)
                 }
@@ -214,7 +223,9 @@ extension ConversationView {
                 .padding(.vertical, 8)
                 .lineLimit(1...6)
                 .onSubmit(send)
+                // COPY END 74e6a94a
 
+                // COPY BEGIN 6d2d2146 [NEEDS HUMAN REVIEW]
                 if hasSomethingToSend {
                     Button(action: send) {
                         Image(systemName: "arrow.up")
@@ -228,6 +239,7 @@ extension ConversationView {
                     .padding(.bottom, 4)
                     .transition(.scale.combined(with: .opacity))
                 }
+                // COPY END 6d2d2146
             }
             }
             .glassEffect(
@@ -291,6 +303,7 @@ extension ConversationView {
             .accessibilityLabel(tileLabel(item, needsTrim: needsTrim))
             .accessibilityAddTraits(needsTrim ? [.isImage, .isButton] : [.isImage])
 
+            // COPY BEGIN 402dc267 [NEEDS HUMAN REVIEW]
             Button {
                 staged.removeAll { $0.id == item.id }
             } label: {
@@ -303,9 +316,11 @@ extension ConversationView {
             .buttonStyle(.plain)
             .offset(x: 6, y: -6)
             .accessibilityLabel(Text("Remove", bundle: .module))
+            // COPY END 402dc267
         }
     }
 
+    // COPY BEGIN 3034cc7f [NEEDS HUMAN REVIEW]
     private func tileLabel(_ item: StagedAttachment, needsTrim: Bool) -> Text {
         switch (item.kind, needsTrim) {
         case (.image, _):
@@ -316,6 +331,7 @@ extension ConversationView {
             Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), longer than a minute. Double-tap to trim.", bundle: .module)
         }
     }
+    // COPY END 3034cc7f
 
     private func trimmed(_ item: StagedAttachment, to url: URL) {
         guard let index = staged.firstIndex(where: { $0.id == item.id }) else { return }

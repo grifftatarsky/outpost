@@ -15,6 +15,7 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
 
     public static let `default` = AppIconChoice.plainLight
 
+    // COPY BEGIN da00684c [NEEDS HUMAN REVIEW]
     public enum Mark: Hashable, Sendable, CaseIterable {
         case full, antenna, mailbox
 
@@ -26,6 +27,7 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
             }
         }
     }
+    // COPY END da00684c
 
     public var mark: Mark {
         if rawValue.hasPrefix("antenna") { return .antenna }
@@ -70,6 +72,7 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
         }
     }
 
+    // COPY BEGIN 5de5b9bf [NEEDS HUMAN REVIEW]
     public var displayName: String {
         guard let accent else {
             return ground == .black
@@ -78,6 +81,7 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
         }
         return accent.displayName
     }
+    // COPY END 5de5b9bf
 
     public var spokenName: String {
         String(
@@ -92,6 +96,7 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
             case .antenna: "Antenna"
             case .mailbox: "Mailbox"
             }
+        // COPY BEGIN e6209288 [NEEDS HUMAN REVIEW]
         switch accent {
         case .cobalt: return prefix + "Cobalt"
         case .verdigris: return prefix + "Verdigris"
@@ -104,5 +109,6 @@ public enum AppIconChoice: String, CaseIterable, Hashable, Sendable, Codable {
             if mark == .full { return ground == .black ? "PlainDark" : "PlainLight" }
             return prefix + (ground == .black ? "Black" : "White")
         }
+        // COPY END e6209288
     }
 }

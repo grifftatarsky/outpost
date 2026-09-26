@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN d23b347d [NEEDS HUMAN REVIEW]
 title: Design
 layout: default
 nav_order: 6
@@ -13,6 +14,10 @@ Where the boards are, what they cover, and what they do not.
 
 1. TOC
 {:toc}
+
+<!-- COPY END d23b347d -->
+
+<!-- COPY BEGIN 1535236a [NEEDS HUMAN REVIEW] -->
 
 ## The set
 
@@ -35,6 +40,10 @@ boards will not be re-exported, so the set is a historical record. Edit it in pl
 cite it for content and copy, and answer presentation questions from the platform — iOS 26's own
 apps, Messages first.
 
+<!-- COPY END 1535236a -->
+
+<!-- COPY BEGIN 5937101b [NEEDS HUMAN REVIEW] -->
+
 ## The system beats a board
 
 Griff's ruling, 2026-08-18: **wherever Liquid Glass and a board disagree, the system wins.** The
@@ -54,6 +63,10 @@ derived `accentFill`; the rooms list as a system `List`; search as a real search
 "Use exactly this" now governs only what the app draws itself — bubbles, delivery marks, avatars, the
 unread dot. Geometry tokens for system chrome were deleted rather than kept as documentation, because
 a token nobody consumes is a second copy of a decision waiting to disagree with the first.
+
+<!-- COPY END 5937101b -->
+
+<!-- COPY BEGIN 653682b3 [NEEDS HUMAN REVIEW] -->
 
 ## What the set does not cover
 
@@ -75,6 +88,10 @@ screen needs the substitution applied, which is an inference rather than a copy.
 **Transitions are not drawn.** "Almost no motion" is a position, and what happens between two boards —
 sheet presentation, tab switch, the retint — exists in prose at most. →
 [Transitions](epics/foundations.md#transitions)
+
+<!-- COPY END 653682b3 -->
+
+<!-- COPY BEGIN 6448ad1f [NEEDS HUMAN REVIEW] -->
 
 ## The contrast finding
 
@@ -105,6 +122,10 @@ ruling 13: a token borrowed from the platform, correct as a platform default and
 The app keeps its stronger grays, which are the weakest values that clear 4.5 on every surface in both
 appearances.
 
+<!-- COPY END 6448ad1f -->
+
+<!-- COPY BEGIN 6ae0e930 [NEEDS HUMAN REVIEW] -->
+
 ## What the rulings ask of the app
 
 Six changes and two tests, from Component Decisions. Each has a ticket.
@@ -121,6 +142,10 @@ Six changes and two tests, from Component Decisions. Each has a ticket.
 | appendix | The default accent becomes verdigris. | [The contrast finding](epics/foundations.md#the-contrast-finding-and-the-test-that-missed-it) |
 
 Everything else in the rulings is a board redraw, already done in the set.
+
+<!-- COPY END 6ae0e930 -->
+
+<!-- COPY BEGIN 645e28bf [NEEDS HUMAN REVIEW] -->
 
 ## Rulings that changed what a feature is
 
@@ -146,10 +171,18 @@ recorded here because a reader of the boards alone would not know a decision had
   one Messages tab when merged. A two-person conversation is a *Solo*, Griff's word. →
   [Solos](epics/messaging.md#solos-a-conversation-with-one-person)
 
+<!-- COPY END 645e28bf -->
+
+<!-- COPY BEGIN a8d489fb [NEEDS HUMAN REVIEW] -->
+
 ## Where the app departs from a board
 
 A board is the design, and overruling one has to be written down or the next person reading the board
 will "fix" the app back.
+
+<!-- COPY END a8d489fb -->
+
+<!-- COPY BEGIN 6996d88f [NEEDS HUMAN REVIEW] -->
 
 ### Board 74 — the admission policy sits behind an advanced toggle
 
@@ -166,6 +199,10 @@ security choice in front of every one of them trains people to tap past the scre
 accepted: somebody who would have chosen differently has to notice a toggle first. Board 75, the same
 control in room settings, is untouched.
 
+<!-- COPY END 6996d88f -->
+
+<!-- COPY BEGIN 1bc950d5 [NEEDS HUMAN REVIEW] -->
+
 ### Board 53 — the list row names no sender
 
 **The board** puts the sender's name in a group's preview. The app drew it as a pill above the
@@ -175,3 +212,5 @@ preview and the row went to three lines.
 against Messages on the same simulator: 45pt avatar, 8pt gutter with the unread dot in it, text at
 84pt, two reserved preview lines, a chevron, and no sender named. Listed as a question in
 [Open questions](open-questions.md).
+
+<!-- COPY END 1bc950d5 -->

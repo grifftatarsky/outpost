@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 57d4dc21 [NEEDS HUMAN REVIEW]
 title: Before TestFlight
 layout: default
 nav_order: 10
@@ -19,6 +20,10 @@ lies, and it ships invisibly because the English build looks fine.
 
 1. TOC
 {:toc}
+
+<!-- COPY END 57d4dc21 -->
+
+<!-- COPY BEGIN 04dcaec6 [NEEDS HUMAN REVIEW] -->
 
 ## Every sentence a member reads, checked against the build
 
@@ -46,6 +51,10 @@ that overstates, understates, or describes a plan.
 | How it works, invitations | "By default that invitation is enough" stopped being true when an invitation became an offer. | **Done.** Rewritten 2026-09-15. It now separates the two questions it was running together: whether anybody else in the room has to approve (by default, no), and the characters you and your inviter read to each other, which happen whatever the room's policy is. |
 | The marketing site | Support, How it works, Status and FAQ all say recovery through nominated friends is designed and not built. It was refused on 2026-09-09. | **Done.** 2026-09-15, in `outpost-site`. All four now say refused rather than pending, with the reasoning. **And the status page was stale the other way too**: seven things marked *Later* are built and tested — photographs, direct messages, per-person Outpost access, removing somebody, notification previews, search, and editing or deleting a post. Understating is the same defect as overstating. |
 
+<!-- COPY END 04dcaec6 -->
+
+<!-- COPY BEGIN 68adf3d4 [NEEDS HUMAN REVIEW] -->
+
 ## Permissions, explained before they are asked
 
 Each system prompt is explained in the app's voice first — what is asked for, why, and what the app
@@ -57,6 +66,10 @@ system prompt has one button and cannot be dismissed — the HIG's pre-alert rul
 | Notifications | Once the account is ready, on the first ready screen | **Done.** `PermissionExplainerView(.notifications)`, seen on both simulators at first ready screen, 2026-09-04. One button, *Continue*, and since 2026-09-16 it cannot be swiped away before Apple's prompt — the HIG's pre-alert rule. The no is given to Apple. | Messages arrive when the app is opened; nothing announces them. Said in the sheet, and in the Notifications footer of You since 2026-09-05. |
 | Photos | Never asked. `PhotosPicker` is out-of-process; the system shows the library and hands over only what is picked. The first tap of ➕ explains this once. | **Done.** `PermissionExplainerView(.photos)`, seen on the rig 2026-09-04; *Choose a photo* opened the system picker, whose own banner read "Private Access to Photos". There is no API that narrows the system's library prompt to limited-only — the app simply never triggers that prompt. | Nothing to refuse; closing the picker sends nothing. |
 | Camera | The first tap of **Scan** on *Join a room*, after the member has answered *Turn on scanning* to a question on that screen, or turning on **Behavior ▸ Scan invites with the camera**. Never at launch. | **Done.** In the app's words, and kept apart from the prompt, because the HIG forbids a way out of a view shown just before one ([Decisions](decisions.md#how-the-ask-and-the-higs-pre-alert-rules-both-hold)). The setting is saved on only once the camera is allowed. Usage string: "The camera reads the QR code on an invite somebody shows you, and the app keeps nothing else it sees." Seen on the rig 2026-09-16 up to the prompt, which a simulator never raises. | Paste stays, the setting is saved off, and the app says the camera is off with *Open Settings*. **Not yet seen on a phone.** |
+
+<!-- COPY END 68adf3d4 -->
+
+<!-- COPY BEGIN 33d9678e [NEEDS HUMAN REVIEW] -->
 
 ## Debug leaves
 
@@ -83,6 +96,10 @@ Release and fails on any of fifteen developer-only strings. It is about strings 
 reachability on purpose: reachability is what the `#if DEBUG` on a call site already buys, and the
 strings are what survived it.
 
+<!-- COPY END 33d9678e -->
+
+<!-- COPY BEGIN dd229921 [NEEDS HUMAN REVIEW] -->
+
 ## Claims that need a proof first
 
 Anything crossing the network is unproven until it has run on two devices on two accounts. Before
@@ -102,6 +119,10 @@ TestFlight these have to have been seen, not reasoned about:
   one recipient collecting leaves the other still owed and the bytes still downloadable; the second
   one takes the record out of the listing and the bytes with it.
 - **Open.** A member's second device on one Apple Account (hardware only).
+
+<!-- COPY END dd229921 -->
+
+<!-- COPY BEGIN c0f35cfb [NEEDS HUMAN REVIEW] -->
 
 ## Dark and light, on every surface
 
@@ -140,6 +161,10 @@ both were actually looked at:
 Switch appearance with `xcrun simctl ui <udid> appearance dark|light` rather than in Settings, so
 the same command can be run against every booted device in the rig.
 
+<!-- COPY END c0f35cfb -->
+
+<!-- COPY BEGIN 594017ad [NEEDS HUMAN REVIEW] -->
+
 ### What the rig found on 2026-09-14
 
 Walking the two flows built that day, on alpha, with the app in **light**:
@@ -165,6 +190,10 @@ and open* now has **Tell me when somebody sets up again** switched **on**, with 
 until I have checked* off. Before 2026-09-15 that first switch was off, and the friendly preset —
 the one most people take — turned it off explicitly. Fixed earlier that day and seen here on a real
 device rather than only in a test.
+
+<!-- COPY END 594017ad -->
+
+<!-- COPY BEGIN a5e88687 [NEEDS HUMAN REVIEW] -->
 
 ## A scan against iOS 27
 
@@ -210,6 +239,10 @@ the part that proves least.
 - **`canOpenURL` is deprecated; the old status-bar accessors may return NaN; `originalFilename` on a
   photo resource is being replaced; `toolbarMinimizeBehavior` is renamed.** None is used.
 
+<!-- COPY END a5e88687 -->
+
+<!-- COPY BEGIN acec3562 [NEEDS HUMAN REVIEW] -->
+
 ## A scan for known vulnerabilities
 
 Added 2026-09-14. Griff gave this as one of two reasons the crypto needs no outside reviewer, and it
@@ -227,6 +260,10 @@ Run by `Scripts/scan-for-vulnerabilities.sh [udid]`, first on 2026-09-15 and cle
 None of these substitutes for the brief, and none of them reads a protocol. They catch the things a
 person would not think to look at.
 
+<!-- COPY END acec3562 -->
+
+<!-- COPY BEGIN 10a9563c [NEEDS HUMAN REVIEW] -->
+
 ## The marketing site
 
 Added 2026-09-16, from Griff.
@@ -238,6 +275,10 @@ Added 2026-09-16, from Griff.
   rewrite corrected is in the commit, and the short version is that the site claimed iPad and Mac,
   no media, a six-character phrase, unbuilt Solos, unbuilt blocking and a dollar-a-month
   subscription, and five of its seven accent values did not match `Accent.swift`.
+
+<!-- COPY END 10a9563c -->
+
+<!-- COPY BEGIN 99ff2cb8 [NEEDS HUMAN REVIEW] -->
 
 ## Before the source is public
 
@@ -259,6 +300,10 @@ Added 2026-09-16, from Griff.
   **What a force-push does not do.** GitHub keeps `refs/pull/1/head` and `refs/pull/2/head`, which
   still reach every old commit, and they cannot be deleted by the owner. `main` is clean; the old
   commits stay fetchable from the PR refs unless the repository itself is recreated.
+
+<!-- COPY END 99ff2cb8 -->
+
+<!-- COPY BEGIN cd0fafa6 [NEEDS HUMAN REVIEW] -->
 
 ## CloudKit, before the first real build
 
@@ -294,6 +339,10 @@ Added 2026-09-16, from Griff.
 - **Open.** The App ID needs `iCloud.com.microgpt.outpost` enabled on it, or automatic signing has
   nothing to build a distribution profile from. Not exercised yet — every build so far has been
   `CODE_SIGNING_ALLOWED=NO` or a simulator.
+
+<!-- COPY END cd0fafa6 -->
+
+<!-- COPY BEGIN 5f374b31 [NEEDS HUMAN REVIEW] -->
 
 ## Operational
 
@@ -353,3 +402,5 @@ Added 2026-09-16, from Griff.
   this whole page exists to catch, pointed the other way. The date is right as it stands. What has to
   happen before a build is that somebody **looks**: if the list changed, the date moves with it, and
   if it did not, it does not.
+
+<!-- COPY END 5f374b31 -->

@@ -16,13 +16,16 @@ public struct OutpostConsentSheet: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN 2e5fb385 [NEEDS HUMAN REVIEW]
                 SettingsHeaderCard(
                     icon: "bubble.left.and.text.bubble.right.fill",
                     title: Text("Before you join in", bundle: .module),
                     paragraph: Text(
                         "An Outpost is somebody's own page. They decide who reads it — and everybody who can read a post can read every comment underneath it.",
                         bundle: .module))
+                // COPY END 2e5fb385
 
+                // COPY BEGIN aa3c687e [NEEDS HUMAN REVIEW]
                 Section {
                     point(
                         icon: "person.2.fill",
@@ -50,17 +53,21 @@ public struct OutpostConsentSheet: View {
                             bundle: .module))
                 }
                 .groupedRowSurface()
+                // COPY END aa3c687e
 
+                // COPY BEGIN f7ae01ea [NEEDS HUMAN REVIEW]
                 Section {
                 } footer: {
                     Text(
                         "Your own Outpost is not affected either way. You choose who reads it, one person at a time, and this is only about the posts other people write.",
                         bundle: .module)
                 }
+                // COPY END f7ae01ea
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
             .safeAreaInset(edge: .bottom) { decision }
+            // COPY BEGIN 39f201a2 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("How comments travel", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .interactiveDismissDisabled()
@@ -81,6 +88,7 @@ public struct OutpostConsentSheet: View {
                 Text(
                     "Read only keeps the tab and takes away commenting and reacting on other people's posts. Turning Outposts off takes the tab away as well. Either can be changed later, under Your Outpost on the You page.",
                     bundle: .module)
+            // COPY END 39f201a2
             }
         }
         .animation(reduceMotion ? nil : .default, value: declining)
@@ -88,6 +96,7 @@ public struct OutpostConsentSheet: View {
 
     private var decision: some View {
         VStack(spacing: 8) {
+            // COPY BEGIN bbd251d1 [NEEDS HUMAN REVIEW]
             Button { Task { await onAnswer(.open) } } label: {
                 Text("I understand", bundle: .module)
             }
@@ -97,6 +106,7 @@ public struct OutpostConsentSheet: View {
                 Text("Not for me", bundle: .module)
             }
             .quietActionButton()
+            // COPY END bbd251d1
         }
         .padding(.horizontal, CarpenterMetrics.screenMargin)
         .padding(.top, 10)

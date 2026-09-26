@@ -41,6 +41,7 @@ public struct PermissionExplainerView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
+                // COPY BEGIN e68c49d3 [NEEDS HUMAN REVIEW]
                 Section {
                     asked
                         .font(CarpenterFont.rowDetail)
@@ -49,7 +50,9 @@ public struct PermissionExplainerView: View {
                     Text("What is asked", bundle: .module).sectionHeading()
                 }
                 .groupedRowSurface()
+                // COPY END e68c49d3
 
+                // COPY BEGIN 42a84a6b [NEEDS HUMAN REVIEW]
                 Section {
                     refused
                         .font(CarpenterFont.rowDetail)
@@ -58,6 +61,7 @@ public struct PermissionExplainerView: View {
                     Text("If you say no", bundle: .module).sectionHeading()
                 }
                 .groupedRowSurface()
+                // COPY END 42a84a6b
             }
             .scrollContentBackground(.hidden)
 
@@ -70,6 +74,7 @@ public struct PermissionExplainerView: View {
                 }
                 .prominentActionButton()
 
+                // COPY BEGIN d8a63311 [NEEDS HUMAN REVIEW]
                 if let onDecline {
                     Button {
                         dismiss()
@@ -79,6 +84,7 @@ public struct PermissionExplainerView: View {
                     }
                     .quietActionButton()
                 }
+                // COPY END d8a63311
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
@@ -93,20 +99,25 @@ public struct PermissionExplainerView: View {
         }
     }
 
+    // COPY BEGIN 2d9c9979 [NEEDS HUMAN REVIEW]
     private var title: Text {
         switch kind {
         case .notifications: Text("Notifications", bundle: .module)
         case .photos: Text("Photos", bundle: .module)
         }
     }
+    // COPY END 2d9c9979
 
+    // COPY BEGIN 28958cf0 [NEEDS HUMAN REVIEW]
     private var continueLabel: Text {
         switch kind {
         case .notifications: Text("Continue", bundle: .module)
         case .photos: Text("Choose a photo", bundle: .module)
         }
     }
+    // COPY END 28958cf0
 
+    // COPY BEGIN f5b81be8 [NEEDS HUMAN REVIEW]
     private var asked: Text {
         switch kind {
         case .notifications:
@@ -119,7 +130,9 @@ public struct PermissionExplainerView: View {
                 bundle: .module)
         }
     }
+    // COPY END f5b81be8
 
+    // COPY BEGIN ab8e30d5 [NEEDS HUMAN REVIEW]
     private var refused: Text {
         switch kind {
         case .notifications:
@@ -132,6 +145,7 @@ public struct PermissionExplainerView: View {
                 bundle: .module)
         }
     }
+    // COPY END ab8e30d5
 }
 
 #if DEBUG

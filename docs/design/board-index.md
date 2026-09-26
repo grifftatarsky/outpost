@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 37cfee47 [NEEDS HUMAN REVIEW]
 title: Board index
 parent: Design
 nav_order: 1
@@ -17,6 +18,10 @@ Exact values — colours, sizes, corner radii, hit targets — live in `Componen
 *Use exactly this*. Take them from there, never by measuring the canvas: the boards are HTML drawn at
 1:1 with px named as pt, and nothing has been checked on a device at a real Dynamic Type size.
 
+<!-- COPY END 37cfee47 -->
+
+<!-- COPY BEGIN bf7e3a03 [NEEDS HUMAN REVIEW] -->
+
 ## 01 — Onboarding
 
 Onboarding. The name is set once, on this device, and never leaves it in the clear. The mark
@@ -24,6 +29,10 @@ above it is the Outpost symbol in the accent, which is Verdigris until somebody 
 
 **Accessibility.** Name field is the first focus. The mark is decorative — hide it from VoiceOver rather than
 labelling it.
+
+<!-- COPY END bf7e3a03 -->
+
+<!-- COPY BEGIN 429727aa [NEEDS HUMAN REVIEW] -->
 
 ## 02 — Rooms
 
@@ -34,6 +43,10 @@ large type sizes and disappear when there is nothing to report. It states what h
 **Accessibility.** Row reads name, then relative time, then sender and preview as one sentence. Unread is
 announced, not implied. Sync row is a live region that speaks once.
 
+<!-- COPY END 429727aa -->
+
+<!-- COPY BEGIN 0d17934f [NEEDS HUMAN REVIEW] -->
+
 ## 03 — Conversation
 
 Room conversation. Sent bubbles take the accent at full strength; incoming take a tint of the
@@ -42,6 +55,10 @@ same hue, so a room reads as one colour.
 **Accessibility.** Each bubble announces sender, text, then delivery state. Group bubbles by sender so a run is not
 re-announced.
 
+<!-- COPY END 0d17934f -->
+
+<!-- COPY BEGIN 98b6c2d5 [NEEDS HUMAN REVIEW] -->
+
 ## 04 — Wall
 
 Your Outpost. Old-Twitter shape, plain text posts and comments. The audience sits above the
@@ -49,6 +66,10 @@ composer and names who can actually see this — including when the answer is no
 fact about who you have added rather than a warning.
 
 **Accessibility.** Post, then reaction summary as words. The audience line is read before the composer, not after.
+
+<!-- COPY END 98b6c2d5 -->
+
+<!-- COPY BEGIN bca5b76a [NEEDS HUMAN REVIEW] -->
 
 ## 05 — Color
 
@@ -60,12 +81,20 @@ side, and every pair is tested against the contrast floor in both appearances.
 3". Retint is the one animation — respect reduced motion by cutting to the new value. Swatches
 draw at 40pt with a 44pt tappable region.
 
+<!-- COPY END bca5b76a -->
+
+<!-- COPY BEGIN d6b1593b [NEEDS HUMAN REVIEW] -->
+
 ## 06 — Room settings
 
 Room settings. Packs are per-room toggles, all off. The invite row carries its consequence
 inline rather than waiting for a dialog.
 
 **Accessibility.** Grouped list semantics with real section headers.
+
+<!-- COPY END d6b1593b -->
+
+<!-- COPY BEGIN b601b0d7 [NEEDS HUMAN REVIEW] -->
 
 ## 07 — Invite
 
@@ -75,6 +104,10 @@ warning is a full paragraph, on purpose.
 **Accessibility.** Code is selectable, readable character by character on request, and has a copy action that
 confirms in words.
 
+<!-- COPY END b601b0d7 -->
+
+<!-- COPY BEGIN b5b18a28 [NEEDS HUMAN REVIEW] -->
+
 ## 08 — Join check
 
 Join verification. Every member checks independently (D4) — so this is a sheet each of them
@@ -82,12 +115,20 @@ sees, with refusal given equal weight, not a destructive-red afterthought.
 
 **Accessibility.** The three words are one label, spoken as words with pauses, not spelled.
 
+<!-- COPY END b5b18a28 -->
+
+<!-- COPY BEGIN 5a33bd49 [NEEDS HUMAN REVIEW] -->
+
 ## 09 — Waiting
 
 Waiting for a peer (§5.2). Not a spinner: it says which peers it is waiting on, what it will do,
 and lets you leave the screen.
 
 **Accessibility.** Live region announcing what changed, at most once per state.
+
+<!-- COPY END 5a33bd49 -->
+
+<!-- COPY BEGIN d06d758f [NEEDS HUMAN REVIEW] -->
 
 ## 10 — Previews
 
@@ -101,6 +142,10 @@ That is what the ladder is choosing between.
 sight still tells you what it leaks. At the largest sizes the sample banners stack under their
 labels.
 
+<!-- COPY END d06d758f -->
+
+<!-- COPY BEGIN cf744bb2 [NEEDS HUMAN REVIEW] -->
+
 ## 11 — Outpost access
 
 Who sees your Outpost. Nobody, until you say otherwise: access is an allow-list, and joining a
@@ -108,6 +153,10 @@ room grants nothing on its own. One row per person — what they can see, then t
 share. A person's access is one thing, changed in one place.
 
 **Accessibility.** Row reads person, then access, then shared rooms. Access is a value, never a colour.
+
+<!-- COPY END cf744bb2 -->
+
+<!-- COPY BEGIN 4e1cbcc8 [NEEDS HUMAN REVIEW] -->
 
 ## 11b — Change access, new
 
@@ -117,10 +166,18 @@ to today, so the common case is one tap.
 **Accessibility.** Date picker is the system's. The permanence sentence is part of the confirming button's
 accessibility hint.
 
+<!-- COPY END 4e1cbcc8 -->
+
+<!-- COPY BEGIN 8001419c [NEEDS HUMAN REVIEW] -->
+
 ## 11c — Change access, existing
 
 Same sheet for someone already on a limited date — it opens on their locked date, not today. The
 consequence of moving them up to Everything is stated on the row itself, before they tap it.
+
+<!-- COPY END 8001419c -->
+
+<!-- COPY BEGIN 89a4602d [NEEDS HUMAN REVIEW] -->
 
 ## 12 — Pairing
 
@@ -131,6 +188,10 @@ was removed.
 
 **Accessibility.** Superseded. Device list rows read name, then this-device, then enrolment date.
 
+<!-- COPY END 89a4602d -->
+
+<!-- COPY BEGIN 71dea34a [NEEDS HUMAN REVIEW] -->
+
 ## 13 — Rooms light
 
 Rooms, light. Each accent has a darker light-mode value so the tinted incoming bubble still
@@ -138,9 +199,17 @@ holds black text.
 
 **Accessibility.** Same as 02 and 03; only values differ.
 
+<!-- COPY END 71dea34a -->
+
+<!-- COPY BEGIN 53f7e700 [NEEDS HUMAN REVIEW] -->
+
 ## 14 — Conversation light
 
 Conversation, light, keyboard up.
+
+<!-- COPY END 53f7e700 -->
+
+<!-- COPY BEGIN c4a81cf9 [NEEDS HUMAN REVIEW] -->
 
 ## 15 — Desktop Wall
 
@@ -150,6 +219,10 @@ right. Same layout at iPad landscape; the right rail collapses to a sheet at iPa
 
 **Accessibility.** Full keyboard path through sidebar, list and detail. Focus ring visible on every stop.
 
+<!-- COPY END c4a81cf9 -->
+
+<!-- COPY BEGIN 96bd4441 [NEEDS HUMAN REVIEW] -->
+
 ## 21 — Upgrade to Everything
 
 The upgrade warning. Names the person, names the locked date, counts what becomes visible, and
@@ -158,12 +231,20 @@ product.
 
 **Accessibility.** The irreversible fact is in the button's hint, not only in body text above it.
 
+<!-- COPY END 96bd4441 -->
+
+<!-- COPY BEGIN 132fca7d [NEEDS HUMAN REVIEW] -->
+
 ## 22 — Fingerprint
 
 Fingerprint comparison, offered once and never blocking (§6). Skipping is a plain button, not a
 nag, and the copy says what checking does and doesn't buy you.
 
 **Accessibility.** Words spoken as words. Offer a compare-again action from the same screen.
+
+<!-- COPY END 132fca7d -->
+
+<!-- COPY BEGIN b9627ef7 [NEEDS HUMAN REVIEW] -->
 
 ## 23 — Leave, step 1
 
@@ -174,15 +255,27 @@ into per-person access either way.
 **Accessibility.** Each step announces which step of how many. Review step reads the full consequence list before
 the confirm.
 
+<!-- COPY END b9627ef7 -->
+
+<!-- COPY BEGIN 3d4a6a2e [NEEDS HUMAN REVIEW] -->
+
 ## 24 — Leave, step 2
 
 Second question, only if they kept access. "Stop at today" pins each person at the current
 point; "keep allowing" leaves them where they are.
 
+<!-- COPY END 3d4a6a2e -->
+
+<!-- COPY BEGIN a383525d [NEEDS HUMAN REVIEW] -->
+
 ## 25 — Leave, review
 
 The review step. Everyone who still has access, why they still have it, and the same Change pill
 from 1k — no forced decisions, just the annotation for people who don't expect it.
+
+<!-- COPY END a383525d -->
+
+<!-- COPY BEGIN 5fbeb629 [NEEDS HUMAN REVIEW] -->
 
 ## 26 — Remove a member
 
@@ -197,6 +290,10 @@ is worse than one that says what happened.
 **Accessibility.** All three facts are spoken before either button. The check and info glyphs are decorative; the
 sentences carry the meaning.
 
+<!-- COPY END 5fbeb629 -->
+
+<!-- COPY BEGIN 9e9d06e5 [NEEDS HUMAN REVIEW] -->
+
 ## 27 — Lost my devices
 
 "I no longer have my other devices" (ADR-P4), reachable on a new device before any other setup.
@@ -205,6 +302,10 @@ screen says so.
 
 **Accessibility.** Nominated friends are a list with names, not avatars alone.
 
+<!-- COPY END 9e9d06e5 -->
+
+<!-- COPY BEGIN fb6a8a11 [NEEDS HUMAN REVIEW] -->
+
 ## 28 — Keys are gone
 
 Keychain reset (OQ-7) — rare, unrecoverable, and presented as a plain explanation rather than an
@@ -212,6 +313,10 @@ error. Two columns: what survived, what didn't.
 
 **Accessibility.** The one screen that must not soften: the loss is stated in the heading, so it is the first thing
 spoken.
+
+<!-- COPY END fb6a8a11 -->
+
+<!-- COPY BEGIN 94321f9f [NEEDS HUMAN REVIEW] -->
 
 ## 29 — Social recovery
 
@@ -222,12 +327,20 @@ to see it.
 **Accessibility.** Signer list reads name and what they can and cannot do. Destructive action carries its own
 confirming hint.
 
+<!-- COPY END 94321f9f -->
+
+<!-- COPY BEGIN e196ec61 [NEEDS HUMAN REVIEW] -->
+
 ## 30 — Locked
 
 The in-app lock. Nothing on screen but the mark — no room names, no counts, nothing worth a
 glance over your shoulder.
 
 **Accessibility.** Reachable with the lock engaged; the unlock control is the first focus.
+
+<!-- COPY END e196ec61 -->
+
+<!-- COPY BEGIN 46ad61c2 [NEEDS HUMAN REVIEW] -->
 
 ## 31 — Composer
 
@@ -237,12 +350,20 @@ nobody added yet the rail says so in the same place, plainly.
 
 **Accessibility.** Audience is read before the text field. Post button disabled state announces why.
 
+<!-- COPY END 46ad61c2 -->
+
+<!-- COPY BEGIN ddebf2e7 [NEEDS HUMAN REVIEW] -->
+
 ## 32 — Comment thread
 
 A post and its comments. Comments are entries like any other, so they carry the same delivery
 honesty at the bottom of the thread.
 
 **Accessibility.** Depth announced as a level, not conveyed by indent alone.
+
+<!-- COPY END ddebf2e7 -->
+
+<!-- COPY BEGIN d479327f [NEEDS HUMAN REVIEW] -->
 
 ## 33 — Storage
 
@@ -251,6 +372,10 @@ where the heavy rooms are, and deleting local media never deletes anyone else's 
 
 **Accessibility.** Sizes spoken in full words. Retention control is a value picker, not a slider.
 
+<!-- COPY END d479327f -->
+
+<!-- COPY BEGIN 8ce64a0e [NEEDS HUMAN REVIEW] -->
+
 ## 34 — Rooms with pins
 
 Unfiltered. Two pins on top in the order you dragged them, then everything else by recency. The
@@ -258,6 +383,10 @@ pin reads as a subscript badge on the avatar — same weight as an edit badge �
 still looks like a row.
 
 **Accessibility.** Pinned is announced as a trait on the row, since the badge sits on the avatar.
+
+<!-- COPY END 8ce64a0e -->
+
+<!-- COPY BEGIN 890d700f [NEEDS HUMAN REVIEW] -->
 
 ## 35 — Rooms filtered by tag
 
@@ -268,12 +397,20 @@ whole list.
 **Accessibility.** Filter row is a tab list; the active filter is announced on entering the list, so the shorter
 list is not mistaken for missing rooms.
 
+<!-- COPY END 890d700f -->
+
+<!-- COPY BEGIN 80ee1f0c [NEEDS HUMAN REVIEW] -->
+
 ## 36 — List menu
 
 The menu behind the ellipsis. Four items and no more: create, join, edit the list, manage tags.
 Search is a separate icon because it is the one thing you reach for mid-thought.
 
 **Accessibility.** System menu semantics. No custom trap.
+
+<!-- COPY END 80ee1f0c -->
+
+<!-- COPY BEGIN 49b4e6b0 [NEEDS HUMAN REVIEW] -->
 
 ## 37 — Edit list
 
@@ -283,6 +420,10 @@ block stays on recency and shows no handle. Swipe reveals Leave.
 
 **Accessibility.** Swipe actions also reachable from the row's actions rotor. Leave carries a confirming hint.
 
+<!-- COPY END 49b4e6b0 -->
+
+<!-- COPY BEGIN ec6f4974 [NEEDS HUMAN REVIEW] -->
+
 ## 38 — Room tags
 
 Tags for one room. Multi-select, with a new tag created inline from the field. The footer states
@@ -290,16 +431,28 @@ the privacy fact once, plainly, where the decision is being made.
 
 **Accessibility.** Reorder available as move-up and move-down actions, not drag only.
 
+<!-- COPY END ec6f4974 -->
+
+<!-- COPY BEGIN 55519ebb [NEEDS HUMAN REVIEW] -->
+
 ## 39 — Manage tags
 
 Manage tags. Rename, reorder the filter rail, delete — deleting a tag removes it from your rooms
 and nothing else. Counts are local counts.
+
+<!-- COPY END 55519ebb -->
+
+<!-- COPY BEGIN 875f658a [NEEDS HUMAN REVIEW] -->
 
 ## 40 — Rooms light with pins
 
 Light. The pin badge takes a white ring instead of black, so it still separates from the avatar.
 
 **Accessibility.** As 34.
+
+<!-- COPY END 875f658a -->
+
+<!-- COPY BEGIN 0859b8e9 [NEEDS HUMAN REVIEW] -->
 
 ## 41 — Outpost feed
 
@@ -309,6 +462,10 @@ dimmed avatar has nothing new because that peer hasn't synced.
 
 **Accessibility.** Rail is a list with names; entering a wall announces whose it is.
 
+<!-- COPY END 0859b8e9 -->
+
+<!-- COPY BEGIN f1d267e5 [NEEDS HUMAN REVIEW] -->
+
 ## 42 — Someone's Outpost
 
 One person's wall, reached from the rail. The line under the name is the reciprocal fact you
@@ -316,6 +473,10 @@ can't get anywhere else: what they can see of yours. Comments carry reactions to
 composer has an emoji key.
 
 **Accessibility.** Both directions of access are read as two separate facts, never merged into one.
+
+<!-- COPY END f1d267e5 -->
+
+<!-- COPY BEGIN 5c4b552b [NEEDS HUMAN REVIEW] -->
 
 ## 43 — Reaction picker
 
@@ -326,6 +487,10 @@ the long press to the system's own menu, which is what the menu below is. Same b
 **Accessibility.** Trigger is a button labelled Add reaction. Each emoji is labelled by name. Plus announces that
 it opens the full picker.
 
+<!-- COPY END 5c4b552b -->
+
+<!-- COPY BEGIN 813250f3 [NEEDS HUMAN REVIEW] -->
+
 ## 44 — Message reactions
 
 The same reactions in a room. A reaction is an ordinary entry in the log, so it syncs, backfills
@@ -334,6 +499,10 @@ there.
 
 **Accessibility.** Summary spoken as "two people clapped", not as glyphs and digits.
 
+<!-- COPY END 813250f3 -->
+
+<!-- COPY BEGIN 9940b9d3 [NEEDS HUMAN REVIEW] -->
+
 ## 45 — You
 
 The third tab finally has a page. Your own wall lives at the top of it, so the Outposts tab can
@@ -341,6 +510,10 @@ be about everyone else. Everything below it is a thing you own: identity, device
 the phone, and what you paid for.
 
 **Accessibility.** Grouped list with headers. Fingerprint spoken as words.
+
+<!-- COPY END 9940b9d3 -->
+
+<!-- COPY BEGIN 2d0e33be [NEEDS HUMAN REVIEW] -->
 
 ## 46 — Desktop feed
 
@@ -351,6 +524,10 @@ commenting happen without leaving the feed.
 
 **Accessibility.** Column order follows reading order; sidebar collapse is keyboard reachable.
 
+<!-- COPY END 2d0e33be -->
+
+<!-- COPY BEGIN 2d25d206 [NEEDS HUMAN REVIEW] -->
+
 ## 51 — Messages, split
 
 The Messages tab in the default arrangement. One person per row, no sender chip — the name at
@@ -358,10 +535,18 @@ the top of the row is the only name it could be from. Tags run across DMs too.
 
 **Accessibility.** Tab labels are Messages and Rooms. Nothing distinguishes the two lists by icon alone.
 
+<!-- COPY END 2d25d206 -->
+
+<!-- COPY BEGIN fd683f1e [NEEDS HUMAN REVIEW] -->
+
 ## 52 — Rooms, split
 
 The Rooms tab beside it, unchanged from turn 3 apart from the dock. The stacked bubble is the
 Rooms icon; the plain one is now Messages.
+
+<!-- COPY END fd683f1e -->
+
+<!-- COPY BEGIN c19f5425 [NEEDS HUMAN REVIEW] -->
 
 ## 53 — Blended inbox
 
@@ -372,6 +557,10 @@ have neither, so the difference is legible without reading a single label.
 **Accessibility.** A group is announced as a group — the offset second disc is decorative, so the trait carries it.
 Sender prefix is part of the preview sentence.
 
+<!-- COPY END c19f5425 -->
+
+<!-- COPY BEGIN 4ad9d716 [NEEDS HUMAN REVIEW] -->
+
 ## 54 — Inbox setting
 
 The setting, on the You page. Two rows with a picture of each, defaulting to separate. Nothing
@@ -379,6 +568,10 @@ moves except the dock and the lists — no conversation changes, nothing re-sync
 
 **Accessibility.** Two options as a radio group; each option's description is part of its label. The two pictures
 are decorative.
+
+<!-- COPY END 4ad9d716 -->
+
+<!-- COPY BEGIN e787bfc2 [NEEDS HUMAN REVIEW] -->
 
 ## 55 — Rooms, empty
 
@@ -390,6 +583,10 @@ sync it is simply absent.
 **Accessibility.** Both actions are equal buttons in reading order. The empty state is a static message, not a live
 region.
 
+<!-- COPY END e787bfc2 -->
+
+<!-- COPY BEGIN ba2a3108 [NEEDS HUMAN REVIEW] -->
+
 ## 56 — Feed, empty
 
 The Outposts feed with nobody in it. Access is an allow-list in both directions, so an empty
@@ -398,6 +595,10 @@ shortfall. Your own wall is still on the rail and still writable; the rail is wh
 who can see it lives.
 
 **Accessibility.** Explains the mechanism, so it must be spoken in full rather than truncated to a heading.
+
+<!-- COPY END ba2a3108 -->
+
+<!-- COPY BEGIN d0197497 [NEEDS HUMAN REVIEW] -->
 
 ## 57 — Collecting earlier messages
 
@@ -408,6 +609,10 @@ a peer never comes back the row says that instead, in the same place.
 
 **Accessibility.** Live region announcing progress at most once every few seconds, naming peers. Never a
 percentage.
+
+<!-- COPY END d0197497 -->
+
+<!-- COPY BEGIN a869a3f6 [NEEDS HUMAN REVIEW] -->
 
 ## 58 — Send failure
 
@@ -420,6 +625,10 @@ rejected.
 **Accessibility.** The failed bubble announces "not sent" as part of its label. The inline failure is a live region
 with the retry and delete actions after it.
 
+<!-- COPY END a869a3f6 -->
+
+<!-- COPY BEGIN 7c5e7456 [NEEDS HUMAN REVIEW] -->
+
 ## 59 — Access review, prompt
 
 You have joined a room and it has people in it you have never decided about. Until you resolve
@@ -428,6 +637,10 @@ above the conversation rather than a sheet in front of it. Anyone you had alread
 to keeps it; the prompt counts only the people it has no answer for.
 
 **Accessibility.** Non-blocking, so it is announced once and does not steal focus from the conversation.
+
+<!-- COPY END 7c5e7456 -->
+
+<!-- COPY BEGIN d3e49274 [NEEDS HUMAN REVIEW] -->
 
 ## 60 — Access review, sheet
 
@@ -441,6 +654,10 @@ revoked from here, because this sheet is about a decision you have not made yet.
 fill every row rather than replacing the list. At the largest sizes each row stacks its action
 below its name.
 
+<!-- COPY END d3e49274 -->
+
+<!-- COPY BEGIN a602cd14 [NEEDS HUMAN REVIEW] -->
+
 ## 61 — Outposts off
 
 Outposts turned off. The tab goes away entirely rather than staying as a shell explaining
@@ -449,6 +666,10 @@ in a new room stops appearing with it. Turning it back on restores whatever acce
 the switch does not decide anything on your behalf.
 
 **Accessibility.** The switch announces the consequence — tab hidden, nothing deleted — in its hint.
+
+<!-- COPY END a602cd14 -->
+
+<!-- COPY BEGIN a26a4784 [NEEDS HUMAN REVIEW] -->
 
 ## 62 — Outpost access, allow-list
 
@@ -461,6 +682,10 @@ sorted alphabetically into the middle.
 **Accessibility.** Two sections with real headers, so "not decided" and "allowed" are navigable groups rather than
 an ordering a sighted reader infers.
 
+<!-- COPY END a26a4784 -->
+
+<!-- COPY BEGIN fba12584 [NEEDS HUMAN REVIEW] -->
+
 ## 63 — Reciprocal access
 
 Someone else's wall, carrying the fact you cannot work out from anywhere else: what they can see
@@ -470,6 +695,10 @@ here; changing theirs is not yours to do, and there is no control implying other
 
 **Accessibility.** The direction you cannot change is announced as read-only with the reason, so no one hunts for a
 missing control.
+
+<!-- COPY END fba12584 -->
+
+<!-- COPY BEGIN 82bdd260 [NEEDS HUMAN REVIEW] -->
 
 ## 64 — Notification content
 
@@ -484,6 +713,10 @@ store.
 **Accessibility.** Radio group; each rung's sample banner is part of that option's label. The store caveat is
 spoken with the group, not left as a trailing footnote.
 
+<!-- COPY END 82bdd260 -->
+
+<!-- COPY BEGIN 4bfc92af [NEEDS HUMAN REVIEW] -->
+
 ## 65 — Notification, one room
 
 The same choice for a single room, in that room's settings. It follows the default until you say
@@ -492,6 +725,10 @@ room override that reads as unset is the most common way people end up believing
 something. Muting is here too, as the case that has nothing to do with disclosure.
 
 **Accessibility.** The follow-my-default row announces which default it is following, so the value is never blank.
+
+<!-- COPY END 4bfc92af -->
+
+<!-- COPY BEGIN 067c82bb [NEEDS HUMAN REVIEW] -->
 
 ## 66 — Welcome, first panel
 
@@ -504,6 +741,10 @@ to pay five taps for it.
 **Accessibility.** Each panel is a page in a paged container announcing "panel 1 of 5". Skip is reachable first,
 not last. Dots are decorative.
 
+<!-- COPY END 067c82bb -->
+
+<!-- COPY BEGIN 86caa9cd [NEEDS HUMAN REVIEW] -->
+
 ## 67 — Welcome, last panel
 
 Panel five, which is where the tour has to stop promising and start pointing. It keeps the
@@ -511,6 +752,10 @@ sentence about finding this again later because the affordance now exists — a 
 the navigation bar of every tab root, drawn in 8c . The panel also states the one limitation
 people discover on their own and find alarming: there is no account to recover, so losing every
 device is a real loss, and the recovery screens are the answer to that rather than this panel.
+
+<!-- COPY END 86caa9cd -->
+
+<!-- COPY BEGIN b9cdba89 [NEEDS HUMAN REVIEW] -->
 
 ## 68 — How this works
 
@@ -521,6 +766,10 @@ answers in the app's own terms and never suggests that support could look someth
 there is nothing to look at.
 
 **Accessibility.** Questions are a list of links; the short version is read before them.
+
+<!-- COPY END b9cdba89 -->
+
+<!-- COPY BEGIN 3d90e155 [NEEDS HUMAN REVIEW] -->
 
 ## 69 — Checking for a registration
 
@@ -533,6 +782,10 @@ starting fresh here abandons an identity that is probably about to arrive.
 **Accessibility.** Held indefinitely, so it announces once on appearing and again only when the numbered advice
 appears. Never a looping spinner announcement.
 
+<!-- COPY END 3d90e155 -->
+
+<!-- COPY BEGIN e449e48f [NEEDS HUMAN REVIEW] -->
+
 ## 70 — Device synced
 
 Shown once, the first time a second device enrols itself with no setup step at all. It exists to
@@ -543,6 +796,10 @@ because the enrolment already happened.
 
 **Accessibility.** Announced on appearing, since nothing the person did opened it. Device list rows read name and
 enrolment.
+
+<!-- COPY END e449e48f -->
+
+<!-- COPY BEGIN 86c6ecd7 [NEEDS HUMAN REVIEW] -->
 
 ## 71 — Integrity
 
@@ -557,6 +814,10 @@ do to the entries — they were never accepted.
 **Accessibility.** Three groups with headers and counts in the header. Each entry reads room, date, then what the
 device did — no entry is presented as actionable.
 
+<!-- COPY END 86c6ecd7 -->
+
+<!-- COPY BEGIN 882c5fda [NEEDS HUMAN REVIEW] -->
+
 ## 72 — Redeem an invite
 
 The joiner's side, which board 07 never drew. The field is a sheet with room for a long code and
@@ -568,6 +829,10 @@ stated here.
 **Accessibility.** Paste field accepts any whitespace. Scan is a separate labelled button. The consequence block is
 read before Continue.
 
+<!-- COPY END 882c5fda -->
+
+<!-- COPY BEGIN c677a88d [NEEDS HUMAN REVIEW] -->
+
 ## 73 — Verify the phrase
 
 The joiner's half of the phrase comparison. Three words, read out loud on a call or in person,
@@ -578,6 +843,10 @@ it costs.
 
 **Accessibility.** Words spoken as words. Match and no-match are equal-weight buttons; skip is a third, clearly
 labelled with what it forgoes.
+
+<!-- COPY END c677a88d -->
+
+<!-- COPY BEGIN 1c1b43cc [NEEDS HUMAN REVIEW] -->
 
 ## 74 — New room
 
@@ -595,6 +864,10 @@ label.
 > [Design](../design.md#where-the-app-departs-from-a-board) — do not "fix" the app back to
 > this board without reading it. Board 75 below is unaffected.
 
+<!-- COPY END 1c1b43cc -->
+
+<!-- COPY BEGIN cdd7cecf [NEEDS HUMAN REVIEW] -->
+
 ## 75 — Admission policy
 
 The same control after the fact, in room settings, where it has to carry one more sentence than
@@ -605,6 +878,10 @@ guarantee it cannot make.
 
 **Accessibility.** Announces who set it and whether you may change it, so a read-only state is never mistaken for a
 broken control.
+
+<!-- COPY END cdd7cecf -->
+
+<!-- COPY BEGIN ee7f53c8 [NEEDS HUMAN REVIEW] -->
 
 ## 76 — Delete for me
 
@@ -617,6 +894,10 @@ actually notice.
 **Accessibility.** The quoted message is part of the sheet's label. Hide carries the "nobody else is affected" fact
 as its hint.
 
+<!-- COPY END ee7f53c8 -->
+
+<!-- COPY BEGIN 7d848148 [NEEDS HUMAN REVIEW] -->
+
 ## 77 — Show hidden messages
 
 The reversal, and the one screen in the set that is deliberately less informative than it could
@@ -627,6 +908,10 @@ arriving at the bottom as if they were new.
 
 **Accessibility.** Deliberately a count. The count is spoken; the messages are not enumerated, and that omission is
 stated so it does not read as a loading failure.
+
+<!-- COPY END 7d848148 -->
+
+<!-- COPY BEGIN 149d9548 [NEEDS HUMAN REVIEW] -->
 
 ## 78 — Block someone in a room
 
@@ -639,6 +924,10 @@ room is offered here because for most people that is the thing they actually mea
 
 **Accessibility.** Two effects announced as two facts. The limit — they stay in the room — is spoken before the
 buttons.
+
+<!-- COPY END 149d9548 -->
+
+<!-- COPY BEGIN cc6e3bfd [NEEDS HUMAN REVIEW] -->
 
 ## 79 — Report a message
 
@@ -653,6 +942,10 @@ immediate effect.
 **Accessibility.** The attachment table is a list of labelled value pairs, read in full before the send action,
 since it is the disclosure.
 
+<!-- COPY END cc6e3bfd -->
+
+<!-- COPY BEGIN 21797b8f [NEEDS HUMAN REVIEW] -->
+
 ## 80 — Devices
 
 Board 12 with its pairing half removed. There is no six-character comparison and no setup step:
@@ -663,6 +956,10 @@ takes effect for people as their devices collect it.
 
 **Accessibility.** Rows read name, this-device, enrolment and last activity. Fingerprint spoken as words.
 
+<!-- COPY END 21797b8f -->
+
+<!-- COPY BEGIN 0607caca [NEEDS HUMAN REVIEW] -->
+
 ## 81 — Compare again
 
 The standalone comparison, reachable from any member at any time — the case board 22 left out,
@@ -671,6 +968,10 @@ what has happened since, because a comparison is only worth anything against a d
 somebody verified is a note to yourself and the screen says so; nothing about the room changes.
 
 **Accessibility.** Both fingerprints labelled by whose they are. The last-checked date is spoken with them.
+
+<!-- COPY END 0607caca -->
+
+<!-- COPY BEGIN 366e9393 [NEEDS HUMAN REVIEW] -->
 
 ## 82 — Fingerprint changed
 
@@ -684,6 +985,10 @@ meanwhile; nothing is blocked on the strength of a suspicion.
 **Accessibility.** Old and new are labelled was and is — the strikethrough is decoration and cannot carry it. Both
 readings are spoken in order of likelihood.
 
+<!-- COPY END 366e9393 -->
+
+<!-- COPY BEGIN 97d8c3b2 [NEEDS HUMAN REVIEW] -->
+
 ## 83 — App icon
 
 The icon picker, built without a board and included here so the set covers what ships. Seven
@@ -693,6 +998,10 @@ rather than left as an inference.
 
 **Accessibility.** Each tile is a button labelled by name, with selected state. Tiles are images, so the mark
 inside them is decorative.
+
+<!-- COPY END 97d8c3b2 -->
+
+<!-- COPY BEGIN 560c28e5 [NEEDS HUMAN REVIEW] -->
 
 ## 85 — System navigation bar
 
@@ -705,6 +1014,10 @@ inside a bar. The search field is the system's too, in the place the system puts
 
 **Accessibility.** System bar brings its own behaviour. The sync row is a live region announcing once, and is
 absent from the accessibility tree when there is nothing to report.
+
+<!-- COPY END 560c28e5 -->
+
+<!-- COPY BEGIN 53c82259 [NEEDS HUMAN REVIEW] -->
 
 ## 86 — Delivery marks
 
@@ -720,6 +1033,10 @@ of its own.
 read. Not-reported speaks that it will not change. The marks are not tappable: they are part of
 the bubble's own label, so they need no hit area of their own.
 
+<!-- COPY END 53c82259 -->
+
+<!-- COPY BEGIN a1e61a31 [NEEDS HUMAN REVIEW] -->
+
 ## 87 — Bubbles, buttons, fields
 
 Rulings 7, 8 and 9 in one sheet, because all three are cases the set never drew and the app
@@ -734,6 +1051,10 @@ measure at 3:1.
 **Accessibility.** Reference sheet. Disabled buttons announce unavailable and why; fields announce their label,
 value and focus separately.
 
+<!-- COPY END a1e61a31 -->
+
+<!-- COPY BEGIN 0cb1a713 [NEEDS HUMAN REVIEW] -->
+
 ## 88 — Reactions, tap to open
 
 Ruling 5, split between the two. The trigger is a visible smiley on the reaction row, as the app
@@ -745,6 +1066,10 @@ ages every time the Unicode set does and a one-person project should not own tha
 **Accessibility.** Trigger labelled Add reaction, reachable without a gesture. Existing reactions are one summary
 element, not five. Emoji buttons draw at 38pt and the chips at 30pt, both extended to a 44pt
 tappable region — the drawn size is the disc, not the target.
+
+<!-- COPY END 0cb1a713 -->
+
+<!-- COPY BEGIN 8535a58f [NEEDS HUMAN REVIEW] -->
 
 ## 89 — Tinted bars
 
@@ -759,6 +1084,10 @@ thirty-two, or the wash is clamped to an opacity that cannot push a pair below t
 changes no label's contrast obligation. Swatches are the same component as board 05 — 40pt
 drawn, 44pt tappable, each labelled by name.
 
+<!-- COPY END 8535a58f -->
+
+<!-- COPY BEGIN ef9a8044 [NEEDS HUMAN REVIEW] -->
+
 ## 90 — Audience rail
 
 Ruling 6, which went to neither side. The app was right to delete "Visible to no one yet." from
@@ -770,6 +1099,10 @@ the rail is the same component either way.
 
 **Accessibility.** Read before the text field in both states. The empty state is a fact about who will collect,
 never phrased as a warning.
+
+<!-- COPY END ef9a8044 -->
+
+<!-- COPY BEGIN 33b5da43 [NEEDS HUMAN REVIEW] -->
 
 ## 91 — Light mode rules
 
@@ -784,6 +1117,10 @@ are the two edge cases the audit measures at 3:1 rather than 4.5:1.
 **Accessibility.** Reference sheet. Every swatch has its value as text beside it, so the specification does not
 depend on seeing colour.
 
+<!-- COPY END 33b5da43 -->
+
+<!-- COPY BEGIN 90b3c9ef [NEEDS HUMAN REVIEW] -->
+
 ## 92 — Rooms, light
 
 The rules from 10h on a real screen, which is the only way to check that they hold. Rows sit on
@@ -793,3 +1130,5 @@ doing the work. Nothing about the layout changed between appearances, which is t
 defining light as values rather than as a second set of drawings.
 
 **Accessibility.** As 02. Unread remains a dot that is present or absent and is announced either way.
+
+<!-- COPY END 90b3c9ef -->

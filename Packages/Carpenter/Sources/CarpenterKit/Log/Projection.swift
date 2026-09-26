@@ -37,6 +37,7 @@ public struct Projection: Sendable {
         return false
     }
 
+    // COPY BEGIN 7e088dc8 [NEEDS HUMAN REVIEW]
     static let withdrawnMessage = String(
         localized: "This message was withdrawn.", bundle: .module,
         comment: "Placeholder for a withdrawn message")
@@ -46,6 +47,7 @@ public struct Projection: Sendable {
     static let withdrawnComment = String(
         localized: "This comment was withdrawn.", bundle: .module,
         comment: "Placeholder for a withdrawn comment")
+    // COPY END 7e088dc8
 
     func preview(
         _ entry: RenderedEntry, withdrawn: String = Projection.withdrawnMessage
@@ -58,6 +60,7 @@ public struct Projection: Sendable {
         case .withdrawn:
             return withdrawn
         case .sealed:
+            // COPY BEGIN 80dfd221 [NEEDS HUMAN REVIEW]
             return String(
                 localized: "Not readable on this device.", bundle: .module,
                 comment: "Placeholder for an entry whose key this device does not hold")
@@ -66,6 +69,7 @@ public struct Projection: Sendable {
                 ?? String(
                     localized: "Not supported by this version.", bundle: .module,
                     comment: "Placeholder for an unknown payload type with no fallback")
+            // COPY END 80dfd221
         }
     }
 }

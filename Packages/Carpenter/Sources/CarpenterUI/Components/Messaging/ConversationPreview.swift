@@ -19,6 +19,7 @@ struct ConversationPreview: View {
         VStack(alignment: .leading, spacing: 10) {
             header
 
+            // COPY BEGIN e4786798 [NEEDS HUMAN REVIEW]
             if recent.isEmpty {
                 Text("No messages yet.", bundle: .module)
                     .font(CarpenterFont.footnote)
@@ -32,6 +33,7 @@ struct ConversationPreview: View {
                     }
                 }
             }
+            // COPY END e4786798
         }
         .padding(14)
         .frame(width: 300)

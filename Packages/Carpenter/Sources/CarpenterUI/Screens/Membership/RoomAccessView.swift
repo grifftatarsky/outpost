@@ -39,6 +39,7 @@ public struct RoomAccessView: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN 24294c68 [NEEDS HUMAN REVIEW]
                 Section {
                     option(
                         .open,
@@ -83,7 +84,9 @@ public struct RoomAccessView: View {
                     .font(CarpenterFont.footnote)
                 }
                 .groupedRowSurface()
+                // COPY END 24294c68
 
+                // COPY BEGIN 66a04207 [NEEDS HUMAN REVIEW]
                 if case .atLeast = access {
                     Section {
                         Stepper(value: $count, in: 2...max(2, members.count)) {
@@ -98,6 +101,7 @@ public struct RoomAccessView: View {
                     }
                     .groupedRowSurface()
                 }
+                // COPY END 66a04207
 
                 if case .member = access {
                     Section {
@@ -126,6 +130,7 @@ public struct RoomAccessView: View {
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN c937689a [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Who gets in", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -133,6 +138,7 @@ public struct RoomAccessView: View {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END c937689a
         }
     }
 

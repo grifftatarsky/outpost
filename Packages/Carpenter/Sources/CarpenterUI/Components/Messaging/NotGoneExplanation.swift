@@ -52,8 +52,10 @@ struct NotGoneMark: View {
         .buttonStyle(.plain)
         .tappable()
         .padding(-max(0, CarpenterMetrics.hitTarget - box - 2) / 2)
+        // COPY BEGIN 019f5faa [NEEDS HUMAN REVIEW]
         .accessibilityLabel(Text("Not sent yet", bundle: .module))
         .accessibilityHint(Text("Says why.", bundle: .module))
+        // COPY END 019f5faa
         .sheet(
             isPresented: $explaining,
             onDismiss: {
@@ -108,6 +110,7 @@ struct NotGoneExplanation: View {
                         .font(CarpenterFont.bubble)
                         .foregroundStyle(palette.primaryText)
 
+                    // COPY BEGIN cff45cfb [NEEDS HUMAN REVIEW]
                     Text("Sent \(sentAt, format: .dateTime.weekday(.wide).day().month().hour().minute()).", bundle: .module)
                         .font(CarpenterFont.footnote)
                         .foregroundStyle(palette.secondaryText)
@@ -118,7 +121,9 @@ struct NotGoneExplanation: View {
                     )
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
+                    // COPY END cff45cfb
 
+                    // COPY BEGIN 938a66e7 [NEEDS HUMAN REVIEW]
                     if let onShowWaiting {
                         Button(action: onShowWaiting) {
                             Text("See who this room is waiting on", bundle: .module)
@@ -127,7 +132,9 @@ struct NotGoneExplanation: View {
                         .tint(palette.accentColor)
                         .tappable()
                     }
+                    // COPY END 938a66e7
 
+                    // COPY BEGIN 333029cb [NEEDS HUMAN REVIEW]
                     if let onChangeWait {
                         Button(action: onChangeWait) {
                             Text("Change when this is shown", bundle: .module)
@@ -136,6 +143,7 @@ struct NotGoneExplanation: View {
                         .tint(palette.accentColor)
                         .tappable()
                     }
+                    // COPY END 333029cb
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -143,6 +151,7 @@ struct NotGoneExplanation: View {
                 .padding(.vertical, 16)
             }
             .background(palette.background)
+            // COPY BEGIN a0d648bf [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Not sent yet", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -150,11 +159,13 @@ struct NotGoneExplanation: View {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END a0d648bf
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
 
+    // COPY BEGIN 439ddf5c [NEEDS HUMAN REVIEW]
     private var whatHappened: Text {
         switch (notGone.signal, notGone.hasLeftThisDevice) {
         case (.newerMessagesCollected(let count), true):
@@ -175,6 +186,7 @@ struct NotGoneExplanation: View {
                 bundle: .module)
         }
     }
+    // COPY END 439ddf5c
 }
 
 struct NotGoneWaitView: View {
@@ -187,6 +199,7 @@ struct NotGoneWaitView: View {
     private var current: NotGoneWait { chosen ?? choice.wait }
 
     var body: some View {
+        // COPY BEGIN 2cdcc54e [NEEDS HUMAN REVIEW]
         List {
             Section {
                 ChoiceRow(
@@ -210,6 +223,7 @@ struct NotGoneWaitView: View {
         .background(palette.background)
         .navigationTitle(Text("Not sent yet", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
+        // COPY END 2cdcc54e
     }
 
     private func choose(_ wait: NotGoneWait) {

@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN f917ea56 [NEEDS HUMAN REVIEW]
 title: Open questions
 layout: default
 nav_order: 2
@@ -16,6 +17,10 @@ Nothing here is settled. Anything settled lives in [Decisions](decisions.md).
 1. TOC
 {:toc}
 
+<!-- COPY END f917ea56 -->
+
+<!-- COPY BEGIN 0e83e72c [NEEDS HUMAN REVIEW] -->
+
 ## Why this file exists
 
 Claude wrote most of `decisions.md`, and for months wrote it in Griff's voice — entries marked
@@ -26,6 +31,10 @@ just asked for.
 `decisions.md` now marks every entry **RULED**, **PROPOSED** or **FACT**. This file is the other
 half: everything **PROPOSED** that is worth his attention, written as a question rather than a
 statement.
+
+<!-- COPY END 0e83e72c -->
+
+<!-- COPY BEGIN e7b509e7 [NEEDS HUMAN REVIEW] -->
 
 ## Waiting on an answer
 
@@ -39,6 +48,10 @@ anyway* (answered out of Apple's own documentation rather than by asking Apple, 
 and forcing the emoji keyboard, deleted at Griff's instruction because the approach was abandoned —
 the searchable grid that replaced it is ordinary SwiftUI and needs no device to test.
 
+<!-- COPY END e7b509e7 -->
+
+<!-- COPY BEGIN ba7e3be3 [NEEDS HUMAN REVIEW] -->
+
 ### What a transient notice is, on iOS 26
 
 Answered from Apple's guidance and ruled on 2026-09-15. Apple's [Alerts](https://developer.apple.com/design/human-interface-guidelines/alerts)
@@ -47,6 +60,10 @@ it within the relevant context". So a message deleted by consensus leaves a perm
 transcript where it was, not a notice that fades. Griff: "Yeah, I'm good with the permanent inline."
 See [Decisions](decisions.md#a-deletion-leaves-a-line-in-the-transcript-not-a-notice-that-fades). It
 applies when consensus deletion is built, which is [after TestFlight](after-testflight.md).
+
+<!-- COPY END ba7e3be3 -->
+
+<!-- COPY BEGIN b2a90f66 [NEEDS HUMAN REVIEW] -->
 
 ### Raised and answered 2026-09-16
 
@@ -67,6 +84,10 @@ Seven questions came out of working the ticket list; Griff answered all of them 
    [Decisions](decisions.md#a-first-launch-that-cannot-reach-icloud-waits).
 7. **A disabled button's label** — keep Apple's look; the record is corrected.
    [Decisions](decisions.md#a-disabled-button-keeps-the-systems-look).
+
+<!-- COPY END b2a90f66 -->
+
+<!-- COPY BEGIN 5cccbb2c [NEEDS HUMAN REVIEW] -->
 
 ## Choices Claude made that Griff has not seen
 
@@ -103,6 +124,10 @@ constraints, and any of them may be wrong for reasons only Griff has.
 - Which picture is drawn for somebody, in one place.
 - A shared photo is a standing attachment, not a log entry.
 
+<!-- COPY END 5cccbb2c -->
+
+<!-- COPY BEGIN b5eafc89 [NEEDS HUMAN REVIEW] -->
+
 **Recent, 2026-09-17**
 
 - Deleting a conversation reaches every device, waits for the leaving, and leaves photos for others.
@@ -125,11 +150,19 @@ constraints, and any of them may be wrong for reasons only Griff has.
 - An accessibility floor is measured against what is actually behind the thing.
 - Search is a tab at the trailing end, and the inline field is for sub-views.
 
+<!-- COPY END b5eafc89 -->
+
+<!-- COPY BEGIN 9d83b219 [NEEDS HUMAN REVIEW] -->
+
 ## Design commentary
 
 Long-form design reasoning, kept because it is useful when picking a feature back up and separated
 because it is not a decision and must not be cited as one. The boards themselves, the rulings they
 carry and the departures already agreed are in [Design](design.md).
+
+<!-- COPY END 9d83b219 -->
+
+<!-- COPY BEGIN 6d1038e9 [NEEDS HUMAN REVIEW] -->
 
 ### Where the app was changed away from a board without Griff seeing it
 
@@ -149,6 +182,10 @@ only the walls a member has turned on. Replies on posts you commented on and com
 are on; replies on posts you *reacted to* and likes are off, and likes are the only kind that arrives
 quietly. Confirmed 2026-09-13: the two that are on are somebody answering you, and the two that are
 off are a tap and a thread you touched once.
+
+<!-- COPY END 6d1038e9 -->
+
+<!-- COPY BEGIN d254fcc5 [NEEDS HUMAN REVIEW] -->
 
 ### What the set does not settle, and neither does the app
 
@@ -171,6 +208,10 @@ inferred, but it was never designed screen by screen.
 motion the app adds, the accent retint, was recorded frame by frame and kept on Griff's ruling of
 2026-09-16.
 
+<!-- COPY END d254fcc5 -->
+
+<!-- COPY BEGIN 182fa583 [NEEDS HUMAN REVIEW] -->
+
 ### Things tried and abandoned, so they are not tried again
 
 **Swipe-to-remove, twice.** A swipe action is as wide as its content and the row slides by that much,
@@ -186,6 +227,10 @@ line.
 **The search glyph taking the app's accent.** `.tint()` does not reach `searchable()`, and
 `UISearchBar.appearance().tintColor` does not reach iOS 26's collapsed search button. Both were tried
 on device. The toolbar's menu glyph is drawn in the primary ink to match it instead.
+
+<!-- COPY END 182fa583 -->
+
+<!-- COPY BEGIN 19bfb2e1 [NEEDS HUMAN REVIEW] -->
 
 ## Not built
 
@@ -211,3 +256,5 @@ with the machinery both need now built), and an in-app lock (canceled). Reasons 
 [After TestFlight](after-testflight.md).
 
 **Desktop.** Its own [roadmap](desktop-roadmap.md), sequenced after TestFlight.
+
+<!-- COPY END 19bfb2e1 -->

@@ -62,6 +62,7 @@ public struct WhoYouAreTalkingToView: View {
 
     public var body: some View {
         List {
+            // COPY BEGIN 430e94d3 [NEEDS HUMAN REVIEW]
             Section {
                 ForEach(people) { person in
                     row(person)
@@ -72,9 +73,11 @@ public struct WhoYouAreTalkingToView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 430e94d3
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 07deb7d5 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Who you are talking to", bundle: .module))
         .navigationSubtitle(Text(verbatim: roomName))
         .toolbarTitleDisplayMode(.inline)
@@ -83,6 +86,7 @@ public struct WhoYouAreTalkingToView: View {
                 Button { dismiss() } label: { Text("Done", bundle: .module) }
             }
         }
+        // COPY END 07deb7d5
     }
 
     @ViewBuilder
@@ -118,14 +122,17 @@ public struct WhoYouAreTalkingToView: View {
         }
     }
 
+    // COPY BEGIN aa96d071 [NEEDS HUMAN REVIEW]
     private func detail(_ person: VerifiedPerson) -> Text {
         guard let checkedAt = person.checkedAt else { return joined(person) }
         return Text(
             "\(joined(person)) · codes checked \(checkedAt.formatted(date: .abbreviated, time: .omitted))",
             bundle: .module)
     }
+    // COPY END aa96d071
 
     private func joined(_ person: VerifiedPerson) -> Text {
+        // COPY BEGIN 44854aae [NEEDS HUMAN REVIEW]
         if person.isFounder {
             return person.isViewer
                 ? Text("You started this room", bundle: .module)
@@ -139,6 +146,7 @@ public struct WhoYouAreTalkingToView: View {
         return Text(
             "Characters confirmed \(confirmedAt.formatted(date: .abbreviated, time: .omitted))",
             bundle: .module)
+        // COPY END 44854aae
     }
 }
 
@@ -160,6 +168,7 @@ public struct VerificationPhraseSheet: View {
         VStack(spacing: 20) {
             VerificationPhrase(phrase)
 
+            // COPY BEGIN ffb27d71 [NEEDS HUMAN REVIEW]
             if let confirmedAt {
                 Text(
                     "This room recorded their confirmation on \(confirmedAt.formatted(date: .abbreviated, time: .shortened)).",
@@ -168,7 +177,9 @@ public struct VerificationPhraseSheet: View {
                     .foregroundStyle(palette.tertiaryText)
                     .multilineTextAlignment(.center)
             }
+            // COPY END ffb27d71
 
+            // COPY BEGIN 8d7a5efa [NEEDS HUMAN REVIEW]
             Text(
                 "These are the characters you and \(name) have. If they do not match what they read out, somebody may have been in the middle when you met — stop, and start again in person.",
                 bundle: .module)
@@ -176,13 +187,16 @@ public struct VerificationPhraseSheet: View {
                 .foregroundStyle(palette.secondaryText)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+            // COPY END 8d7a5efa
 
+            // COPY BEGIN 18f0abe3 [NEEDS HUMAN REVIEW]
             Button {
                 dismiss()
             } label: {
                 Text("Done", bundle: .module).primaryAction()
             }
             .prominentActionButton()
+            // COPY END 18f0abe3
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 28)

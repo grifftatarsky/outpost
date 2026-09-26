@@ -4,6 +4,7 @@ import SwiftUI
 public struct SearchTabView: View {
     @Environment(\.palette) private var palette
 
+    // COPY BEGIN 8a53b455 [NEEDS HUMAN REVIEW]
     public enum Scope: Hashable, CaseIterable, Sendable {
         case everything, messages, photos, outposts
 
@@ -16,6 +17,7 @@ public struct SearchTabView: View {
             }
         }
     }
+    // COPY END 8a53b455
 
     private let onSearch: (String) -> SearchResults
     private let onOpenRoom: (RoomID) -> Void
@@ -123,6 +125,7 @@ public struct SearchTabView: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN 8f7294a4 [NEEDS HUMAN REVIEW]
                 if !conversations.isEmpty {
                     Section {
                         ForEach(conversations) { hit in
@@ -133,7 +136,9 @@ public struct SearchTabView: View {
                     }
                     .groupedRowSurface()
                 }
+                // COPY END 8f7294a4
 
+                // COPY BEGIN 45d87d54 [NEEDS HUMAN REVIEW]
                 if !said.isEmpty {
                     Section {
                         ForEach(said) { hit in
@@ -144,7 +149,9 @@ public struct SearchTabView: View {
                     }
                     .groupedRowSurface()
                 }
+                // COPY END 45d87d54
 
+                // COPY BEGIN a5a425d7 [NEEDS HUMAN REVIEW]
                 if !pictures.isEmpty {
                     Section {
                         ForEach(pictures) { hit in
@@ -155,7 +162,9 @@ public struct SearchTabView: View {
                     }
                     .groupedRowSurface()
                 }
+                // COPY END a5a425d7
 
+                // COPY BEGIN 0ecce145 [NEEDS HUMAN REVIEW]
                 if !posts.isEmpty {
                     Section {
                         ForEach(posts) { post in
@@ -166,14 +175,17 @@ public struct SearchTabView: View {
                     }
                     .groupedRowSurface()
                 }
+                // COPY END 0ecce145
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN 8ed7275f [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Search", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .searchable(
                 text: $query,
                 prompt: Text("Conversations, messages, photos and Outposts", bundle: .module))
+            // COPY END 8ed7275f
             .autocorrectionDisabled()
             .searchFocused($searching)
             .onAppear { Task { searching = true } }
@@ -197,6 +209,7 @@ public struct SearchTabView: View {
                     ContentUnavailableView.search(text: trimmed)
                         .background(palette.background)
                 } else if trimmed.isEmpty {
+                    // COPY BEGIN 93a96e73 [NEEDS HUMAN REVIEW]
                     ContentUnavailableView {
                         Label {
                             Text("Search \(Branding.displayName)", bundle: .module)
@@ -209,6 +222,7 @@ public struct SearchTabView: View {
                             bundle: .module)
                     }
                     .background(palette.background)
+                    // COPY END 93a96e73
                 }
             }
         }

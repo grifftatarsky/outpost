@@ -23,6 +23,7 @@ public struct NotificationLevelView: View {
 
     public var body: some View {
         List {
+            // COPY BEGIN e504981b [NEEDS HUMAN REVIEW]
             if room == nil {
                 SettingsHeaderCard(
                     icon: "bell.badge.fill",
@@ -31,6 +32,7 @@ public struct NotificationLevelView: View {
                         "Choose how much a banner shows before the phone is unlocked. If you have not allowed notifications, nothing announces itself; messages still arrive every time you open the app.",
                         bundle: .module))
             }
+            // COPY END e504981b
 
             Section {
                 ForEach(NotificationLevel.allCases, id: \.self) { rung in
@@ -44,11 +46,13 @@ public struct NotificationLevelView: View {
                     }
                 }
             } header: {
+                // COPY BEGIN fe4e679a [NEEDS HUMAN REVIEW]
                 if let room {
                     Text("Notifications from \(room)", bundle: .module)
                         .textCase(nil)
                         .font(CarpenterFont.footnote)
                 }
+                // COPY END fe4e679a
             } footer: {
                 caveat
             }
@@ -60,8 +64,10 @@ public struct NotificationLevelView: View {
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN b9a3b43b [NEEDS HUMAN REVIEW]
         .navigationTitle(
             room.map { Text(verbatim: $0) } ?? Text("Notifications", bundle: .module))
+        // COPY END b9a3b43b
         .toolbarTitleDisplayMode(.inline)
     }
 
@@ -77,11 +83,13 @@ public struct NotificationLevelView: View {
                         action: { Task { await receipts.onChange(answer) } })
                 }
             } header: {
+                // COPY BEGIN 86ad5b92 [NEEDS HUMAN REVIEW]
                 Text("Read receipts here", bundle: .module).sectionHeading()
             } footer: {
                 Text(
                     "Reporting is off everywhere until you ask for it. This room can differ from the rest.",
                     bundle: .module)
+                // COPY END 86ad5b92
             }
             .groupedRowSurface()
         }
@@ -90,6 +98,7 @@ public struct NotificationLevelView: View {
     @ViewBuilder
     private var notGoneSection: some View {
         if let notGone {
+            // COPY BEGIN c102116d [NEEDS HUMAN REVIEW]
             Section {
                 NavigationLink {
                     NotGoneWaitView(choice: notGone)
@@ -109,9 +118,11 @@ public struct NotificationLevelView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END c102116d
         }
     }
 
+    // COPY BEGIN f1d0e16e [NEEDS HUMAN REVIEW]
     private func title(of answer: RoomReceiptChoice.Answer) -> Text {
         switch answer {
         case .followEverywhere: Text("Follow my usual answer", bundle: .module)
@@ -119,7 +130,9 @@ public struct NotificationLevelView: View {
         case .off: Text("Never report here", bundle: .module)
         }
     }
+    // COPY END f1d0e16e
 
+    // COPY BEGIN 8a55d791 [NEEDS HUMAN REVIEW]
     private func detail(of answer: RoomReceiptChoice.Answer) -> Text {
         switch answer {
         case .followEverywhere:
@@ -132,11 +145,14 @@ public struct NotificationLevelView: View {
             Text("People here are told your marks will not change.", bundle: .module)
         }
     }
+    // COPY END 8a55d791
 
     private func sample(_ rung: NotificationLevel) -> some View {
+        // COPY BEGIN aa223603 [NEEDS HUMAN REVIEW]
         let copy = MessageNotification.of(
             room: RoomID(), roomName: "Hangar 7", author: "Alice", body: "are you coming",
             level: rung)
+        // COPY END aa223603
 
         return VStack(alignment: .leading, spacing: 2) {
             Text(copy.title).font(CarpenterFont.micro.weight(.semibold))
@@ -152,6 +168,7 @@ public struct NotificationLevelView: View {
         .accessibilityHidden(true)
     }
 
+    // COPY BEGIN 93d56db0 [NEEDS HUMAN REVIEW]
     private var caveat: some View {
         Text(
             """
@@ -167,9 +184,11 @@ public struct NotificationLevelView: View {
         .font(CarpenterFont.footnote)
         .fixedSize(horizontal: false, vertical: true)
     }
+    // COPY END 93d56db0
 }
 
 extension NotificationLevel {
+    // COPY BEGIN 189c078d [NEEDS HUMAN REVIEW]
     public var shortTitle: LocalizedStringKey {
         switch self {
         case .everything: "Everything"
@@ -178,7 +197,9 @@ extension NotificationLevel {
         case .nothing: "Arrival only"
         }
     }
+    // COPY END 189c078d
 
+    // COPY BEGIN abf72505 [NEEDS HUMAN REVIEW]
     public var title: LocalizedStringKey {
         switch self {
         case .everything: "Room, sender and message"
@@ -187,7 +208,9 @@ extension NotificationLevel {
         case .nothing: "That a message arrived"
         }
     }
+    // COPY END abf72505
 
+    // COPY BEGIN dbffb7ba [NEEDS HUMAN REVIEW]
     public var detail: LocalizedStringKey {
         switch self {
         case .everything: "Anyone who can see your lock screen can read what was said."
@@ -196,6 +219,7 @@ extension NotificationLevel {
         case .nothing: "They see only that the app has something for you."
         }
     }
+    // COPY END dbffb7ba
 }
 
 public struct RoomReceiptChoice: Sendable {

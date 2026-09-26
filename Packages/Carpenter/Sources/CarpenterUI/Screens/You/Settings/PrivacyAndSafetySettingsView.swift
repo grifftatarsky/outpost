@@ -34,13 +34,16 @@ struct PrivacyAndSafetySettingsView: View {
 
     var body: some View {
         List {
+            // COPY BEGIN 7f55c807 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "hand.raised.fill",
                 title: Text("Privacy & Safety", bundle: .module),
                 paragraph: Text(
                     "What this device tells other people, and what it does with what arrives. Every judgment here is made on this device and reaches nobody. Change any of it whenever you like; what has already been sent stays with whoever received it.",
                     bundle: .module))
+            // COPY END 7f55c807
 
+            // COPY BEGIN 80171c59 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "person.text.rectangle.fill", title: Text("Share my name", bundle: .module),
@@ -72,7 +75,9 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 80171c59
 
+            // COPY BEGIN 2dc93f05 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "person.text.rectangle.fill", title: Text("Show others' names", bundle: .module),
@@ -91,7 +96,9 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 2dc93f05
 
+            // COPY BEGIN 40a7e7f2 [NEEDS HUMAN REVIEW]
             Section {
                 Button { isCheckingUp = true } label: {
                     SettingsRow(
@@ -104,8 +111,10 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 40a7e7f2
 
             Section {
+                // COPY BEGIN 5b968939 [NEEDS HUMAN REVIEW]
                 SettingsToggle(
                     icon: "eye.trianglebadge.exclamationmark.fill",
                     title: Text("Blur sensitive photos", bundle: .module),
@@ -117,11 +126,13 @@ struct PrivacyAndSafetySettingsView: View {
                             title: Text("Turn on Sensitive Content Warning", bundle: .module))
                     }
                 }
+                // COPY END 5b968939
             } footer: {
                 screeningFooter
             }
             .groupedRowSurface()
 
+            // COPY BEGIN 8473ea72 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "person.crop.circle.badge.checkmark",
@@ -135,7 +146,9 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 8473ea72
 
+            // COPY BEGIN 8edfd454 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "textformat.abc",
@@ -149,7 +162,9 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 8edfd454
 
+            // COPY BEGIN d5427ed4 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "key.horizontal.fill",
@@ -169,7 +184,9 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END d5427ed4
 
+            // COPY BEGIN cd652188 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "hand.wave.fill",
@@ -183,7 +200,9 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END cd652188
 
+            // COPY BEGIN d4b10496 [NEEDS HUMAN REVIEW]
             Section {
                 SettingsToggle(
                     icon: "hand.raised.slash.fill",
@@ -203,7 +222,9 @@ struct PrivacyAndSafetySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END d4b10496
 
+            // COPY BEGIN a3421a78 [NEEDS HUMAN REVIEW]
             if let form = Branding.contactFormURL {
                 Section {
                     Link(destination: form) {
@@ -218,10 +239,13 @@ struct PrivacyAndSafetySettingsView: View {
                 }
                 .groupedRowSurface()
             }
+            // COPY END a3421a78
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 3801b675 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Privacy & Safety", bundle: .module))
+        // COPY END 3801b675
         .sheet(isPresented: $isCheckingUp) {
             PrivacyCheckupView(
                 owner: owner,
@@ -268,6 +292,7 @@ struct PrivacyAndSafetySettingsView: View {
         .toolbarTitleDisplayMode(.inline)
     }
 
+    // COPY BEGIN d699ba95 [NEEDS HUMAN REVIEW]
     private var screeningFooter: Text {
         switch screening {
         case .available:
@@ -284,4 +309,5 @@ struct PrivacyAndSafetySettingsView: View {
                 bundle: .module)
         }
     }
+    // COPY END d699ba95
 }

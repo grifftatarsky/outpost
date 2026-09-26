@@ -44,6 +44,7 @@ public struct RegistrationStalledView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
+            // COPY BEGIN fa05dc81 [NEEDS HUMAN REVIEW]
             Button {
                 Task {
                     retrying = true
@@ -57,7 +58,9 @@ public struct RegistrationStalledView: View {
             .disabled(retrying)
             .padding(.horizontal, 32)
             .padding(.top, 6)
+            // COPY END fa05dc81
 
+            // COPY BEGIN c1d22f7a [NEEDS HUMAN REVIEW]
             if let onRestore, offersARecoveryKey {
                 Button(action: onRestore) {
                     Text("I have a recovery key", bundle: .module)
@@ -71,6 +74,7 @@ public struct RegistrationStalledView: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal, 32)
             }
+            // COPY END c1d22f7a
 
             Spacer(minLength: 0)
 
@@ -91,6 +95,7 @@ public struct RegistrationStalledView: View {
         }
     }
 
+    // COPY BEGIN 4f8229af [NEEDS HUMAN REVIEW]
     private var headline: Text {
         switch stall {
         case .accountHasAMember:
@@ -103,7 +108,9 @@ public struct RegistrationStalledView: View {
             Text("The Keychain would not answer", bundle: .module)
         }
     }
+    // COPY END 4f8229af
 
+    // COPY BEGIN 682b13fe [NEEDS HUMAN REVIEW]
     private var detail: Text {
         switch stall {
         case .accountHasAMember:
@@ -124,6 +131,7 @@ public struct RegistrationStalledView: View {
                 bundle: .module)
         }
     }
+    // COPY END 682b13fe
 }
 
 #if DEBUG

@@ -16,6 +16,7 @@ struct PresetPage: View {
 
     var body: some View {
         List {
+            // COPY BEGIN 827c7293 [NEEDS HUMAN REVIEW]
             switch preset {
             case .familiar:
                 SettingsHeaderCard(
@@ -32,7 +33,9 @@ struct PresetPage: View {
                         "As little as possible. You are a short code to everyone with no photo, everyone is a short code to you, senders are told you do not report, and nobody learns when you have a Focus on. A conversation with one person stays shut until the two of you have read the same characters to each other — yours included, the ones you already have.",
                         bundle: .module))
             }
+            // COPY END 827c7293
 
+            // COPY BEGIN 4fdcdd43 [NEEDS HUMAN REVIEW]
             ExampleCard(caption: Text("How you appear to others", bundle: .module)) {
                 SeenAsRow(
                     person: choices.sharing.sharesName ? owner : Member.placeholder(owner.id),
@@ -49,7 +52,9 @@ struct PresetPage: View {
             ExampleCard(caption: Text("What they see over the field while you have a Focus on", bundle: .module)) {
                 FocusExample(shared: choices.focus.sharesFocus)
             }
+            // COPY END 4fdcdd43
 
+            // COPY BEGIN f29c6ed2 [NEEDS HUMAN REVIEW]
             Section {
                 EmptyView()
             } footer: {
@@ -57,10 +62,12 @@ struct PresetPage: View {
                     "Blurring sensitive photos and blocking known abusers stay on; both can be turned off under Privacy & Safety.",
                     bundle: .module)
             }
+            // COPY END f29c6ed2
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .toolbarTitleDisplayMode(.inline)
+        // COPY BEGIN 013c241c [NEEDS HUMAN REVIEW]
         .safeAreaInset(edge: .bottom) {
             Button(action: onConfirm) {
                 Text("Use these settings", bundle: .module).primaryAction()
@@ -71,6 +78,7 @@ struct PresetPage: View {
             .padding(.vertical, 10)
             .background(palette.background)
         }
+        // COPY END 013c241c
     }
 }
 
@@ -95,6 +103,7 @@ struct StepPage: View {
             Section {
                 switch step {
                 case .shareName:
+                    // COPY BEGIN 56dad5ec [NEEDS HUMAN REVIEW]
                     SettingsToggle(
                         icon: "person.text.rectangle.fill",
                         title: Text("Share my name", bundle: .module),
@@ -159,6 +168,7 @@ struct StepPage: View {
                         icon: "rectangle.stack.fill",
                         title: Text("Use Outposts", bundle: .module),
                         isOn: $choices.outposts.isOn)
+                    // COPY END 56dad5ec
                 case .outpostReach:
                     ForEach([OutpostConsent.open, .closed, .quiet], id: \.self) { standing in
                         ChoiceRow(
@@ -168,6 +178,7 @@ struct StepPage: View {
                             action: { choices.outposts.consent = standing })
                     }
                 case .outpostFace:
+                    // COPY BEGIN 6b7b5814 [NEEDS HUMAN REVIEW]
                     SettingsToggle(
                         icon: "person.crop.square.fill",
                         title: Text("Show my picture there", bundle: .module),
@@ -177,16 +188,20 @@ struct StepPage: View {
                         icon: "person.crop.circle.badge.questionmark.fill",
                         title: Text("Ask about people I meet", bundle: .module),
                         isOn: $choices.outposts.offersReview)
+                    // COPY END 6b7b5814
                 }
             } footer: {
                 let place = step.position(under: choices)
+                // COPY BEGIN 79c0cb8f [NEEDS HUMAN REVIEW]
                 Text("\(place.at) of \(place.of)", bundle: .module)
+                // COPY END 79c0cb8f
             }
             .groupedRowSurface()
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .toolbarTitleDisplayMode(.inline)
+        // COPY BEGIN ce06f5a6 [NEEDS HUMAN REVIEW]
         .safeAreaInset(edge: .bottom) {
             Button(action: onNext) {
                 (step.next(under: choices) == nil
@@ -199,12 +214,14 @@ struct StepPage: View {
             .padding(.vertical, 10)
             .background(palette.background)
         }
+        // COPY END ce06f5a6
     }
 
     @ViewBuilder
     private var header: some View {
         switch step {
         case .shareName:
+            // COPY BEGIN f7d33891 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "person.text.rectangle.fill",
                 title: Text("Share my name", bundle: .module),
@@ -232,7 +249,9 @@ struct StepPage: View {
                 paragraph: Text(
                     "People who share their name are drawn by it. Off, everyone is a short code and two characters of it on a disc, whatever they chose to share.",
                     bundle: .module))
+            // COPY END f7d33891
         case .showOthersPhotos:
+            // COPY BEGIN c1374897 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "person.crop.square.fill",
                 title: Text("Show others' photos", bundle: .module),
@@ -267,7 +286,9 @@ struct StepPage: View {
                 paragraph: Text(
                     "A short list shipped inside the app. Nothing is fetched. Somebody on it is never shown, in any room, and is not told.",
                     bundle: .module))
+            // COPY END c1374897
         case .soloCheck:
+            // COPY BEGIN d7103db6 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "person.crop.circle.badge.checkmark",
                 title: Text("One conversation, one person", bundle: .module),
@@ -281,7 +302,9 @@ struct StepPage: View {
                 paragraph: Text(
                     "Somebody who loses every device can come back with a recovery key. It makes them them again, and nothing else — so their conversations come back from the people who were in them, which means from you. Your history goes either way. This only decides whether you are told it happened, and which conversation was asked for.",
                     bundle: .module))
+            // COPY END d7103db6
         case .restoreHold:
+            // COPY BEGIN 6badc6d4 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "hand.raised.fingers.spread.fill",
                 title: Text("Before your history goes back", bundle: .module),
@@ -295,7 +318,9 @@ struct StepPage: View {
                 paragraph: Text(
                     "An Outpost is a page of your own. You choose who reads it, one person at a time, and nobody is let in until you say so — sharing a room grants nothing. Off, the tab goes away and nothing is written or fetched for one.",
                     bundle: .module))
+            // COPY END 6badc6d4
         case .outpostReach:
+            // COPY BEGIN 1b74f802 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "bubble.left.and.text.bubble.right.fill",
                 title: Text("What you write on other people's", bundle: .module),
@@ -316,6 +341,7 @@ struct StepPage: View {
                 paragraph: Text(
                     "When you end up in a room with somebody new, the room can ask once whether to let them read your Outpost. Off, nobody is ever offered it and you add readers yourself. Either way, nobody is let in until you say so — this only decides whether you are asked.",
                     bundle: .module))
+            // COPY END 1b74f802
         }
     }
 
@@ -323,6 +349,7 @@ struct StepPage: View {
     private var example: some View {
         switch step {
         case .shareName:
+            // COPY BEGIN 9a7f9bd1 [NEEDS HUMAN REVIEW]
             ExampleCard(caption: Text("How you appear to others", bundle: .module)) {
                 SeenAsRow(
                     person: choices.sharing.sharesName ? owner : Member.placeholder(owner.id),
@@ -403,11 +430,13 @@ struct StepPage: View {
             }
         case .outpostFace:
             ExampleCard(caption: Text("The top of your own Outpost", bundle: .module)) {
+            // COPY END 9a7f9bd1
                 VStack(alignment: .leading, spacing: 8) {
                     SeenAsRow(
                         person: choices.sharing.sharesName ? owner : Member.placeholder(owner.id),
                         isAccented: true,
                         photo: choices.outposts.showsPhoto ? ownAvatar : nil)
+                    // COPY BEGIN 0fe97a9a [NEEDS HUMAN REVIEW]
                     if choices.outposts.showsPhoto, ownAvatar == nil {
                         Text("You have no photo yet. Pick one on You and your Outpost takes it.", bundle: .module)
                             .font(CarpenterFont.caption)
@@ -418,12 +447,15 @@ struct StepPage: View {
                             .font(CarpenterFont.caption)
                             .foregroundStyle(palette.secondaryText)
                     }
+                    // COPY END 0fe97a9a
                 }
             }
         case .outpostReview:
+            // COPY BEGIN 5c6ee24f [NEEDS HUMAN REVIEW]
             ExampleCard(caption: Text("When you end up in a room with somebody new", bundle: .module)) {
                 ReviewExample(asks: choices.outposts.offersReview)
             }
+            // COPY END 5c6ee24f
         }
     }
 }

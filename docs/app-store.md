@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN dd0ac068 [NEEDS HUMAN REVIEW]
 title: App Store
 layout: default
 nav_order: 8
@@ -14,6 +15,10 @@ Export compliance and Guideline 1.2 have both been researched and resolved. Sect
 source is published alongside the TestFlight build, which is the plan and changes the obligations.
 
 ---
+
+<!-- COPY END dd0ac068 -->
+
+<!-- COPY BEGIN 414b93db [NEEDS HUMAN REVIEW] -->
 
 ## 1. Listing
 
@@ -32,10 +37,18 @@ source is published alongside the TestFlight build, which is the plan and change
 | EULA | Custom, at `https://outpostmessaging.com/terms`. Apple's standard EULA is also acceptable; the custom one exists because §5's "no account to recover" needs saying. |
 | TestFlight license agreement | Custom, in `docs/TESTFLIGHT_LICENCE.txt`. Pasted into TestFlight → Test Information → License Agreement, replacing Apple's standard beta agreement. Separate from the EULA above and needed sooner, because it governs the build the testers actually get. |
 
+<!-- COPY END 414b93db -->
+
+<!-- COPY BEGIN f8ffa40a [NEEDS HUMAN REVIEW] -->
+
 ### Promotional text (170 max)
 
 > Rooms for the group, an Outpost for you. Everything lives on the phones of the people you
 > wrote it to — not on a server of ours, because there isn't one.
+
+<!-- COPY END f8ffa40a -->
+
+<!-- COPY BEGIN 1b86e7de [NEEDS HUMAN REVIEW] -->
 
 ### Description
 
@@ -71,17 +84,29 @@ source is published alongside the TestFlight build, which is the plan and change
 > Nothing. No analytics, no advertising identifiers, no third-party SDKs of any kind. The app
 > depends only on Apple's own frameworks.
 
+<!-- COPY END 1b86e7de -->
+
+<!-- COPY BEGIN 92e9df3c [NEEDS HUMAN REVIEW] -->
+
 ### Keywords (100 char max, comma-separated, no spaces)
 
 ```
 private,encrypted,group chat,friends,e2e,no server,messaging,secure,rooms,wall,offline
 ```
 
+<!-- COPY END 92e9df3c -->
+
+<!-- COPY BEGIN 0cc83819 [NEEDS HUMAN REVIEW] -->
+
 ### What's New (first release)
 
 > First release. Rooms, Outposts, reactions, comments, and a device list you can revoke from.
 
 ---
+
+<!-- COPY END 0cc83819 -->
+
+<!-- COPY BEGIN cecf28b1 [NEEDS HUMAN REVIEW] -->
 
 ## 2. Privacy nutrition label
 
@@ -102,10 +127,18 @@ developer has no server, no account system, and no credential that could read an
 
 ---
 
+<!-- COPY END cecf28b1 -->
+
+<!-- COPY BEGIN 7443d086 [NEEDS HUMAN REVIEW] -->
+
 ## 3. Export compliance
 
 Researched against the regulation text rather than guessed. Both previously-open questions are now
 closed. Sources at the end of this section.
+
+<!-- COPY END 7443d086 -->
+
+<!-- COPY BEGIN 7b13c725 [NEEDS HUMAN REVIEW] -->
 
 ### The finding that everything else rests on
 
@@ -127,6 +160,10 @@ Everything the app uses is an IETF standard, and none of it is implemented here 
 This keeps the project out of 740.17(b)(3)(ii), the non-standard lane, which requires a
 classification request to BIS before export. That is the expensive path and Outpost is not on it.
 
+<!-- COPY END 7b13c725 -->
+
+<!-- COPY BEGIN f46830cb [NEEDS HUMAN REVIEW] -->
+
 ### Both open questions, closed
 
 **ERN: not required.** 740.17(b)(1) authorizes export "subject to submission of a
@@ -147,6 +184,10 @@ subject to the EAR."* The email notification buried in 742.15(b) applies only to
 
 "Object code" is the compiled binary — the thing Apple distributes. So the question was whether
 publishing the source frees only the repository or the shipped app as well. It frees both.
+
+<!-- COPY END f46830cb -->
+
+<!-- COPY BEGIN 44b337a0 [NEEDS HUMAN REVIEW] -->
 
 ### What the decision to publish at TestFlight buys
 
@@ -170,6 +211,10 @@ There is nothing to send to anyone.
 4. The primitives stay standard. Substituting anything proprietary or unpublished moves the project
    into the non-standard lane and its classification-request requirement.
 
+<!-- COPY END 44b337a0 -->
+
+<!-- COPY BEGIN e3bd3fe2 [NEEDS HUMAN REVIEW] -->
+
 ### What to put in App Store Connect
 
 **`ITSAppUsesNonExemptEncryption` = `true`** — set in `App/Carpenter/Info.plist` on 2026-09-17 — and
@@ -189,6 +234,10 @@ Apple's documentation table is about what you must *upload*, which is narrower:
 Outpost sits on the first row, because it calls CryptoKit and ships no algorithms of its own. Expect
 no upload. Answer the France question if distributing there.
 
+<!-- COPY END e3bd3fe2 -->
+
+<!-- COPY BEGIN b247cb11 [NEEDS HUMAN REVIEW] -->
+
 ### Sources
 
 - 15 CFR 772.1, definition of "non-standard cryptography"
@@ -203,6 +252,10 @@ well-supported, but an hour with an export-controls attorney before submission i
 a position you will rely on for years.
 
 ---
+
+<!-- COPY END b247cb11 -->
+
+<!-- COPY BEGIN 61037d2d [NEEDS HUMAN REVIEW] -->
 
 ## 4. Age rating, and Guideline 1.2
 
@@ -238,6 +291,10 @@ produces 13+.
 | Everything else | None |
 | Social media features | **No** — see below |
 
+<!-- COPY END 61037d2d -->
+
+<!-- COPY BEGIN 1e3e8d9f [NEEDS HUMAN REVIEW] -->
+
 That should compute to 13+ without touching the override. Medical Treatment is Signal's own
 conservatism; leave it None unless you want to mirror them exactly.
 
@@ -260,6 +317,10 @@ and terms both read from it.
 **The TestFlight license requiring 18+ is fine** alongside a 13+ listing. A beta restricted to adults
 is normal and the two are separate instruments.
 
+<!-- COPY END 1e3e8d9f -->
+
+<!-- COPY BEGIN 644c76a9 [NEEDS HUMAN REVIEW] -->
+
 ### Age suitability URL
 
 ```
@@ -276,6 +337,10 @@ also publishes the questionnaire answers above and the reasoning.
 It deliberately does not say the app is text-only, which stopped being true when photos arrived on
 2026-09-04. It has to match the 13+ rating above; an earlier plan to rate the app 17+ was replaced by
 the questionnaire's answer.
+
+<!-- COPY END 644c76a9 -->
+
+<!-- COPY BEGIN 5c78947d [NEEDS HUMAN REVIEW] -->
 
 ### Guideline 1.2
 
@@ -299,11 +364,19 @@ a defense.
 
 The details, and the App Review reply, are in [Trust and safety](trust-and-safety.md).
 
+<!-- COPY END 5c78947d -->
+
+<!-- COPY BEGIN 30ba8f36 [NEEDS HUMAN REVIEW] -->
+
 ### Sources
 
 - Apple, *App Review Guidelines*, guideline 1.2, quoted verbatim above
 
 ---
+
+<!-- COPY END 30ba8f36 -->
+
+<!-- COPY BEGIN 10daa985 [NEEDS HUMAN REVIEW] -->
 
 ## 5. Review notes
 
@@ -357,7 +430,15 @@ the second device is missing.
 > directory, no user search and no public content, and joining a room takes an invitation that the
 > person joining confirms by reading characters with the person who invited them.
 
+<!-- COPY END 10daa985 -->
+
+<!-- COPY BEGIN 7c044f5e [NEEDS HUMAN REVIEW] -->
+
 ---
+
+<!-- COPY END 7c044f5e -->
+
+<!-- COPY BEGIN e2299312 [NEEDS HUMAN REVIEW] -->
 
 ## 6. Screenshots
 
@@ -374,6 +455,10 @@ Suggested order, leading with what is different:
 
 ---
 
+<!-- COPY END e2299312 -->
+
+<!-- COPY BEGIN bfd51a80 [NEEDS HUMAN REVIEW] -->
+
 ## 7. Before submitting
 
 What has to be true for the listing, the review notes and the website to be honest. The operational
@@ -388,6 +473,10 @@ list is on [Before TestFlight](pre-testflight.md#operational).
 | **The Supporter purchase** | Not built. The TestFlight build grants a free year instead. |
 
 ---
+
+<!-- COPY END bfd51a80 -->
+
+<!-- COPY BEGIN 9cb1cda0 [NEEDS HUMAN REVIEW] -->
 
 ## 8. Accessibility
 
@@ -405,6 +494,10 @@ The page is a full accessibility statement in the shape W3C WAI recommends: comm
 applied, what is supported, known limitations, how it was assessed, and how to report a problem. The
 limitations section is the point of it — Apple's own labels have no slot for "labeled but not driven
 by voice", and claiming everything is how a statement becomes worthless.
+
+<!-- COPY END 9cb1cda0 -->
+
+<!-- COPY BEGIN f09ea271 [NEEDS HUMAN REVIEW] -->
 
 ### Accessibility Nutrition Labels
 
@@ -434,6 +527,10 @@ edited: Voice Control and Switch Control. If either gets tested, update both the
 
 ---
 
+<!-- COPY END f09ea271 -->
+
+<!-- COPY BEGIN f6862f3b [NEEDS HUMAN REVIEW] -->
+
 ## 9. URLs the listing depends on
 
 All live on the marketing site and must be reachable before submission, since Apple checks them:
@@ -444,3 +541,5 @@ All live on the marketing site and must be reachable before submission, since Ap
 - `https://outpostmessaging.com/security`
 - `https://outpostmessaging.com/accessibility`
 - `https://outpostmessaging.com/age-suitability`
+
+<!-- COPY END f6862f3b -->

@@ -31,13 +31,16 @@ extension Payload {
             fallbackText: nil)
     }
 
+    // COPY BEGIN b9f4b886 [NEEDS HUMAN REVIEW]
     public static func joinConfirmed(_ body: JoinConfirmedBody) throws -> Payload {
         Payload(
             type: .joinConfirmed, body: try encode(body),
             fallbackText: String(
                 localized: "Somebody confirmed their invitation.", bundle: .module))
     }
+    // COPY END b9f4b886
 
+    // COPY BEGIN fc1685d8 [NEEDS HUMAN REVIEW]
     public static func invitationRescinded(of attestation: MembershipAttestation) throws -> Payload {
         Payload(
             type: .invitationRescinded,
@@ -45,7 +48,9 @@ extension Payload {
             fallbackText: String(
                 localized: "An invitation was taken back.", bundle: .module))
     }
+    // COPY END fc1685d8
 
+    // COPY BEGIN 8750ff7f [NEEDS HUMAN REVIEW]
     public static func soloCheck(_ body: SoloCheckBody) throws -> Payload {
         let fallback: String
         switch body.move {
@@ -60,6 +65,7 @@ extension Payload {
         }
         return Payload(type: .soloCheck, body: try encode(body), fallbackText: fallback)
     }
+    // COPY END 8750ff7f
 
     public static func removal(of member: ParticipantID) throws -> Payload {
         Payload(

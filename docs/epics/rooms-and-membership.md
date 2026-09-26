@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 3dd8f935 [NEEDS HUMAN REVIEW]
 title: Rooms and membership
 layout: default
 parent: Roadmap
@@ -14,6 +15,10 @@ Who is in a room, who can see an Outpost, and how somebody leaves or is put out.
 1. TOC
 {:toc}
 
+<!-- COPY END 3dd8f935 -->
+
+<!-- COPY BEGIN f5450d90 [NEEDS HUMAN REVIEW] -->
+
 ## Where this stands
 
 Creating a room, inviting with a code and a verification phrase, admission by existing members, a
@@ -23,6 +28,10 @@ not left in the other direction, is closed.
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END f5450d90 -->
+
+<!-- COPY BEGIN 7fa05e34 [NEEDS HUMAN REVIEW] -->
 
 ## A room with three people in it
 
@@ -43,6 +52,10 @@ three transcripts read the same six lines:
 
 **Proved above the mailbox. Unproven below it.** Zone routing, share acceptance, the change feed and
 push are the seam this replaces, and they stay for UAT, where a third real account exists.
+
+<!-- COPY END 7fa05e34 -->
+
+<!-- COPY BEGIN ba17a578 [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -77,6 +90,10 @@ is also the clearest.
   quiet ones are quiet enough to live at the top of a conversation permanently.
 - **Where the expiry and the purge live**, now that they are load-bearing rather than housekeeping.
 
+<!-- COPY END ba17a578 -->
+
+<!-- COPY BEGIN 2d977b66 [NEEDS HUMAN REVIEW] -->
+
 **Acceptance criteria**
 
 - **Done.** Every screen audited against `SettingsChrome`, the native-first rule and the honesty rules, by
@@ -99,6 +116,10 @@ wrong, it becomes its own ticket rather than being fixed under this one.
 
 </details>
 
+<!-- COPY END 2d977b66 -->
+
+<!-- COPY BEGIN d61dd61c [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="an-invitation-is-an-offer">
 <summary><b>An invitation is an offer, not an admission</b> — Complete (tested)</summary>
 
@@ -119,6 +140,10 @@ being reachable at all. See *What two accounts said* below.
 
 **What two accounts said, 2026-09-09.** Griff on an iPhone 17 Pro, Outie on an iPhone 17 Pro Max,
 two Apple Accounts, CloudKit between them.
+
+<!-- COPY END d61dd61c -->
+
+<!-- COPY BEGIN 704093d3 [NEEDS HUMAN REVIEW] -->
 
 1. **Refusing refuses.** *Rig One*, an indefinite invitation, the same phrase **K9F4V9** on both
    screens. Outie tapped **They do not match**: the refusal screen is terminal, no room appeared,
@@ -153,6 +178,10 @@ in the room — their copy says *"A added you to this room"*, lists two members 
 A's copy says two members. The button is not at fault: reading an invite only inspects it and
 refusing only closes the sheet. What admits B is A, because creating an invitation writes B into the
 roster, and where an invitation is enough that roster reaches B through ordinary sync.
+
+<!-- COPY END 704093d3 -->
+
+<!-- COPY BEGIN d725a8dc [NEEDS HUMAN REVIEW] -->
 
 **Acceptance criteria**
 
@@ -202,6 +231,10 @@ roster, and where an invitation is enough that roster reaches B through ordinary
   dates. The joiner's side is answerable only because `PersistedState.acceptedInvitations` is
   append-only: it is their sole copy of the attestation the phrase is derived from.
 
+<!-- COPY END d725a8dc -->
+
+<!-- COPY BEGIN c99dfb49 [NEEDS HUMAN REVIEW] -->
+
 **Wire, as built.** **Two** cases, and neither is a refusal — a refusal still does not travel.
 `PayloadType.joinConfirmed` = 21 in stage 2, and `PayloadType.invitationRescinded` = 22 in stage 3,
 both in `allKnown` and `plumbing`. The second is the purge this ticket folds in, which was the one
@@ -232,6 +265,10 @@ ways — which is what turned this from green to proved. The whole defect was in
 suite, so nothing but the rig counted. See *What two accounts said* above.
 
 </details>
+
+<!-- COPY END c99dfb49 -->
+
+<!-- COPY BEGIN 2cd2ff31 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="solo-verification">
 <summary><b>Solo verification</b> — Complete (tested)</summary>
@@ -292,6 +329,10 @@ room's admission machinery, which does not fit two people.
   confirmation. A check made mid-conversation is in the transcript with its own line and is not yet
   on that screen.
 
+<!-- COPY END 2cd2ff31 -->
+
+<!-- COPY BEGIN 0ec3b63e [NEEDS HUMAN REVIEW] -->
+
 **Not this ticket.** Rooms. A solo is exempt from *An invitation is an offer* and from `RoomAccess`
 entirely; the two tickets share the phrase and nothing else.
 
@@ -300,6 +341,10 @@ reviewer will assume works the other way; and the rig for a phrase matching acro
 which is the only thing that can prove the two devices derive the same one.
 
 </details>
+
+<!-- COPY END 0ec3b63e -->
+
+<!-- COPY BEGIN 11491cbb [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="join-prompt-padding">
 <summary><b>Padding on the join prompt's member list</b> — Complete (tested)</summary>
@@ -317,6 +362,10 @@ padding of its own, so 32-point avatars touched. Seen on the rig 2026-09-08.
 
 </details>
 
+<!-- COPY END 11491cbb -->
+
+
+<!-- COPY BEGIN c72d9029 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="setting-up-a-room">
 <summary><b>Setting up a room</b> — Complete (tested)</summary>
@@ -348,6 +397,10 @@ it, and bring people I already know, so that the room is the shape I meant befor
 
 **Design.** Boards 74 (New room) and 75 (Admission policy), with the advanced-toggle departure recorded
 in [Design](../design.md#board-74--the-admission-policy-sits-behind-an-advanced-toggle).
+
+<!-- COPY END c72d9029 -->
+
+<!-- COPY BEGIN 03afc313 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — the sheet, the confirmation an open room used to skip, and "before they join"</summary>
@@ -391,6 +444,10 @@ there. `RoomGreeting`, `JoinPromptView`, shown once per device, with the room's 
 
 </details>
 
+<!-- COPY END 03afc313 -->
+
+<!-- COPY BEGIN 8288c378 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="removing-somebody">
 <summary><b>Removing somebody</b> — Complete (tested)</summary>
 
@@ -421,6 +478,10 @@ correct rather than only add to.
 **Design.** Board 26, redrawn: three facts on the screen, spoken before either button. Everyone who
 stays gets a new key and the removed person does not; nothing they already collected comes back;
 removal is visible to the room. The destructive fill is the darkened red at 4.86:1.
+
+<!-- COPY END 8288c378 -->
+
+<!-- COPY BEGIN 849d924a [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — what was decided on 2026-09-01, and the audit</summary>
@@ -454,6 +515,10 @@ rest is the ticket below.
 
 </details>
 
+<!-- COPY END 849d924a -->
+
+<!-- COPY BEGIN 9026ca40 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="leaving-properly">
 <summary><b>Leaving properly</b> — Complete (tested)</summary>
 
@@ -482,6 +547,10 @@ what I meant to stop.
 [Leaving and being removed are two acts](../decisions.md#leaving-and-being-removed-are-two-acts-and-never-one-with-a-flag)
 · [Somebody who stays turns the key](../decisions.md#somebody-who-stays-turns-the-key-after-somebody-leaves).
 
+<!-- COPY END 9026ca40 -->
+
+<!-- COPY BEGIN d0996048 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record</summary>
 
@@ -496,6 +565,10 @@ app makes neither claim.
 </details>
 
 </details>
+
+<!-- COPY END d0996048 -->
+
+<!-- COPY BEGIN a1f77874 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="blocking-a-person">
 <summary><b>Blocking a person</b> — Complete (tested)</summary>
@@ -538,6 +611,10 @@ mine to read.
   conversation is drawn. Seen on the rig 2026-09-17: holding Quad's message and choosing *Block Quad*
   opened the sheet from the message with *Block* and *Block and Leave*, both red.
 
+<!-- COPY END a1f77874 -->
+
+<!-- COPY BEGIN 7f5d5998 [NEEDS HUMAN REVIEW] -->
+
 **Testing**
 
 - Suite: `BlockingTests`, including that current messages stop being drawn and the mailbox saw no
@@ -548,6 +625,10 @@ mine to read.
 **Design.** Board 78: a screen, not a system. **Detail.** [Trust and safety](../trust-and-safety.md).
 
 </details>
+
+<!-- COPY END 7f5d5998 -->
+
+<!-- COPY BEGIN 9d5bcd2f [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="reporting-a-message">
 <summary><b>Reporting a message</b> — Complete (operational proof owed)</summary>
@@ -577,6 +658,10 @@ escalate that does not require me to build one.
 mandatory-reporting obligations and the review reply.
 
 </details>
+
+<!-- COPY END 9d5bcd2f -->
+
+<!-- COPY BEGIN e3b47d62 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="per-person-outpost-access">
 <summary><b>Per-person Outpost access</b> — Complete (tested)</summary>
@@ -610,6 +695,10 @@ is not defined by which rooms I happen to be in.
   fact it carries — who will collect this — is already said on iPhone under the composer, by the
   same words board 90 asked for. It moves with the desktop wall, in
   [Desktop](desktop.md#the-desktop-wall).
+
+<!-- COPY END e3b47d62 -->
+
+<!-- COPY BEGIN f8bed739 [NEEDS HUMAN REVIEW] -->
 
 **Testing**
 
@@ -653,6 +742,10 @@ is not defined by which rooms I happen to be in.
   three answers, narrowing the grant rewrote the lower line to a date, and widening it back
   restored *Everything of yours*.
 
+<!-- COPY END f8bed739 -->
+
+<!-- COPY BEGIN 8e14c22d [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — what a date could honestly mean, and why the floor is an epoch</summary>
 
@@ -691,7 +784,15 @@ same rather than sending the next person after a bug that is not there.
 
 </details>
 
+<!-- COPY END 8e14c22d -->
+
+<!-- COPY BEGIN d6d236cb [NEEDS HUMAN REVIEW] -->
+
 **Design.** Boards 11, 11b/c, 21, 42, 59, 60, 62, 63, 90, 15.
+
+<!-- COPY END d6d236cb -->
+
+<!-- COPY BEGIN 3ff1a6dd [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — why the enforcement was deliberately not built with the model</summary>
@@ -715,6 +816,10 @@ deleted "Visible to no one yet" line went: who *will* collect this, as a fact, n
 </details>
 
 </details>
+
+<!-- COPY END 3ff1a6dd -->
+
+<!-- COPY BEGIN 436bba42 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="a-confirmation-answers-one-invitation">
 <summary><b>A confirmation answers one invitation</b> — Complete (tested)</summary>
@@ -755,6 +860,10 @@ see. Three existing tests were inverted rather than deleted, so the diff shows t
 re-admission. `docs/testing.md` has no step for it.
 
 </details>
+
+<!-- COPY END 436bba42 -->
+
+<!-- COPY BEGIN 3389a930 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="invitations-that-are-never-accepted">
 <summary><b>Invitations that are never accepted</b> — Complete (operational proof owed)</summary>
@@ -801,6 +910,10 @@ room does not accumulate invitations to people who moved on.
   frees an invitation nobody could reach: an offer made by a member who has since left, which
   nothing clears and which that member may no longer write to the room to withdraw.
 
+<!-- COPY END 3389a930 -->
+
+<!-- COPY BEGIN 14f4535f [NEEDS HUMAN REVIEW] -->
+
 **Five defects found on the way, none of them in the plan.** Worth listing, because every one was a
 screen or a control saying something the code did not do:
 
@@ -834,6 +947,10 @@ the sheet's fourth fact named Griff. Outie took it back, and Griff's own transcr
 took back the invitation to Quad"** — his device names Quad because he has met them, Outie's names
 ABD2B6 because she has not. Both rules holding on one entry.
 
+<!-- COPY END 14f4535f -->
+
+<!-- COPY BEGIN 3624b687 [NEEDS HUMAN REVIEW] -->
+
 **Still unproven, and CLAUDE.md's rule stands:** (a) the joiner confirms, the inviter stays offline
 past the date, the inviter opens the app, and the join is refused with both screens saying so; (b) the
 joiner confirms, the inviter relays in time, and an approver admits after the date. Both want an
@@ -841,6 +958,10 @@ inviter's clock moved past the date; `--clock-ahead-days` can now do that on the
 tried for this.
 
 </details>
+
+<!-- COPY END 3624b687 -->
+
+<!-- COPY BEGIN 9a5eddd0 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-multi-step-leave">
 <summary><b>The multi-step leave</b> — Complete (tested)</summary>
@@ -880,6 +1001,10 @@ longer the reference — see
 
 </details>
 
+<!-- COPY END 9a5eddd0 -->
+
+<!-- COPY BEGIN be7a519a [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="delete-room-for-somebody-removed-or-gone">
 <summary><b>Delete room for somebody removed or gone</b> — Complete (hardware proof owed)</summary>
 
@@ -913,6 +1038,10 @@ for positions nothing occupies — so entries deleted on purpose become holes th
 asks a peer for every hour, and refills. Delete the room and it comes back.
 
 Three ways out, none free:
+
+<!-- COPY END be7a519a -->
+
+<!-- COPY BEGIN b0293248 [NEEDS HUMAN REVIEW] -->
 
 - **Record the deletion as spent**, the way `RoomRoster.spent` records a finished invitation and
   `Replica.refusesForever` records an entry that can never be lifted. The gap index has to consult it,
@@ -952,6 +1081,10 @@ position, absorbing a late entry, keeping photos for others, continuing from a s
 the old invitation, finishing on launch, settling a sibling's deletion, refusing a sibling's key,
 refusing a peer's key, reopening on an invitation, and waiting for the leaving.
 
+<!-- COPY END b0293248 -->
+
+<!-- COPY BEGIN df9676ec [NEEDS HUMAN REVIEW] -->
+
 **Over the real wire.** `LiveRoundTests.aDeletedRoomStaysDeleted` puts a removal, the deletion, a
 relaunch and a repair asking for history on real CloudKit, and passed on beta on 2026-09-17. Its first
 version passed with the spent-entry machinery taken out, because the holes only appear once the log is
@@ -970,6 +1103,10 @@ members, and the compare-codes page opened on both halves.
 **Owed.** Deleting on one phone and seeing it go from another needs one account on two phones.
 
 </details>
+
+<!-- COPY END df9676ec -->
+
+<!-- COPY BEGIN 9ef7ccc5 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="verifying-who-somebody-is-later">
 <summary><b>Verifying who somebody is, later</b> — Complete (hardware proof owed)</summary>
@@ -999,6 +1136,10 @@ verification is not a one-time thing I clicked past.
   keys. What can change is somebody's devices, so a dated *Alex added a device* appears in every
   conversation with them, for any device newer than the first thing this phone heard from them there.
 
+<!-- COPY END 9ef7ccc5 -->
+
+<!-- COPY BEGIN 68d60d12 [NEEDS HUMAN REVIEW] -->
+
 **Testing.** `ComparisonCodeTests`, five: the halves are identical on both phones and in the same
 order; ten characters from the reading alphabet; an impostor's half differs; each key counts; and a
 half is pinned against a value computed independently in Python. `ComparingAgainTests`, three: in a
@@ -1023,6 +1164,10 @@ It asks again when the greeting closes now, and a new joiner tapping *Open Check
 **Design.** Boards 22, 81, 82, 80, 09, 57.
 
 </details>
+
+<!-- COPY END 68d60d12 -->
+
+<!-- COPY BEGIN 5d533c56 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="why-nothing-is-happening">
 <summary><b>Why nothing is happening</b> — Complete (proved above the mailbox)</summary>
@@ -1062,6 +1207,10 @@ mailbox: *Waiting on* in Checks named Quad — *Has everything you sent here. La
 Quad's last message was written.
 
 </details>
+
+<!-- COPY END 5d533c56 -->
+
+<!-- COPY BEGIN dc639b80 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-one-stranger">
 <summary><b>The one stranger</b> — Complete (proved above the mailbox)</summary>
@@ -1108,6 +1257,10 @@ the change feed and push are all untested by it.
 **What is not covered:** the envelope — see
 [Inbox](../inbox.md#privacy-on-the-wire).
 
+<!-- COPY END dc639b80 -->
+
+<!-- COPY BEGIN eccd971c [NEEDS HUMAN REVIEW] -->
+
 ### Backfill, and the recommendation not to
 
 Alice reads a stranger's comment on Bob's wall. Later Alice and Carol meet, and it turns out Carol
@@ -1147,12 +1300,20 @@ being edited. That is deliberate and worth leaving alone.
 
 </details>
 
+<!-- COPY END eccd971c -->
+
+<!-- COPY BEGIN f1c57087 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="open-or-closed-on-other-peoples-outposts">
 <summary><b>Open or closed on other people's Outposts</b> — Complete (proved above the mailbox)</summary>
 
 **Story.** As somebody setting up the app, I want to be asked once whether I want Outposts at all and
 how far what I write on other people's should travel, so that the answer is a decision I made rather
 than one I discover.
+
+<!-- COPY END f1c57087 -->
+
+<!-- COPY BEGIN cdc96390 [NEEDS HUMAN REVIEW] -->
 
 ### Where it goes
 
@@ -1161,6 +1322,10 @@ including the advanced path. An Outpost section follows **the whole of that flow
 same shape, same voice, same one-question-per-screen. Every setting it asks about also lives under
 Outpost settings on the You page, because a wizard is where a decision is *made* and settings are
 where it is *changed*.
+
+<!-- COPY END cdc96390 -->
+
+<!-- COPY BEGIN e69f0064 [NEEDS HUMAN REVIEW] -->
 
 ### The two questions
 
@@ -1188,6 +1353,10 @@ what I say is seen by people I chose. Neither is the safe default to assume — 
 **Read only** is today's `OutpostConsent.quiet` and needs no new machinery. It stays, because refusing
 the deal outright is a real answer and the consent sheet already offers it.
 
+<!-- COPY END e69f0064 -->
+
+<!-- COPY BEGIN 1f351e69 [NEEDS HUMAN REVIEW] -->
+
 ### How closed would work
 
 A comment now seals under the wall it lands on, so the post's readers and the thread's readers are the
@@ -1203,6 +1372,10 @@ a pairwise wrap of the same content key to the author — `Pairwise.swift` is th
 same entry. Design it as a second recipient, not as a second entry.
 
 **Acceptance criteria**
+
+<!-- COPY END 1f351e69 -->
+
+<!-- COPY BEGIN 0bfb0bdd [NEEDS HUMAN REVIEW] -->
 
 - **Done.** The check-up's Outpost section runs after the messages flow completes — **both doors**, because a
   preset answers the messages half and neither preset has anything to say about Outposts.
@@ -1234,6 +1407,10 @@ same entry. Design it as a second recipient, not as a second entry.
 - **Deferred.** The triangle on real accounts, over CloudKit. Needs a third Apple Account — moved off the
   roadmap 2026-09-14 to [Proofs a rig cannot run](../proofs-a-rig-cannot-run.md).
 
+<!-- COPY END 0bfb0bdd -->
+
+<!-- COPY BEGIN 6a2bbcb9 [NEEDS HUMAN REVIEW] -->
+
 **Testing.** `closedIsInvisibleToTheRest` is the one that matters and it is the triangle in memory:
 Carol writes closed under Bob's post having let in Bob and not Alice; Bob reads it, Alice's thread is
 empty and her count is zero. Plus `closedReachesOnlyYourOwnReaders`,
@@ -1253,6 +1430,10 @@ and that the number is the one thing in the app a reader cannot check. **Proved 
 unproven below it.**
 
 </details>
+
+<!-- COPY END 6a2bbcb9 -->
+
+<!-- COPY BEGIN b2e8fb10 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="an-invitation-that-runs-out-says-so-nowhere">
 <summary><b>An invitation that runs out says so nowhere</b> — Complete (tested)</summary>
@@ -1274,6 +1455,10 @@ day, 2026-09-09.
 
 </details>
 
+<!-- COPY END b2e8fb10 -->
+
+<!-- COPY BEGIN e9ae7047 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="a-refusal-throws-the-six-characters-away">
 <summary><b>A refusal throws the six characters away</b> — Complete (tested)</summary>
 
@@ -1290,6 +1475,10 @@ was shown, so that I can ring the person I meant to talk to and compare them.
 afternoon, 2026-09-09.
 
 </details>
+
+<!-- COPY END e9ae7047 -->
+
+<!-- COPY BEGIN 60408d2a [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-removal-audits-open-cases">
 <summary><b>The removal audit's open cases</b> — Complete (tested)</summary>
@@ -1328,6 +1517,10 @@ accounts.
 
 </details>
 
+<!-- COPY END 60408d2a -->
+
+<!-- COPY BEGIN 47d9a5d0 [NEEDS HUMAN REVIEW] -->
+
 ## Test plan
 
 <details markdown="1">
@@ -1350,6 +1543,12 @@ they collected. Leaving a shared room changes neither.
 
 </details>
 
+<!-- COPY END 47d9a5d0 -->
+
+<!-- COPY BEGIN a435fc91 [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** Somebody reading a room they were removed from. Somebody losing
 history they legitimately held. A member count that disagrees between two devices. Any claim that a
 removal reaches into somebody else's device.
+
+<!-- COPY END a435fc91 -->

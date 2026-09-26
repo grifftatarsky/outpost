@@ -16,11 +16,13 @@ public struct WaitingOnView: View {
     public var body: some View {
         List {
             Section {
+                // COPY BEGIN f17c5271 [NEEDS HUMAN REVIEW]
                 if people.isEmpty {
                     Text("There is nobody else in here to wait on.", bundle: .module)
                         .font(CarpenterFont.rowDetail)
                         .foregroundStyle(palette.secondaryText)
                 }
+                // COPY END f17c5271
                 ForEach(people) { person in
                     PersonRow(
                         name: person.member.displayName,
@@ -30,14 +32,17 @@ public struct WaitingOnView: View {
                         .accessibilityElement(children: .combine)
                 }
             } footer: {
+                // COPY BEGIN 0bcd12f2 [NEEDS HUMAN REVIEW]
                 Text(
                     "Nothing here is a fault. A message reaches somebody when their app next opens and collects it, so waiting on somebody who has not opened theirs is the ordinary case. Last heard is the newest thing of theirs this phone holds, and the time is the one their device wrote on it.",
                     bundle: .module)
+                // COPY END 0bcd12f2
             }
             .groupedRowSurface()
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN a5491637 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Waiting on", bundle: .module))
         .navigationSubtitle(Text(verbatim: roomName))
         .toolbarTitleDisplayMode(.inline)
@@ -46,10 +51,12 @@ public struct WaitingOnView: View {
                 Button { dismiss() } label: { Text("Done", bundle: .module) }
             }
         }
+        // COPY END a5491637
     }
 
     private func detail(_ person: WaitingOnPerson) -> Text {
         let holding: Text
+        // COPY BEGIN f8ad89a0 [NEEDS HUMAN REVIEW]
         switch person.holding {
         case .everything:
             holding = Text("Has everything you sent here.", bundle: .module)
@@ -66,5 +73,6 @@ public struct WaitingOnView: View {
         return Text(
             "\(holding) Last heard \(heard.formatted(date: .abbreviated, time: .shortened)).",
             bundle: .module)
+        // COPY END f8ad89a0
     }
 }

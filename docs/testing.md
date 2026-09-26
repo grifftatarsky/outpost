@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN a23f7c79 [NEEDS HUMAN REVIEW]
 title: Testing
 layout: default
 nav_order: 5
@@ -30,6 +31,10 @@ Each epic has its own test plan: [Messaging](epics/messaging.md#test-plan),
 1. TOC
 {:toc}
 
+<!-- COPY END a23f7c79 -->
+
+<!-- COPY BEGIN 4227807f [NEEDS HUMAN REVIEW] -->
+
 ## The suites
 
 | Suite | Runs with | Covers |
@@ -43,6 +48,10 @@ CI runs the package suite, the lint and a build of the app.
 **What green is worth.** The package suite has been green while the app did not work, more than once.
 It proves the logic above the mailbox and cannot prove CloudKit. A run on two accounts is the only
 evidence for anything that crosses the network.
+
+<!-- COPY END 4227807f -->
+
+<!-- COPY BEGIN 43897dc9 [NEEDS HUMAN REVIEW] -->
 
 ## The fakes are held to the real seams
 
@@ -66,12 +75,20 @@ on, and the one refusal the real keychain has, reading before first unlock, has 
 One fake is harsher than the real thing, and stays that way: `InMemoryMailbox` is one pool where the
 real mailbox is a zone per account, so a test can only ever sweep more than the app would.
 
+<!-- COPY END 43897dc9 -->
+
+<!-- COPY BEGIN 8a469d2c [NEEDS HUMAN REVIEW] -->
+
 ## The app and the extension
 
 The notification extension opens the shared container through the `readOnly` view of its
 `SessionStorage` and writes nothing. `AppAndExtensionTests` checks that a setting and a room deletion
 the app saves while the extension runs both survive, that an extension round leaves the shared files
 byte-for-byte unchanged, and that the app still collects what the extension saw.
+
+<!-- COPY END 8a469d2c -->
+
+<!-- COPY BEGIN 385dcc11 [NEEDS HUMAN REVIEW] -->
 
 ## The CloudKit integration tests
 
@@ -96,6 +113,10 @@ surviving the round trip; every field in `CloudKitMailbox.scannedFields` coming 
 a query; a photo's bytes in their own record type; acknowledgment stopping a packet being offered;
 the order records come back in; and the record ceiling in both directions.
 
+<!-- COPY END 385dcc11 -->
+
+<!-- COPY BEGIN 21adf5cb [NEEDS HUMAN REVIEW] -->
+
 ### A whole round on one account
 
 A packet is addressed by a `RecipientTag`, never by an account. So two sessions pointed at the
@@ -114,6 +135,10 @@ accepting a share, a third party, and anything that needs a phone.
 
 Preferences default to off, and a test that forgets one looks like a delivery failure. Showing other
 people's photos and sharing your own are both off until set.
+
+<!-- COPY END 21adf5cb -->
+
+<!-- COPY BEGIN 648bc4a4 [NEEDS HUMAN REVIEW] -->
 
 ### Which parts of the mailbox have run against a real account
 
@@ -145,6 +170,10 @@ instead of swallowing the error. And removing `PacketWire.grantValues` from `sca
 tests in about three seconds, a mistake that once took an afternoon of a rendezvous reporting "found 0
 offer(s)".
 
+<!-- COPY END 648bc4a4 -->
+
+<!-- COPY BEGIN 499d6f75 [NEEDS HUMAN REVIEW] -->
+
 ## Before a run on two accounts
 
 **Both devices need a build from the same tree.** The app removes subscriptions it does not
@@ -156,6 +185,10 @@ come back; turn it on in Settings.
 
 **Record types are created by the app.** `MessageBell` is seeded into a `Schema` zone before the
 subscription that names it. Look for `bell: record type present` in the log.
+
+<!-- COPY END 499d6f75 -->
+
+<!-- COPY BEGIN f3785643 [NEEDS HUMAN REVIEW] -->
 
 ## Reading the logs
 
@@ -194,6 +227,10 @@ push on that device yet.
 container, so it is reading a private copy that is always behind, and that looks exactly like a slow
 process.
 
+<!-- COPY END f3785643 -->
+
+<!-- COPY BEGIN 44ff8f19 [NEEDS HUMAN REVIEW] -->
+
 ## Tools in a debug build
 
 You › **Debug**, which is compiled out of a release build; `Scripts/check-release-leaves.sh` checks the
@@ -215,6 +252,10 @@ release binary for their words.
 person or the other person in a Solo, and says who has answered and what is still missing, counted
 from the log when it is read.
 
+<!-- COPY END 44ff8f19 -->
+
+<!-- COPY BEGIN 637f9cc2 [NEEDS HUMAN REVIEW] -->
+
 ## Launch arguments for the rig
 
 Debug builds only, all named in `Scripts/check-release-leaves.sh`, and defined in
@@ -227,6 +268,10 @@ are on [the simulator rig](simulator-rig.md).
   time. Invitation expiry moves too.
 - **`--channel testflight|appstore`** makes a debug build behave as a TestFlight or App Store build for
   the Supporter year.
+
+<!-- COPY END 637f9cc2 -->
+
+<!-- COPY BEGIN ffab2533 [NEEDS HUMAN REVIEW] -->
 
 ## Accessibility
 
@@ -255,6 +300,10 @@ xcrun simctl spawn <udid> launchctl kickstart -k user/foreground/com.apple.Voice
 
 Set both to `0` and kick it again to turn it off. `xcrun simctl io <udid> screenshot` then captures
 the caption with the screen, headlessly, taking no focus.
+
+<!-- COPY END ffab2533 -->
+
+<!-- COPY BEGIN ff189202 [NEEDS HUMAN REVIEW] -->
 
 **What can be measured this way: the arrival announcement.** Injected taps *do* activate controls
 with VoiceOver running, so a whole flow can be navigated, and the caption after each step is the
@@ -285,6 +334,10 @@ label tests could not, because every element already had a label:
 | Show the badge? | "Back button" | "Show the Supporter badge?, Heading" |
 | Notifications and Photos explainers | "Notifications" / "Photos" | "..., Heading" |
 
+<!-- COPY END ff189202 -->
+
+<!-- COPY BEGIN 66fc43cb [NEEDS HUMAN REVIEW] -->
+
 The first two were a `NavigationStack` with no `.navigationTitle`, so VoiceOver had nothing to
 announce and fell back to the first element, which was the chrome. `@AccessibilityFocusState` on the
 headline, set on appear and only when VoiceOver is running, fixes it. The third was a missing
@@ -296,6 +349,10 @@ Also read on the same walk, and left alone: the You tab's first stop is the anim
 the VoiceOver cost is recorded there.
 
 In Xcode 27, `Simulator.app` is replaced by `DeviceHub.app` in `Xcode.app/Contents/Applications`.
+
+<!-- COPY END 66fc43cb -->
+
+<!-- COPY BEGIN 991e837f [NEEDS HUMAN REVIEW] -->
 
 ## Practical traps on the rig
 
@@ -327,6 +384,10 @@ delayed screenshot, then hold for a few seconds and drag off before lifting.
 **Count to ten for a crash that happens sometimes.** The launch crash of 2026-09-12 killed about one
 launch in two:
 
+<!-- COPY END 991e837f -->
+
+<!-- COPY BEGIN 2da3b51a [NEEDS HUMAN REVIEW] -->
+
 ```bash
 for i in $(seq 1 10); do
   xcrun simctl launch <udid> com.microgpt.carpenter >/dev/null 2>&1
@@ -346,6 +407,10 @@ clock froze, and the first explanation written down was Xcode 27. Sampling the a
 thread busy decrypting the log inside a render. See
 [Architecture](architecture.md#nothing-a-render-reads-may-do-work).
 
+<!-- COPY END 2da3b51a -->
+
+<!-- COPY BEGIN 1663deed [NEEDS HUMAN REVIEW] -->
+
 ## Still unproved underneath notifications
 
 Does a `CKRecordZoneSubscription` on your own private zone fire when a share participant writes into
@@ -354,3 +419,5 @@ database, and the device-sync subscription behaves that way. It has not been obs
 fire, the fallback is a database subscription on the shared database, still scoped to `MessageBell`,
 at the cost of an occasional banner for somebody who shares the sender's outbox but not the room; only
 `PushChannel` and `CloudKitMailbox+Bell.swift` would change.
+
+<!-- COPY END 1663deed -->

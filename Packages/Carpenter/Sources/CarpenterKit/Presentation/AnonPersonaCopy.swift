@@ -1,5 +1,6 @@
 import Foundation
 
+// COPY BEGIN bd8c3a71 [NEEDS HUMAN REVIEW]
 public enum AnonPersonaCopy {
     public static func name(of face: AnonPersona.Face) -> String {
         switch face {
@@ -30,3 +31,4 @@ public enum AnonPersonaCopy {
         }
     }
 }
+// COPY END bd8c3a71

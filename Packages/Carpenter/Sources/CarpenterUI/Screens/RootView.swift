@@ -506,6 +506,7 @@ public struct RootView: View {
             .environment(\.showsHelp, theme.tutorialMode)
             // A confirmation dialog rather than an alert: Apple's answer for a choice related to an
             // intentional action, and an alert offers no additional choices related to the action.
+            // COPY BEGIN 209d0602 [NEEDS HUMAN REVIEW]
             .confirmationDialog(
                 Text("Leave \(leaving?.name ?? "")", bundle: .module),
                 isPresented: Binding(get: { leaving != nil }, set: { if !$0 { leaving = nil } }),
@@ -563,6 +564,7 @@ public struct RootView: View {
                 Text(
                     "Every message and photo in it goes from your devices, and being added back may not bring them back. This cannot be undone.",
                     bundle: .module)
+            // COPY END 209d0602
             }
             .sheet(item: $reviewingAccessBefore) { room in
                 LeavingRoomView(

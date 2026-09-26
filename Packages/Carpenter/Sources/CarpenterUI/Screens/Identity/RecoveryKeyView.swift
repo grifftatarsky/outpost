@@ -26,6 +26,7 @@ public struct RecoveryKeyView: View {
 
     public var body: some View {
         List {
+                // COPY BEGIN b4443225 [NEEDS HUMAN REVIEW]
                 Section {
                     SettingsHeaderCard(
                         icon: "key.horizontal.fill",
@@ -35,7 +36,9 @@ public struct RecoveryKeyView: View {
                             bundle: .module))
                 }
                 .groupedRowSurface()
+                // COPY END b4443225
 
+                // COPY BEGIN deee3b35 [NEEDS HUMAN REVIEW]
                 Section {
                     VerificationPhrase(fingerprint)
                         .frame(maxWidth: .infinity)
@@ -48,8 +51,10 @@ public struct RecoveryKeyView: View {
                         bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END deee3b35
 
                 Section {
+                    // COPY BEGIN 4a9f85db [NEEDS HUMAN REVIEW]
                     Label {
                         Text("It makes you you again", bundle: .module)
                     } icon: {
@@ -68,9 +73,11 @@ public struct RecoveryKeyView: View {
                     Text(
                         "Your rooms come back because the people in them can address you again, and they send you what was said while you were gone. Anything nobody else still holds is gone.",
                         bundle: .module)
+                    // COPY END 4a9f85db
                 }
                 .groupedRowSurface()
 
+                // COPY BEGIN 5dcfbe43 [NEEDS HUMAN REVIEW]
                 Section {
                 } footer: {
                     Text(
@@ -79,11 +86,13 @@ public struct RecoveryKeyView: View {
                         .foregroundStyle(palette.destructive)
                 }
                 .groupedRowSurface()
+                // COPY END 5dcfbe43
             }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
+                // COPY BEGIN d46cf88c [NEEDS HUMAN REVIEW]
                 ShareLink(
                     item: text,
                     preview: SharePreview(
@@ -93,18 +102,22 @@ public struct RecoveryKeyView: View {
                 }
                 .prominentActionButton()
                 .simultaneousGesture(TapGesture().onEnded { onSaved() })
+                // COPY END d46cf88c
 
+                // COPY BEGIN d3255589 [NEEDS HUMAN REVIEW]
                 if onSkip != nil {
                     Button { confirming = true } label: {
                         Text("Not now", bundle: .module)
                     }
                     .quietActionButton()
                 }
+                // COPY END d3255589
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
         }
         .background(palette.background)
+        // COPY BEGIN 62a19f8e [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Recovery key", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .confirmationDialog(
@@ -124,6 +137,7 @@ public struct RecoveryKeyView: View {
             Text(
                 "You can save it later under You. Until you do, losing every device you own ends this account.",
                 bundle: .module)
+        // COPY END 62a19f8e
         }
     }
 }

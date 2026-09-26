@@ -64,6 +64,7 @@ public struct PostThreadView: View {
                         )
                     }
 
+                    // COPY BEGIN 2e756da5 [NEEDS HUMAN REVIEW]
                     if comments.isEmpty, hidden == 0 {
                         Text("No comments yet.", bundle: .module)
                             .font(CarpenterFont.footnote)
@@ -71,6 +72,7 @@ public struct PostThreadView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.top, 28)
                     }
+                    // COPY END 2e756da5
 
                     if hidden > 0 { missing }
                 }
@@ -82,7 +84,9 @@ public struct PostThreadView: View {
             if canJoinIn { composer }
         }
         .background(palette.background.ignoresSafeArea())
+        // COPY BEGIN 98fde6ab [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Post", bundle: .module))
+        // COPY END 98fde6ab
         .toolbarTitleDisplayMode(.inline)
         .sheet(isPresented: $explaining) {
             HiddenCommentsSheet(hidden: hidden, settings: settings)
@@ -92,6 +96,7 @@ public struct PostThreadView: View {
 
     private var missing: some View {
         Button { explaining = true } label: {
+            // COPY BEGIN f9a63942 [NEEDS HUMAN REVIEW]
             HStack(spacing: 6) {
                 (hidden == 1
                     ? Text("1 comment is not shown", bundle: .module)
@@ -105,10 +110,13 @@ public struct PostThreadView: View {
             .frame(maxWidth: .infinity)
             .padding(.top, 18)
             .padding(.bottom, 4)
+            // COPY END f9a63942
         }
         .buttonStyle(.plain)
         .tappable()
+        // COPY BEGIN 16a411ef [NEEDS HUMAN REVIEW]
         .accessibilityLabel(Text("Why some comments are not shown", bundle: .module))
+        // COPY END 16a411ef
     }
 
     private var original: some View {
@@ -149,7 +157,9 @@ public struct PostThreadView: View {
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 4) {
             TextField(text: $draft, axis: .vertical) {
+                // COPY BEGIN 76144bc4 [NEEDS HUMAN REVIEW]
                 Text("Add a comment", bundle: .module)
+                // COPY END 76144bc4
             }
             .textFieldStyle(.plain)
             .font(CarpenterFont.bubble)
@@ -180,7 +190,9 @@ public struct PostThreadView: View {
                 .padding(.trailing, 4)
                 .padding(.bottom, 4)
                 .transition(.scale.combined(with: .opacity))
+                // COPY BEGIN 650327b8 [NEEDS HUMAN REVIEW]
                 .accessibilityLabel(Text("Post comment", bundle: .module))
+                // COPY END 650327b8
             }
         }
         .glassEffect(

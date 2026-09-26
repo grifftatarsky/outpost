@@ -6,6 +6,7 @@ import SwiftUI
 extension RoomsListView {
     @ViewBuilder
     func roomActions(for room: RoomSummary) -> some View {
+        // COPY BEGIN 41c83735 [NEEDS HUMAN REVIEW]
         Button {
             organisation.setPinned(!organisation.isPinned(room.id), for: room.id, stamp: stamp())
         } label: {
@@ -16,7 +17,9 @@ extension RoomsListView {
                 Image(systemName: organisation.isPinned(room.id) ? "pin.slash" : "pin")
             }
         }
+        // COPY END 41c83735
 
+        // COPY BEGIN 80661dc1 [NEEDS HUMAN REVIEW]
         if room.hasUnread {
             Button {
                 onMarkRead(room.id)
@@ -28,7 +31,9 @@ extension RoomsListView {
                 }
             }
         }
+        // COPY END 80661dc1
 
+        // COPY BEGIN 9313ee9f [NEEDS HUMAN REVIEW]
         Button {
             onSilence(room.id, !isSilenced(room.id))
         } label: {
@@ -39,7 +44,9 @@ extension RoomsListView {
                 Image(systemName: isSilenced(room.id) ? "bell" : "moon")
             }
         }
+        // COPY END 9313ee9f
 
+        // COPY BEGIN 5f92111f [NEEDS HUMAN REVIEW]
         Button {
             taggingRoom = room
         } label: {
@@ -49,7 +56,9 @@ extension RoomsListView {
                 Image(systemName: "tag")
             }
         }
+        // COPY END 5f92111f
 
+        // COPY BEGIN db0aee2b [NEEDS HUMAN REVIEW]
         if let invited = visibleManagedTags.first(where: { $0.kind == .invited }) {
             Button {
                 filter = filter == invited.id ? nil : invited.id
@@ -63,7 +72,9 @@ extension RoomsListView {
                 }
             }
         }
+        // COPY END db0aee2b
 
+        // COPY BEGIN 1f22b213 [NEEDS HUMAN REVIEW]
         if focus != nil {
             Divider()
             Button {
@@ -76,9 +87,11 @@ extension RoomsListView {
                 }
             }
         }
+        // COPY END 1f22b213
 
         switch roomDeletion(room.id) {
         case .stillIn:
+            // COPY BEGIN 8f987bad [NEEDS HUMAN REVIEW]
             if let onLeave {
                 Divider()
                 Button(role: .destructive) {
@@ -106,6 +119,7 @@ extension RoomsListView {
                 }
                 .tint(palette.destructive)
             }
+            // COPY END 8f987bad
         case .departureNotSent:
             EmptyView()
         }
@@ -115,6 +129,7 @@ extension RoomsListView {
     var composeButton: some View {
         switch scope {
         case .direct:
+            // COPY BEGIN cf4f9fd0 [NEEDS HUMAN REVIEW]
             Button { isStartingSolo = true } label: { composeGlyph }
                 .accessibilityLabel(Text("New solo", bundle: .module))
         case .groups:
@@ -136,10 +151,13 @@ extension RoomsListView {
                         Image(systemName: "person.3")
                     }
                 }
+            // COPY END cf4f9fd0
             } label: {
                 composeGlyph
             }
+            // COPY BEGIN 3658cd6a [NEEDS HUMAN REVIEW]
             .accessibilityLabel(Text("New conversation", bundle: .module))
+            // COPY END 3658cd6a
         }
     }
 
@@ -157,6 +175,7 @@ extension RoomsListView {
                         get: { preferences.density },
                         set: { preferences.density = $0 })
                 ) {
+                    // COPY BEGIN 8f2c22ba [NEEDS HUMAN REVIEW]
                     Label {
                         Text("Comfortable", bundle: .module)
                     } icon: {
@@ -171,10 +190,12 @@ extension RoomsListView {
                     .tag(RoomsListDensity.compact)
                 } label: {
                     Text("Row size", bundle: .module)
+                    // COPY END 8f2c22ba
                 }
                 .pickerStyle(.inline)
             }
 
+            // COPY BEGIN 6252a9c0 [NEEDS HUMAN REVIEW]
             if let onJoinWithInvite {
                 Button(action: onJoinWithInvite) {
                     Label {
@@ -202,11 +223,14 @@ extension RoomsListView {
                     Image(systemName: "tag")
                 }
             }
+            // COPY END 6252a9c0
         } label: {
             Image(systemName: "ellipsis.circle")
                 .font(.system(size: 21, weight: .regular))
                 .foregroundStyle(palette.primaryText)
         }
+        // COPY BEGIN 8bc21884 [NEEDS HUMAN REVIEW]
         .accessibilityLabel(Text("Rooms list options", bundle: .module))
+        // COPY END 8bc21884
     }
 }

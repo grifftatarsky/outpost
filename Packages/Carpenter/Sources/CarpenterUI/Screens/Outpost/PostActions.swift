@@ -67,6 +67,7 @@ private struct PostActionsModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .contextMenu {
+                // COPY BEGIN 5a1f9277 [NEEDS HUMAN REVIEW]
                 if mayEdit {
                     Button { editing = true } label: {
                         Label {
@@ -96,11 +97,13 @@ private struct PostActionsModifier: ViewModifier {
                     }
                     .tint(palette.destructive)
                 }
+                // COPY END 5a1f9277
             }
             .sheet(isPresented: $reporting) {
                 ReportView(item: item)
             }
             .sheet(isPresented: $editing) {
+                // COPY BEGIN dedb897b [NEEDS HUMAN REVIEW]
                 EditWordsView(
                     title: kind == .post
                         ? Text("Edit post", bundle: .module)
@@ -143,5 +146,6 @@ private struct PostActionsModifier: ViewModifier {
             } message: {
                 Text(verbatim: problem ?? "")
             }
+                // COPY END dedb897b
     }
 }

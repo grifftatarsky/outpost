@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 24b7d133 [NEEDS HUMAN REVIEW]
 title: After TestFlight
 layout: default
 nav_order: 6
@@ -14,6 +15,10 @@ somebody's hands. Nothing here blocks TestFlight; nothing here is scheduled.
 1. TOC
 {:toc}
 
+<!-- COPY END 24b7d133 -->
+
+<!-- COPY BEGIN de204351 [NEEDS HUMAN REVIEW] -->
+
 ## Why this page exists
 
 `RULED` — Griff, 2026-09-14. The roadmap is the list of what stands between the app and a
@@ -23,9 +28,17 @@ and more urgent than it is, so it comes off and lands here.
 The Mac and the iPad are the same ruling with their own page, because a second platform is a
 product rather than a ticket: [Desktop roadmap](desktop-roadmap.md).
 
+<!-- COPY END de204351 -->
+
+<!-- COPY BEGIN 2be886e0 [NEEDS HUMAN REVIEW] -->
+
 ## Pushed out, with the reason
 
 `RULED` — Griff, 2026-09-14, working through the roadmap ticket by ticket.
+
+<!-- COPY END 2be886e0 -->
+
+<!-- COPY BEGIN 5303e2ed [NEEDS HUMAN REVIEW] -->
 
 ### Consensus hard delete
 
@@ -47,6 +60,10 @@ it within the relevant context. For example, when a server connection is unavail
 an indicator that people can choose to learn more"
 ([Alerts](https://developer.apple.com/design/human-interface-guidelines/alerts)).
 
+<!-- COPY END 5303e2ed -->
+
+<!-- COPY BEGIN 7983404b [NEEDS HUMAN REVIEW] -->
+
 ### Hard delete and desync quietly
 
 Destroying a message on this device and letting the conversation diverge, with the other party never
@@ -56,6 +73,10 @@ told.
 honestly: the app would be knowingly letting a conversation diverge with no way to repair it. That
 sentence has to be right before the feature exists.
 
+<!-- COPY END 7983404b -->
+
+<!-- COPY BEGIN 5a18d784 [NEEDS HUMAN REVIEW] -->
+
 ### Clearing media older than a date
 
 A control that clears media older than a date the member picks, showing what it would free first.
@@ -63,6 +84,10 @@ A control that clears media older than a date the member picks, showing what it 
 **Why it waits.** Nothing deletes itself on its own — ruled 2026-09-13 as the answer rather than a
 gap — and the size is already on the You screen, so a member who wants space can see it and act.
 This is convenience on top of an honest baseline.
+
+<!-- COPY END 5a18d784 -->
+
+<!-- COPY BEGIN b69b5179 [NEEDS HUMAN REVIEW] -->
 
 ## Devices to eventually support
 
@@ -81,6 +106,10 @@ than in fixed frames, the rig already checks two phone widths (402pt and 440pt),
 than an architecture one. What it does **not** have is any notion of two displays, a hinge, or a
 window that changes shape while it is open.
 
+<!-- COPY END b69b5179 -->
+
+<!-- COPY BEGIN 7ac8ee8e [NEEDS HUMAN REVIEW] -->
+
 ## Future enhancements
 
 Named by Griff, recorded in his words, not designed. What the design called *extensions* — first-party
@@ -91,6 +120,10 @@ features switched on per room — are **Packs** (Outpost Packs) from 2026-09-16,
 | **The Bullet Pack** | 2026-09-16 | "Build bullet extension, lock to subscriber" — and the same night: call it a **Pack**, an **Outpost Pack**, "because that's more fun". It starts with the $0.99 subscribers having Bullet's shared simple list, and anyone who used the app in TestFlight gets one year of subscriber free. Built while the main app is in TestFlight. |
 | **Buying Supporter** | 2026-09-17 | "12$ value, since we don't do discounts, it's just annual 12$ and monthly 1$." The TestFlight build grants the free year and the badge instead; the purchase comes with the App Store release. |
 | **YubiKey support** | 2026-09-17 | "yubikey support". **Named by Griff, and this page deliberately does not describe it.** Nobody here has read what the platform offers a key over Lightning, USB-C or NFC, or which of the three things it could touch Griff means — holding the identity key off the Keychain, gating the app or a recovery, or being a second factor where this app has no first one to add to. Any sentence about which would be a guess dressed as a requirement. When it is real, the first job is to read Apple's guidance and write that here. |
+
+<!-- COPY END 7ac8ee8e -->
+
+<!-- COPY BEGIN 832a700e [NEEDS HUMAN REVIEW] -->
 
 ## Questions for later, not decided
 
@@ -115,6 +148,10 @@ not use, on an app whose whole proposition is that it holds no directory and kno
 Writing a member into Contacts means writing a name this app was told into a store every other app
 on the phone can read. That tension is the reason this is a question rather than a ticket.
 
+<!-- COPY END 832a700e -->
+
+<!-- COPY BEGIN 345d90e1 [NEEDS HUMAN REVIEW] -->
+
 ## Canceled, with the reason
 
 ### An in-app lock
@@ -138,3 +175,5 @@ app itself does not hold anything back once the phone is open. That belongs in t
 **What would reopen it.** A member reporting that the system control is not discoverable enough, or a
 case where the app needs to lock something *inside* itself — a single conversation rather than the
 whole app — which the system cannot do.
+
+<!-- COPY END 345d90e1 -->

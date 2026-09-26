@@ -24,17 +24,21 @@ public struct InboxArrangementView: View {
                     }
                 }
             } footer: {
+                // COPY BEGIN f0cf8d6d [NEEDS HUMAN REVIEW]
                 Text(
                     "Nothing moves except the dock and the lists. No conversation is renamed, nothing is re-sent, and no message changes hands.",
                     bundle: .module
                 )
                 .fixedSize(horizontal: false, vertical: true)
+                // COPY END f0cf8d6d
             }
             .groupedRowSurface()
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN c81094d8 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Inbox", bundle: .module))
+        // COPY END c81094d8
         .toolbarTitleDisplayMode(.inline)
     }
 
@@ -78,20 +82,25 @@ public struct InboxArrangementView: View {
 }
 
 extension InboxArrangement {
+    // COPY BEGIN fcd48ebc [NEEDS HUMAN REVIEW]
     var shortTitle: LocalizedStringKey {
         switch self {
         case .split: "Split"
         case .merged: "Merged"
         }
     }
+    // COPY END fcd48ebc
 
+    // COPY BEGIN 049ed353 [NEEDS HUMAN REVIEW]
     var title: LocalizedStringResource {
         switch self {
         case .split: .module("Solos and Rooms apart")
         case .merged: .module("One list")
         }
     }
+    // COPY END 049ed353
 
+    // COPY BEGIN 2a51478b [NEEDS HUMAN REVIEW]
     var detail: LocalizedStringResource {
         switch self {
         case .split:
@@ -100,6 +109,7 @@ extension InboxArrangement {
             .module("One tab, newest first. A group is marked by a second disc behind its avatar.")
         }
     }
+    // COPY END 2a51478b
 }
 
 #if DEBUG

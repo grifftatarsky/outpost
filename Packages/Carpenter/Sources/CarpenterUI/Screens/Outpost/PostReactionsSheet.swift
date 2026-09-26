@@ -28,6 +28,7 @@ public struct PostReactionsSheet: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN c19793e3 [NEEDS HUMAN REVIEW]
                 Section {
                     ForEach(reactions, id: \.emoji) { reaction in
                         row(reaction)
@@ -40,9 +41,11 @@ public struct PostReactionsSheet: View {
                     }
                 }
                 .groupedRowSurface()
+                // COPY END c19793e3
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN 5edeadb4 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("^[\(total) reaction](inflect: true)", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -50,6 +53,7 @@ public struct PostReactionsSheet: View {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 5edeadb4
         }
         .presentationDetents([.medium, .large])
         .presentationContentInteraction(.scrolls)
@@ -65,6 +69,7 @@ public struct PostReactionsSheet: View {
                 Text(verbatim: reaction.emoji)
                     .font(.system(size: emoji))
                     .frame(width: emoji * 1.36)
+                // COPY BEGIN 0d765784 [NEEDS HUMAN REVIEW]
                 VStack(alignment: .leading, spacing: 2) {
                     Text("^[\(reaction.count) person](inflect: true)", bundle: .module)
                         .font(CarpenterFont.rowTitle)
@@ -75,6 +80,7 @@ public struct PostReactionsSheet: View {
                             .foregroundStyle(palette.secondaryText)
                     }
                 }
+                // COPY END 0d765784
                 Spacer(minLength: 0)
                 if isMine {
                     Image(systemName: "checkmark")

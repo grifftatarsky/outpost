@@ -15,6 +15,7 @@ public struct HowItWorksView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 26) {
+                        // COPY BEGIN 7d330d05 [NEEDS HUMAN REVIEW]
                         section(
                             "What this is",
                             [
@@ -22,7 +23,9 @@ public struct HowItWorksView: View {
                                 "Everything you write lives on the phones of the people you wrote it to. Not on a server that happens to be encrypted — on their devices.",
                             ]
                         )
+                        // COPY END 7d330d05
 
+                        // COPY BEGIN 04884ac4 [NEEDS HUMAN REVIEW]
                         section(
                             "There is a mailbox, and we will not pretend otherwise",
                             [
@@ -31,7 +34,9 @@ public struct HowItWorksView: View {
                                 "A photo or a clip goes the same way, as a separate sealed file. The mailbox can see its size and nothing else.",
                             ]
                         )
+                        // COPY END 04884ac4
 
+                        // COPY BEGIN b561c670 [NEEDS HUMAN REVIEW]
                         section(
                             "You do not have an account",
                             [
@@ -41,9 +46,11 @@ public struct HowItWorksView: View {
                                 "Your keys live in your iCloud Keychain, so a new phone picks them up by itself. If the keychain goes too, your recovery key is the way back — it makes you you again. It carries no conversations, so the app asks the people you were talking to for their copies, and tells them it asked.",
                             ]
                         )
+                        // COPY END b561c670
 
                         comparisons
 
+                        // COPY BEGIN 614f14c4 [NEEDS HUMAN REVIEW]
                         section(
                             "Who has checked this",
                             [
@@ -51,7 +58,9 @@ public struct HowItWorksView: View {
                                 "What was written for this app is the arrangement: which key opens what, who is handed one, and when a room turns its key. Nobody outside the project has reviewed that arrangement. The source is published so that anybody can, but being open to inspection is not the same as having been inspected, and this app will not tell you otherwise.",
                             ]
                         )
+                        // COPY END 614f14c4
 
+                        // COPY BEGIN 1675ec4f [NEEDS HUMAN REVIEW]
                         section(
                             "Notifications",
                             [
@@ -59,7 +68,9 @@ public struct HowItWorksView: View {
                                 "Your own devices keeping up with each other never make a sound and never show a banner. Say no to notifications and nothing announces itself; messages still arrive every time you open the app.",
                             ]
                         )
+                        // COPY END 1675ec4f
 
+                        // COPY BEGIN 85f818ac [NEEDS HUMAN REVIEW]
                         section(
                             "What you give up",
                             [
@@ -68,6 +79,7 @@ public struct HowItWorksView: View {
                                 "Photos and clips can be sent. Each is scaled down, stripped of its location and camera details, and sealed like a message. Your own device can screen what arrives, using a capability built into the operating system, and blur it until you choose to look; that is a switch under Safety, and the judgment never leaves your device.",
                             ]
                         )
+                        // COPY END 85f818ac
                     }
                     .padding(.horizontal, CarpenterMetrics.screenMargin)
                     .padding(.vertical, 20)
@@ -76,17 +88,20 @@ public struct HowItWorksView: View {
                 footer
             }
             .background(palette.background)
+            // COPY BEGIN 79e25afb [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("How this works", bundle: .module))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 79e25afb
         }
     }
 
     private var comparisons: some View {
         VStack(alignment: .leading, spacing: 14) {
+            // COPY BEGIN 07207d26 [NEEDS HUMAN REVIEW]
             Text("How it differs", bundle: .module)
                 .font(CarpenterFont.rowTitle)
                 .foregroundStyle(palette.primaryText)
@@ -98,7 +113,9 @@ public struct HowItWorksView: View {
             )
             .font(CarpenterFont.footnote)
             .foregroundStyle(palette.secondaryText)
+            // COPY END 07207d26
 
+            // COPY BEGIN 43e010c0 [NEEDS HUMAN REVIEW]
             comparison(
                 "Signal",
                 "Signal's encryption is the standard the rest of the industry copied, this app included. The difference is the account: Signal knows a phone number for you and runs the servers your messages pass through. Here there is no number and no account, and your history lives on your friends' devices rather than being fetched from a service."
@@ -111,10 +128,13 @@ public struct HowItWorksView: View {
                 "WhatsApp",
                 "Encrypted in transit and at rest, and owned by Meta, which sees who you talk to and how often even when it cannot see what you say. That pattern — the words are private, the social graph is not — is what the rotating addresses here are for."
             )
+            // COPY END 43e010c0
+            // COPY BEGIN 1b29af76 [NEEDS HUMAN REVIEW]
             comparison(
                 "Facebook Messenger",
                 "Encrypted between people now, but built around an account tied to your real identity and a company whose business is knowing about you. There is no identity here to tie anything to."
             )
+            // COPY END 1b29af76
         }
     }
 
@@ -154,6 +174,7 @@ public struct HowItWorksView: View {
     }
 
     private var footer: some View {
+        // COPY BEGIN fb84afbe [NEEDS HUMAN REVIEW]
         Button {
             openURL(Self.website)
         } label: {
@@ -168,6 +189,7 @@ public struct HowItWorksView: View {
         .foregroundStyle(palette.accentColor)
         .padding(.horizontal, CarpenterMetrics.screenMargin)
         .background(.bar)
+        // COPY END fb84afbe
     }
 }
 

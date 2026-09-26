@@ -42,6 +42,7 @@ public struct DeviceSyncedView: View {
 
             Spacer()
 
+            // COPY BEGIN e538fe8a [NEEDS HUMAN REVIEW]
             Button(action: onContinue) {
                 Text("Continue", bundle: .module)
                     .font(CarpenterFont.button)
@@ -51,10 +52,12 @@ public struct DeviceSyncedView: View {
             .tint(palette.accentFill)
             .padding(.horizontal, CarpenterMetrics.screenMargin)
             .padding(.bottom, 22)
+            // COPY END e538fe8a
         }
         .background(palette.background)
     }
 
+    // COPY BEGIN d55c9d07 [NEEDS HUMAN REVIEW]
     private var headline: Text {
         switch arrival {
         case .keychain:
@@ -63,7 +66,9 @@ public struct DeviceSyncedView: View {
             Text("This device is you again", bundle: .module)
         }
     }
+    // COPY END d55c9d07
 
+    // COPY BEGIN 269e7fcd [NEEDS HUMAN REVIEW]
     private var detail: Text {
         switch arrival {
         case .keychain:
@@ -76,6 +81,7 @@ public struct DeviceSyncedView: View {
                 bundle: .module)
         }
     }
+    // COPY END 269e7fcd
 }
 
 #if DEBUG

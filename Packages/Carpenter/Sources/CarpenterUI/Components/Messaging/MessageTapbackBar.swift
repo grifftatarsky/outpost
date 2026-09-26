@@ -58,6 +58,7 @@ public struct MessageTapbackBar<Actions: View>: View {
         .accessibilityAddTraits(isChosen ? [.isSelected] : [])
     }
 
+    // COPY BEGIN de3759aa [NEEDS HUMAN REVIEW]
     private var more: some View {
         Button(action: onMoreEmoji) {
             Image(systemName: "face.smiling")
@@ -69,7 +70,9 @@ public struct MessageTapbackBar<Actions: View>: View {
         .glassEffect(.regular.interactive(), in: Circle())
         .accessibilityLabel(Text("More reactions", bundle: .module))
     }
+    // COPY END de3759aa
 
+    // COPY BEGIN d8781b79 [NEEDS HUMAN REVIEW]
     private var overflow: some View {
         Menu {
             actions()
@@ -84,6 +87,7 @@ public struct MessageTapbackBar<Actions: View>: View {
         .glassEffect(.regular.interactive(), in: Circle())
         .accessibilityLabel(Text("More actions", bundle: .module))
     }
+    // COPY END d8781b79
 }
 
 public struct MessageReactions: View {
@@ -158,6 +162,7 @@ public struct MessageReactions: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(summary)
+        // COPY BEGIN a2a846aa [NEEDS HUMAN REVIEW]
         .accessibilityHint(Text("Double-tap to see who reacted", bundle: .module))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { onOpen() }
@@ -165,6 +170,7 @@ public struct MessageReactions: View {
             guard mine != nil else { return }
             Task { await onToggle(nil) }
         }
+        // COPY END a2a846aa
     }
 
     private func circle(_ content: Text, isMine: Bool) -> some View {
@@ -188,6 +194,7 @@ enum ReactionSpeech {
     static func summary(_ reactions: [(emoji: String, count: Int, isMine: Bool)]) -> Text {
         let counted = reactions.sorted { $0.isMine != $1.isMine ? $0.isMine : $0.emoji < $1.emoji }
         var parts: [Text] = []
+        // COPY BEGIN 8e885bcd [NEEDS HUMAN REVIEW]
         for reaction in counted {
             let others = reaction.count - (reaction.isMine ? 1 : 0)
             let who: Text
@@ -202,6 +209,7 @@ enum ReactionSpeech {
             Text("\($0), \($1)", bundle: .module)
         }
         return Text("Reactions: \(list)", bundle: .module)
+        // COPY END 8e885bcd
     }
 }
 

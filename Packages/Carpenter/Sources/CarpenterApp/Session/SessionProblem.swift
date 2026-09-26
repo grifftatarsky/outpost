@@ -9,6 +9,7 @@ public enum SessionProblem {
 
         switch refusal {
         case .tooLateToEdit:
+            // COPY BEGIN cd81b719 [NEEDS HUMAN REVIEW]
             return String(
                 localized: "The fifteen minutes to change these words are up. Everybody who has it already read them as they are.",
                 bundle: .module, comment: "The edit window has closed")
@@ -60,13 +61,17 @@ public enum SessionProblem {
             return String(
                 localized: "That code came from a device that is already set up, so there is nothing to add.",
                 bundle: .module, comment: "The pasted offer carries no device subkey")
+            // COPY END cd81b719
         case .keyNotTurned(let rooms):
+            // COPY BEGIN 8947ed4f [NEEDS HUMAN REVIEW]
             return String(
                 localized: "That device is out. ^[\(rooms) conversation](inflect: true) has not turned its key yet, so it can still read what is said there until something does.",
                 bundle: .module, comment: "A device was revoked but some rooms did not turn their key")
+            // COPY END 8947ed4f
         }
     }
 
+    // COPY BEGIN 9b7ca357 [NEEDS HUMAN REVIEW]
     public static func sentence(for refusal: MailboxFailure) -> String {
         switch refusal {
         case .noRoomInICloud:
@@ -80,10 +85,12 @@ public enum SessionProblem {
                 bundle: .module, comment: "The member is not signed in to iCloud")
         }
     }
+    // COPY END 9b7ca357
 
     private static func sentence(for refusal: MembershipError) -> String {
         switch refusal {
         case .expired:
+            // COPY BEGIN e67803b6 [NEEDS HUMAN REVIEW]
             return String(
                 localized: "That invitation ran out before it was answered. Sending another is the way back.",
                 bundle: .module, comment: "The invitation's lifetime has passed")
@@ -120,7 +127,9 @@ public enum SessionProblem {
             return String(
                 localized: "Check who you are talking to first. Read the characters to each other and say whether they matched.",
                 bundle: .module, comment: "A solo held until the two people have checked each other")
+            // COPY END e67803b6
         case .notTheFounder:
+            // COPY BEGIN 66d18e00 [NEEDS HUMAN REVIEW]
             return String(
                 localized: "Only whoever named this conversation can change how people are let into it.",
                 bundle: .module, comment: "Tried to change a room's access rule without founding it")
@@ -152,6 +161,7 @@ public enum SessionProblem {
             return String(
                 localized: "This device does not have keys for whoever sent that, so it cannot answer them.",
                 bundle: .module, comment: "No keys held for the inviter")
+            // COPY END 66d18e00
         }
     }
 }

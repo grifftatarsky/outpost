@@ -63,6 +63,7 @@ public struct OnboardingView: View {
                 OutpostMark(width: 260)
 
                 VStack(spacing: 18) {
+                    // COPY BEGIN b2ec607c [NEEDS HUMAN REVIEW]
                     Text(
                         "Conversations should be owned by the people in them. With \(Branding.displayName), they are.",
                         bundle: .module
@@ -71,7 +72,9 @@ public struct OnboardingView: View {
                     .foregroundStyle(palette.secondaryText)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
+                    // COPY END b2ec607c
 
+                    // COPY BEGIN 60beeaec [NEEDS HUMAN REVIEW]
                     Button {
                         explaining = true
                     } label: {
@@ -80,12 +83,14 @@ public struct OnboardingView: View {
                             .underline()
                     }
                     .foregroundStyle(palette.secondaryText)
+                    // COPY END 60beeaec
                 }
             }
 
             Spacer()
 
             VStack(spacing: 12) {
+                // COPY BEGIN 5ff391a2 [NEEDS HUMAN REVIEW]
                 if invitePending {
                     Text(
                         "Your invitation is waiting. Tell us what to call you and we will open it.",
@@ -96,9 +101,12 @@ public struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 2)
                 }
+                // COPY END 5ff391a2
 
                 TextField(text: $displayName) {
+                    // COPY BEGIN d945b6f7 [NEEDS HUMAN REVIEW]
                     Text("What your friends call you", bundle: .module)
+                    // COPY END d945b6f7
                 }
                 .textFieldStyle(.plain)
                 .font(.body)
@@ -117,12 +125,14 @@ public struct OnboardingView: View {
                 .onTapGesture { if !naming { naming = true } }
                 .onAppear { naming = true }
 
+                // COPY BEGIN 9c34697f [NEEDS HUMAN REVIEW]
                 Button(action: create) { 
                     Text("Create my identity", bundle: .module).primaryAction()
                 }
                 .prominentActionButton()
                 .disabled(
                     creating || displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                // COPY END 9c34697f
 
                 if let problem {
                     Text(problem)
@@ -133,6 +143,7 @@ public struct OnboardingView: View {
                         .transition(.opacity)  // cross-fade only
                 }
 
+                // COPY BEGIN d9057934 [NEEDS HUMAN REVIEW]
                 Button(action: redeemInvite) {
                     Text("I have an invite", bundle: .module)
                         .font(CarpenterFont.button)
@@ -142,7 +153,9 @@ public struct OnboardingView: View {
                             palette.elevatedSurface,
                             in: .rect(cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
                 }
+                // COPY END d9057934
 
+                // COPY BEGIN ca234160 [NEEDS HUMAN REVIEW]
                 Text(
                     "Your keys are generated on this device and stored in your iCloud Keychain. \(Branding.displayName) has no account to sign in to.",
                     bundle: .module
@@ -152,7 +165,9 @@ public struct OnboardingView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 8)
                 .padding(.horizontal, 6)
+                // COPY END ca234160
 
+                // COPY BEGIN 9121e797 [NEEDS HUMAN REVIEW]
                 if let restore {
                     Button(action: restore) {
                         Text("I have a recovery key", bundle: .module)
@@ -162,6 +177,7 @@ public struct OnboardingView: View {
                     }
                     .padding(.top, 2)
                 }
+                // COPY END 9121e797
             }
             .buttonStyle(.plain)
             .padding(.bottom, 8)

@@ -17,6 +17,7 @@ extension ConversationView {
 
     var roomMenu: some View {
         Menu {
+            // COPY BEGIN fac748d4 [NEEDS HUMAN REVIEW]
             if let onRoomMembers {
                 Button(action: onRoomMembers) {
                     Label {
@@ -104,10 +105,12 @@ extension ConversationView {
                     }
                 }
             }
+            // COPY END fac748d4
             if let onRepair {
                 Group {
                     if repairTargets.count > 1 {
                         Menu {
+                            // COPY BEGIN 01e05e21 [NEEDS HUMAN REVIEW]
                             Button {
                                 Task { await onRepair(nil) }
                             } label: {
@@ -117,6 +120,7 @@ extension ConversationView {
                                     Image(systemName: "person.3")
                                 }
                             }
+                            // COPY END 01e05e21
                             Divider()
                             ForEach(repairTargets) { person in
                                 Button {
@@ -138,6 +142,7 @@ extension ConversationView {
                 }
                 .disabled(repair.map { !$0.isComplete } ?? false)
             }
+            // COPY BEGIN 405f1a05 [NEEDS HUMAN REVIEW]
             if let onDelete {
                 Divider()
                 Button(role: .destructive, action: onDelete) {
@@ -149,17 +154,21 @@ extension ConversationView {
                 }
                 .tint(palette.destructive)
             }
+            // COPY END 405f1a05
         } label: {
             Image(systemName: wantsAttention ? "bell.circle.fill" : "ellipsis.circle")
                 .font(.system(size: 21, weight: .regular))
                 .foregroundStyle(wantsAttention ? palette.accentFill : palette.primaryText)
         }
+        // COPY BEGIN f2cca848 [NEEDS HUMAN REVIEW]
         .accessibilityLabel(
             wantsAttention
                 ? Text("Room settings, something needs an answer", bundle: .module)
                 : Text("Room settings", bundle: .module))
+        // COPY END f2cca848
     }
 
+    // COPY BEGIN 8833362b [NEEDS HUMAN REVIEW]
     private var repairLabel: some View {
         Label {
             Text("Check for missing history", bundle: .module)
@@ -167,4 +176,5 @@ extension ConversationView {
             Image(systemName: "arrow.triangle.2.circlepath")
         }
     }
+    // COPY END 8833362b
 }

@@ -22,6 +22,7 @@ struct RenameMemberView: View {
 
     var body: some View {
         List {
+            // COPY BEGIN a3495825 [NEEDS HUMAN REVIEW]
             Section {
                 TextField(text: $name) { Text("Name", bundle: .module) }
                     .focused($editing)
@@ -36,10 +37,12 @@ struct RenameMemberView: View {
                 }
             }
             .groupedRowSurface()
+            // COPY END a3495825
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .background(palette.background)
+        // COPY BEGIN 75d12e38 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Name", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
@@ -48,6 +51,7 @@ struct RenameMemberView: View {
                     .disabled(trimmed.isEmpty || saving)
             }
         }
+        // COPY END 75d12e38
         .task { editing = true }
     }
 

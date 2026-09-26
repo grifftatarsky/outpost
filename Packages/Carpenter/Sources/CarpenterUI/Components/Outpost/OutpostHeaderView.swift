@@ -30,7 +30,9 @@ struct OutpostHeaderView: View {
             }
             .buttonStyle(.plain)
             .photosPicker(isPresented: $choosing, selection: picking, matching: .images)
+            // COPY BEGIN 1b874e78 [NEEDS HUMAN REVIEW]
             .accessibilityLabel(Text("Change the picture on your Outpost", bundle: .module))
+            // COPY END 1b874e78
         } else {
             face
         }

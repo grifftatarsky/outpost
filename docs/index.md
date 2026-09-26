@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN a94cd624 [NEEDS HUMAN REVIEW]
 title: Home
 layout: default
 nav_order: 1
@@ -16,6 +17,10 @@ The source is licensed under the Mozilla Public License 2.0.
 
 It also builds and runs on a Mac. The Mac is not offered: Griff ruled on 2026-09-13 that the product
 is iPhone, and the [desktop roadmap](desktop-roadmap.md) is sequenced after the iPhone beta.
+
+<!-- COPY END a94cd624 -->
+
+<!-- COPY BEGIN 6ade848a [NEEDS HUMAN REVIEW] -->
 
 ## Where to start
 
@@ -51,6 +56,10 @@ is iPhone, and the [desktop roadmap](desktop-roadmap.md) is sequenced after the 
 - [Inbox](inbox.md): things noticed and deliberately parked.
 - [App Store](app-store.md): the listing, export compliance and the age rating.
 
+<!-- COPY END 6ade848a -->
+
+<!-- COPY BEGIN aa5d25c0 [NEEDS HUMAN REVIEW] -->
+
 ## How honest this documentation is meant to be
 
 The app's whole claim is that what it says is true, so a page that overstates it does more damage
@@ -69,6 +78,10 @@ a callout instead:
 
 **Never report an inference as a measurement.** If a number was not measured, the page says what is
 known, including "not measured".
+
+<!-- COPY END aa5d25c0 -->
+
+<!-- COPY BEGIN f9cebb32 [NEEDS HUMAN REVIEW] -->
 
 ## What is built
 
@@ -91,6 +104,10 @@ Proved between two people on two Apple Accounts unless the [Roadmap](roadmap.md)
 - Comparing a code with anybody in a room, at any time after the introduction.
 - The Supporter badge and a free Supporter year for beta testers.
 
+<!-- COPY END f9cebb32 -->
+
+<!-- COPY BEGIN d6577044 [NEEDS HUMAN REVIEW] -->
+
 ## What is not
 
 **Not proved yet.** Griff saw a banner arrive on a phone from another account on 2026-09-09, and
@@ -103,3 +120,5 @@ without it costs.
 deleting and letting a conversation diverge, and clearing media older than a date were moved past the
 beta on purpose. An in-app lock was canceled, because iOS already locks apps behind Face ID. Each has
 its reason on [After TestFlight](after-testflight.md).
+
+<!-- COPY END d6577044 -->

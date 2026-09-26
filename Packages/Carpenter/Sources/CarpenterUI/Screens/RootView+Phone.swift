@@ -66,6 +66,7 @@ extension RootView {
                     }
                 }
             } label: {
+                // COPY BEGIN 5e600b66 [NEEDS HUMAN REVIEW]
                 Label {
                     if isSplitInbox {
                         Text("Solos", bundle: .module)
@@ -75,6 +76,7 @@ extension RootView {
                 } icon: {
                     Image(systemName: "bubble.left")
                 }
+                // COPY END 5e600b66
             }
             .badge(unreadCount(isSplitInbox ? .direct : .everything))
 
@@ -116,11 +118,13 @@ extension RootView {
                         }
                     }
                 } label: {
+                    // COPY BEGIN ac60bfae [NEEDS HUMAN REVIEW]
                     Label {
                         Text("Rooms", bundle: .module)
                     } icon: {
                         Image(systemName: "bubble.left.and.bubble.right")
                     }
+                    // COPY END ac60bfae
                 }
                 .badge(unreadCount(.groups))
             }
@@ -162,11 +166,13 @@ extension RootView {
                     }
                 }
             } label: {
+                // COPY BEGIN 72881db6 [NEEDS HUMAN REVIEW]
                 Label {
                     Text("Outposts", bundle: .module)
                 } icon: {
                     Image(systemName: "rectangle.stack")
                 }
+                // COPY END 72881db6
             }
             .badge(unseenOutpostCount)
             }
@@ -206,11 +212,13 @@ extension RootView {
                     }
                 }
             } label: {
+                // COPY BEGIN 87154afe [NEEDS HUMAN REVIEW]
                 Label {
                     Text("You", bundle: .module)
                 } icon: {
                     youTabIcon
                 }
+                // COPY END 87154afe
             }
             .badge(youNeedsAttention ? Text(verbatim: "!") : nil)
         }

@@ -13,6 +13,7 @@ public enum RestoreNotification {
         let who = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let room = roomName.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // COPY BEGIN c0841350 [NEEDS HUMAN REVIEW]
         let title =
             level.showsSender && !who.isEmpty
             ? String(
@@ -21,8 +22,10 @@ public enum RestoreNotification {
             : String(
                 localized: "Somebody set up a new device", bundle: .module,
                 comment: "Banner title for a restore when the banner does not name people")
+        // COPY END c0841350
 
         let body: String
+        // COPY BEGIN f987b18d [NEEDS HUMAN REVIEW]
         if level.showsRoom && !room.isEmpty {
             body = String(
                 localized: "It asked for your copy of \(room). Your history is on its way to them.",
@@ -34,6 +37,7 @@ public enum RestoreNotification {
                 bundle: .module,
                 comment: "Banner body for a restore when the banner does not name conversations")
         }
+        // COPY END f987b18d
 
         return NotificationCopy(
             title: title, body: body,

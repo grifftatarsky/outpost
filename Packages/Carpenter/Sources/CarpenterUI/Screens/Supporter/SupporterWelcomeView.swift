@@ -34,20 +34,25 @@ struct SupporterWelcomeView: View {
                     .padding(.top, 32)
                     .accessibilityHidden(true)
 
+                // COPY BEGIN d60c364b [NEEDS HUMAN REVIEW]
                 Text("You’re a Supporter", bundle: .module)
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(palette.primaryText)
                     .multilineTextAlignment(.center)
                     .heading()
                     .accessibilityFocused($readingThanks)
+                // COPY END d60c364b
 
+                // COPY BEGIN 69f3481f [NEEDS HUMAN REVIEW]
                 Text(
                     "Thank you for testing. Your year is free, and it starts on the day the app is released on the App Store.",
                     bundle: .module)
                     .font(.title3)
                     .foregroundStyle(palette.secondaryText)
                     .multilineTextAlignment(.center)
+                // COPY END 69f3481f
 
+                // COPY BEGIN 9824d46c [NEEDS HUMAN REVIEW]
                 VStack(alignment: .leading, spacing: 18) {
                     point(
                         "hammer.fill",
@@ -61,12 +66,14 @@ struct SupporterWelcomeView: View {
                             bundle: .module))
                 }
                 .padding(.top, 8)
+                // COPY END 9824d46c
             }
             .padding(.horizontal, 28)
             .padding(.bottom, 24)
             .fixedSize(horizontal: false, vertical: true)
         }
         .scrollContentBackground(.hidden)
+        // COPY BEGIN 863632b8 [NEEDS HUMAN REVIEW]
         .safeAreaInset(edge: .bottom) {
             Button {
                 asking = true
@@ -87,6 +94,7 @@ struct SupporterWelcomeView: View {
                 }
             }
         }
+        // COPY END 863632b8
         .onAppear { announce($readingThanks) }
     }
 
@@ -117,19 +125,23 @@ struct SupporterWelcomeView: View {
                     .supporterBadge(true, onAvatarOf: 112)
                     .padding(.top, 32)
 
+                // COPY BEGIN a9ca4b86 [NEEDS HUMAN REVIEW]
                 Text("Show the Supporter badge?", bundle: .module)
                     .font(.title.weight(.bold))
                     .foregroundStyle(palette.primaryText)
                     .multilineTextAlignment(.center)
                     .heading()
                     .accessibilityFocused($readingQuestion)
+                // COPY END a9ca4b86
 
+                // COPY BEGIN c36056ae [NEEDS HUMAN REVIEW]
                 Text(
                     "A small mark on your picture. Everyone in your conversations sees it, and so does anyone who can read your Outpost.",
                     bundle: .module)
                     .font(.body)
                     .foregroundStyle(palette.secondaryText)
                     .multilineTextAlignment(.center)
+                // COPY END c36056ae
             }
             .padding(.horizontal, 28)
             .fixedSize(horizontal: false, vertical: true)
@@ -137,25 +149,31 @@ struct SupporterWelcomeView: View {
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
+                // COPY BEGIN 1f448f68 [NEEDS HUMAN REVIEW]
                 Button {
                     answer(true)
                 } label: {
                     Text("Show the badge", bundle: .module).primaryAction()
                 }
                 .prominentActionButton()
+                // COPY END 1f448f68
 
+                // COPY BEGIN 7d3bb100 [NEEDS HUMAN REVIEW]
                 Button {
                     answer(false)
                 } label: {
                     Text("Not now", bundle: .module)
                 }
                 .quietActionButton()
+                // COPY END 7d3bb100
 
+                // COPY BEGIN cba1e7bc [NEEDS HUMAN REVIEW]
                 Text("You can change this under You, Supporter.", bundle: .module)
                     .font(CarpenterFont.caption)
                     .foregroundStyle(palette.tertiaryText)
                     .multilineTextAlignment(.center)
                     .padding(.top, 2)
+                // COPY END cba1e7bc
             }
             .disabled(answering)
             .padding(.horizontal, 24)

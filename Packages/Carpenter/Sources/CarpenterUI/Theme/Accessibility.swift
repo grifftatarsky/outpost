@@ -120,23 +120,27 @@ public struct PasteCodeButton: View {
                 nothingToPaste = true
             }
         } label: {
+            // COPY BEGIN a3a2767a [NEEDS HUMAN REVIEW]
             Label {
                 Text("Paste", bundle: .module)
             } icon: {
                 Image(systemName: "doc.on.clipboard")
             }
             .codeEntryButtonChrome()
+            // COPY END a3a2767a
         }
         .buttonStyle(.plain)
         .foregroundStyle(palette.primaryText)
         .haptic(.refusal, trigger: nothingToPaste ? 1 : 0)
 
+        // COPY BEGIN 2b5a343a [NEEDS HUMAN REVIEW]
         if nothingToPaste {
             Text("There is nothing to paste. Copy the code again, or type it in.", bundle: .module)
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        // COPY END 2b5a343a
         }
     }
 }

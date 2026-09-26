@@ -34,12 +34,14 @@ public struct OutpostPersonView: View {
 
     public var body: some View {
         List {
+            // COPY BEGIN 9371b17f [NEEDS HUMAN REVIEW]
             direction(
                 title: Text("You can read", bundle: .module),
                 windows: access.youCanRead,
                 footer: Text(
                     "Only they can change this. What they let you read is their decision, and there is no control here for it.",
                     bundle: .module))
+            // COPY END 9371b17f
 
             Section {
                 ForEach(Array(access.theyCanRead.enumerated()), id: \.offset) { _, window in
@@ -47,6 +49,7 @@ public struct OutpostPersonView: View {
                         .font(CarpenterFont.rowTitle)
                         .foregroundStyle(palette.primaryText)
                 }
+                // COPY BEGIN 89928b62 [NEEDS HUMAN REVIEW]
                 if access.theyCanRead.isEmpty {
                     Text("Nothing", bundle: .module)
                         .font(CarpenterFont.rowTitle)
@@ -59,10 +62,12 @@ public struct OutpostPersonView: View {
                 }
             } header: {
                 Text("They can read", bundle: .module).sectionHeading()
+                // COPY END 89928b62
             }
             .groupedRowSurface()
 
             if !access.sharedRooms.isEmpty {
+                // COPY BEGIN 2a055b0c [NEEDS HUMAN REVIEW]
                 Section {
                     ForEach(access.sharedRooms, id: \.self) { room in
                         Text(verbatim: room)
@@ -77,8 +82,10 @@ public struct OutpostPersonView: View {
                         bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END 2a055b0c
             }
 
+            // COPY BEGIN 61dd130b [NEEDS HUMAN REVIEW]
             Section {
                 Toggle(isOn: notifying) {
                     Text("Tell me when they post", bundle: .module)
@@ -89,8 +96,10 @@ public struct OutpostPersonView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 61dd130b
 
             Section {
+                // COPY BEGIN fab27b68 [NEEDS HUMAN REVIEW]
                 if isBlocked {
                     Button { Task { await onUnblock() } } label: {
                         Text("Unblock", bundle: .module)
@@ -105,6 +114,7 @@ public struct OutpostPersonView: View {
                 Text(
                     "Blocking hides everything they write, everywhere, on your devices only. They are not told.",
                     bundle: .module)
+                // COPY END fab27b68
             }
             .groupedRowSurface()
         }
@@ -112,6 +122,7 @@ public struct OutpostPersonView: View {
         .background(palette.background)
         .navigationTitle(Text(verbatim: access.person.displayName))
         .toolbarTitleDisplayMode(.inline)
+        // COPY BEGIN 2cd8cf30 [NEEDS HUMAN REVIEW]
         .alert(
             Text("Block them?", bundle: .module), isPresented: $confirmingBlock
         ) {
@@ -126,6 +137,7 @@ public struct OutpostPersonView: View {
                 "\(access.person.displayName) stops being drawn anywhere on your devices. They are not told, and nothing about what they can read of yours changes — that is the setting above.",
                 bundle: .module)
         }
+        // COPY END 2cd8cf30
     }
 
     private var notifying: Binding<Bool> {
@@ -136,6 +148,7 @@ public struct OutpostPersonView: View {
         title: Text, windows: [AccessWindow], footer: Text
     ) -> some View {
         Section {
+            // COPY BEGIN e6512d51 [NEEDS HUMAN REVIEW]
             if windows.isEmpty {
                 Text("Nothing", bundle: .module)
                     .font(CarpenterFont.rowTitle)
@@ -147,6 +160,7 @@ public struct OutpostPersonView: View {
                         .foregroundStyle(palette.primaryText)
                 }
             }
+            // COPY END e6512d51
         } header: {
             title.sectionHeading()
         } footer: {

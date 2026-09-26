@@ -142,6 +142,7 @@ public struct RoomsListView: View {
     public var body: some View {
         content
             .safeAreaInset(edge: .bottom) {
+                // COPY BEGIN 20a8f30f [NEEDS HUMAN REVIEW]
                 if showsPrivacyNote {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
@@ -156,6 +157,7 @@ public struct RoomsListView: View {
                     .frame(maxWidth: .infinity)
                     .transition(.opacity)  // cross-fade only
                 }
+                // COPY END 20a8f30f
             }
             .animation(.default, value: showsPrivacyNote)  // cross-fade only
     }

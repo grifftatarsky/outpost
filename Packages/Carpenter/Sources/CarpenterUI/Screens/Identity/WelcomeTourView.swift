@@ -16,6 +16,7 @@ public struct WelcomeTourView: View {
         let icon: String
     }
 
+    // COPY BEGIN 92143e53 [NEEDS HUMAN REVIEW]
     private var panels: [Panel] {
         [
             Panel(
@@ -56,6 +57,7 @@ public struct WelcomeTourView: View {
                 icon: "hand.raised"),
         ]
     }
+    // COPY END 92143e53
 
     @State private var page = 0
 
@@ -81,6 +83,7 @@ public struct WelcomeTourView: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
 
+                        // COPY BEGIN a0ba5304 [NEEDS HUMAN REVIEW]
                         if panel.id == panels.count - 1 {
                             Text(
                                 "New here? Turn on Tutorial mode in You — every screen gains a ? that explains its buttons.",
@@ -91,6 +94,7 @@ public struct WelcomeTourView: View {
                             .multilineTextAlignment(.center)
                             .padding(.top, 6)
                         }
+                        // COPY END a0ba5304
 
                         Spacer()
                     }
@@ -104,6 +108,7 @@ public struct WelcomeTourView: View {
 
             Group {
                 if page == panels.count - 1 {
+                    // COPY BEGIN 70d3df21 [NEEDS HUMAN REVIEW]
                     Button(action: onContinue) {
                         Text("Get started", bundle: .module)
                             .font(CarpenterFont.button)
@@ -118,6 +123,7 @@ public struct WelcomeTourView: View {
                             .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
                     }
                     .buttonStyle(.borderless)
+                    // COPY END 70d3df21
                 }
             }
             .tint(palette.accentColor)

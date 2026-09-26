@@ -27,6 +27,7 @@ public enum Accent: String, CaseIterable, Hashable, Sendable, Codable {
 
     public static let `default` = Accent.verdigris
 
+    // COPY BEGIN 04189f5c [NEEDS HUMAN REVIEW]
     public var displayName: String {
         switch self {
         case .cobalt: String(localized: "Cobalt", bundle: .module, comment: "Accent color name")
@@ -39,6 +40,7 @@ public enum Accent: String, CaseIterable, Hashable, Sendable, Codable {
         case .monochrome: String(localized: "Monochrome", bundle: .module, comment: "Accent color name")
         }
     }
+    // COPY END 04189f5c
 
     public func tone(for appearance: Appearance) -> AccentTone {
         switch appearance {

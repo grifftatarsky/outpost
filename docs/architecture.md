@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN e62fa78f [NEEDS HUMAN REVIEW]
 title: Architecture
 layout: default
 nav_order: 3
@@ -17,6 +18,10 @@ was written from the code in `CarpenterKit/Crypto`; where the two disagree, trus
 1. TOC
 {:toc}
 
+<!-- COPY END e62fa78f -->
+
+<!-- COPY BEGIN 4842111d [NEEDS HUMAN REVIEW] -->
+
 ## The log
 
 Everything a member does is an **entry**: a message, a reaction, a room rename, an admission, a read
@@ -30,6 +35,10 @@ clock, time and room are outside that seal, and the whole entry then travels ins
 again for its recipients. So the transport cannot tell a message from a reaction.
 
 No member can remove another member's entry from the log. A deletion is an entry too.
+
+<!-- COPY END 4842111d -->
+
+<!-- COPY BEGIN 917cec80 [NEEDS HUMAN REVIEW] -->
 
 ## The mailbox
 
@@ -49,12 +58,20 @@ not a history.
 **Storage bills the sender**, in their own iCloud. The public database is never used, so the
 developer's costs do not grow with the number of people using the app.
 
+<!-- COPY END 917cec80 -->
+
+<!-- COPY BEGIN af6d6fe5 [NEEDS HUMAN REVIEW] -->
+
 ### Addresses rotate, and readers look back
 
 A tag lasts a day (`SyncSession.tagWindow`). A packet written at 23:50 and collected at 00:10 is
 addressed to yesterday, so a reader asks for the last seven days and tomorrow, and acknowledges under
 whichever tag matched. Asking for today alone once stranded messages: never found, so never
 acknowledged, and never sent again, because the sender had recorded them as sent.
+
+<!-- COPY END af6d6fe5 -->
+
+<!-- COPY BEGIN f134eff4 [NEEDS HUMAN REVIEW] -->
 
 ### A hole is named and asked for
 
@@ -64,6 +81,10 @@ and a room, sent to one peer inside the sealed packet. The peer answers with the
 names the ones it does not, so the asker can tell "sent and not arrived" from "nobody has it". A
 member who joins late asks the inviter for the room's history as soon as they accept, because a
 sender never offers an entry twice.
+
+<!-- COPY END f134eff4 -->
+
+<!-- COPY BEGIN 122c0d21 [NEEDS HUMAN REVIEW] -->
 
 ### A deleted room leaves its numbers spent
 
@@ -79,6 +100,10 @@ The closed rooms and the spent positions are saved before anything is removed. T
 `PersistedState.spentEntries`. A launch finishes a deletion that was cut off. A device whose newest
 entry was spent continues its feed from that entry's link instead of reusing the number. Accepting a
 new invitation to a closed room reopens it, so its history can be asked for again.
+
+<!-- COPY END 122c0d21 -->
+
+<!-- COPY BEGIN 26fdeeea [NEEDS HUMAN REVIEW] -->
 
 ## Device sync
 
@@ -105,6 +130,10 @@ The app tells the engine when to sync instead of letting it schedule itself
 (`automaticallySync = false`). Left to schedule itself, an explicit `fetchChanges()` returned in
 milliseconds without asking the server anything.
 
+<!-- COPY END 26fdeeea -->
+
+<!-- COPY BEGIN dd42746f [NEEDS HUMAN REVIEW] -->
+
 ## Notifications
 
 There are three subscriptions, each scoped to a record type. One of them is visible.
@@ -127,6 +156,10 @@ none of them is how delivery happens. The app syncs when it comes to the front, 
 is open, and on pull to refresh. With notifications off it works, and is not realtime while closed.
 The app never treats that as an error.
 
+<!-- COPY END dd42746f -->
+
+<!-- COPY BEGIN b8c80004 [NEEDS HUMAN REVIEW] -->
+
 ## The seams
 
 `CarpenterKit` depends on nothing but Foundation. Everything platform-shaped sits behind a protocol,
@@ -141,6 +174,10 @@ because both gaps once hid a bug the whole suite passed. The same lesson went un
 the real implementation wrote, and the unsealed sibling feed passed 118 suites. The relay holds
 encoded `Data` now. Every seam was checked against this rule on 2026-09-14; the table is in
 [Testing](testing.md).
+
+<!-- COPY END b8c80004 -->
+
+<!-- COPY BEGIN 6bcfa419 [NEEDS HUMAN REVIEW] -->
 
 ## Where the source lives
 
@@ -183,6 +220,10 @@ name matches a C function binds to the C function from a sibling file instead of
 the warnings; the only sign is `no 'async' operations occur within 'await' expression`, and an
 incremental build does not print it again. `CLAUDE.md` has the full account.
 
+<!-- COPY END 6bcfa419 -->
+
+<!-- COPY BEGIN 166592a6 [NEEDS HUMAN REVIEW] -->
+
 ## Nothing a render reads may do work
 
 SwiftUI evaluates a view's body many times a second, and anything the body reaches runs that often.
@@ -213,6 +254,10 @@ and are recorded as exceptions with their numbers; see
 [the inbox](inbox.md#the-conversation-screen-still-costs-3500µs-a-read). **Any new state those caches
 read needs `foldChanged()` too.** Nothing fails if it is missed; the cache goes quietly stale.
 
+<!-- COPY END 166592a6 -->
+
+<!-- COPY BEGIN 31bd476c [NEEDS HUMAN REVIEW] -->
+
 ## What a round assumes about its own order
 
 `AppSession.sync(through:media:mode:)` is about 270 lines in one function on purpose: most of what has
@@ -236,6 +281,10 @@ The three unchecked rules are ordinary "do this last" rules. Breaking one would 
 not lose history. They are listed so the next person to move a line knows which were tested and which
 were only read.
 
+<!-- COPY END 31bd476c -->
+
+<!-- COPY BEGIN 8aa03a7e [NEEDS HUMAN REVIEW] -->
+
 ## Two processes, one container
 
 The app and the notification service extension are separate processes over one App Group container.
@@ -249,3 +298,5 @@ anything the app had saved in the meantime.
 If the App Group is unavailable, the extension falls back to a directory inside its **own**
 container, not the app's. That is a second private copy that is always behind, and it looks exactly
 like a slow process. Both processes log which container they resolved.
+
+<!-- COPY END 8aa03a7e -->

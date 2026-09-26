@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 0cccb952 [NEEDS HUMAN REVIEW]
 title: Identity and devices
 layout: default
 parent: Roadmap
@@ -14,6 +15,10 @@ One identity across a member's devices, and what happens when they lose them.
 1. TOC
 {:toc}
 
+<!-- COPY END 0cccb952 -->
+
+<!-- COPY BEGIN aab12361 [NEEDS HUMAN REVIEW] -->
+
 ## Where this stands
 
 An identity generated on first run and filed in the synchronizable Keychain; a second device adopting
@@ -24,6 +29,10 @@ simulator cannot show is two real devices on one account, which needs two phones
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END aab12361 -->
+
+<!-- COPY BEGIN 43dadefe [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -54,6 +63,10 @@ setup step and no second identity.
 
 **Design.** Boards 69, 70, 80.
 
+<!-- COPY END 43dadefe -->
+
+<!-- COPY BEGIN 24bd125f [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — a device trapped before recovery exists, and the signal it waits on</summary>
 
@@ -75,6 +88,10 @@ account has nobody in it" was fixed 2026-09-01.
 </details>
 
 </details>
+
+<!-- COPY END 24bd125f -->
+
+<!-- COPY BEGIN 23c39697 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="erase-everything">
 <summary><b>Erase everything</b> — Complete (tested)</summary>
@@ -102,6 +119,10 @@ inside the app, so that leaving is mine to do.
 
 </details>
 
+<!-- COPY END 23c39697 -->
+
+<!-- COPY BEGIN 15ae772a [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="the-sibling-feed-is-written-in-the-clear">
 <summary><b>The sibling feed is sealed before it is written</b> — Complete (tested)</summary>
 
@@ -127,6 +148,10 @@ the rig doc tells you to use accounts with it **off**.
 **What is in that record.** Message bodies are safe — entries carry a `SealedPayload` sealed under a
 room epoch key. What is not:
 
+<!-- COPY END 15ae772a -->
+
+<!-- COPY BEGIN 9c880262 [NEEDS HUMAN REVIEW] -->
+
 - `epochs: [HeldEpoch]` — `heldEpochs()` writes `chain.secret(for: epoch).material`, the **actual
   epoch secrets**, for every room this member is in. These are the keys that open the sealed payloads
   sitting beside them.
@@ -140,6 +165,10 @@ room epoch key. What is not:
 is the only one that hands over anything readable.
 
 **Acceptance criteria**
+
+<!-- COPY END 9c880262 -->
+
+<!-- COPY BEGIN 85af5b2c [NEEDS HUMAN REVIEW] -->
 
 - **Done.** The feed is sealed before it leaves the device: HKDF-SHA256 from the identity's two seeds with
   its own domain, ChaChaPoly over the encoded feed, and the member and the writing device as
@@ -161,6 +190,10 @@ is the only one that hands over anything readable.
 
 **Why the app seals it rather than using `CKRecord.encryptedValues`.** Two reasons, both checked
 against Apple's documentation on 2026-09-13.
+
+<!-- COPY END 85af5b2c -->
+
+<!-- COPY BEGIN 300c7eb9 [NEEDS HUMAN REVIEW] -->
 
 - **Encrypted fields are end-to-end only with Advanced Data Protection on.** Apple: "When you turn on
   Advanced Data Protection, third-party app data stored in iCloud Backup and CloudKit encrypted
@@ -189,12 +222,20 @@ was added, and `architecture.md` was written the same day claiming the record wa
 derived from the identity" — a **stronger** claim than the comment, and one that was never true of
 any version of this code.
 
+<!-- COPY END 300c7eb9 -->
+
+<!-- COPY BEGIN 6c638211 [NEEDS HUMAN REVIEW] -->
+
 Nothing caught it in between: `CarpenterCloudKit` is not covered by `swift test`, and the fake at the
 seam stores the struct rather than its written form, so no test could have seen it. This is the
 project's characteristic defect — a green suite over an untested seam — with the added twist that a
 comment which went stale the same day it was written was then promoted into a document.
 
 </details>
+
+<!-- COPY END 6c638211 -->
+
+<!-- COPY BEGIN 93cea7ab [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="recovery-from-a-lost-device">
 <summary><b>Recovery from a lost device</b> — Complete (tested)</summary>
@@ -242,6 +283,10 @@ the same as losing everybody I have talked to.
   **person asked** decides: *hold until I check* keeps history back until the solo check passes with
   the restored device ([Decisions](../decisions.md#recovery-is-announced-and-both-sides-of-it-have-settings)).
 
+<!-- COPY END 93cea7ab -->
+
+<!-- COPY BEGIN 8f6a9660 [NEEDS HUMAN REVIEW] -->
+
 **When a recovery key is actually needed — confirmed by reading the code, 2026-09-13.**
 
 The identity seeds are stored `scope: .synchronized`, which is iCloud Keychain. The device signing key
@@ -272,6 +317,10 @@ None of the four scenarios above is covered, because all four turn on keychain a
 the suite cannot reach — and the rig cannot stage a reset keychain either.
 
 </details>
+
+<!-- COPY END 8f6a9660 -->
+
+<!-- COPY BEGIN 6fa3803a [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="recovery-settings-and-the-backfill-notice">
 <summary><b>Recovery settings, and telling people a restore asked them</b> — Complete (tested)</summary>
@@ -307,6 +356,10 @@ silent is not great."
   key. See
   [the decision](../decisions.md#turning-every-rooms-key-on-a-restore-is-a-question-not-a-default).
 
+<!-- COPY END 6fa3803a -->
+
+<!-- COPY BEGIN 8ea9b475 [NEEDS HUMAN REVIEW] -->
+
 **No setting is needed for key exchange, and this is why.** Everything re-derives from the identity
 the key restores: pairwise secrets come from this member's seeds and the other person's public keys;
 rotating tags come from those; `RoomRoster.rewrapTargets` is keyed by **participant**, so peers hand
@@ -323,6 +376,10 @@ the backfill and the recoverer's choice, and the restore that asks nobody proved
 2026-09-13.
 
 </details>
+
+<!-- COPY END 8ea9b475 -->
+
+<!-- COPY BEGIN 99e8afe2 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="an-in-app-lock">
 <summary><b>An in-app lock</b> — Canceled</summary>
@@ -344,6 +401,10 @@ conversation. A stolen unlocked phone currently gives up every room in full.
 **Design.** Board 30, not built.
 
 </details>
+
+<!-- COPY END 99e8afe2 -->
+
+<!-- COPY BEGIN 74cc379c [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-device-list-tells-the-truth">
 <summary><b>The device list tells the truth</b> — Complete (hardware proof owed)</summary>
@@ -384,6 +445,10 @@ six-character comparison, no setup step, a record rather than a control.
 
 </details>
 
+<!-- COPY END 74cc379c -->
+
+<!-- COPY BEGIN 823c2a4c [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="names-and-faces-shared-by-choice">
 <summary><b>Names and faces shared by choice</b> — Complete (tested)</summary>
 
@@ -417,6 +482,10 @@ that nothing about me leaves this device because I forgot to say no.
 
 **What everybody sees with all four off**
 
+<!-- COPY END 823c2a4c -->
+
+<!-- COPY BEGIN 7287528e [NEEDS HUMAN REVIEW] -->
+
 | Who is looking at | Sees |
 |---|---|
 | You, at yourself | Your name and your photo, or your initials on the accent disc without one. |
@@ -443,6 +512,10 @@ over that person's shared one on every disc; the person's page shows both.
 [decisions](../decisions.md#names-and-faces-are-shared-by-choice-both-ways-and-start-off).
 
 </details>
+
+<!-- COPY END 7287528e -->
+
+<!-- COPY BEGIN d2431db0 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="a-privacy-check-up-at-first-run">
 <summary><b>A privacy check-up at first run</b> — Complete (tested)</summary>
@@ -484,6 +557,10 @@ defaults are my choices rather than my silence.
 
 </details>
 
+<!-- COPY END d2431db0 -->
+
+<!-- COPY BEGIN d1eae7ff [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="a-name-and-a-face-of-your-own-for-somebody">
 <summary><b>A name and a face of your own for somebody</b> — Complete (tested)</summary>
 
@@ -518,6 +595,10 @@ so that a shared name is a default and not a decree.
 
 </details>
 
+<!-- COPY END d1eae7ff -->
+
+<!-- COPY BEGIN 68559ce0 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="supporter-the-testflight-year-and-the-badge">
 <summary><b>Supporter: the TestFlight year and the badge</b> — Complete (proved above the mailbox)</summary>
 
@@ -551,6 +632,10 @@ support it, so that the people I talk to can see it if I want them to.
 
 </details>
 
+<!-- COPY END 68559ce0 -->
+
+<!-- COPY BEGIN ebcdaefd [NEEDS HUMAN REVIEW] -->
+
 ## Test plan
 
 <details markdown="1">
@@ -576,5 +661,11 @@ opposite until 2026-09-13.
 
 </details>
 
+<!-- COPY END ebcdaefd -->
+
+<!-- COPY BEGIN f5249815 [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** Two identities on one account. A device that stays trusted after
 revocation. A member who loses everything because iCloud Keychain was slow rather than empty.
+
+<!-- COPY END f5249815 -->

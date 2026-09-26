@@ -1,6 +1,12 @@
+<!-- COPY BEGIN 2afcc63d [NEEDS HUMAN REVIEW] -->
+
 # The CloudKit schema
 
 `schema.ckdb` is the container's record types, written by hand and kept in git.
+
+<!-- COPY END 2afcc63d -->
+
+<!-- COPY BEGIN 076986d5 [NEEDS HUMAN REVIEW] -->
 
 ## Why it is written rather than inferred
 
@@ -17,6 +23,10 @@ record type that does not exist, with no error anywhere saying why.
 A written schema is better than the inferred one would have been. It is reviewable, it is in git
 beside the code that writes it, and it says what is intended rather than whatever a test run
 happened to leave behind.
+
+<!-- COPY END 076986d5 -->
+
+<!-- COPY BEGIN 6970ec1d [NEEDS HUMAN REVIEW] -->
 
 ## Where each field comes from
 
@@ -43,6 +53,10 @@ The grants are CloudKit's own defaults. They govern the public database, which t
 touches: every record is in a private zone or a zone shared through `CKShare`, where access follows
 ownership and the share rather than a role.
 
+<!-- COPY END 6970ec1d -->
+
+<!-- COPY BEGIN 998ea099 [NEEDS HUMAN REVIEW] -->
+
 ## Changing it
 
 The record types are `PushChannel.recordType` plus `Attachment` and `OutboxShareOffer`. If you add a
@@ -61,3 +75,5 @@ xcrun cktool import-schema --team-id 999S5A5WC5 \
 
 Production is deployed from the CloudKit Console, not from here, because the Console shows a diff
 first and `import-schema --environment production` does not.
+
+<!-- COPY END 998ea099 -->

@@ -2,7 +2,9 @@ import AppIntents
 import CarpenterKit
 
 struct RoomEntity: AppEntity {
+    // COPY BEGIN 5db1b0c3 [NEEDS HUMAN REVIEW]
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Room")
+    // COPY END 5db1b0c3
     static let defaultQuery = RoomQuery()
 
     let id: String
@@ -33,13 +35,18 @@ struct RoomQuery: EntityQuery {
 }
 
 struct RoomsFocusFilter: SetFocusFilterIntent {
+    // COPY BEGIN cd4a9e32 [NEEDS HUMAN REVIEW]
     static let title: LocalizedStringResource = "Rooms that may notify"
     static let description: IntentDescription? = IntentDescription(
         "Which rooms may notify while this Focus is on, and whether banners show what was said.")
+    // COPY END cd4a9e32
 
+    // COPY BEGIN c255f52c [NEEDS HUMAN REVIEW]
     @Parameter(title: "Only these rooms", description: "Leave empty to let every room notify.")
     var rooms: [RoomEntity]?
+    // COPY END c255f52c
 
+    // COPY BEGIN e72ee671 [NEEDS HUMAN REVIEW]
     @Parameter(title: "Show what was said", default: true)
     var showsPreviews: Bool
 
@@ -49,6 +56,7 @@ struct RoomsFocusFilter: SetFocusFilterIntent {
         let subtitle: LocalizedStringResource = showsPreviews ? "Previews shown" : "Previews hidden"
         return DisplayRepresentation(title: title, subtitle: subtitle)
     }
+    // COPY END e72ee671
 
     func perform() async throws -> some IntentResult {
         let allowed = Set(

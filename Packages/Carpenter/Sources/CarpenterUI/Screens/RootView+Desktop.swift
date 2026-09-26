@@ -9,6 +9,7 @@ extension RootView {
         NavigationSplitView {
             List(selection: $destination) {
                 Section(isExpanded: $outpostsExpanded) {
+                    // COPY BEGIN 23ec8aaf [NEEDS HUMAN REVIEW]
                     NavigationLink(value: Destination.allOutposts) {
                         Label {
                             Text("All Outposts", bundle: .module)
@@ -16,7 +17,9 @@ extension RootView {
                             Image(systemName: "square.stack")
                         }
                     }
+                    // COPY END 23ec8aaf
 
+                    // COPY BEGIN fb91dc45 [NEEDS HUMAN REVIEW]
                     ForEach(outpostAuthors.isEmpty ? [owner] : outpostAuthors) { author in
                         NavigationLink(value: Destination.outpost(author.id)) {
                             HStack(spacing: 8) {
@@ -28,6 +31,7 @@ extension RootView {
                 } header: {
                     Text("Outposts", bundle: .module)
                         .badge(outpostAuthors.count)
+                    // COPY END fb91dc45
                 }
 
                 Section(isExpanded: $roomsExpanded) {
@@ -42,10 +46,13 @@ extension RootView {
                     }
                     .onMove(perform: moveRooms)
                 } header: {
+                    // COPY BEGIN f4a1e2f5 [NEEDS HUMAN REVIEW]
                     Text("Rooms", bundle: .module)
                         .badge(rooms.count)
+                    // COPY END f4a1e2f5
                 }
 
+                // COPY BEGIN 5dbd6a58 [NEEDS HUMAN REVIEW]
                 Section {
                     NavigationLink(value: Destination.you) {
                         Label {
@@ -55,6 +62,7 @@ extension RootView {
                         }
                     }
                 }
+                // COPY END 5dbd6a58
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 220, ideal: 264, max: 320)

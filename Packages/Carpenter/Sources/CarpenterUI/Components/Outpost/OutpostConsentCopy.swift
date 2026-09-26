@@ -2,6 +2,7 @@ import CarpenterKit
 import SwiftUI
 
 public enum OutpostConsentCopy {
+    // COPY BEGIN ed0bc824 [NEEDS HUMAN REVIEW]
     public static func title(of standing: OutpostConsent) -> Text {
         switch standing {
         case .open: return Text("Open", bundle: .module)
@@ -10,7 +11,9 @@ public enum OutpostConsentCopy {
         case .off: return Text("Turn Outposts off", bundle: .module)
         }
     }
+    // COPY END ed0bc824
 
+    // COPY BEGIN 07cf4252 [NEEDS HUMAN REVIEW]
     public static func detail(of standing: OutpostConsent) -> Text {
         switch standing {
         case .open:
@@ -28,6 +31,7 @@ public enum OutpostConsentCopy {
             return Text("The tab goes away. Your own posts stay where they are.", bundle: .module)
         }
     }
+    // COPY END 07cf4252
 
     public static func symbol(of standing: OutpostConsent) -> String {
         switch standing {

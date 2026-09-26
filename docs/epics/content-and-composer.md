@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN ff6502b7 [NEEDS HUMAN REVIEW]
 title: Content and composer
 layout: default
 parent: Roadmap
@@ -14,6 +15,10 @@ Text, photos, clips, reactions, and what the device does with what arrives.
 1. TOC
 {:toc}
 
+<!-- COPY END ff6502b7 -->
+
+<!-- COPY BEGIN abba81f7 [NEEDS HUMAN REVIEW] -->
+
 ## Where this stands
 
 Text with formatting, and since 2026-09-04 photos and clips with captions, sent, sealed, fetched and
@@ -22,6 +27,10 @@ messages. Anything not built is drawn disabled rather than hidden, which is the 
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END abba81f7 -->
+
+<!-- COPY BEGIN f8d4c941 [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -43,6 +52,10 @@ met.
 - Two accounts: text proven daily; a formatted message has not been specifically watched.
 
 </details>
+
+<!-- COPY END f8d4c941 -->
+
+<!-- COPY BEGIN 242e5bcd [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="photos">
 <summary><b>Photos</b> — Complete (tested)</summary>
@@ -80,6 +93,10 @@ to send each other.
 **Design: needed** for the bubble, the viewer and the blur; none of the boards shows an image, and
 what is built is the messenger convention. Board 33 for storage.
 
+<!-- COPY END 242e5bcd -->
+
+<!-- COPY BEGIN f5dadc2d [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — what was built, and what is not built deliberately</summary>
 
@@ -100,6 +117,10 @@ block, a deny list in the binary, and the obligations written down in
 </details>
 
 </details>
+
+<!-- COPY END f5dadc2d -->
+
+<!-- COPY BEGIN 6c4087f8 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="clips">
 <summary><b>Clips</b> — Complete (tested)</summary>
@@ -124,6 +145,10 @@ block, a deny list in the binary, and the obligations written down in
 
 </details>
 
+<!-- COPY END 6c4087f8 -->
+
+<!-- COPY BEGIN 797ebd73 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="captions">
 <summary><b>Captions</b> — Complete (tested)</summary>
 
@@ -144,6 +169,10 @@ block, a deny list in the binary, and the obligations written down in
 
 </details>
 
+<!-- COPY END 797ebd73 -->
+
+<!-- COPY BEGIN ced5cedf [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="trimming-a-long-clip">
 <summary><b>Trimming a long clip</b> — Complete (hardware proof owed)</summary>
 
@@ -162,6 +191,10 @@ step rather than a wall.
   been seen. The trimmer itself is a device proof still owed.
 
 </details>
+
+<!-- COPY END ced5cedf -->
+
+<!-- COPY BEGIN 93c604e6 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="on-device-screening-and-the-blur">
 <summary><b>On-device screening and the blur</b> — Complete (hardware proof owed)</summary>
@@ -190,6 +223,10 @@ arrives is mine to decide about.
 
 </details>
 
+<!-- COPY END 93c604e6 -->
+
+<!-- COPY BEGIN 307c6108 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="the-deny-list">
 <summary><b>The deny list</b> — Complete (tested)</summary>
 
@@ -211,6 +248,10 @@ does not get a second audience.
 **Detail.** [Trust and safety](../trust-and-safety.md), decision D5.
 
 </details>
+
+<!-- COPY END 307c6108 -->
+
+<!-- COPY BEGIN 6179ef45 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="reactions-on-messages">
 <summary><b>Reactions on messages</b> — Complete (tested)</summary>
@@ -248,6 +289,10 @@ have to be a message.
 
 **Design.** Boards 43, 44, 88; Component Blockers for sizes (38pt drawn, 44pt tappable).
 
+<!-- COPY END 6179ef45 -->
+
+<!-- COPY BEGIN 5baee8c1 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — Ruling 5 was reversed for messages on 2026-09-03, and what it costs</summary>
 
@@ -273,6 +318,10 @@ neutral fills are translucent, so the circle lays `palette.background` under its
 </details>
 
 </details>
+
+<!-- COPY END 5baee8c1 -->
+
+<!-- COPY BEGIN 7909cbe3 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="storage-and-retention">
 <summary><b>Storage and retention</b> — Complete (tested)</summary>
@@ -302,6 +351,10 @@ it quietly. See
 **Design.** Board 33, behind retention, whose date is not set.
 
 </details>
+
+<!-- COPY END 7909cbe3 -->
+
+<!-- COPY BEGIN f9d34995 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-system-emoji-picker">
 <summary><b>A searchable emoji picker</b> — Complete (tested)</summary>
@@ -335,6 +388,10 @@ does.
   `.presentationCompactAdaptation(.sheet)` on the content. Both measured on alpha, from a build
   timestamped after the edit. Why is not known; the explicit `.sheet` is what made a sheet.
 
+<!-- COPY END f9d34995 -->
+
+<!-- COPY BEGIN 9d648d59 [NEEDS HUMAN REVIEW] -->
+
 **A limit, named rather than papered over.** The names are **English only** — they come from the
 Unicode file, which carries CLDR's English short names, and the translated names live in a much
 larger CLDR set this app does not carry. So search works for an English speaker and not for anybody
@@ -359,6 +416,10 @@ tap the field and the sheet goes to large with the field and caret below the dra
 Outpost post path uses the same modifier and was not walked. A regular width was not walked either.
 
 </details>
+
+<!-- COPY END 9d648d59 -->
+
+<!-- COPY BEGIN 0b8f7f50 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="photos-on-an-outpost">
 <summary><b>Photos on an Outpost</b> — Complete (tested)</summary>
@@ -387,6 +448,10 @@ picked a photo through the system picker, posted it with a caption, and the feed
 place; the log read `uploaded … bytes=1501814 recipients=0`, the bytes in CloudKit and addressed to
 nobody, because nobody had been let in. Proved over real CloudKit on 2026-09-14: a post with a photo
 reached a reader and the bytes came back identical (`LiveOutpostTests`).
+
+<!-- COPY END 0b8f7f50 -->
+
+<!-- COPY BEGIN 10540ddf [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — the wall in place of a room, as built on 2026-09-06</summary>
@@ -425,6 +490,10 @@ editing and deleting posts is its own ticket.
 
 </details>
 
+<!-- COPY END 10540ddf -->
+
+<!-- COPY BEGIN 841c3214 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="what-is-new-on-somebodys-wall">
 <summary><b>What is new on somebody's wall</b> — Complete (hardware proof owed)</summary>
 
@@ -444,6 +513,10 @@ not seen, without opening each one.
 clearing on 2026-09-11. A real banner from the extension has not been watched.
 
 </details>
+
+<!-- COPY END 841c3214 -->
+
+<!-- COPY BEGIN 973952fa [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="editing-and-deleting-your-own-posts">
 <summary><b>Editing and deleting your own posts</b> — Complete (tested)</summary>
@@ -465,6 +538,10 @@ its own words and is never called deleted; withdrawing a photo post takes the pi
 words; a comment does both; somebody else's post is not yours to change. Proved over real CloudKit on
 2026-09-14: an edit and a withdrawal both reached the reader (`LiveOutpostTests`).
 
+<!-- COPY END 973952fa -->
+
+<!-- COPY BEGIN 0852bff3 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — the log could always do this, and a dead control fell out of it</summary>
 
@@ -483,6 +560,10 @@ entry every device ignores.
 </details>
 
 </details>
+
+<!-- COPY END 0852bff3 -->
+
+<!-- COPY BEGIN 2b98799b [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="search">
 <summary><b>Search</b> — Complete (tested)</summary>
@@ -515,6 +596,10 @@ under a title is for a search scoped to one section. Recorded in
 
 </details>
 
+<!-- COPY END 2b98799b -->
+
+<!-- COPY BEGIN 2758b63b [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="blocking-reaches-posts">
 <summary><b>Blocking reaches posts, not only messages</b> — Complete (tested)</summary>
 
@@ -542,6 +627,10 @@ and in the number on the Outposts badge. The same was true of the bundled deny l
 member into their wall and checks all four surfaces at once.
 
 </details>
+
+<!-- COPY END 2758b63b -->
+
+<!-- COPY BEGIN ca81c533 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-disabled-affordances">
 <summary><b>The disabled affordances</b> — Complete (hardware proof owed)</summary>
@@ -576,6 +665,10 @@ advertising things it cannot do.
 - **Done.** Anything still not built stays visibly disabled rather than hidden. Hiding it makes the app look
   complete and the member look wrong for expecting it.
 
+<!-- COPY END ca81c533 -->
+
+<!-- COPY BEGIN 85aafca2 [NEEDS HUMAN REVIEW] -->
+
 **Testing.** `InviteScanningTests`, seven: an unanswered device asks; *Turn on scanning* shows Scan
 and saves nothing; allowing the camera saves it on; a no to Apple or *Not now* saves it off and stops
 the asking; a device that cannot scan is never asked and changes nothing; the stored answers keep
@@ -591,6 +684,10 @@ refuse it once (and see *Open Settings*).
 **Design.** Boards 34–36, 41, 07, 72. Nicknames: design needed.
 
 </details>
+
+<!-- COPY END 85aafca2 -->
+
+<!-- COPY BEGIN 0b4fe79d [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="scale-and-crop-a-picked-avatar">
 <summary><b>Scale and crop a picked avatar</b> — Complete (tested)</summary>
@@ -637,6 +734,10 @@ against a picture with its subject hard off to one side, through all three picke
 
 </details>
 
+<!-- COPY END 0b4fe79d -->
+
+<!-- COPY BEGIN b3670ecf [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="an-outpost-inherits-your-face">
 <summary><b>An Outpost inherits your face</b> — Complete (tested)</summary>
 
@@ -648,6 +749,10 @@ into every room.
 for them in People, which is the right default. The other three were built here.
 
 **Acceptance criteria**
+
+<!-- COPY END b3670ecf -->
+
+<!-- COPY BEGIN 0b967a6a [NEEDS HUMAN REVIEW] -->
 
 - **Done.** This member's own Outpost draws their own avatar, the one the You page holds, with no second
   setting to find. The defect was that `PersonAvatarView` looked the viewer up in two maps that are
@@ -674,6 +779,10 @@ people a member deliberately let into their own wall; it now names both, in the 
 Privacy & Safety, and in the modal. See [Decisions](../decisions.md), "A wall carries its own
 picture pointer".
 
+<!-- COPY END 0b967a6a -->
+
+<!-- COPY BEGIN ae1a2ae5 [NEEDS HUMAN REVIEW] -->
+
 **Two defects found on the way, both fixed here.**
 
 - **Being let in to somebody's Outpost announced your name, your photo and your Do Not Disturb
@@ -699,6 +808,10 @@ the check-up's re-run door.
 
 </details>
 
+<!-- COPY END ae1a2ae5 -->
+
+<!-- COPY BEGIN f5cc3f69 [NEEDS HUMAN REVIEW] -->
+
 ## Test plan
 
 <details markdown="1">
@@ -718,7 +831,13 @@ the log still verifies end to end.
 
 </details>
 
+<!-- COPY END f5cc3f69 -->
+
+<!-- COPY BEGIN 17841ab3 [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** A formatting marker reaching a reader. A packet per message. A tag a
 photo carried in that reaches a reader. An edit that does not converge, two devices showing different
 text for the same entry, which is a fold bug and the one thing here that would undermine the log
 rather than a feature.
+
+<!-- COPY END 17841ab3 -->

@@ -366,6 +366,18 @@ else
     printf '\nwarning: python3 not found; the xcconfig URL rule did not run.\n'
 fi
 
+# Every piece of copy sits between a pair of COPY markers carrying one id, so the team can read it
+#     piece by piece and mark each one as it goes (Griff, 2026-09-25). A pair that has come apart drops
+#     its chunk out of the count without a word, so a broken one fails here rather than in a tally.
+if command -v python3 >/dev/null 2>&1; then
+    markers=$(python3 Scripts/copy-review.py check 2>&1 >/dev/null)
+    if [ -n "$markers" ]; then
+        report "error: a copy review marker has lost its pair — each BEGIN needs one END with its id:" "$markers"
+    fi
+else
+    printf '\nwarning: python3 not found; the copy-marker rule did not run.\n'
+fi
+
 if [ "$status" -eq 0 ]; then
     echo "branding lint: clean"
 fi

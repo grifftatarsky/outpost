@@ -45,15 +45,19 @@ extension AppRootView {
             feed: session.feed(),
             outpostAuthors: session.outpostAuthors(),
             onReact: { post, emoji in
+                // COPY BEGIN c899dc89 [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That reaction did not go through"), "react"
                 ) { try await session.react(to: post, emoji: emoji) }
+                // COPY END c899dc89
             },
             comments: { session.comments(on: $0) },
             onComment: { post, text in
+                // COPY BEGIN de96aee0 [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That comment did not go through"), "comment"
                 ) { try await session.comment(on: post, text: text) }
+                // COPY END de96aee0
             },
             onAttachPost: { picked, caption in await post(picked, caption: caption) },
             postActions: PostActions(
@@ -66,9 +70,11 @@ extension AppRootView {
                 editableFor: { session.timeLeft(toEdit: $0) },
                 withdrawableFor: { session.timeLeft(toWithdraw: $0) }),
             onReactToComment: { comment, emoji in
+                // COPY BEGIN 492084e9 [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That reaction did not go through"), "react"
                 ) { try await session.react(to: comment, emoji: emoji) }
+                // COPY END 492084e9
             },
             messages: { session.messages(in: $0) },
             transcript: { session.transcript(in: $0) },
@@ -78,23 +84,29 @@ extension AppRootView {
             onSeenMessage: { message, room in await session.markSeen(message, in: room) },
             onMarkRoomRead: { await session.markRoomRead($0) },
             onLeaveRoom: { room in
+                // COPY BEGIN 779ff4e7 [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "You are still in that room"), "leave room"
                 ) { try await session.leave(room) }
+                // COPY END 779ff4e7
             },
             roomDeletion: { session.deletion(of: $0) },
             onDeleteRoom: { room in
+                // COPY BEGIN 0b6a8edc [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That room was not deleted"), "delete room"
                 ) { try await session.deleteRoom(room) }
+                // COPY END 0b6a8edc
             },
             outpostAccessChosen: { session.outpostAccessChosen(in: $0) },
             onStopOutpostAccess: { people, room in
+                // COPY BEGIN aeea75af [NEEDS HUMAN REVIEW]
                 for person in people {
                     await attempting(
                         String(localized: "They can still read your Outpost"), "stop outpost access"
                     ) { try await session.revokeOutpost(person, chosenIn: room) }
                 }
+                // COPY END aeea75af
             },
             onReactToMessage: { await react(to: $0, in: $1, with: $2) },
             isSilenced: { session.isMuted($0) },
@@ -210,11 +222,13 @@ extension AppRootView {
                     session.pendingJoins(in: room) + session.awaitingConfirmation(in: room)
                 guard let attestation = candidates.first(where: { $0.joiner == join.id })
                 else { return }
+                // COPY BEGIN 364edb99 [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That answer did not go through"), "answer a join"
                 ) {
                     try await session.decide(on: attestation, admit: admit)
                 }
+                // COPY END 364edb99
             },
             identityCode: session.codeForSharing,
             onSync: { await syncNow() },
@@ -228,6 +242,7 @@ extension AppRootView {
                 do {
                     try await session.revoke(going.map(\.id))
                 } catch let error as AppSessionError {
+                    // COPY BEGIN 5d951e6c [NEEDS HUMAN REVIEW]
                     if case .keyNotTurned(let rooms) = error {
                         Diagnostics.identity.error(
                             "revoke: \(rooms, privacy: .public) room(s) did not turn their key")
@@ -244,12 +259,15 @@ extension AppRootView {
                             title: String(localized: "Those devices were not removed"),
                             detail: SessionProblem.sentence(for: error))
                     }
+                    // COPY END 5d951e6c
                 } catch {
                     Diagnostics.identity.error(
                         "revoke failed: \(String(describing: error), privacy: .public)")
+                    // COPY BEGIN 0350cd68 [NEEDS HUMAN REVIEW]
                     problem = ActionProblem(
                         title: String(localized: "That device was not removed"),
                         detail: SessionProblem.sentence(for: error))
+                    // COPY END 0350cd68
                 }
             },
             onRenameDevice: { device, name in
@@ -294,9 +312,11 @@ extension AppRootView {
             },
             onRescindInvitation: { room, person in
                 guard let attestation = session.roster(of: room).requests[person] else { return }
+                // COPY BEGIN 1e1c5685 [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That invitation was not taken back"), "rescind invitation"
                 ) { try await session.rescind(attestation) }
+                // COPY END 1e1c5685
             },
             waitingOn: { session.waitingOn(in: $0) },
             comparisonToOffer: { room in
@@ -319,6 +339,7 @@ extension AppRootView {
                     isHolding: session.isHoldingSolo(room))
             },
             onAskWhoYouAreTalkingTo: { room, holding in
+                // COPY BEGIN ea3e46cd [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That check did not go out"), "ask a solo check"
                 ) { try await session.askWhoYouAreTalkingTo(in: room, holding: holding) }
@@ -327,6 +348,7 @@ extension AppRootView {
                 await attempting(
                     String(localized: "That answer did not go through"), "answer a solo check"
                 ) { try await session.answerWhoYouAreTalkingTo(in: room, matched: matched) }
+                // COPY END ea3e46cd
             },
             requiresSoloCheck: session.requiresSoloCheck,
             onRequiresSoloCheck: { await session.setRequiresSoloCheck($0) },
@@ -341,9 +363,11 @@ extension AppRootView {
             awaitingAdmission: session.awaitingAdmission,
             managedTags: session.managedTags,
             onRemoveMember: { room, person in
+                // COPY BEGIN 116b0b9e [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That person was not removed"), "remove member"
                 ) { try await session.remove(person, from: room) }
+                // COPY END 116b0b9e
             },
             roomStanding: { session.standing(in: $0) },
             viewer: session.enrolment?.identity.id,
@@ -376,9 +400,11 @@ extension AppRootView {
             roomGreeting: { session.greeting(for: $0) },
             onGreetingSeen: { await session.acknowledgeGreeting(for: $0) },
             onRoomAccessChange: { room, access in
+                // COPY BEGIN ee46929d [NEEDS HUMAN REVIEW]
                 await attempting(
                     String(localized: "That setting did not change"), "set access"
                 ) { try await session.setAccess(access, in: room) }
+                // COPY END ee46929d
             },
             repairStatus: { session.repairStatus(of: $0) },
             onRepair: { room, person in

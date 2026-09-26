@@ -1,3 +1,5 @@
+<!-- COPY BEGIN f31dabd7 [NEEDS HUMAN REVIEW] -->
+
 # Outpost
 
 Group messaging for iPhone with no Outpost server.
@@ -13,6 +15,10 @@ Outpost is in development and has not been released. A TestFlight beta is next.
 - **Documentation:** [grifftatarsky.github.io/outpost](https://grifftatarsky.github.io/outpost/),
   built from [`docs/`](docs/)
 - **TestFlight:** link to come
+
+<!-- COPY END f31dabd7 -->
+
+<!-- COPY BEGIN 054c02f9 [NEEDS HUMAN REVIEW] -->
 
 ## How it works
 
@@ -30,6 +36,10 @@ share of someone's outbox. It does not see what was said, which room it was for,
 
 Nobody outside this project has reviewed the protocol. The source is published so that it can be.
 
+<!-- COPY END 054c02f9 -->
+
+<!-- COPY BEGIN 1d17edb7 [NEEDS HUMAN REVIEW] -->
+
 ## What it does
 
 - Rooms, and Solos with one person. Joining a room takes an invitation and ten characters the two of
@@ -45,6 +55,10 @@ Nobody outside this project has reviewed the protocol. The source is published s
 
 [The roadmap](docs/roadmap.md) is the full list, with what has been proved on real devices and what
 has not.
+
+<!-- COPY END 1d17edb7 -->
+
+<!-- COPY BEGIN 1101d5e9 [NEEDS HUMAN REVIEW] -->
 
 ## Building it
 
@@ -77,6 +91,10 @@ nowhere else, and `Scripts/lint-branding.sh` enforces that.
 [Testing](docs/testing.md) covers the suites, and [The simulator rig](docs/simulator-rig.md) covers
 proving anything that crosses the network, which needs two Apple Accounts.
 
+<!-- COPY END 1101d5e9 -->
+
+<!-- COPY BEGIN 66707f10 [NEEDS HUMAN REVIEW] -->
+
 ## Contributing and security
 
 Read [`CLAUDE.md`](CLAUDE.md) before changing code. It holds the rules the lint enforces and the
@@ -85,6 +103,12 @@ mistakes this codebase has already made. Decisions and who made them are in
 
 To report a security problem, email info@outpostmessaging.com rather than opening a public issue.
 
+<!-- COPY END 66707f10 -->
+
+<!-- COPY BEGIN 46bce634 [NEEDS HUMAN REVIEW] -->
+
 ## License
 
 The source is licensed under the [Mozilla Public License 2.0](LICENSE).
+
+<!-- COPY END 46bce634 -->

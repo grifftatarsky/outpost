@@ -19,6 +19,7 @@ public struct EditRoomsListView: View {
     private let roomDeletion: (RoomID) -> RoomDeletion
     private let onDelete: ((RoomID) -> Void)?
 
+    // COPY BEGIN e13f99f6 [NEEDS HUMAN REVIEW]
     public init(
         rooms: [RoomSummary],
         title: LocalizedStringResource = .module("Rooms"),
@@ -38,6 +39,7 @@ public struct EditRoomsListView: View {
         self.onLeave = onLeave
         self.onSilence = onSilence
     }
+    // COPY END e13f99f6
 
     private var pinned: [RoomSummary] {
         organisation.arrange(rooms).filter { organisation.isPinned($0.id) }
@@ -50,6 +52,7 @@ public struct EditRoomsListView: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN 4d7f8c96 [NEEDS HUMAN REVIEW]
                 if !pinned.isEmpty {
                     Section {
                         ForEach(pinned) { room in
@@ -60,6 +63,7 @@ public struct EditRoomsListView: View {
                         Text("Pinned", bundle: .module)
                     }
                 }
+                // COPY END 4d7f8c96
 
                 Section {
                     ForEach(unpinned) { room in
@@ -67,6 +71,7 @@ public struct EditRoomsListView: View {
                             .swipeActions(edge: .trailing) {
                                 switch roomDeletion(room.id) {
                                 case .stillIn:
+                                    // COPY BEGIN 1b7300b7 [NEEDS HUMAN REVIEW]
                                     if let onLeave {
                                         Button(role: .destructive) {
                                             onLeave(room.id)
@@ -82,17 +87,21 @@ public struct EditRoomsListView: View {
                                             Text("Delete", bundle: .module)
                                         }
                                     }
+                                    // COPY END 1b7300b7
                                 case .departureNotSent:
                                     EmptyView()
                                 }
                             }
                     }
                 } header: {
+                    // COPY BEGIN 89fbaece [NEEDS HUMAN REVIEW]
                     Text("Most recent", bundle: .module)
+                    // COPY END 89fbaece
                 }
             }
             .alwaysEditing()
             .navigationTitle(Text(title))
+            // COPY BEGIN 7ce6b199 [NEEDS HUMAN REVIEW]
             .safeAreaInset(edge: .top) {
                 Text(
                     "Drag to reorder your pins. Tap a room's tags to change them. Swipe to leave.",
@@ -109,6 +118,7 @@ public struct EditRoomsListView: View {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 7ce6b199
             .sheet(item: $taggingRoom) { room in
                 RoomTagsSheet(room: room, organisation: $organisation)
             }
@@ -129,6 +139,7 @@ public struct EditRoomsListView: View {
                 isAccented: organisation.isPinned(room.id))
 
             VStack(alignment: .leading, spacing: 5) {
+                // COPY BEGIN 3ec7fe0b [NEEDS HUMAN REVIEW]
                 HStack(spacing: 6) {
                     Text(room.name)
                         .font(.callout.weight(.semibold))
@@ -141,10 +152,12 @@ public struct EditRoomsListView: View {
                             .accessibilityLabel(Text("Silenced", bundle: .module))
                     }
                 }
+                // COPY END 3ec7fe0b
 
                 Button {
                     taggingRoom = room
                 } label: {
+                    // COPY BEGIN 95fa5195 [NEEDS HUMAN REVIEW]
                     HStack(spacing: 5) {
                         let assigned = organisation.orderedTags
                             .filter { organisation.tags(of: room.id).contains($0.id) }
@@ -155,12 +168,14 @@ public struct EditRoomsListView: View {
                             TagChip(title: "+ Tag", isPlaceholder: true)
                         }
                     }
+                    // COPY END 95fa5195
                 }
                 .buttonStyle(.plain)
             }
 
             Spacer(minLength: 0)
         }
+        // COPY BEGIN 6cb57963 [NEEDS HUMAN REVIEW]
         .swipeActions(edge: .leading) {
             Button {
                 onSilence(room.id, !isSilenced(room.id))
@@ -169,6 +184,7 @@ public struct EditRoomsListView: View {
                     ? Text("Unsilence", bundle: .module) : Text("Silence", bundle: .module)
             }
         }
+        // COPY END 6cb57963
     }
 
     private func movePins(from source: IndexSet, to destination: Int) {
@@ -198,6 +214,7 @@ private struct PinToggle: View {
     let isOn: Bool
 
     var body: some View {
+        // COPY BEGIN 24d51251 [NEEDS HUMAN REVIEW]
         Circle()
             .fill(isOn ? palette.accentColor : .clear)
             .frame(width: 26, height: 26)
@@ -212,6 +229,7 @@ private struct PinToggle: View {
                     .foregroundStyle(isOn ? palette.textOnAccent : palette.tertiaryText)
             }
             .accessibilityLabel(Text(isOn ? "Unpin" : "Pin", bundle: .module))
+        // COPY END 24d51251
     }
 }
 

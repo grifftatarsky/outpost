@@ -21,10 +21,14 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<true/>
+	<!-- COPY BEGIN dc8580d4 [NEEDS HUMAN REVIEW] -->
 	<key>NSCameraUsageDescription</key>
 	<string>The camera reads the QR code on an invite somebody shows you, and the app keeps nothing else it sees.</string>
+	<!-- COPY END dc8580d4 -->
+	<!-- COPY BEGIN 9662b091 [NEEDS HUMAN REVIEW] -->
 	<key>NSFocusStatusUsageDescription</key>
 	<string>Tells the people you write to that you have notifications silenced, only if you turn that on under Privacy &amp; Safety.</string>
+	<!-- COPY END 9662b091 -->
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>

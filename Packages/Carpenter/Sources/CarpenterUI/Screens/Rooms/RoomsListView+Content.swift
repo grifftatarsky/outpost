@@ -11,6 +11,7 @@ extension RoomsListView {
             } else {
             List {
                 if let cannotSend {
+                    // COPY BEGIN 1af10146 [NEEDS HUMAN REVIEW]
                     Section {
                         Label {
                             Text(verbatim: cannotSend)
@@ -25,8 +26,10 @@ extension RoomsListView {
                         Text("Nothing is going out", bundle: .module).sectionHeading()
                     }
                     .groupedRowSurface()
+                    // COPY END 1af10146
                 }
 
+                // COPY BEGIN f347ac4e [NEEDS HUMAN REVIEW]
                 if !awaiting.isEmpty && showsAwaiting {
                     Section {
                         ForEach(awaiting) { admission in
@@ -41,6 +44,7 @@ extension RoomsListView {
                         Text("Waiting to be let in", bundle: .module).sectionHeading()
                     }
                 }
+                // COPY END f347ac4e
                 ForEach(searched) { room in
                     NavigationLink(value: room.id) {
                         row(for: room)
@@ -55,10 +59,12 @@ extension RoomsListView {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(
                             room.id == searched.first?.id ? .hidden : .automatic, edges: .top)
+                        // COPY BEGIN f1ac657c [NEEDS HUMAN REVIEW]
                         .accessibilityLabel(
                             scope.marksGroups && !room.isDirect
                                 ? Text("\(room.name), group", bundle: .module)
                                 : Text(room.name))
+                        // COPY END f1ac657c
                         .contextMenu {
                             roomActions(for: room)
                         } preview: {
@@ -81,11 +87,13 @@ extension RoomsListView {
                         .background(palette.background)
                 }
             }
+            // COPY BEGIN 80c75a0f [NEEDS HUMAN REVIEW]
             .accessibilityRotor(Text("Unread", bundle: .module)) {
                 ForEach(arranged.filter(\.hasUnread)) { room in
                     AccessibilityRotorEntry(room.name, id: room.id)
                 }
             }
+            // COPY END 80c75a0f
             }
         }
         .background(palette.background)
@@ -198,6 +206,7 @@ extension RoomsListView {
             VStack(spacing: 12) {
                 switch scope {
                 case .direct:
+                    // COPY BEGIN 0a3d7d2f [NEEDS HUMAN REVIEW]
                     Button { isStartingSolo = true } label: {
                         Text("Send a Solo", bundle: .module).primaryAction()
                     }
@@ -216,14 +225,17 @@ extension RoomsListView {
                         Text("Make a room", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
+                    // COPY END 0a3d7d2f
                 }
 
+                // COPY BEGIN 565b7d46 [NEEDS HUMAN REVIEW]
                 if let onJoinWithInvite {
                     Button(action: onJoinWithInvite) {
                         Text("I have an invite", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                 }
+                // COPY END 565b7d46
             }
             .frame(maxWidth: CarpenterMetrics.readableWidth)
             .padding(.top, 6)

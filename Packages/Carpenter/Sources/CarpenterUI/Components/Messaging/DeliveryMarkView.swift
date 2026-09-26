@@ -79,14 +79,17 @@ struct DeliveryMarkView: View {
             .foregroundStyle(lit ? palette.accentColor : palette.unlitMark)
     }
 
+    // COPY BEGIN 31325a06 [NEEDS HUMAN REVIEW]
     var spoken: Text {
         guard isEdited else { return label }
         let edited = Text("Edited.", bundle: .module)
         guard delivery.isVisible else { return edited }
         return Text("\(edited) \(label)", bundle: .module)
     }
+    // COPY END 31325a06
 
     var label: Text {
+        // COPY BEGIN c562b6b2 [NEEDS HUMAN REVIEW]
         switch delivery {
         case .pending:
             return Text(verbatim: "")
@@ -105,6 +108,7 @@ struct DeliveryMarkView: View {
             return Text(
                 "Collected. Shown \(RelativeTimestampFormatter().readReceipt(at)).", bundle: .module)
         }
+        // COPY END c562b6b2
     }
 }
 
@@ -122,6 +126,7 @@ struct DeliveryMarkView: View {
     }
 #endif
 
+// COPY BEGIN 07a47466 [NEEDS HUMAN REVIEW]
 struct EditedMark: View {
     @Environment(\.palette) private var palette
 
@@ -131,3 +136,4 @@ struct EditedMark: View {
             .foregroundStyle(palette.quaternaryText)
     }
 }
+// COPY END 07a47466

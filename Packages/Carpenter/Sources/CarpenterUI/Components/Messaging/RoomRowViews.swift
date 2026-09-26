@@ -113,6 +113,7 @@ public struct TagFilterRail: View {
     public var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
+                // COPY BEGIN a55c04d7 [NEEDS HUMAN REVIEW]
                 pill(
                     title: Text("All", bundle: .module),
                     titleText: String(localized: "All", bundle: .module),
@@ -120,6 +121,7 @@ public struct TagFilterRail: View {
                 ) {
                     selection = nil
                 }
+                // COPY END a55c04d7
 
                 ForEach(managed) { tag in
                     pill(
@@ -180,6 +182,7 @@ public struct TagFilterRail: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        // COPY BEGIN 808807a3 [NEEDS HUMAN REVIEW]
         .accessibilityHint(
             isManaged
                 ? Text("Kept up to date by the app. It goes when nothing is waiting.", bundle: .module)
@@ -188,9 +191,11 @@ public struct TagFilterRail: View {
             isManaged
                 ? Text("\(titleText), kept by the app", bundle: .module)
                 : Text(verbatim: titleText))
+        // COPY END 808807a3
     }
 }
 
+// COPY BEGIN eee6fec6 [NEEDS HUMAN REVIEW]
 public enum ManagedTagCopy {
     public static func name(of kind: ManagedTagKind) -> Text {
         switch kind {
@@ -204,6 +209,7 @@ public enum ManagedTagCopy {
         }
     }
 }
+// COPY END eee6fec6
 
 public struct TagFilterMenu: View {
     @Environment(\.palette) private var palette
@@ -224,6 +230,7 @@ public struct TagFilterMenu: View {
 
     public var body: some View {
         Menu {
+            // COPY BEGIN 31d0c409 [NEEDS HUMAN REVIEW]
             Picker(selection: $selection) {
                 Text("All rooms", bundle: .module).tag(TagID?.none)
                 ForEach(managed) { tag in
@@ -236,10 +243,12 @@ public struct TagFilterMenu: View {
                 Text("Filter by tag", bundle: .module)
             }
             .pickerStyle(.inline)
+            // COPY END 31d0c409
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: selection == nil ? "line.3.horizontal.decrease" : "tag.fill")
                     .font(.caption.weight(.semibold))
+                // COPY BEGIN 6e3c76f3 [NEEDS HUMAN REVIEW]
                 Group {
                     if let activeName {
                         Text(activeName)
@@ -248,6 +257,7 @@ public struct TagFilterMenu: View {
                     }
                 }
                 .font(.footnote.weight(.semibold))
+                // COPY END 6e3c76f3
                 Image(systemName: "chevron.down")
                     .font(.caption2.weight(.semibold))
             }
@@ -262,7 +272,9 @@ public struct TagFilterMenu: View {
                 }
             }
         }
+        // COPY BEGIN cc2f10d2 [NEEDS HUMAN REVIEW]
         .accessibilityLabel(Text("Filter by tag", bundle: .module))
+        // COPY END cc2f10d2
     }
 }
 
@@ -311,6 +323,7 @@ public struct RoomMarks: View {
 
     public var body: some View {
         HStack(spacing: 5) {
+            // COPY BEGIN 8f41ec3f [NEEDS HUMAN REVIEW]
             if isSilenced {
                 Image(systemName: "moon.fill")
                     .accessibilityLabel(Text("Silenced", bundle: .module))
@@ -323,6 +336,7 @@ public struct RoomMarks: View {
                 Image(systemName: "person.crop.circle.badge.clock")
                     .accessibilityLabel(Text("Somebody invited, not yet in", bundle: .module))
             }
+            // COPY END 8f41ec3f
         }
         .font(.caption2)
         .foregroundStyle(palette.accentColor)

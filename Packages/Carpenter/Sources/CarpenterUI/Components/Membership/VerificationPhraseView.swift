@@ -36,6 +36,7 @@ public struct VerificationPhrase: View {
     public var body: some View {
         switch size {
         case .display:
+            // COPY BEGIN e51aa52e [NEEDS HUMAN REVIEW]
             VStack(spacing: 8) {
                 Text("^[Read these \(phrase.count) character](inflect: true) aloud", bundle: .module)
                     .sectionHeading()
@@ -49,6 +50,7 @@ public struct VerificationPhrase: View {
                     .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                     .multilineTextAlignment(.center)
             }
+            // COPY END e51aa52e
         case .inline:
             characters
                 .font(.system(.footnote, design: .monospaced, weight: .semibold))
@@ -84,6 +86,7 @@ public struct VerificationPhrasePending: View {
     public init() {}
 
     public var body: some View {
+        // COPY BEGIN 8f102e96 [NEEDS HUMAN REVIEW]
         VStack(spacing: 8) {
             Text("The characters are not ready yet", bundle: .module)
                 .sectionHeading()
@@ -97,6 +100,7 @@ public struct VerificationPhrasePending: View {
             .foregroundStyle(palette.tertiaryText)
             .multilineTextAlignment(.center)
         }
+        // COPY END 8f102e96
     }
 }
 

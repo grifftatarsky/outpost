@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 56d190f0 [NEEDS HUMAN REVIEW]
 title: Messaging
 layout: default
 parent: Roadmap
@@ -14,6 +15,10 @@ Getting a message from one person to another, reliably, and saying honestly how 
 1. TOC
 {:toc}
 
+<!-- COPY END 56d190f0 -->
+
+<!-- COPY BEGIN f50039eb [NEEDS HUMAN REVIEW] -->
+
 ## Where this stands
 
 Rooms, invites with a verification phrase, messages sealed under a room epoch key and exchanged
@@ -23,6 +28,10 @@ a message that has not gone says so where it was sent.
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END f50039eb -->
+
+<!-- COPY BEGIN b6ec0c01 [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -51,6 +60,10 @@ messenger and not a notebook.
 - Owed, hardware only: a send across a UTC midnight boundary; three sends with the network off,
   then restored.
 
+<!-- COPY END b6ec0c01 -->
+
+<!-- COPY BEGIN 5d8893a3 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — the silent defects this closed</summary>
 
@@ -73,6 +86,10 @@ refused, and a room stopped being a room the moment a second person joined it.
 </details>
 
 </details>
+
+<!-- COPY END 5d8893a3 -->
+
+<!-- COPY BEGIN 1c84ab2b [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="delivery-marks-and-who-reports">
 <summary><b>Delivery marks, and who reports</b> — Complete (tested)</summary>
@@ -99,6 +116,10 @@ guessing, and without the app guessing on anybody's behalf.
   read seen both ways 2026-09-05.
 
 **Design.** Ruling 4.
+
+<!-- COPY END 1c84ab2b -->
+
+<!-- COPY BEGIN 3b30542f [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — the amendments, the state opt-in forces, and two defects</summary>
@@ -133,6 +154,10 @@ advances when a packet is written, and with no peers none is, so every solo mess
 
 </details>
 
+<!-- COPY END 3b30542f -->
+
+<!-- COPY BEGIN d6592f96 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="a-round-bigger-than-a-packet">
 <summary><b>A round bigger than a packet</b> — Complete (tested)</summary>
 
@@ -151,6 +176,10 @@ refuse does not lose everything in it.
 - Suite: `PacketCapTests`, four cases.
 - Real CloudKit, 2026-09-14: a 24-entry round arrived complete and in write order (`LiveRoundTests`).
 
+<!-- COPY END d6592f96 -->
+
+<!-- COPY BEGIN b8a87747 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record</summary>
 
@@ -164,6 +193,10 @@ the defect the tests found.
 </details>
 
 </details>
+
+<!-- COPY END b8a87747 -->
+
+<!-- COPY BEGIN 2c974681 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-rendezvous-heals-a-dead-share">
 <summary><b>The rendezvous heals a dead share</b> — Complete (tested)</summary>
@@ -192,6 +225,10 @@ dead channel.
 
 </details>
 
+<!-- COPY END 2c974681 -->
+
+<!-- COPY BEGIN e8faae74 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="a-round-acknowledges-every-packet-it-can">
 <summary><b>A round acknowledges every packet it can</b> — Complete (tested)</summary>
 
@@ -209,6 +246,10 @@ hold the rest, so that a sender's outbox drains and marks do not lag a round for
 - Real CloudKit, 2026-09-14: a 24-packet round settled and the outbox emptied (`LiveRoundTests`).
 
 </details>
+
+<!-- COPY END e8faae74 -->
+
+<!-- COPY BEGIN c2dd58d5 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="solos-a-conversation-with-one-person">
 <summary><b>Solos: a conversation with one person</b> — Complete (tested)</summary>
@@ -242,6 +283,10 @@ room I named after them, so that the common case is not the awkward case.
 exclusive as tab arrangements; one is the default and the other is the switch. The row departs from
 board 53: no sender in the preview, and the metrics are Messages' own — see the record.
 
+<!-- COPY END c2dd58d5 -->
+
+<!-- COPY BEGIN ccd10235 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — what was built, and a control that did nothing</summary>
 
@@ -269,6 +314,10 @@ already says who, so the runs no longer do (`showsRunAuthors`, off for a solo). 
 also noticed and left, with the reason, is in the inbox: a seen mark carries the reader's latest
 receipt time rather than their first.
 
+<!-- COPY END ccd10235 -->
+
+<!-- COPY BEGIN 6fae99d3 [NEEDS HUMAN REVIEW] -->
+
 **The row, 2026-09-05.** Measured against Messages on the same simulator: a 45 pt avatar, an 8 pt
 gutter with the 10 pt unread dot in it, text starting 84 pt in, a 17 pt semibold title, a 15 pt
 preview held to two lines with the space reserved, a chevron. The pill carrying the last sender's
@@ -292,6 +341,10 @@ changes the dock.
 the app had a two-person glyph. Board 53 requires a group to be *announced* as one; the second disc
 is decorative, so without a trait a screen reader heard a room and a direct message identically.
 
+<!-- COPY END 6fae99d3 -->
+
+<!-- COPY BEGIN 4f1f8237 [NEEDS HUMAN REVIEW] -->
+
 **Long press, 2026-08-20.** The platform's gesture: a glass-lifted preview of the real bubbles over
 Pin, Mark as Read, Silence and Leave. **Silence** rather than "hide alerts", because the app says what
 it will stop doing; **Leave** rather than "delete", because one person cannot delete a conversation
@@ -306,6 +359,10 @@ The organization's flag is deleted; silence means what it says.
 </details>
 
 </details>
+
+<!-- COPY END 4f1f8237 -->
+
+<!-- COPY BEGIN e9a5dd66 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="sending-feels-like-sending">
 <summary><b>Sending feels like sending</b> — Complete (proved above the mailbox)</summary>
@@ -353,6 +410,10 @@ feels like a messaging app rather than a form.
 - **Done.** The reason a send is refused reaches the conversation: the `cannotSend` sentence is shown above
   the composer, with an iCloud symbol, and leads the explanation sheet too.
 
+<!-- COPY END e9a5dd66 -->
+
+<!-- COPY BEGIN a172441b [NEEDS HUMAN REVIEW] -->
+
 **Testing**
 
 - Suite: `NoRoomToSendTests` for what a member is told and that nothing is lost;
@@ -384,6 +445,10 @@ feels like a messaging app rather than a form.
 
 </details>
 
+<!-- COPY END a172441b -->
+
+<!-- COPY BEGIN 327d0868 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="per-room-read-reporting">
 <summary><b>Per-room read reporting</b> — Complete (tested)</summary>
 
@@ -412,6 +477,10 @@ but the read-by detail view assumes it.
 
 </details>
 
+<!-- COPY END 327d0868 -->
+
+<!-- COPY BEGIN ddf6221b [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="the-read-by-detail-view">
 <summary><b>The read-by detail view</b> — Complete (tested)</summary>
 
@@ -438,6 +507,10 @@ that comes back, a reader whose cursor has not reached the message, a solo, the 
 in their own list, and the ordering.
 
 </details>
+
+<!-- COPY END ddf6221b -->
+
+<!-- COPY BEGIN 6da111a6 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="repairing-a-history-with-holes-in-it">
 <summary><b>Repairing a history with holes in it</b> — Complete (tested)</summary>
@@ -473,6 +546,10 @@ later.
   than a walk of the whole log on every read.
 - **Done.** A reader let into an Outpost asks its owner for it, by whose wall rather than by which room.
 
+<!-- COPY END 6da111a6 -->
+
+<!-- COPY BEGIN 517dd324 [NEEDS HUMAN REVIEW] -->
+
 **Testing**
 
 - Suite, `HistoryRepairTests`: a vanished packet is named as one entry of the right feed and the
@@ -492,6 +569,10 @@ later.
 **Design.** Board 57 (Collecting) covers the progress state: a live region naming peers, never a
 percentage. The completion is one sentence in the same place, dismissed by the member; there is no
 separate list of missing messages, because a missing entry has no words to list until it arrives.
+
+<!-- COPY END 517dd324 -->
+
+<!-- COPY BEGIN 4d18a4b9 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — what a request carries, why it rides the packet, and two defects it uncovered</summary>
@@ -521,6 +602,10 @@ collected.
 
 **Two defects the three-member test found**, neither visible with two accounts:
 
+<!-- COPY END 4d18a4b9 -->
+
+<!-- COPY BEGIN 98cea50f [NEEDS HUMAN REVIEW] -->
+
 1. *The third member of a room was handed a room with one other person in it.* The sent frontier is
    global, so what the inviter had forwarded to the second member before the third existed — the
    founding, the second member's admission, and with it the keys the second member's entries verify
@@ -545,10 +630,18 @@ after its revocation would be asked for and refused forever, and is not handled.
 
 </details>
 
+<!-- COPY END 98cea50f -->
+
+<!-- COPY BEGIN 28cfc30f [NEEDS HUMAN REVIEW] -->
+
 ## What has actually been observed
 
 **Observed** means seen on both devices, not inferred from a log line or a passing test. Two Apple
 Accounts, two simulators, against the live container.
+
+<!-- COPY END 28cfc30f -->
+
+<!-- COPY BEGIN 5cfaaf05 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>2026-09-01 — the first two-account run</summary>
@@ -573,6 +666,10 @@ a phone on 2026-09-09. See [Telling someone it arrived](notifications.md).
 
 </details>
 
+<!-- COPY END 5cfaaf05 -->
+
+<!-- COPY BEGIN 9b1f1631 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>2026-09-05 — after the rendezvous learned to heal</summary>
 
@@ -584,6 +681,10 @@ a phone on 2026-09-09. See [Telling someone it arrived](notifications.md).
 | Twenty-four packets in one round, one of them unacknowledgeable | **Fixed.** The loop stops at nothing now and names what it could not acknowledge. A 24-packet round was proved over real CloudKit on 2026-09-14. |
 
 </details>
+
+<!-- COPY END 9b1f1631 -->
+
+<!-- COPY BEGIN 452a8213 [NEEDS HUMAN REVIEW] -->
 
 ## Test plan
 
@@ -619,6 +720,12 @@ by `LiveRoundTests` on 2026-09-14.
 
 </details>
 
+<!-- COPY END 452a8213 -->
+
+<!-- COPY BEGIN 679c98af [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** A message that arrives twice. A message that never arrives and is
 not reported missing. A mark that claims delivery or reading that did not happen. Any of those is
 worse than a crash, because the app looks fine while it is wrong.
+
+<!-- COPY END 679c98af -->

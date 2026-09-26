@@ -16,6 +16,7 @@ public enum RecoveryKey {
         let signing = identity.signingSeed.base64EncodedString()
         let agreement = identity.agreementSeed.base64EncodedString()
         let made = ISO8601DateFormatter().string(from: createdAt)
+        // COPY BEGIN eb7806ac [NEEDS HUMAN REVIEW]
         return """
             \(header) v\(version)
 
@@ -32,6 +33,7 @@ public enum RecoveryKey {
             AGREEMENT: \(agreement)
             CHECK: \(checksum(signingSeed: identity.signingSeed, agreementSeed: identity.agreementSeed))
             """
+        // COPY END eb7806ac
     }
 
     public static func identity(from text: String) throws -> Identity {

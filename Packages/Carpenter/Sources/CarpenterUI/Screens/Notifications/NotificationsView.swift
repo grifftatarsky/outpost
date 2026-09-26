@@ -13,6 +13,7 @@ public struct NotificationsView: View {
     public var body: some View {
         List {
             Section {
+                // COPY BEGIN 8246d001 [NEEDS HUMAN REVIEW]
                 NavigationLink {
                     MessagingNotificationsView(
                         choices: settings.messaging, badges: settings.badges,
@@ -41,11 +42,13 @@ public struct NotificationsView: View {
                             ? Text("\(settings.outposts.wantedCount) of 5", bundle: .module)
                             : Text("Off", bundle: .module))
                 }
+                // COPY END 8246d001
             } footer: {
                 BadgeMeaningLine(meaning: settings.badges.meaning)
             }
             .groupedRowSurface()
 
+            // COPY BEGIN 0728e4fa [NEEDS HUMAN REVIEW]
             Section {
             } footer: {
                 Text(
@@ -53,7 +56,9 @@ public struct NotificationsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END 0728e4fa
 
+            // COPY BEGIN dd400255 [NEEDS HUMAN REVIEW]
             Section {
             } footer: {
                 Text(
@@ -61,10 +66,13 @@ public struct NotificationsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END dd400255
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN f79f95df [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Notifications", bundle: .module))
+        // COPY END f79f95df
         .toolbarTitleDisplayMode(.inline)
     }
 }

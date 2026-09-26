@@ -16,6 +16,7 @@ public struct HiddenCommentsSheet: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN 8f8d7935 [NEEDS HUMAN REVIEW]
                 SettingsHeaderCard(
                     icon: "eye.slash.fill",
                     title: hidden == 1
@@ -24,7 +25,9 @@ public struct HiddenCommentsSheet: View {
                     paragraph: Text(
                         "Somebody who wrote under this post keeps their comments to the people they have let into their own Outpost. You are not one of them, so their words are not on your device in any form you can read.",
                         bundle: .module))
+                // COPY END 8f8d7935
 
+                // COPY BEGIN ebbea6c3 [NEEDS HUMAN REVIEW]
                 Section {
                     point(
                         icon: "lock.fill",
@@ -46,7 +49,9 @@ public struct HiddenCommentsSheet: View {
                             bundle: .module))
                 }
                 .groupedRowSurface()
+                // COPY END ebbea6c3
 
+                // COPY BEGIN 198639c1 [NEEDS HUMAN REVIEW]
                 Section {
                     point(
                         icon: "exclamationmark.triangle.fill",
@@ -63,7 +68,9 @@ public struct HiddenCommentsSheet: View {
                             bundle: .module))
                 }
                 .groupedRowSurface()
+                // COPY END 198639c1
 
+                // COPY BEGIN 3cbaa876 [NEEDS HUMAN REVIEW]
                 Section {
                     NavigationLink {
                         OutpostSettingsView(settings)
@@ -77,9 +84,11 @@ public struct HiddenCommentsSheet: View {
                     }
                 }
                 .groupedRowSurface()
+                // COPY END 3cbaa876
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN 093f8372 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Missing comments", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -87,6 +96,7 @@ public struct HiddenCommentsSheet: View {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 093f8372
         }
     }
 

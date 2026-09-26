@@ -20,6 +20,7 @@ public struct OutpostDetailSettingsView: View {
     }
 
     public var body: some View {
+        // COPY BEGIN 40b82a84 [NEEDS HUMAN REVIEW]
         List {
             Section {
                 SettingsToggle(
@@ -50,6 +51,7 @@ public struct OutpostDetailSettingsView: View {
         .background(palette.background)
         .navigationTitle(Text(verbatim: person.displayName))
         .toolbarTitleDisplayMode(.inline)
+        // COPY END 40b82a84
     }
 }
 

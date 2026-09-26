@@ -17,6 +17,7 @@ public struct EraseEverythingView: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN 3f677afd [NEEDS HUMAN REVIEW]
                 Section {
                     fact(
                         "trash",
@@ -34,7 +35,9 @@ public struct EraseEverythingView: View {
                     Text("What is erased", bundle: .module).sectionHeading()
                 }
                 .groupedRowSurface()
+                // COPY END 3f677afd
 
+                // COPY BEGIN 96d3cb2b [NEEDS HUMAN REVIEW]
                 Section {
                     fact(
                         "person.2",
@@ -53,11 +56,13 @@ public struct EraseEverythingView: View {
                         bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END 96d3cb2b
 
                 Section {
                     Button {
                         confirming = true
                     } label: {
+                        // COPY BEGIN d6cb6319 [NEEDS HUMAN REVIEW]
                         Label {
                             Text("Erase everything", bundle: .module).primaryAction()
                         } icon: {
@@ -67,6 +72,7 @@ public struct EraseEverythingView: View {
                                 .frame(width: 30, height: 30)
                                 .foregroundStyle(.white)
                         }
+                        // COPY END d6cb6319
                     }
                     .destructiveActionButton()
                     .disabled(erasing)
@@ -74,6 +80,7 @@ public struct EraseEverythingView: View {
                     .listRowInsets(EdgeInsets())
                 }
             }
+            // COPY BEGIN a12e6eb2 [NEEDS HUMAN REVIEW]
             .alert(
                 Text("Erase everything?", bundle: .module), isPresented: $confirming
             ) {
@@ -92,9 +99,11 @@ public struct EraseEverythingView: View {
                 Text(
                     "Your identity goes from this device, from your iCloud Keychain, and from every other device you have. There is no undo and nobody can restore this for you.",
                     bundle: .module)
+            // COPY END a12e6eb2
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN bd94bb9e [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Erase everything", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .interactiveDismissDisabled(erasing)
@@ -104,6 +113,7 @@ public struct EraseEverythingView: View {
                         .disabled(erasing)
                 }
             }
+            // COPY END bd94bb9e
         }
     }
 

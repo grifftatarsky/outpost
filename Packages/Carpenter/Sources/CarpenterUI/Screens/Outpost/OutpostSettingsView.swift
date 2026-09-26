@@ -39,7 +39,9 @@ public struct OutpostSettingsView: View {
                 TextField(
                     text: $draft, axis: .vertical
                 ) {
+                    // COPY BEGIN 4a9380b0 [NEEDS HUMAN REVIEW]
                     Text("A line about you", bundle: .module)
+                    // COPY END 4a9380b0
                 }
                 .lineLimit(1...3)
                 .textFieldStyle(.plain)
@@ -52,6 +54,7 @@ public struct OutpostSettingsView: View {
                 .submitLabel(.done)
                 .onSubmit { saveBlurb(now: true) }
             } header: {
+                // COPY BEGIN f082e48d [NEEDS HUMAN REVIEW]
                 Text("Your blurb", bundle: .module).sectionHeading()
             } footer: {
                 if let blurbProblem {
@@ -61,6 +64,7 @@ public struct OutpostSettingsView: View {
                         "Sits under your name at the top of your Outpost, for anybody who can read it. A sentence or two — \(draft.count) of \(MemberProfileBody.blurbLimit).",
                         bundle: .module)
                 }
+                // COPY END f082e48d
             }
             .groupedRowSurface()
 
@@ -75,28 +79,35 @@ public struct OutpostSettingsView: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .background(palette.background)
+        // COPY BEGIN 1cdde6b2 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Outpost settings", bundle: .module))
+        // COPY END 1cdde6b2
         .toolbarTitleDisplayMode(.inline)
         .croppingPickedPhoto($picked) { await onFace?($0) }
     }
 
     @ViewBuilder private var picture: some View {
         Section {
+            // COPY BEGIN 13a41974 [NEEDS HUMAN REVIEW]
             SettingsToggle(
                 icon: "person.crop.square.fill",
                 title: Text("Show my picture", bundle: .module),
                 isOn: Binding(
                     get: { settings.showsPicture },
                     set: { shows in Task { await settings.onShowsPicture(shows) } }))
+            // COPY END 13a41974
 
             if settings.showsPicture, onPicture != nil {
+                // COPY BEGIN 513788a6 [NEEDS HUMAN REVIEW]
                 PhotosPicker(selection: $pickedPicture, matching: .images) {
                     SettingsRow(
                         icon: "photo.on.rectangle.angled",
                         title: Text("Use a different picture here", bundle: .module))
                 }
                 .buttonStyle(.plain)
+                // COPY END 513788a6
 
+                // COPY BEGIN 3f9ba109 [NEEDS HUMAN REVIEW]
                 if settings.hasOwnPicture {
                     Button(role: .destructive) { Task { await onPicture?(nil) } } label: {
                         SettingsRow(
@@ -112,6 +123,7 @@ public struct OutpostSettingsView: View {
             Text(
                 "The photo on your You page, at the top of your Outpost, unless you choose a different one here. Off, your Outpost draws your initials and the rooms you are in are unchanged. Either way a reader is only ever sent a picture where Share my photo is on.",
                 bundle: .module)
+                // COPY END 3f9ba109
         }
         .groupedRowSurface()
         .croppingPickedPhoto($pickedPicture) { await onPicture?($0) }
@@ -120,6 +132,7 @@ public struct OutpostSettingsView: View {
     @ViewBuilder private var stranger: some View {
         Section {
             VStack(spacing: 10) {
+                // COPY BEGIN 8c851b5d [NEEDS HUMAN REVIEW]
                 if onFace != nil {
                     Button { choosingFace = true } label: { face }
                         .buttonStyle(.plain)
@@ -128,6 +141,7 @@ public struct OutpostSettingsView: View {
                 } else {
                     face
                 }
+                // COPY END 8c851b5d
                 Text(verbatim: persona.displayName)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(palette.primaryText)
@@ -135,11 +149,13 @@ public struct OutpostSettingsView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
         } header: {
+            // COPY BEGIN b58d985d [NEEDS HUMAN REVIEW]
             Text("People you have not met", bundle: .module).sectionHeading()
         } footer: {
             Text(
                 "Anybody who comments on an Outpost you both read, but whom you have never shared a room or an Outpost with, is drawn like this — all of them as one person, so there is nothing to follow from thread to thread. This is how your own devices draw them. Nobody else sees it, and nobody is told.",
                 bundle: .module)
+            // COPY END b58d985d
         }
         .groupedRowSurface()
 
@@ -159,6 +175,7 @@ public struct OutpostSettingsView: View {
                 .submitLabel(.done)
                 .onSubmit { saveName(now: true) }
             }
+            // COPY BEGIN 1a308145 [NEEDS HUMAN REVIEW]
             if hasCustomFace, let onFace {
                 Button(role: .destructive) { Task { await onFace(nil) } } label: {
                     SettingsRow(
@@ -171,6 +188,7 @@ public struct OutpostSettingsView: View {
             Text("What you call them", bundle: .module).sectionHeading()
         } footer: {
             Text("Leave it empty for the name that comes with the picture.", bundle: .module)
+            // COPY END 1a308145
         }
         .groupedRowSurface()
 
@@ -185,11 +203,13 @@ public struct OutpostSettingsView: View {
                 }
             }
         } header: {
+            // COPY BEGIN 971541fd [NEEDS HUMAN REVIEW]
             Text("Pick a face", bundle: .module).sectionHeading()
         } footer: {
             Text(
                 "Each one takes your accent color, so changing the color changes them all. A picture you choose is left alone.",
                 bundle: .module)
+            // COPY END 971541fd
         }
         .groupedRowSurface()
     }
@@ -208,14 +228,17 @@ public struct OutpostSettingsView: View {
                     action: { Task { await onConsent(standing) } })
             }
         } header: {
+            // COPY BEGIN 7bea7391 [NEEDS HUMAN REVIEW]
             Text("Joining in", bundle: .module).sectionHeading()
         } footer: {
             Text(
                 "None of these touch your own Outpost. You decide who reads that one person at a time, and nothing here changes what they can already read.",
                 bundle: .module)
+            // COPY END 7bea7391
         }
         .groupedRowSurface()
 
+        // COPY BEGIN 1b55b0af [NEEDS HUMAN REVIEW]
         Section {
             Toggle(isOn: reviewing) {
                 Text("Ask about people I meet", bundle: .module)
@@ -228,6 +251,7 @@ public struct OutpostSettingsView: View {
                 bundle: .module)
         }
         .groupedRowSurface()
+        // COPY END 1b55b0af
     }
 
     private var reviewing: Binding<Bool> {

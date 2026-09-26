@@ -18,6 +18,7 @@ struct RefusedCheck<Actions: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: placement == .screen ? 18 : 12) {
+            // COPY BEGIN b3d7e2d2 [NEEDS HUMAN REVIEW]
             AdaptiveStack(spacing: 10) {
                 Image(systemName: "exclamationmark.circle")
                     .font(placement == .screen ? .title2 : .body)
@@ -31,6 +32,7 @@ struct RefusedCheck<Actions: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityAddTraits(.isHeader)
             }
+            // COPY END b3d7e2d2
 
             readings
                 .font(CarpenterFont.footnote)

@@ -48,6 +48,7 @@ extension YouView {
 
     var reachingYou: some View {
         Section {
+            // COPY BEGIN e27d2cdb [NEEDS HUMAN REVIEW]
             if let notifications {
                 NavigationLink {
                     NotificationsView(settings: notifications)
@@ -59,6 +60,7 @@ extension YouView {
                             "\(notifications.messaging.wantsMessages ? 1 : 0)", bundle: .module))
                 }
             }
+            // COPY END e27d2cdb
             NavigationLink {
                 PrivacyAndSafetySettingsView(
                     owner: owner,
@@ -84,6 +86,7 @@ extension YouView {
                     onUnblock: onUnblock,
                     outposts: outpostSettings)
             } label: {
+                // COPY BEGIN 798dd04d [NEEDS HUMAN REVIEW]
                 SettingsRow(
                     icon: "hand.raised.fill",
                     title: Text("Privacy & Safety", bundle: .module))
@@ -98,12 +101,14 @@ extension YouView {
                     title: Text("Devices", bundle: .module),
                     detail: Text("\(devices.filter(\.isActive).count)", bundle: .module))
             }
+                // COPY END 798dd04d
         }
         .groupedRowSurface()
     }
 
     var outpost: some View {
         Section {
+            // COPY BEGIN df1b987c [NEEDS HUMAN REVIEW]
             NavigationLink(value: owner.id) {
                 SettingsRow(
                     icon: "rectangle.stack.fill",
@@ -117,12 +122,14 @@ extension YouView {
                     icon: "text.bubble.fill",
                     title: Text("Outpost settings", bundle: .module))
             }
+            // COPY END df1b987c
         }
         .groupedRowSurface()
     }
 
     var howItLooks: some View {
         Section {
+            // COPY BEGIN b87e2993 [NEEDS HUMAN REVIEW]
             NavigationLink {
                 AppearanceSettingsView(
                     accent: $accent, inbox: $inbox, appIcon: $appIcon,
@@ -142,12 +149,14 @@ extension YouView {
                     icon: "hand.tap.fill",
                     title: Text("Behavior", bundle: .module))
             }
+            // COPY END b87e2993
         }
         .groupedRowSurface()
     }
 
     var thisDevice: some View {
         Section {
+            // COPY BEGIN 07edb102 [NEEDS HUMAN REVIEW]
             SettingsRow(
                 icon: "internaldrive.fill", tone: .device,
                 title: Text("Storage", bundle: .module),
@@ -197,12 +206,14 @@ extension YouView {
             Text(
                 "Photos and clips you receive stay on this device, sealed, until you erase everything.",
                 bundle: .module)
+            // COPY END 07edb102
         }
         .groupedRowSurface()
     }
 
     var gettingHelp: some View {
         Section {
+            // COPY BEGIN 93d36060 [NEEDS HUMAN REVIEW]
             NavigationLink {
                 HowItWorksView()
             } label: {
@@ -217,6 +228,7 @@ extension YouView {
                     icon: "envelope.fill", tone: .device,
                     title: Text("Get product updates", bundle: .module))
             }
+            // COPY END 93d36060
             #if DEBUG
             if let debugActions {
                 NavigationLink {
@@ -243,6 +255,7 @@ extension YouView {
             Button(role: .destructive) {
                 erasing = true
             } label: {
+                // COPY BEGIN f952e135 [NEEDS HUMAN REVIEW]
                 HStack(spacing: 12) {
                     IconTile(fill: palette.destructiveFill) {
                         Image("NukeMark", bundle: .module)
@@ -253,12 +266,15 @@ extension YouView {
                     Text("Erase everything", bundle: .module)
                         .foregroundStyle(palette.destructive)
                 }
+                // COPY END f952e135
             }
             .tint(palette.destructive)
         } footer: {
+            // COPY BEGIN 8a7d8ae2 [NEEDS HUMAN REVIEW]
             Text(
                 "Removes your member and everything this Apple Account holds in iCloud, on every device. It cannot remove what you already sent from anybody else's.",
                 bundle: .module)
+            // COPY END 8a7d8ae2
         }
         .groupedRowSurface()
     }

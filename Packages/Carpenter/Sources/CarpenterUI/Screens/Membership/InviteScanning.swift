@@ -99,6 +99,7 @@ enum ScanAttempt: Equatable {
         var body: some View {
             switch access {
             case .unsupported:
+                // COPY BEGIN 0e0bd3cd [NEEDS HUMAN REVIEW]
                 Text("This device cannot scan codes. Paste the invite instead.", bundle: .module)
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
@@ -120,6 +121,7 @@ enum ScanAttempt: Equatable {
                         .tint(palette.accentColor)
                         .tappable()
                     }
+                // COPY END 0e0bd3cd
                 }
             case .granted, .undecided:
                 EmptyView()
@@ -162,6 +164,7 @@ enum ScanAttempt: Equatable {
             }
         }
 
+        // COPY BEGIN a6e460d2 [NEEDS HUMAN REVIEW]
         private var scanButton: some View {
             Button(action: scan) {
                 Label {
@@ -174,6 +177,7 @@ enum ScanAttempt: Equatable {
             .buttonStyle(.plain)
             .foregroundStyle(palette.primaryText)
         }
+        // COPY END a6e460d2
 
         private func scan() {
             notice = nil
@@ -205,6 +209,7 @@ enum ScanAttempt: Equatable {
 
         private var question: some View {
             VStack(alignment: .leading, spacing: 10) {
+                // COPY BEGIN 8cc71634 [NEEDS HUMAN REVIEW]
                 Text("Scan invites with the camera?", bundle: .module)
                     .font(CarpenterFont.rowTitle)
                     .foregroundStyle(palette.primaryText)
@@ -215,7 +220,9 @@ enum ScanAttempt: Equatable {
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
+                // COPY END 8cc71634
 
+                // COPY BEGIN b3bbfd73 [NEEDS HUMAN REVIEW]
                 AdaptiveStack(spacing: 10) {
                     Button { wantsToScan = true } label: {
                         Text("Turn on scanning", bundle: .module)
@@ -226,6 +233,7 @@ enum ScanAttempt: Equatable {
                     }
                     .quietActionButton()
                 }
+                // COPY END b3bbfd73
             }
             .padding(14)
             .background(
@@ -240,6 +248,7 @@ enum ScanAttempt: Equatable {
         @State private var notice: CameraAccess?
 
         var body: some View {
+            // COPY BEGIN 7b2baf9b [NEEDS HUMAN REVIEW]
             if InviteScanning.deviceCanScan {
                 Section {
                     SettingsToggle(
@@ -254,6 +263,7 @@ enum ScanAttempt: Equatable {
                 }
                 .groupedRowSurface()
             }
+            // COPY END 7b2baf9b
         }
 
         private func change(_ wanted: Bool) {
@@ -298,6 +308,7 @@ enum ScanAttempt: Equatable {
                         .padding(.horizontal, CarpenterMetrics.screenMargin)
                         .padding(.bottom, 32)
                 }
+                // COPY BEGIN 4906735d [NEEDS HUMAN REVIEW]
                 .navigationTitle(Text("Scan an invite", bundle: .module))
                 .toolbarTitleDisplayMode(.inline)
                 .toolbar {
@@ -305,9 +316,11 @@ enum ScanAttempt: Equatable {
                         Button { dismiss() } label: { Text("Cancel", bundle: .module) }
                     }
                 }
+                // COPY END 4906735d
             }
         }
 
+        // COPY BEGIN 9a259e6a [NEEDS HUMAN REVIEW]
         private var guidance: Text {
             if stopped {
                 return Text("The camera stopped. Close this and paste the invite instead.", bundle: .module)
@@ -317,6 +330,7 @@ enum ScanAttempt: Equatable {
             }
             return Text("Point the camera at the invite's QR code.", bundle: .module)
         }
+        // COPY END 9a259e6a
     }
 
     private struct InviteScanner: UIViewControllerRepresentable {

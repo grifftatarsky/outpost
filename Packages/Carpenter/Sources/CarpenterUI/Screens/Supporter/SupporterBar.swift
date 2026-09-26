@@ -14,6 +14,7 @@ struct SupporterBar: View {
                     .foregroundStyle(palette.accentFill, .white)
                     .font(.system(size: 30, weight: .semibold))
 
+                // COPY BEGIN 2231431d [NEEDS HUMAN REVIEW]
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Become a Supporter", bundle: .module)
                         .font(.headline)
@@ -23,6 +24,7 @@ struct SupporterBar: View {
                 }
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.leading)
+                // COPY END 2231431d
 
                 Spacer(minLength: 8)
 

@@ -43,7 +43,9 @@ struct IdentitySettingsView: View {
                         }
                         .buttonStyle(.plain)
                         .photosPicker(isPresented: $choosingAvatar, selection: $pickedAvatar, matching: .images)
+                        // COPY BEGIN 3812cbad [NEEDS HUMAN REVIEW]
                         .accessibilityLabel(Text("Change your photo", bundle: .module))
+                        // COPY END 3812cbad
                     } else {
                         AvatarView(initials: owner.initials, diameter: 64, isAccented: true, image: ownAvatar)
                     }
@@ -54,6 +56,7 @@ struct IdentitySettingsView: View {
                     Text(fingerprint)
                         .font(.system(.subheadline, design: .monospaced))
                         .foregroundStyle(palette.tertiaryText)
+                    // COPY BEGIN da3b159f [NEEDS HUMAN REVIEW]
                     Text(
                         "This is your key, not an account. There is no sign-up, no password and no phone number, and nobody can look you up by it.",
                         bundle: .module
@@ -61,12 +64,14 @@ struct IdentitySettingsView: View {
                     .font(CarpenterFont.rowDetail)
                     .foregroundStyle(palette.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
+                    // COPY END da3b159f
                 }
                 .padding(.vertical, 6)
             }
             .groupedRowSurface()
 
             if onAvatarChange != nil, ownAvatar != nil {
+                // COPY BEGIN 628f64f4 [NEEDS HUMAN REVIEW]
                 Section {
                     Button(role: .destructive) {
                         Task { await onAvatarChange?(nil) }
@@ -80,10 +85,12 @@ struct IdentitySettingsView: View {
                     Text("Back to your initials on a disc, which is what everybody else sees today.", bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END 628f64f4
             }
 
             if let onRename {
                 Section {
+                    // COPY BEGIN c3543aff [NEEDS HUMAN REVIEW]
                     NavigationLink {
                         RenameMemberView(current: owner.displayName, onRename: onRename)
                     } label: {
@@ -96,10 +103,12 @@ struct IdentitySettingsView: View {
                     Text(
                         "Your name is how people in your rooms see you, once Share my name is on in Privacy & Safety. Until then it stays on this device, and changing it reaches nobody.",
                         bundle: .module)
+                    // COPY END c3543aff
                 }
                 .groupedRowSurface()
             }
 
+            // COPY BEGIN b67a4def [NEEDS HUMAN REVIEW]
             if !identityCode.isEmpty {
                 Section {
                     ShareLink(item: identityShareable) {
@@ -114,7 +123,9 @@ struct IdentitySettingsView: View {
                 }
                 .groupedRowSurface()
             }
+            // COPY END b67a4def
 
+            // COPY BEGIN a018d8bc [NEEDS HUMAN REVIEW]
             Section {
                 SettingsRow(
                     icon: "key.fill", tone: .device,
@@ -125,10 +136,13 @@ struct IdentitySettingsView: View {
                     bundle: .module)
             }
             .groupedRowSurface()
+            // COPY END a018d8bc
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 76020e40 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Your identity", bundle: .module))
+        // COPY END 76020e40
         .toolbarTitleDisplayMode(.inline)
         .croppingPickedPhoto($pickedAvatar) { picked in await onAvatarChange?(picked) }
     }

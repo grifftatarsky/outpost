@@ -26,6 +26,7 @@ public struct MessageDetailView: View {
 
     public var body: some View {
         List {
+            // COPY BEGIN 4d6bfd04 [NEEDS HUMAN REVIEW]
             Section {
                 Text(verbatim: message.body)
                     .font(CarpenterFont.bubble)
@@ -36,6 +37,7 @@ public struct MessageDetailView: View {
                 Text("Message", bundle: .module).sectionHeading()
             }
             .groupedRowSurface()
+            // COPY END 4d6bfd04
 
             delivery
             readBy
@@ -44,6 +46,7 @@ public struct MessageDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN c5a62b92 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Details", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .alert(
@@ -72,6 +75,7 @@ public struct MessageDetailView: View {
         } message: {
             Text(verbatim: problem ?? "")
         }
+        // COPY END c5a62b92
         .sheet(isPresented: $reporting) {
             ReportView(item: ViewedItem(message))
         }
@@ -79,6 +83,7 @@ public struct MessageDetailView: View {
 
     private var delivery: some View {
         Section {
+            // COPY BEGIN 7b083304 [NEEDS HUMAN REVIEW]
             row(Text("Sent", bundle: .module), value: message.sentAt.formatted(date: .abbreviated, time: .shortened))
             if let editedAt = message.editedAt {
                 row(Text("Edited", bundle: .module), value: editedAt.formatted(date: .abbreviated, time: .shortened))
@@ -94,6 +99,7 @@ public struct MessageDetailView: View {
                     "A read mark appears only if somebody's device reports one. Its absence is not evidence either way.",
                     bundle: .module)
             }
+            // COPY END 7b083304
         }
         .groupedRowSurface()
     }
@@ -113,6 +119,7 @@ public struct MessageDetailView: View {
                         detail: detail(of: reader.report))
                 }
             } header: {
+                // COPY BEGIN 3e540edb [NEEDS HUMAN REVIEW]
                 isSolo
                     ? Text("Read", bundle: .module).sectionHeading()
                     : Text("Read by", bundle: .module).sectionHeading()
@@ -126,11 +133,13 @@ public struct MessageDetailView: View {
                         "A time is when a device displayed this message, never that somebody read it.",
                         bundle: .module)
                 }
+                // COPY END 3e540edb
             }
             .groupedRowSurface()
         }
     }
 
+    // COPY BEGIN 52d2b508 [NEEDS HUMAN REVIEW]
     private func detail(of report: ReadReport) -> Text {
         switch report {
         case .displayed(let at):
@@ -141,6 +150,7 @@ public struct MessageDetailView: View {
             Text("Does not report", bundle: .module)
         }
     }
+    // COPY END 52d2b508
 
     @ViewBuilder
     private var history: some View {
@@ -160,11 +170,13 @@ public struct MessageDetailView: View {
                     .padding(.vertical, 2)
                 }
             } header: {
+                // COPY BEGIN 8605b99e [NEEDS HUMAN REVIEW]
                 Text("Every wording", bundle: .module).sectionHeading()
             } footer: {
                 Text(
                     "Each edit is its own entry in the room, so everybody can read what changed.",
                     bundle: .module)
+                // COPY END 8605b99e
             }
             .groupedRowSurface()
         }
@@ -172,6 +184,7 @@ public struct MessageDetailView: View {
 
     private var acts: some View {
         Section {
+            // COPY BEGIN 1dadf3f6 [NEEDS HUMAN REVIEW]
             if !message.isMine {
                 Button {
                     reporting = true
@@ -183,7 +196,9 @@ public struct MessageDetailView: View {
                     }
                 }
             }
+            // COPY END 1dadf3f6
 
+            // COPY BEGIN 0c0c9dd1 [NEEDS HUMAN REVIEW]
             Button(role: .destructive) {
                 confirmingHide = true
             } label: {
@@ -194,7 +209,9 @@ public struct MessageDetailView: View {
                 }
             }
             .tint(palette.destructive)
+            // COPY END 0c0c9dd1
 
+            // COPY BEGIN 2e314aa0 [NEEDS HUMAN REVIEW]
             Button {
                 explainingHide.toggle()
             } label: {
@@ -205,8 +222,10 @@ public struct MessageDetailView: View {
                         .foregroundStyle(palette.accentColor)
                 }
             }
+            // COPY END 2e314aa0
 
             if explainingHide {
+                // COPY BEGIN 9de72c36 [NEEDS HUMAN REVIEW]
                 Text(
                     """
                     Hiding is yours alone. The message stops being drawn on your devices and stays \
@@ -221,11 +240,14 @@ public struct MessageDetailView: View {
                     """,
                     bundle: .module
                 )
+                // COPY END 9de72c36
                 .font(CarpenterFont.caption)
                 .foregroundStyle(palette.secondaryText)
             }
         } header: {
+            // COPY BEGIN dd2f7a19 [NEEDS HUMAN REVIEW]
             Text("This message", bundle: .module).sectionHeading()
+            // COPY END dd2f7a19
         }
         .groupedRowSurface()
     }

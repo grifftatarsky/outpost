@@ -27,6 +27,7 @@ public struct AvatarCropView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            // COPY BEGIN d2ddcc67 [NEEDS HUMAN REVIEW]
             if let picture {
                 stage(picture)
             } else if couldNotRead {
@@ -38,6 +39,7 @@ public struct AvatarCropView: View {
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            // COPY END d2ddcc67
 
             buttons
         }
@@ -103,7 +105,9 @@ public struct AvatarCropView: View {
             .onChange(of: circle) { _, _ in
                 offset = held(offset, within: room(drawn(image, at: zoom)))
             }
+            // COPY BEGIN 81ae5c18 [NEEDS HUMAN REVIEW]
             .accessibilityLabel(Text("Move and scale your picture", bundle: .module))
+            // COPY END 81ae5c18
         }
     }
 
@@ -127,6 +131,7 @@ public struct AvatarCropView: View {
 
     private var buttons: some View {
         VStack(spacing: 10) {
+            // COPY BEGIN dcde4124 [NEEDS HUMAN REVIEW]
             Text("Drag to move, pinch to zoom.", bundle: .module)
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.secondaryText)
@@ -140,7 +145,9 @@ public struct AvatarCropView: View {
             }
             .prominentActionButton()
             .disabled(picture == nil)
+            // COPY END dcde4124
 
+            // COPY BEGIN 2dcbfc89 [NEEDS HUMAN REVIEW]
             Button {
                 dismiss()
             } label: {
@@ -149,6 +156,7 @@ public struct AvatarCropView: View {
                     .foregroundStyle(palette.accentColor)
                     .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
             }
+            // COPY END 2dcbfc89
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 24)

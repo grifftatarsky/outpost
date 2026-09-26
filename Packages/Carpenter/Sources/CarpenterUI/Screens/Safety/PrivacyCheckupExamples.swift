@@ -8,6 +8,7 @@ struct TabExample: View {
 
     let present: Bool
 
+    // COPY BEGIN cbb12361 [NEEDS HUMAN REVIEW]
     var body: some View {
         HStack(spacing: 26) {
             item("bubble.left", Text("Solos", bundle: .module), isOn: false)
@@ -20,6 +21,7 @@ struct TabExample: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
     }
+    // COPY END cbb12361
 
     private func item(_ symbol: String, _ label: Text, isOn: Bool) -> some View {
         VStack(spacing: 3) {
@@ -37,6 +39,7 @@ struct ReachExample: View {
 
     let consent: OutpostConsent
 
+    // COPY BEGIN 4ad9bfa0 [NEEDS HUMAN REVIEW]
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             row(
@@ -56,6 +59,7 @@ struct ReachExample: View {
         }
         .padding(.vertical, 2)
     }
+    // COPY END 4ad9bfa0
 
     private func row(_ person: Member, who: Text, reads: Bool, note: Text? = nil) -> some View {
         HStack(spacing: 10) {
@@ -85,6 +89,7 @@ struct ReviewExample: View {
     var body: some View {
         Group {
             if asks {
+                // COPY BEGIN bcc1325d [NEEDS HUMAN REVIEW]
                 HStack(spacing: 10) {
                     PersonAvatarView(member: Sample.other(named: true), diameter: 30)
                     VStack(alignment: .leading, spacing: 2) {
@@ -102,6 +107,7 @@ struct ReviewExample: View {
                     .font(CarpenterFont.rowDetail)
                     .foregroundStyle(palette.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                // COPY END bcc1325d
             }
         }
         .padding(.vertical, 4)
@@ -128,6 +134,7 @@ struct ExampleCard<Content: View>: View {
     }
 }
 
+// COPY BEGIN 2e911442 [NEEDS HUMAN REVIEW]
 enum Sample {
     static let otherID = ParticipantID(rawValue: Data([0xA4, 0x1F, 0x2C, 0x91, 0x37, 0x08]))
 
@@ -135,6 +142,7 @@ enum Sample {
         named ? Member(id: otherID, displayName: "Robin") : Member.placeholder(otherID)
     }
 }
+// COPY END 2e911442
 
 struct SeenAsRow: View {
     @Environment(\.palette) private var palette
@@ -143,10 +151,13 @@ struct SeenAsRow: View {
     let isAccented: Bool
     var photo: Image? = nil
     var wearsTheMark: Bool = false
+    // COPY BEGIN 517f7eb1 [NEEDS HUMAN REVIEW]
     var preview: Text = Text("Are you around later?", bundle: .module)
+    // COPY END 517f7eb1
 
     var body: some View {
         HStack(spacing: 12) {
+            // COPY BEGIN 2328ee02 [NEEDS HUMAN REVIEW]
             if wearsTheMark {
                 ZStack {
                     Circle().fill(palette.accentFill)
@@ -159,6 +170,7 @@ struct SeenAsRow: View {
                     initials: person.initials, diameter: CarpenterMetrics.roomAvatar, isAccented: isAccented,
                     image: photo)
             }
+            // COPY END 2328ee02
             VStack(alignment: .leading, spacing: 2) {
                 Text(person.displayName)
                     .font(CarpenterFont.rowTitle)
@@ -179,6 +191,7 @@ struct FocusExample: View {
 
     var body: some View {
         VStack(spacing: 8) {
+            // COPY BEGIN 1f9a5148 [NEEDS HUMAN REVIEW]
             if shared {
                 HStack(spacing: 6) {
                     Image(systemName: "moon.fill")
@@ -203,6 +216,7 @@ struct FocusExample: View {
                         .padding(.leading, 16)
                 }
                 .accessibilityHidden(true)
+            // COPY END 1f9a5148
         }
         .frame(maxWidth: .infinity)
     }
@@ -214,6 +228,7 @@ struct ReceiptExample: View {
     let reports: Bool
 
     var body: some View {
+        // COPY BEGIN a4905f6f [NEEDS HUMAN REVIEW]
         VStack(alignment: .trailing, spacing: 4) {
             MessageBubbleView(text: String(localized: "See you at eight", bundle: .module), isMine: true, position: .only)
             DeliveryMarkView(delivery: reports ? .displayed(at: .now) : .notReported)
@@ -227,6 +242,7 @@ struct ReceiptExample: View {
             .foregroundStyle(palette.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
+        // COPY END a4905f6f
     }
 }
 
@@ -253,6 +269,7 @@ struct BlurExample: View {
                 }
             }
             .accessibilityHidden(true)
+            // COPY BEGIN 20f9cbbc [NEEDS HUMAN REVIEW]
             Text(
                 blurred
                     ? "Blurred until you choose to look."
@@ -261,6 +278,7 @@ struct BlurExample: View {
             )
             .font(CarpenterFont.rowDetail)
             .foregroundStyle(palette.secondaryText)
+            // COPY END 20f9cbbc
             Spacer(minLength: 0)
         }
     }
@@ -273,6 +291,7 @@ struct SoloCheckExample: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            // COPY BEGIN cd08f79e [NEEDS HUMAN REVIEW]
             if required {
                 IconTile(
                     "person.crop.circle.badge.checkmark",
@@ -287,6 +306,7 @@ struct SoloCheckExample: View {
                     person: Member.placeholder(Sample.otherID), isAccented: false,
                     preview: Text("\u{201C}hello — it's me\u{201D}", bundle: .module))
             }
+            // COPY END cd08f79e
             Spacer(minLength: 0)
         }
     }
@@ -304,6 +324,7 @@ struct RestoreAskExample: View {
                 fill: palette.tileFill(.device), size: CarpenterMetrics.roomAvatar)
             VStack(alignment: .leading, spacing: 2) {
                 if told {
+                    // COPY BEGIN 743d3d2d [NEEDS HUMAN REVIEW]
                     Text("Outie set up a new device", bundle: .module)
                         .font(CarpenterFont.rowTitle)
                         .foregroundStyle(palette.primaryText)
@@ -321,6 +342,7 @@ struct RestoreAskExample: View {
                         bundle: .module)
                         .font(CarpenterFont.rowDetail)
                         .foregroundStyle(palette.secondaryText)
+                    // COPY END 743d3d2d
                 }
             }
             Spacer(minLength: 0)
@@ -340,6 +362,7 @@ struct RestoreHoldExample: View {
                 fill: palette.tileFill(.device), size: CarpenterMetrics.roomAvatar)
             VStack(alignment: .leading, spacing: 2) {
                 if holding {
+                    // COPY BEGIN 7d2290ea [NEEDS HUMAN REVIEW]
                     Text("Read these to each other first", bundle: .module)
                         .font(CarpenterFont.rowTitle)
                         .foregroundStyle(palette.primaryText)
@@ -353,6 +376,7 @@ struct RestoreHoldExample: View {
                     Text("Nothing waits on you being at your phone.", bundle: .module)
                         .font(CarpenterFont.rowDetail)
                         .foregroundStyle(palette.secondaryText)
+                    // COPY END 7d2290ea
                 }
             }
             Spacer(minLength: 0)
@@ -366,6 +390,7 @@ struct BlockExample: View {
     let blocked: Bool
 
     var body: some View {
+        // COPY BEGIN 653dd83a [NEEDS HUMAN REVIEW]
         HStack(spacing: 12) {
             if blocked {
                 IconTile("hand.raised.slash.fill", fill: palette.tileFill(.device), size: CarpenterMetrics.roomAvatar)
@@ -379,5 +404,6 @@ struct BlockExample: View {
             }
             Spacer(minLength: 0)
         }
+        // COPY END 653dd83a
     }
 }

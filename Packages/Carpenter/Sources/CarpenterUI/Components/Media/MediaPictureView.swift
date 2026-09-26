@@ -69,6 +69,7 @@ public struct MediaPictureView: View {
                     if isVideo { clipMarks }
                 }
             case .gone:
+                // COPY BEGIN cdf3adf0 [NEEDS HUMAN REVIEW]
                 notice(
                     symbol: isVideo ? "video.badge.exclamationmark" : "photo.badge.exclamationmark",
                     title: Text("No longer available", bundle: .module),
@@ -80,6 +81,7 @@ public struct MediaPictureView: View {
                     symbol: "arrow.clockwise",
                     title: Text("Could not load", bundle: .module),
                     detail: Text("Tap to try again.", bundle: .module))
+                // COPY END cdf3adf0
             }
         }
     }
@@ -128,6 +130,7 @@ public struct MediaPictureView: View {
         Button {
             loader?.reveal(media.id)
         } label: {
+            // COPY BEGIN 8e5fb51e [NEEDS HUMAN REVIEW]
             VStack(spacing: 6) {
                 Image(systemName: "eye.slash")
                     .font(.title2)
@@ -141,13 +144,16 @@ public struct MediaPictureView: View {
             }
             .foregroundStyle(.white)
             .padding(14)
+            // COPY END 8e5fb51e
         }
         .buttonStyle(.plain)
         .overMedia(in: RoundedRectangle(cornerRadius: 14, style: .continuous), interactive: true)
+        // COPY BEGIN 9f035268 [NEEDS HUMAN REVIEW]
         .accessibilityLabel(
             isVideo
                 ? Text("Sensitive video, hidden. Show it.", bundle: .module)
                 : Text("Sensitive photo, hidden. Show it.", bundle: .module))
+        // COPY END 9f035268
     }
 
     private func notice(symbol: String, title: Text, detail: Text) -> some View {
@@ -182,6 +188,7 @@ public struct MediaPictureView: View {
     }
 
     private func label(for state: MediaLoadState) -> Text {
+        // COPY BEGIN 0b72c4b7 [NEEDS HUMAN REVIEW]
         let what = isVideo
             ? Text("Video, \(Self.length(media.duration ?? 0))", bundle: .module)
             : Text("Photo", bundle: .module)
@@ -197,6 +204,7 @@ public struct MediaPictureView: View {
         case .failed:
             return Text("\(what), could not load. Double-tap to try again.", bundle: .module)
         }
+        // COPY END 0b72c4b7
     }
 }
 

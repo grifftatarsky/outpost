@@ -1,3 +1,5 @@
+<!-- COPY BEGIN 197aa307 [NEEDS HUMAN REVIEW] -->
+
 # Brand assets — complete set
 
 The eight files in this directory's root are what the 2026-08-18 design pass was given: full lockups,
@@ -16,6 +18,10 @@ The complete set is here, and has been all along, in `Design/logos/`:
 
 `icon_white_<accent>.svg` is the white-on-accent variant board 83 asks for.
 
+<!-- COPY END 197aa307 -->
+
+<!-- COPY BEGIN 3cfe0c8e [NEEDS HUMAN REVIEW] -->
+
 ## One naming inconsistency
 
 The SVGs spell it **verdegris**; the app spells it **verdigris**, in `Accent.swift`, in
@@ -25,3 +31,5 @@ design pass also writes verdigris.
 Nothing resolves these SVGs by name at runtime, so this breaks nothing today — the app draws from the
 asset catalog, which is consistent. It matters at the point somebody regenerates the icon sets from
 source and the filename does not match the accent case it belongs to.
+
+<!-- COPY END 3cfe0c8e -->

@@ -118,6 +118,7 @@ public struct ReactionBar: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
+        // COPY BEGIN 22aba5fd [NEEDS HUMAN REVIEW]
         .accessibilityHint(Text("Double-tap to see every reaction", bundle: .module))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { isListingReactions = true }
@@ -130,6 +131,7 @@ public struct ReactionBar: View {
                 }
             }
         }
+        // COPY END 22aba5fd
     }
 
     var spoken: Text {
@@ -140,6 +142,7 @@ public struct ReactionBar: View {
     private var controls: some View {
         HStack(spacing: 7) {
             if !isReadOnly {
+            // COPY BEGIN 0309ce6c [NEEDS HUMAN REVIEW]
             Button { isPickingEmoji = true } label: {
                 Image(systemName: "face.smiling")
                     .font(.system(size: control * 0.57))
@@ -153,10 +156,12 @@ public struct ReactionBar: View {
             .buttonStyle(.plain)
             .tappable()
             .accessibilityLabel(Text("Add a reaction", bundle: .module))
+            // COPY END 0309ce6c
             }
 
             Spacer(minLength: 0)
 
+            // COPY BEGIN d50cd84d [NEEDS HUMAN REVIEW]
             if let commentCount, let thread {
                 NavigationLink(value: thread) {
                     Text(
@@ -170,6 +175,7 @@ public struct ReactionBar: View {
                 }
                 .buttonStyle(.plain)
             }
+            // COPY END d50cd84d
         }
     }
 }
@@ -190,9 +196,11 @@ struct MoreReactionsChip: View {
             HStack(spacing: 5) {
                 Text(verbatim: emoji)
                     .font(.footnote)
+                // COPY BEGIN 078fd40a [NEEDS HUMAN REVIEW]
                 Text("more", bundle: .module)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(palette.neutralText)
+                // COPY END 078fd40a
             }
             .padding(.horizontal, 10)
             .frame(height: 30)
@@ -217,8 +225,10 @@ struct MoreReactionsChip: View {
         }
         .buttonStyle(.plain)
         .tappable()
+        // COPY BEGIN e201efdd [NEEDS HUMAN REVIEW]
         .accessibilityLabel(
             Text("^[\(kinds) more reaction](inflect: true)", bundle: .module))
+        // COPY END e201efdd
     }
 }
 
@@ -250,15 +260,18 @@ struct EmojiPicker: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12, pinnedViews: [.sectionHeaders]) {
                     if query.isEmpty {
+                        // COPY BEGIN 647f164c [NEEDS HUMAN REVIEW]
                         if !recents.emoji.isEmpty {
                             section(
                                 Text("Recent", bundle: .module),
                                 recents.emoji.map { EmojiCatalogue.Entry(emoji: $0, name: $0) })
                         }
+                        // COPY END 647f164c
                         ForEach(catalogue.groups) { group in
                             section(Text(verbatim: group.name), group.emoji)
                         }
                     } else if found.isEmpty {
+                        // COPY BEGIN a53d6282 [NEEDS HUMAN REVIEW]
                         Text("Nothing matches \(query).", bundle: .module)
                             .font(CarpenterFont.footnote)
                             .foregroundStyle(palette.secondaryText)
@@ -267,6 +280,7 @@ struct EmojiPicker: View {
                     } else {
                         section(
                             Text("^[\(found.count) match](inflect: true)", bundle: .module), found)
+                        // COPY END a53d6282
                     }
                 }
                 .padding(.horizontal, 14)
@@ -286,6 +300,7 @@ struct EmojiPicker: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(palette.secondaryText)
+            // COPY BEGIN a2efc787 [NEEDS HUMAN REVIEW]
             TextField(text: $query) {
                 Text("Search by name", bundle: .module)
             }
@@ -302,6 +317,7 @@ struct EmojiPicker: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Clear the search", bundle: .module))
             }
+            // COPY END a2efc787
         }
         .font(CarpenterFont.rowDetail)
         .padding(.horizontal, 14)

@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 64b59f32 [NEEDS HUMAN REVIEW]
 title: Foundations
 layout: default
 parent: Roadmap
@@ -14,6 +15,10 @@ Accessibility, the test seam, an outside review of the crypto, and getting it sh
 1. TOC
 {:toc}
 
+<!-- COPY END 64b59f32 -->
+
+<!-- COPY BEGIN b9b9b38d [NEEDS HUMAN REVIEW] -->
+
 ## Where this stands
 
 Cross-cutting work: the rules that hold everywhere, the tests that hold them, and what has to be true
@@ -21,6 +26,10 @@ before anybody outside sees a build.
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END b9b9b38d -->
+
+<!-- COPY BEGIN 7572746d [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -45,6 +54,10 @@ the theme is a choice rather than a hazard.
   "derive until it passes" is satisfied by black; the border test.
 
 **Design.** Rulings 13, 9 and the appendix.
+
+<!-- COPY END 7572746d -->
+
+<!-- COPY BEGIN a18e6058 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — what was actually wrong, and the measurements</summary>
@@ -73,6 +86,10 @@ seven; it is only safe because filled surfaces derive their own value.
 </details>
 
 </details>
+
+<!-- COPY END a18e6058 -->
+
+<!-- COPY BEGIN 8add9285 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="tab-roots-on-system-navigation-bars">
 <summary><b>Tab roots on system navigation bars</b> — Complete (tested)</summary>
@@ -103,6 +120,10 @@ them.
 
 **Design.** Rulings 11 and 2; board 85.
 
+<!-- COPY END 8add9285 -->
+
+<!-- COPY BEGIN 9e180cb3 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — what the ruling reversed</summary>
 
@@ -117,6 +138,10 @@ been a `Color`, which cannot be measured; it is a `Swatch` composited over the g
 </details>
 
 </details>
+
+<!-- COPY END 9e180cb3 -->
+
+<!-- COPY BEGIN 939218f4 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="haptics-bounded-to-three-cues">
 <summary><b>Haptics, bounded to three cues</b> — Complete (tested)</summary>
@@ -139,6 +164,10 @@ something, so that a haptic means something rather than being texture.
 
 **Design.** Ruling 12.
 
+<!-- COPY END 939218f4 -->
+
+<!-- COPY BEGIN 279b1803 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — the six that went</summary>
 
@@ -151,6 +180,10 @@ commit.
 </details>
 
 </details>
+
+<!-- COPY END 279b1803 -->
+
+<!-- COPY BEGIN a3de464d [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="asking-for-photos-honestly">
 <summary><b>Asking for photos honestly</b> — Complete (tested)</summary>
@@ -175,6 +208,10 @@ picker is not a surprise.
 **Detail.** [Before TestFlight](../pre-testflight.md#permissions-explained-before-they-are-asked).
 
 </details>
+
+<!-- COPY END a3de464d -->
+
+<!-- COPY BEGIN d8d96ee2 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="trust-and-safety-in-the-app">
 <summary><b>Trust and safety in the app</b> — Complete (operational proof owed)</summary>
@@ -208,6 +245,10 @@ in under thirty seconds, so that Guideline 1.2 is met in fact and not in a note.
 [Before TestFlight, operational](../pre-testflight.md#operational).
 
 </details>
+
+<!-- COPY END d8d96ee2 -->
+
+<!-- COPY BEGIN 79e7ec2d [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="an-accessibility-pass">
 <summary><b>An accessibility pass</b> — Complete (hardware proof owed)</summary>
@@ -280,6 +321,10 @@ that it is usable rather than nominally accessible.
   **Unread** is a dot that is present or absent, which is not a color distinction at all, and it
   carries an `Unread` label that is hidden when there is nothing to say.
 
+<!-- COPY END 79e7ec2d -->
+
+<!-- COPY BEGIN 2b0740b6 [NEEDS HUMAN REVIEW] -->
+
 **Apple's own audit, run 2026-09-16.** `AccessibilityAuditTests` calls
 `XCUIApplication.performAccessibilityAudit()` on the rooms list, every tab and a conversation. It
 could not run for a day because the app never went idle — that turned out to be a render loop, see
@@ -297,6 +342,10 @@ out of the result bundle's activity tree.
 | Text clipped | 1 | the Solos explanation |
 
 **Read before fixing, because not all of these are defects of the same kind.**
+
+<!-- COPY END 2b0740b6 -->
+
+<!-- COPY BEGIN 38d00008 [NEEDS HUMAN REVIEW] -->
 
 - **Tab-bar labels staying small is documented; nothing else in that list is.** Corrected
   2026-09-16 after Griff asked for the documentation. Apple's `UILargeContentViewerInteraction`
@@ -332,6 +381,10 @@ out of the result bundle's activity tree.
 
 **Changing a color for contrast changes how the app looks**, so those five are Griff's to see before
 they move.
+
+<!-- COPY END 38d00008 -->
+
+<!-- COPY BEGIN e6621dbd [NEEDS HUMAN REVIEW] -->
 
 **The audit extended, 2026-09-16 evening.** `AccessibilityAuditTests` now launches quieted and pinned
 to verdigris, and covers four more surfaces: *Appearance* and *Color*, *Privacy & Safety*, *Join a
@@ -369,6 +422,10 @@ bundle's element screenshots, which this Xcode crops to the element.
 - **The sample bubbles** have no line limit and no fixed height in `AppearanceSample`; why they are
   flagged is not established.
 
+<!-- COPY END e6621dbd -->
+
+<!-- COPY BEGIN a31b88f6 [NEEDS HUMAN REVIEW] -->
+
 Nothing else on the four new surfaces was flagged: no hit region, no missing or useless description,
 no trait. Of what was built today, the waiting list and the room sheet's new section were audited and
 added nothing but the system footer gray; *Join a room* was audited with scanning **off** on the
@@ -385,6 +442,10 @@ they had not. Fixed with `DeliveryMarkSpeaksTests`, five tests, one of which pin
 original defect so that wiring the old label back up fails loudly.
 
 **Testing**
+
+<!-- COPY END a31b88f6 -->
+
+<!-- COPY BEGIN 7ea350db [NEEDS HUMAN REVIEW] -->
 
 - Suite: the contrast and symbol-name tests.
 - Device: Dynamic Type at `accessibility-extra-extra-extra-large`, 2026-08-19.
@@ -412,6 +473,10 @@ original defect so that wiring the old label back up fails loudly.
 and 92 for light mode as values; Component Blockers carries the requirement for every board plus the
 four rules that hold everywhere.
 
+<!-- COPY END 7ea350db -->
+
+<!-- COPY BEGIN 8077dda9 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — the values that hold everywhere</summary>
 
@@ -428,6 +493,10 @@ it is Apple's own `systemGray` now. Delivery marks are not controls and have no 
 
 </details>
 
+<!-- COPY END 8077dda9 -->
+
+<!-- COPY BEGIN 7e190556 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="a-cloudkit-integration-target">
 <summary><b>A CloudKit integration target</b> — Complete (tested)</summary>
 
@@ -435,12 +504,20 @@ it is Apple's own `systemGray` now. Delivery marks are not controls and have no 
 that the one seam a green suite has been wrong about more than once is covered by something that
 touches it.
 
+<!-- COPY END 7e190556 -->
+
+<!-- COPY BEGIN 605d2405 [NEEDS HUMAN REVIEW] -->
+
 ### Why it can be small
 
 The seam is already right, and that is most of the work. `Mailbox` is a protocol, `PacketWire` maps a
 packet to named fields **above every transport**, and `CloudKitMailbox` is the only thing that knows
 what a `CKRecord` is. So this target needs no app, no session and no UI — it drives the mailbox
 directly.
+
+<!-- COPY END 605d2405 -->
+
+<!-- COPY BEGIN 3dfc424d [NEEDS HUMAN REVIEW] -->
 
 ### Shape
 
@@ -459,6 +536,10 @@ in the writer's own database, so everything below works single-account. The shar
 rig's, and the rig doc says which.
 
 **Acceptance criteria**
+
+<!-- COPY END 3dfc424d -->
+
+<!-- COPY BEGIN 7f7862ee [NEEDS HUMAN REVIEW] -->
 
 - **Done.** A packet survives the round trip byte-identical: `PacketWire.fields(of:)` → `CKRecord` →
   `packet(from:)` — `aPacketComesBackExactly`, against a live account, 2026-09-13. **This is the test
@@ -490,6 +571,10 @@ rig's, and the rig doc says which.
 [A test seam that cannot lie](#a-test-seam-that-cannot-lie), which is where this was parked.
 
 </details>
+
+<!-- COPY END 7f7862ee -->
+
+<!-- COPY BEGIN 88331dfb [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="a-test-seam-that-cannot-lie">
 <summary><b>A test seam that cannot lie</b> — Complete (tested)</summary>
@@ -524,6 +609,10 @@ that a green suite means something.
 
 - Suite: the regression guards below.
 
+<!-- COPY END 88331dfb -->
+
+<!-- COPY BEGIN efd60359 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — the regression guards worth knowing</summary>
 
@@ -543,6 +632,10 @@ CloudKit. It has happened at least five times.
 </details>
 
 </details>
+
+<!-- COPY END efd60359 -->
+
+<!-- COPY BEGIN 397a14d1 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="before-testflight">
 <summary><b>Before TestFlight</b> — Incomplete</summary>
@@ -571,6 +664,10 @@ proven, so that the first outside tester is not the first audit.
 
 **Testing.** The checklist itself: [Before TestFlight](../pre-testflight.md).
 
+<!-- COPY END 397a14d1 -->
+
+<!-- COPY BEGIN 9fa4ce4f [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — the gates before any release</summary>
 
@@ -586,6 +683,10 @@ proven, so that the first outside tester is not the first audit.
 </details>
 
 </details>
+
+<!-- COPY END 9fa4ce4f -->
+
+<!-- COPY BEGIN 33967feb [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-help-the-welcome-tour-promises">
 <summary><b>The help the welcome tour promises</b> — Complete (tested)</summary>
@@ -608,6 +709,10 @@ the UI tests exist for and those are not run. Not seen on the rig either. **Desi
 
 </details>
 
+<!-- COPY END 33967feb -->
+
+<!-- COPY BEGIN fca6e1eb [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="light-mode-from-rules-rather-than-drawings">
 <summary><b>Light mode, from rules rather than drawings</b> — Complete (tested)</summary>
 
@@ -624,6 +729,10 @@ swatch in `Palette` carries a real light value, nothing sets `preferredColorSche
 on every surface it is drawn on* and *White clears AA on every accent, **in both appearances***.
 
 What is left is not building; it is looking.
+
+<!-- COPY END fca6e1eb -->
+
+<!-- COPY BEGIN 949d237a [NEEDS HUMAN REVIEW] -->
 
 - **Done.** The palette answers both appearances, and the contrast audit covers both rather than only dark.
 - **Done.** **The sweep**, done 2026-09-15 and recorded on
@@ -657,6 +766,10 @@ second set of drawings: four surfaces, the ink and edge steps, the accent's ligh
 swatch's value as text beside it. Boards 13 and 14.
 
 </details>
+
+<!-- COPY END 949d237a -->
+
+<!-- COPY BEGIN a6075f6b [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="transitions">
 <summary><b>Transitions</b> — Complete (tested)</summary>
@@ -698,6 +811,10 @@ declaring a cross-fade on the line.
 decision task before it is an implementation one.
 
 </details>
+
+<!-- COPY END a6075f6b -->
+
+<!-- COPY BEGIN 5bd4c3cc [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="somebody-outside-the-project-reads-the-crypto">
 <summary><b>The crypto, written down</b> — Complete (tested)</summary>
@@ -741,6 +858,12 @@ the project behind it, which is the ruling and not an omission.
 
 </details>
 
+<!-- COPY END 5bd4c3cc -->
+
+<!-- COPY BEGIN 74808cb2 [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** A green suite next to a broken app. That is the specific failure
 this epic exists to prevent, and it has happened enough times here to be the working assumption
 rather than a worry.
+
+<!-- COPY END 74808cb2 -->

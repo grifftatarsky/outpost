@@ -76,13 +76,16 @@ public struct OutpostListView: View {
         #if os(iOS)
             .listSectionIndexVisibility(query.isEmpty ? .visible : .hidden)
         #endif
+        // COPY BEGIN 4e413b0a [NEEDS HUMAN REVIEW]
         .searchable(text: $query, prompt: Text("Search people", bundle: .module))
         .tint(palette.accentColor)
         .navigationTitle(Text("All Outposts", bundle: .module))
+        // COPY END 4e413b0a
         .toolbarTitleDisplayMode(.inline)
         .overlay {
             if shown.isEmpty {
                 if query.isEmpty {
+                    // COPY BEGIN c1cb706e [NEEDS HUMAN REVIEW]
                     ContentUnavailableView {
                         Label {
                             Text("Nobody's Outpost yet", bundle: .module)
@@ -95,6 +98,7 @@ public struct OutpostListView: View {
                             bundle: .module)
                     }
                     .background(palette.background)
+                    // COPY END c1cb706e
                 } else {
                     ContentUnavailableView.search(text: query)
                         .background(palette.background)
@@ -105,6 +109,7 @@ public struct OutpostListView: View {
 
     private func row(_ person: Member) -> some View {
         NavigationLink(value: person.id) {
+            // COPY BEGIN 0318d63d [NEEDS HUMAN REVIEW]
             PersonRow(
                 name: person.displayName, initials: person.initials, id: person.id,
                 detail: detail(for: person)
@@ -144,13 +149,16 @@ public struct OutpostListView: View {
             .tint(palette.accentColor)
             .disabled(!unseen.contains(person.id))
         }
+            // COPY END 0318d63d
     }
 
+    // COPY BEGIN cc147d42 [NEEDS HUMAN REVIEW]
     private func detail(for person: Member) -> Text {
         unseen.contains(person.id)
             ? Text("Something new", bundle: .module)
             : Text("Up to date", bundle: .module)
     }
+    // COPY END cc147d42
 }
 
 #if DEBUG

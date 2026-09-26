@@ -29,6 +29,7 @@ struct NewRoomView: View {
     var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN eb5bc607 [NEEDS HUMAN REVIEW]
                 Section {
                     TextField(text: $name) { Text("Name", bundle: .module) }
                         .focused($naming)
@@ -38,7 +39,9 @@ struct NewRoomView: View {
                     Text("Only you are in it until you invite someone.", bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END eb5bc607
 
+                // COPY BEGIN 8dda4bc3 [NEEDS HUMAN REVIEW]
                 Section {
                     Toggle(isOn: $isAdvanced) {
                         Text("Advanced setup", bundle: .module)
@@ -48,7 +51,9 @@ struct NewRoomView: View {
                     Text("Choose who has to agree before somebody new can join.", bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END 8dda4bc3
 
+                // COPY BEGIN 0ec0e0cb [NEEDS HUMAN REVIEW]
                 Section {
                     Toggle(isOn: $preferences.bringsPeopleIn) {
                         Text("Bring people in", bundle: .module)
@@ -63,6 +68,7 @@ struct NewRoomView: View {
                         : Text("Choose who to invite after naming the room.", bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END 0ec0e0cb
 
                 if isAdvanced {
                     policySection
@@ -73,13 +79,16 @@ struct NewRoomView: View {
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
             .background(palette.background)
+            // COPY BEGIN a861d074 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("New room", bundle: .module))
+            // COPY END a861d074
             .toolbarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $picking) {
                 PeoplePickerView(connections: connections) { chosen in
                     finish(inviting: chosen)
                 }
             }
+            // COPY BEGIN 2e055b39 [NEEDS HUMAN REVIEW]
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
@@ -89,6 +98,7 @@ struct NewRoomView: View {
                         .disabled(trimmed.isEmpty)
                 }
             }
+            // COPY END 2e055b39
             .task { naming = true }
         }
         .presentationDetents([.medium, .large], selection: $detent)
@@ -99,6 +109,7 @@ struct NewRoomView: View {
 
     private var policySection: some View {
         Section {
+            // COPY BEGIN bca2f823 [NEEDS HUMAN REVIEW]
             option(
                 .open,
                 title: Text("Anyone invited", bundle: .module),
@@ -139,17 +150,21 @@ struct NewRoomView: View {
                     "Every member has to agree, and one refusal is enough to keep somebody out. In a busy room this can mean nobody joins for a while.",
                     bundle: .module)
             )
+            // COPY END bca2f823
         } header: {
+            // COPY BEGIN 819f1ebd [NEEDS HUMAN REVIEW]
             Text(
                 "Nobody can join without an invitation from someone already here, whatever you choose. This is who else has to agree.",
                 bundle: .module
             )
             .textCase(nil)
             .font(CarpenterFont.footnote)
+            // COPY END 819f1ebd
         }
         .groupedRowSurface()
     }
 
+    // COPY BEGIN 41bb7db6 [NEEDS HUMAN REVIEW]
     private var approvalsSection: some View {
         Section {
             Stepper(value: $approvals, in: 2...Self.mostApprovalsAtCreation) {
@@ -164,6 +179,7 @@ struct NewRoomView: View {
         }
         .groupedRowSurface()
     }
+    // COPY END 41bb7db6
 
     private func option(
         _ value: RoomAccess, title: Text, detail: Text, explanation: Text
@@ -176,6 +192,7 @@ struct NewRoomView: View {
                     isSelected: isSameKind(access, value),
                     action: { access = value }
                 )
+                // COPY BEGIN 3d090a37 [NEEDS HUMAN REVIEW]
                 Button {
                     explaining = isExplaining(value) ? nil : value
                 } label: {
@@ -184,6 +201,7 @@ struct NewRoomView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("What this means", bundle: .module))
+                // COPY END 3d090a37
             }
             if isExplaining(value) {
                 explanation

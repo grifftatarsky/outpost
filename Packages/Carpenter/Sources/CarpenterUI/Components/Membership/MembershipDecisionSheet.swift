@@ -49,6 +49,7 @@ struct MembershipDecisionSheet<Facts: View>: View {
                 .destructiveActionButton()
                 .disabled(working)
 
+                // COPY BEGIN 10d12958 [NEEDS HUMAN REVIEW]
                 Button {
                     dismiss()
                 } label: {
@@ -57,6 +58,7 @@ struct MembershipDecisionSheet<Facts: View>: View {
                         .foregroundStyle(palette.accentColor)
                         .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
                 }
+                // COPY END 10d12958
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)

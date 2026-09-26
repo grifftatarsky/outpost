@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 550f36a8 [NEEDS HUMAN REVIEW]
 title: Roadmap
 layout: default
 nav_order: 5
@@ -13,6 +14,10 @@ Every ticket in the product and where it stands.
 
 1. TOC
 {:toc}
+
+<!-- COPY END 550f36a8 -->
+
+<!-- COPY BEGIN 2e28e41a [NEEDS HUMAN REVIEW] -->
 
 ## How to read this
 
@@ -59,6 +64,10 @@ The epic pages carry the long form: the story, the acceptance criteria, what was
 and the test plan. [Open questions](open-questions.md) holds what is unbuilt or uncertain.
 [Inbox](inbox.md) holds what was noticed and parked.
 
+<!-- COPY END 2e28e41a -->
+
+<!-- COPY BEGIN 2e97a3d8 [NEEDS HUMAN REVIEW] -->
+
 ## Where everything stands
 
 Seven epics, 87 tickets, counted 2026-09-17.
@@ -73,6 +82,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 | Incomplete | 1 |
 | Not started | 0 |
 | Pushed out or canceled | 3 |
+
+<!-- COPY END 2e97a3d8 -->
+
+<!-- COPY BEGIN bc7d0367 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary><b>Getting a message there</b> · 10 tickets — 9 tested · 1 proved above the mailbox</summary>
@@ -92,6 +105,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 
 </details>
 
+<!-- COPY END bc7d0367 -->
+
+<!-- COPY BEGIN 0ac943dc [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary><b>Telling someone it arrived</b> · 10 tickets — 4 tested · 6 hardware proof owed</summary>
 
@@ -109,6 +126,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 | Asking for Outpost notifications | Complete (tested) | A step in onboarding, and a gear on an Outpost's own page for one wall at a time. Walked end to end on two Apple Accounts 2026-09-15: beta allowed alpha in from the room banner — behind an alert that says plainly it cannot be undone — beta posted, the post crossed, Outie appeared on alpha's rail, and the gear on that wall carried *Get notifications for this Outpost* with the honest footer that the other person is not told. Turned on and it held. |
 
 </details>
+
+<!-- COPY END 0ac943dc -->
+
+<!-- COPY BEGIN 7e73965c [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary><b>Who is in a room</b> · 21 tickets — 14 tested · 3 proved above the mailbox · 2 hardware proof owed · 2 operational proof owed</summary>
@@ -139,6 +160,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 
 </details>
 
+<!-- COPY END 7e73965c -->
+
+<!-- COPY BEGIN 3282db1c [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary><b>Your identity across your devices</b> · 11 tickets — 7 tested · 1 proved above the mailbox · 2 hardware proof owed · 1 canceled</summary>
 
@@ -158,6 +183,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 
 </details>
 
+<!-- COPY END 3282db1c -->
+
+<!-- COPY BEGIN 5d2c38e0 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary><b>Taking things back</b> · 5 tickets — 2 tested · 1 hardware proof owed · 2 pushed out</summary>
 
@@ -170,6 +199,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 | Hard delete and desync quietly | Pushed out | Ruled 2026-09-14. The harder of the two to explain honestly — the app would knowingly let a conversation diverge with no repair. [After TestFlight](after-testflight.md#hard-delete-and-desync-quietly). |
 
 </details>
+
+<!-- COPY END 5d2c38e0 -->
+
+<!-- COPY BEGIN 959ea199 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary><b>What you can send</b> · 18 tickets — 14 tested · 4 hardware proof owed</summary>
@@ -197,6 +230,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 
 </details>
 
+<!-- COPY END 959ea199 -->
+
+<!-- COPY BEGIN 87319ce6 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary><b>Groundwork</b> · 13 tickets — 10 tested · 1 hardware proof owed · 1 operational proof owed · 1 incomplete</summary>
 
@@ -218,6 +255,10 @@ Seven epics, 87 tickets, counted 2026-09-17.
 
 </details>
 
+<!-- COPY END 87319ce6 -->
+
+<!-- COPY BEGIN e3aa4f04 [NEEDS HUMAN REVIEW] -->
+
 ## Next up
 
 Taken from the table rather than from what was last touched, 2026-09-17.
@@ -228,6 +269,10 @@ Taken from the table rather than from what was last touched, 2026-09-17.
    source, and App Store Connect ([Before TestFlight](pre-testflight.md#operational)).
 3. **A phone on iOS 27**, and a second phone on the same account, for the tickets owed a hardware
    proof, both suites, a walk, and the VoiceOver pass.
+
+<!-- COPY END e3aa4f04 -->
+
+<!-- COPY BEGIN 94574bfb [NEEDS HUMAN REVIEW] -->
 
 ## The epics
 
@@ -240,3 +285,5 @@ Taken from the table rather than from what was last touched, 2026-09-17.
 | [Taking things back](epics/data-etiquette.md) | Hiding, editing, withdrawing, consensus deletion. Refusal is unilateral; removal from somebody else never is. |
 | [What you can send](epics/content-and-composer.md) | Text, photos, clips, reactions, screening, search. |
 | [Groundwork](epics/foundations.md) | Accessibility, the test seam, an outside review of the crypto, and shipping. |
+
+<!-- COPY END 94574bfb -->

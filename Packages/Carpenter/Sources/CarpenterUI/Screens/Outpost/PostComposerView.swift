@@ -74,6 +74,7 @@ public struct PostComposerView: View {
                 .padding(.horizontal, CarpenterMetrics.screenMargin - 5)
                 .padding(.top, 8)
                 .focused($writing)
+                // COPY BEGIN 9c47ef0e [NEEDS HUMAN REVIEW]
                 .overlay(alignment: .topLeading) {
                     if !hasWords {
                         Text("Say something to your Outpost", bundle: .module)
@@ -84,6 +85,7 @@ public struct PostComposerView: View {
                             .allowsHitTesting(false)
                     }
                 }
+                // COPY END 9c47ef0e
 
                 if !photos.isEmpty {
                     stagedStrip
@@ -99,11 +101,14 @@ public struct PostComposerView: View {
                 formatBar
             }
             .background(palette.background.ignoresSafeArea())
+            // COPY BEGIN 96f5e91b [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("New post", bundle: .module))
+            // COPY END 96f5e91b
             #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
+                // COPY BEGIN b69aa2d3 [NEEDS HUMAN REVIEW]
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
                 }
@@ -119,6 +124,7 @@ public struct PostComposerView: View {
                     }
                     .disabled(isEmpty || posting)
                 }
+                // COPY END b69aa2d3
             }
             .sensoryFeedback(.success, trigger: posted)
             .task { writing = true }
@@ -216,6 +222,7 @@ public struct PostComposerView: View {
         photos.append(StagedPhoto(picked: .image(data), kind: .image, thumbnail: thumbnail))
     }
 
+    // COPY BEGIN 832a5951 [NEEDS HUMAN REVIEW]
     private static let unreadable = String(
         localized: "That could not be read from your library.", bundle: .module,
         comment: "The picker handed back something that would not load")
@@ -226,6 +233,7 @@ public struct PostComposerView: View {
                 "\(refused) more did not fit: a post carries \(MediaBody.galleryLimit).",
             bundle: .module, comment: "More pictures were picked than a post can carry")
     }
+    // COPY END 832a5951
 
     private var stagedStrip: some View {
         ScrollView(.horizontal) {
@@ -263,12 +271,15 @@ public struct PostComposerView: View {
                 }
             }
             .accessibilityElement(children: .ignore)
+            // COPY BEGIN 8e7c3816 [NEEDS HUMAN REVIEW]
             .accessibilityLabel(
                 item.kind == .video
                     ? Text("Clip to post", bundle: .module)
                     : Text("Photo to post", bundle: .module))
+            // COPY END 8e7c3816
             .accessibilityAddTraits(.isImage)
 
+            // COPY BEGIN c693c870 [NEEDS HUMAN REVIEW]
             Button {
                 photos.removeAll { $0.id == item.id }
             } label: {
@@ -281,12 +292,14 @@ public struct PostComposerView: View {
             .buttonStyle(.plain)
             .padding(4)
             .accessibilityLabel(Text("Remove it", bundle: .module))
+            // COPY END c693c870
         }
     }
 
     private var formatBar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
+                // COPY BEGIN f3344451 [NEEDS HUMAN REVIEW]
                 Button {
                     if photosExplained { pickingPhoto = true } else { explainingPhotos = true }
                 } label: {
@@ -301,13 +314,17 @@ public struct PostComposerView: View {
                 .foregroundStyle(onAttach != nil ? palette.primaryText : palette.quaternaryText)
                 .disabled(onAttach == nil || isFull)
                 .accessibilityLabel(Text("Add a photo", bundle: .module))
+                // COPY END f3344451
 
+                // COPY BEGIN 596952e3 [NEEDS HUMAN REVIEW]
                 emphasis("bold", "**", .bold, label: Text("Bold", bundle: .module))
                 emphasis("italic", "*", .italic, label: Text("Italic", bundle: .module))
                 emphasis("underline", "__", .underline, label: Text("Underline", bundle: .module))
+                // COPY END 596952e3
 
                 Spacer()
 
+                // COPY BEGIN 911a5878 [NEEDS HUMAN REVIEW]
                 Button { toggleMarkers() } label: {
                     Text("MD", bundle: .module)
                         .font(CarpenterFont.caption.weight(.semibold))
@@ -320,7 +337,9 @@ public struct PostComposerView: View {
                 .foregroundStyle(showsMarkers ? palette.accentColor : palette.primaryText)
                 .accessibilityLabel(Text("Show formatting marks", bundle: .module))
                 .accessibilityAddTraits(showsMarkers ? [.isSelected] : [])
+                // COPY END 911a5878
 
+                // COPY BEGIN 24a7adc5 [NEEDS HUMAN REVIEW]
                 if writing {
                     Button { writing = false } label: {
                         Text("Done", bundle: .module)
@@ -331,6 +350,7 @@ public struct PostComposerView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(palette.accentColor)
                 }
+                // COPY END 24a7adc5
             }
             .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: writing)
             .padding(.horizontal, CarpenterMetrics.screenMargin)

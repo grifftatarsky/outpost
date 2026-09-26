@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 9630990f [NEEDS HUMAN REVIEW]
 title: Who you are talking to
 layout: default
 nav_order: 12
@@ -14,6 +15,10 @@ cryptography behind the characters is in [The crypto, written down](crypto-brief
 
 1. TOC
 {:toc}
+
+<!-- COPY END 9630990f -->
+
+<!-- COPY BEGIN e8fe352d [NEEDS HUMAN REVIEW] -->
 
 ## Why an invitation is an offer
 
@@ -31,6 +36,10 @@ So the rule now is:
 The person invited checks first, so a room is never asked to approve somebody who is about to find
 out the invitation is fake, and so they are never shown a room's name, members or history before
 they accept it.
+
+<!-- COPY END e8fe352d -->
+
+<!-- COPY BEGIN d1bb5701 [NEEDS HUMAN REVIEW] -->
 
 ## An invitation, step by step
 
@@ -62,6 +71,10 @@ A learns what A can observe: the invitation was never accepted.
 everything outstanding under *Invited, not yet in*, and can take one back at any time. A withdrawn
 invitation cannot be used even by somebody holding the link.
 
+<!-- COPY END d1bb5701 -->
+
+<!-- COPY BEGIN 9804c6c2 [NEEDS HUMAN REVIEW] -->
+
 ## Who gets in
 
 After the characters, the room's own rule applies. The characters are required under every rule.
@@ -75,6 +88,10 @@ After the characters, the room's own rule applies. The characters are required u
 | **Several members approve** | waiting, with a running count |
 | **Everyone approves** | waiting for every member; one silence holds it |
 
+<!-- COPY END 9804c6c2 -->
+
+<!-- COPY BEGIN de2bbe61 [NEEDS HUMAN REVIEW] -->
+
 ## A room nobody has joined yet
 
 A room somebody is invited to and not in, or a room this member is waiting to be let into, carries
@@ -83,11 +100,19 @@ where a member's own tags are outlined, and it is never sent to anybody. A room'
 **Show only invited**. Each row says which way it is waiting: *Invited, not yet in* for the inviter,
 *waiting to be let in* for the person invited.
 
+<!-- COPY END de2bbe61 -->
+
+<!-- COPY BEGIN 7b54dc97 [NEEDS HUMAN REVIEW] -->
+
 ## Seeing the characters again
 
 **Who you are talking to**, in a room's menu, lists everybody in the room with the characters that
 were read when they were invited and the date they were confirmed. Anybody on that list can be opened
 to compare codes, below.
+
+<!-- COPY END 7b54dc97 -->
+
+<!-- COPY BEGIN 02fbe99c [NEEDS HUMAN REVIEW] -->
 
 ## Solos
 
@@ -107,6 +132,10 @@ If asking could close the other person's conversation, anybody could close anybo
 **A refusal closes the Solo for both people** and says why. Nothing already said is deleted. The way
 out is to check again in person, or to block the person.
 
+<!-- COPY END 02fbe99c -->
+
+<!-- COPY BEGIN 049d8e55 [NEEDS HUMAN REVIEW] -->
+
 ## Comparing codes later
 
 The characters at an invitation exist only between the inviter and the person invited. Two other
@@ -121,6 +150,10 @@ conversations with them.
 This part is built and has run on the rig; the line about a new device needs one account on two
 phones to see, and is listed on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
 
+<!-- COPY END 049d8e55 -->
+
+<!-- COPY BEGIN ca480c93 [NEEDS HUMAN REVIEW] -->
+
 ## What this cost
 
 **Rooms joined before the rule stopped counting their members.** The rule changes how the log is
@@ -131,3 +164,5 @@ changed a rule this way.
 
 **What would change the refusal.** A way for B to reach A without first trusting A. There is none,
 because the whole design is that you connect to the mailbox of somebody you have decided to talk to.
+
+<!-- COPY END ca480c93 -->

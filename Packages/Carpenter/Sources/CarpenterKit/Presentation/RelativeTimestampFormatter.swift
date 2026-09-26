@@ -9,6 +9,7 @@ public struct RelativeTimestampFormatter: Sendable {
         self.locale = locale
     }
 
+    // COPY BEGIN 0b1bac5f [NEEDS HUMAN REVIEW]
     public func roomsList(for date: Date, now: Date = Date()) -> String {
         switch elapsedDays(from: date, to: now) {
         case 0: format(date, .dateTime.hour().minute())
@@ -17,12 +18,14 @@ public struct RelativeTimestampFormatter: Sendable {
         default: format(date, Date.FormatStyle(date: .numeric, time: .omitted))
         }
     }
+    // COPY END 0b1bac5f
 
     public func compact(for date: Date, now: Date = Date()) -> String {
         let elapsed = now.timeIntervalSince(date)
 
         switch elapsedDays(from: date, to: now) {
         case 0 where elapsed < 60:
+            // COPY BEGIN c25433ef [NEEDS HUMAN REVIEW]
             return String(localized: "now", bundle: .module, comment: "Outpost timestamp, under a minute old")
         case 0 where elapsed < 3_600:
             return String(
@@ -32,6 +35,7 @@ public struct RelativeTimestampFormatter: Sendable {
                 localized: "\(Int(elapsed / 3_600))h", bundle: .module, comment: "Outpost timestamp in hours")
         case 1:
             return String(localized: "Yesterday", bundle: .module, comment: "Rooms list timestamp")
+            // COPY END c25433ef
         case 2..<7:
             return format(date, .dateTime.weekday(.abbreviated))
         default:
@@ -39,6 +43,7 @@ public struct RelativeTimestampFormatter: Sendable {
         }
     }
 
+    // COPY BEGIN afbe82eb [NEEDS HUMAN REVIEW]
     public func readReceipt(_ date: Date, now: Date = Date()) -> String {
         switch elapsedDays(from: date, to: now) {
         case 0:
@@ -50,6 +55,7 @@ public struct RelativeTimestampFormatter: Sendable {
             return format(date, .dateTime.day().month(.abbreviated))
         }
     }
+    // COPY END afbe82eb
 
     private func elapsedDays(from date: Date, to now: Date) -> Int {
         let start = calendar.startOfDay(for: date)

@@ -54,10 +54,12 @@ public struct ReportView: View {
             appVersion: Branding.version)
     }
 
+    // COPY BEGIN 2f94d344 [NEEDS HUMAN REVIEW]
     private var fileName: String {
         let day = clock.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))
         return "\(Branding.displayName) report \(item.author.id.shortCode) \(day)"
     }
+    // COPY END 2f94d344
 
     private var reportFile: ReportFile {
         ReportFile(text: report.body, name: fileName)
@@ -73,6 +75,7 @@ public struct ReportView: View {
     public var body: some View {
         NavigationStack {
             List {
+                // COPY BEGIN 82a3a54b [NEEDS HUMAN REVIEW]
                 Section {
                     TextField(text: $description, axis: .vertical) {
                         Text("What happened?", bundle: .module)
@@ -86,7 +89,9 @@ public struct ReportView: View {
                         bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END 82a3a54b
 
+                // COPY BEGIN 5aa4676a [NEEDS HUMAN REVIEW]
                 Section {
                     row(Text("Who sent it", bundle: .module), value: "\(item.author.displayName) · \(item.author.id.shortCode)")
                     row(
@@ -106,8 +111,10 @@ public struct ReportView: View {
                         bundle: .module)
                 }
                 .groupedRowSurface()
+                // COPY END 5aa4676a
 
                 Section {
+                    // COPY BEGIN 898cc145 [NEEDS HUMAN REVIEW]
                     Link(destination: Self.cyberTipline) {
                         Label {
                             Text("CyberTipline (United States)", bundle: .module)
@@ -128,10 +135,12 @@ public struct ReportView: View {
                     Text(
                         "Keep your own copy, and report it directly as well. These are the people who can act on it.",
                         bundle: .module)
+                    // COPY END 898cc145
                 }
                 .groupedRowSurface()
 
                 Section {
+                    // COPY BEGIN 43d5589d [NEEDS HUMAN REVIEW]
                     Button {
                         leaving = true
                     } label: {
@@ -145,9 +154,11 @@ public struct ReportView: View {
                     Text(
                         "This app sends nothing itself. The report is copied for you and \(formHost) opens, where you paste it and say how to reach you.",
                         bundle: .module)
+                    // COPY END 43d5589d
                 }
 
                 Section {
+                    // COPY BEGIN 08d848fb [NEEDS HUMAN REVIEW]
                     ShareLink(
                         item: reportFile,
                         preview: SharePreview(fileName, image: Image(systemName: "doc.text"))
@@ -160,7 +171,9 @@ public struct ReportView: View {
                         }
                     }
                     .disabled(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    // COPY END 08d848fb
 
+                    // COPY BEGIN 6da4670d [NEEDS HUMAN REVIEW]
                     Button {
                         copy(report.body)
                     } label: {
@@ -180,9 +193,11 @@ public struct ReportView: View {
                     Text(
                         "Worth doing before you send it. A report names a message by a fingerprint, and the fingerprint only means something while the message is still on your device.",
                         bundle: .module)
+                    // COPY END 6da4670d
                 }
                 .groupedRowSurface()
 
+                // COPY BEGIN 3bbdea2e [NEEDS HUMAN REVIEW]
                 if noBrowser {
                     Section {
                         EmptyView()
@@ -195,10 +210,12 @@ public struct ReportView: View {
                     }
                     .groupedRowSurface()
                 }
+                // COPY END 3bbdea2e
             }
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
             .background(palette.background)
+            // COPY BEGIN 19f2f045 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Report", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -218,6 +235,7 @@ public struct ReportView: View {
                     "Your report is copied and \(formHost) opens in whichever browser this phone uses. Paste it there. Nothing is sent until you send it.",
                     bundle: .module)
             }
+            // COPY END 19f2f045
         }
     }
 

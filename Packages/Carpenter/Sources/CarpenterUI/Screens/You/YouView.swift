@@ -227,6 +227,7 @@ public struct YouView: View {
 
             Section {
                 identityRow
+                // COPY BEGIN f3a07490 [NEEDS HUMAN REVIEW]
                 NavigationLink {
                     PeopleView(
                         connections: connections, nickname: nickname, sharedName: sharedName,
@@ -247,6 +248,7 @@ public struct YouView: View {
                             detail: supporter.standingDetail)
                     }
                 }
+                // COPY END f3a07490
             }
             .groupedRowSurface()
 

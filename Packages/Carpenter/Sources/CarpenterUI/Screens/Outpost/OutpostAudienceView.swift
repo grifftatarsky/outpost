@@ -63,13 +63,16 @@ public struct OutpostAudienceView: View {
 
     public var body: some View {
         List {
+            // COPY BEGIN 1c5b22d8 [NEEDS HUMAN REVIEW]
             SettingsHeaderCard(
                 icon: "person.2.badge.key.fill",
                 title: Text("Who sees your Outpost", bundle: .module),
                 paragraph: Text(
                     "Nobody, until you say so. Being in a room together is not an answer to this. Somebody you let in collects your posts onto their own device, and what they have collected stays theirs if you change your mind.",
                     bundle: .module))
+            // COPY END 1c5b22d8
 
+            // COPY BEGIN 9d99cca4 [NEEDS HUMAN REVIEW]
             if keyTurnPending {
                 Section {
                     Label {
@@ -84,8 +87,10 @@ public struct OutpostAudienceView: View {
                 }
                 .groupedRowSurface()
             }
+            // COPY END 9d99cca4
 
             if !undecided.isEmpty {
+                // COPY BEGIN fb59ecd9 [NEEDS HUMAN REVIEW]
                 Section {
                     ForEach(undecided) { person in
                         Button { deciding = subject(person) } label: {
@@ -99,9 +104,11 @@ public struct OutpostAudienceView: View {
                     Text("You have not decided", bundle: .module).sectionHeading()
                 }
                 .groupedRowSurface()
+                // COPY END fb59ecd9
             }
 
             if allowed.isEmpty {
+                // COPY BEGIN 661a8d61 [NEEDS HUMAN REVIEW]
                 Section {
                     Text("Nobody can see your Outpost.", bundle: .module)
                         .font(CarpenterFont.rowDetail)
@@ -127,13 +134,16 @@ public struct OutpostAudienceView: View {
                     Text(
                         "Removing somebody stops them collecting anything new. It cannot take back what they already have — no app can reach into somebody else's device, and this one does not pretend to.",
                         bundle: .module)
+                // COPY END 661a8d61
                 }
                 .groupedRowSurface()
             }
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 4d730a02 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Who sees it", bundle: .module))
+        // COPY END 4d730a02
         .toolbarTitleDisplayMode(.inline)
         .outpostAccessSheet(deciding: $deciding) { person, choice in
             switch choice {
@@ -142,6 +152,7 @@ public struct OutpostAudienceView: View {
             case .no: return await onRevoke(person)
             }
         }
+        // COPY BEGIN c5168cda [NEEDS HUMAN REVIEW]
         .alert(
             Text("That did not go through", bundle: .module),
             isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })
@@ -150,6 +161,7 @@ public struct OutpostAudienceView: View {
         } message: {
             Text(verbatim: problem ?? "")
         }
+        // COPY END c5168cda
     }
 
     private func detail(for person: Member) -> Text {

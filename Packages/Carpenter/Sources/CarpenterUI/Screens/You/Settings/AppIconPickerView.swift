@@ -17,6 +17,7 @@ public struct AppIconPickerView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                // COPY BEGIN 21e1f335 [NEEDS HUMAN REVIEW]
                 if !isSupported {
                     Text(
                         "Choosing an icon works on iPhone and iPad. On a Mac the app keeps the one it was built with.",
@@ -25,6 +26,7 @@ public struct AppIconPickerView: View {
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
                 }
+                // COPY END 21e1f335
 
                 ForEach(AppIconChoice.Mark.allCases, id: \.self) { mark in
                     VStack(alignment: .leading, spacing: 10) {
@@ -46,18 +48,22 @@ public struct AppIconPickerView: View {
                     }
                 }
 
+                // COPY BEGIN d6f64678 [NEEDS HUMAN REVIEW]
                 Text(
                     "The icon is separate from the color you picked for the app. They do not have to match.",
                     bundle: .module
                 )
                 .font(CarpenterFont.caption)
                 .foregroundStyle(palette.quaternaryText)
+                // COPY END d6f64678
             }
             .padding(.horizontal, CarpenterMetrics.screenMargin)
             .padding(.vertical, 16)
         }
         .background(palette.background)
+        // COPY BEGIN cbb2a113 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("App icon", bundle: .module))
+        // COPY END cbb2a113
     }
 
     private func tile(_ option: AppIconChoice) -> some View {

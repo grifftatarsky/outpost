@@ -1,4 +1,6 @@
+// COPY BEGIN dbf2c195 [NEEDS HUMAN REVIEW]
 APP_DISPLAY_NAME = Outpost
+// COPY END dbf2c195
 APP_URL_SCHEME = outpost
 APP_REPORT_FORM_URL = https:$(SLASH)$(SLASH)outpostmessaging.com/report
 APS_ENVIRONMENT = development

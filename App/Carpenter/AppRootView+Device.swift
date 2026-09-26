@@ -146,11 +146,13 @@ extension AppRootView {
             .appending(path: Bundle.main.bundleIdentifier ?? "app", directoryHint: .isDirectory)
             .appending(path: "sync-engine.json")
     }
+    // COPY BEGIN 241275d8 [NEEDS HUMAN REVIEW]
     func nuke() async {
         await attempting(
             String(localized: "This account was not cleared"), "nuke account"
         ) { try await wipe() }
     }
+    // COPY END 241275d8
     func openSystemSettings() {
         #if os(iOS)
             if let url = URL(string: UIApplication.openSettingsURLString) {

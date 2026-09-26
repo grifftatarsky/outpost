@@ -34,6 +34,7 @@ struct SoloCheckNotice: View {
     private func refusal(answerable: Member?) -> some View {
         RefusedCheck(
             placement: .notice,
+            // COPY BEGIN 17ca25c6 [NEEDS HUMAN REVIEW]
             readings: Text(
                 "Usually that means one of you read them wrong, or read the ones from another conversation. It can also mean somebody is in the middle of this one.",
                 bundle: .module),
@@ -62,11 +63,13 @@ struct SoloCheckNotice: View {
                 }
                 block
             }
+            // COPY END 17ca25c6
         }
     }
 
     private func answers(_ onAnswer: @escaping (Bool) async -> Void) -> some View {
         AdaptiveStack(spacing: 10) {
+            // COPY BEGIN 72934cc1 [NEEDS HUMAN REVIEW]
             Button {
                 Task { working = true; await onAnswer(false); working = false }
             } label: {
@@ -80,7 +83,9 @@ struct SoloCheckNotice: View {
             }
             .foregroundStyle(palette.primaryText)
             .disabled(working)
+            // COPY END 72934cc1
 
+            // COPY BEGIN fbf3b5f0 [NEEDS HUMAN REVIEW]
             Button {
                 Task { working = true; await onAnswer(true); working = false }
             } label: {
@@ -88,6 +93,7 @@ struct SoloCheckNotice: View {
             }
             .prominentActionButton()
             .disabled(working)
+            // COPY END fbf3b5f0
         }
     }
 
@@ -105,6 +111,7 @@ struct SoloCheckNotice: View {
         }
     }
 
+    // COPY BEGIN ebfa1e81 [NEEDS HUMAN REVIEW]
     @ViewBuilder private var stopRequiring: some View {
         if case .heldByYourSetting = state, let onStopRequiring {
             Button {
@@ -119,7 +126,9 @@ struct SoloCheckNotice: View {
             .padding(.top, 2)
         }
     }
+    // COPY END ebfa1e81
 
+    // COPY BEGIN bf5d6ce6 [NEEDS HUMAN REVIEW]
     @ViewBuilder private var block: some View {
         if let partner, onBlock != nil, !partner.isAnonymous {
             Button {
@@ -134,9 +143,11 @@ struct SoloCheckNotice: View {
             .padding(.top, 2)
         }
     }
+    // COPY END bf5d6ce6
 
     private let symbol = "person.crop.circle.badge.questionmark"
 
+    // COPY BEGIN 20531eb4 [NEEDS HUMAN REVIEW]
     private var headline: Text {
         switch state {
         case .refused:
@@ -149,8 +160,10 @@ struct SoloCheckNotice: View {
             return Text(verbatim: "")
         }
     }
+    // COPY END 20531eb4
 
     private var explanation: Text {
+        // COPY BEGIN 432ca2b5 [NEEDS HUMAN REVIEW]
         switch state {
         case .refused:
             return Text(verbatim: "")
@@ -175,6 +188,7 @@ struct SoloCheckNotice: View {
         case .nothing, .waitingOnThem, .waitingOnYou:
             return Text(verbatim: "")
         }
+        // COPY END 432ca2b5
     }
 }
 
@@ -187,6 +201,7 @@ struct SoloCheckLine: View {
 
     @State private var answering = false
 
+    // COPY BEGIN 56ea5d36 [NEEDS HUMAN REVIEW]
     var body: some View {
         switch state {
         case .waitingOnThem:
@@ -200,6 +215,7 @@ struct SoloCheckLine: View {
             EmptyView()
         }
     }
+    // COPY END 56ea5d36
 
     private func line(_ text: Text) -> some View {
         HStack(spacing: 8) {
@@ -211,6 +227,7 @@ struct SoloCheckLine: View {
                 .font(CarpenterFont.caption)
                 .foregroundStyle(palette.secondaryText)
             Spacer(minLength: 0)
+            // COPY BEGIN 2fb2deb0 [NEEDS HUMAN REVIEW]
             if state.canAnswer, onAnswer != nil {
                 Button {
                     answering = true
@@ -224,6 +241,7 @@ struct SoloCheckLine: View {
                 }
                 .buttonStyle(.plain)
             }
+            // COPY END 2fb2deb0
         }
         .padding(.horizontal, CarpenterMetrics.screenMargin)
         .padding(.vertical, 7)
@@ -253,6 +271,7 @@ struct AskWhoYouAreTalkingToSheet: View {
         NavigationStack {
             List {
                 Section {
+                    // COPY BEGIN 9501f864 [NEEDS HUMAN REVIEW]
                     ChoiceRow(
                         title: Text("Keep talking", bundle: .module),
                         detail: Text(
@@ -260,7 +279,9 @@ struct AskWhoYouAreTalkingToSheet: View {
                             bundle: .module),
                         isSelected: !holding
                     ) { holding = false }
+                    // COPY END 9501f864
 
+                    // COPY BEGIN 2ddce609 [NEEDS HUMAN REVIEW]
                     ChoiceRow(
                         title: Text("Hold until it is answered", bundle: .module),
                         detail: Text(
@@ -274,6 +295,7 @@ struct AskWhoYouAreTalkingToSheet: View {
                     Text(
                         "Both of you already have the same characters. Read them to each other, out loud, on a line you trust.",
                         bundle: .module)
+                    // COPY END 2ddce609
                 }
                 .groupedRowSurface()
 
@@ -288,6 +310,7 @@ struct AskWhoYouAreTalkingToSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN daba07eb [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Who you are talking to", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -307,6 +330,7 @@ struct AskWhoYouAreTalkingToSheet: View {
                     }
                     .disabled(working)
                 }
+            // COPY END daba07eb
             }
         }
     }
@@ -324,12 +348,14 @@ struct AnswerWhoYouAreTalkingToSheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 18) {
+                // COPY BEGIN 975affde [NEEDS HUMAN REVIEW]
                 Text(
                     "Read these to each other, out loud, on a line you trust.",
                     bundle: .module)
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
+                // COPY END 975affde
 
                 if let phrase {
                     VerificationPhrase(phrase)
@@ -337,6 +363,7 @@ struct AnswerWhoYouAreTalkingToSheet: View {
                 }
 
                 AdaptiveStack(spacing: 10) {
+                    // COPY BEGIN fd066c84 [NEEDS HUMAN REVIEW]
                     Button {
                         Task { working = true; await onAnswer(false); working = false; dismiss() }
                     } label: {
@@ -351,7 +378,9 @@ struct AnswerWhoYouAreTalkingToSheet: View {
                     }
                     .foregroundStyle(palette.primaryText)
                     .disabled(working)
+                    // COPY END fd066c84
 
+                    // COPY BEGIN b3f3d160 [NEEDS HUMAN REVIEW]
                     Button {
                         Task { working = true; await onAnswer(true); working = false; dismiss() }
                     } label: {
@@ -359,14 +388,17 @@ struct AnswerWhoYouAreTalkingToSheet: View {
                     }
                     .prominentActionButton()
                     .disabled(working)
+                    // COPY END b3f3d160
                 }
 
+                // COPY BEGIN 5b00c4bd [NEEDS HUMAN REVIEW]
                 Text(
                     "Saying they do not match closes this conversation, both ways, until you have checked again in person. Nothing already here is deleted.",
                     bundle: .module)
                     .font(CarpenterFont.caption)
                     .foregroundStyle(palette.tertiaryText)
                     .fixedSize(horizontal: false, vertical: true)
+                // COPY END 5b00c4bd
 
                 Spacer(minLength: 0)
             }
@@ -374,6 +406,7 @@ struct AnswerWhoYouAreTalkingToSheet: View {
             .padding(.vertical, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(palette.background)
+            // COPY BEGIN c409c3fa [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Who you are talking to", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -381,6 +414,7 @@ struct AnswerWhoYouAreTalkingToSheet: View {
                     Button { dismiss() } label: { Text("Not now", bundle: .module) }
                 }
             }
+            // COPY END c409c3fa
         }
     }
 }

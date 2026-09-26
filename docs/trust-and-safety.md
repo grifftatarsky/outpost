@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 9bd107c0 [NEEDS HUMAN REVIEW]
 title: Trust and safety
 layout: default
 nav_order: 9
@@ -17,6 +18,10 @@ Scope: US and Canada launch, an individual developer, no server. **Nothing here 
 1. TOC
 {:toc}
 
+<!-- COPY END 9bd107c0 -->
+
+<!-- COPY BEGIN c66ddf0b [NEEDS HUMAN REVIEW] -->
+
 ## Context
 
 Outpost is end-to-end encrypted, and messages move between members' own iCloud accounts. There is
@@ -33,6 +38,10 @@ Photos create three obligations text did not:
 
 The design satisfies all three without acquiring the ability to read content, without a server, and
 without a new outbound network destination.
+
+<!-- COPY END c66ddf0b -->
+
+<!-- COPY BEGIN 34e9f653 [NEEDS HUMAN REVIEW] -->
 
 ## Decisions
 
@@ -53,9 +62,17 @@ rule, and every fetch is a device check-in visible in the container. A static fi
 or a CDN is worse: it moves the check-in log to a third party that also sees the requesting IP,
 which CloudKit never does.
 
+<!-- COPY END 34e9f653 -->
+
+<!-- COPY BEGIN 09365ad5 [NEEDS HUMAN REVIEW] -->
+
 ## Implementation
 
 As of 2026-09-17.
+
+<!-- COPY END 09365ad5 -->
+
+<!-- COPY BEGIN bc38b922 [NEEDS HUMAN REVIEW] -->
 
 ### Receiving
 
@@ -73,6 +90,10 @@ As of 2026-09-17.
   2026-09-04, so the negative path is proven. A positive verdict needs Apple's test profile on a
   phone and has not been observed; the blur was driven with a debug switch.
 
+<!-- COPY END bc38b922 -->
+
+<!-- COPY BEGIN cf683561 [NEEDS HUMAN REVIEW] -->
+
 ### Settings
 
 - **Built.** *Blur sensitive photos*, on by default, under You › Privacy & Safety, with a footer that
@@ -80,6 +101,10 @@ As of 2026-09-17.
   Settings), or unsupported. Where photos are not screened, it says so.
 - **Built.** *Block known abusers*, on by default, with the list's date in the footer.
 - **Built.** *Report a problem* opens a mail to the support address.
+
+<!-- COPY END cf683561 -->
+
+<!-- COPY BEGIN 87960e50 [NEEDS HUMAN REVIEW] -->
 
 ### Reporting and blocking
 
@@ -96,12 +121,20 @@ As of 2026-09-17.
 - **Built.** The report screen tells the reporter to keep their own copy and links CyberTipline (US)
   and Cybertip.ca (Canada).
 
+<!-- COPY END 87960e50 -->
+
+<!-- COPY BEGIN 7b82d069 [NEEDS HUMAN REVIEW] -->
+
 ### The deny list
 
 - **Built.** `denylist.json` in `CarpenterKit`'s resources: a version, a date and SHA-256
   fingerprints, covered by the app's code signature.
 - **Built.** A listed sender is treated as blocked on receive.
 - **Built.** `Scripts/denylist.py add <fingerprint>` appends to the list and updates the date.
+
+<!-- COPY END 7b82d069 -->
+
+<!-- COPY BEGIN 3b6ff346 [NEEDS HUMAN REVIEW] -->
 
 ### Documents
 
@@ -115,6 +148,10 @@ As of 2026-09-17.
 - **Not done.** Contact information in App Store Connect.
 - **Not done.** The encrypted vault for report records; see
   [where report records live](#where-report-records-live).
+
+<!-- COPY END 3b6ff346 -->
+
+<!-- COPY BEGIN 461adb91 [NEEDS HUMAN REVIEW] -->
 
 ## Acceptance criteria
 
@@ -133,6 +170,10 @@ All met.
 6. **No new outbound network destination compared with the build before photos.** Photos travel in
    the same CloudKit container and zone as packets, and reports go through the member's own mail app.
    Not measured with a proxy; nothing in the code opens a connection anywhere new.
+
+<!-- COPY END 461adb91 -->
+
+<!-- COPY BEGIN 07cdfec5 [NEEDS HUMAN REVIEW] -->
 
 ## Mandatory reporting obligations
 
@@ -167,6 +208,10 @@ for CSAM-related reports.**
 **Penalties.** § 2258A(e): knowing and willful failure to report — up to **$600,000** for a first
 failure by a provider with fewer than 100 million monthly active users, up to **$850,000** for any
 later one.
+
+<!-- COPY END 07cdfec5 -->
+
+<!-- COPY BEGIN 118f776a [NEEDS HUMAN REVIEW] -->
 
 ### Canada — Mandatory Reporting Act (S.C. 2011, c. 4)
 
@@ -212,6 +257,10 @@ argument.
 **Action:** re-read the Act before a Canadian launch and again when the amendments come into force.
 Design to the stricter reading in the meantime.
 
+<!-- COPY END 118f776a -->
+
+<!-- COPY BEGIN d45d6538 [NEEDS HUMAN REVIEW] -->
+
 ### Standard operating procedure
 
 1. **Receive** a report at the abuse address. Acknowledge receipt within 24 hours. Promise no outcome.
@@ -233,6 +282,10 @@ Design to the stricter reading in the meantime.
    Encrypted at rest, access limited to the developer.
 8. **Do not disclose.** Tell neither the reporter nor the sender that an escalation occurred.
 9. **Close** with a dated note in the vault: what was reported, what was filed, where, when.
+
+<!-- COPY END d45d6538 -->
+
+<!-- COPY BEGIN 01d7b9b4 [NEEDS HUMAN REVIEW] -->
 
 ### Where report records live
 
@@ -260,6 +313,10 @@ location with limited access for a year. A database on a machine in his house, r
 nowhere else, is a defensible reading. Whether the disk under it is encrypted is an operating-system
 decision he can make in an afternoon and no commit here can make for him.
 
+<!-- COPY END 01d7b9b4 -->
+
+<!-- COPY BEGIN 19a5b739 [NEEDS HUMAN REVIEW] -->
+
 ## Risks and open questions
 
 | Risk | Note |
@@ -270,6 +327,10 @@ decision he can make in an afternoon and no commit here can make for him.
 | Published contact information as an individual | The developer's legal name and address become the published contact. For an anonymity-focused app this is a mismatch; an LLC fixes it for a few hundred dollars. |
 | Screening is opt-in at the OS level | Most members will have Sensitive Content Warning off, so the filter does nothing for them. The app says so in the Safety footer; the App Review reply must not overstate coverage either. |
 | Legal review | Not required by statute. Given the individual-not-entity posture and the one-year preservation duty, an hour of counsel before launch is cheap insurance. |
+
+<!-- COPY END 19a5b739 -->
+
+<!-- COPY BEGIN d15c1679 [NEEDS HUMAN REVIEW] -->
 
 ## App Review reply — draft
 
@@ -299,6 +360,10 @@ decision he can make in an afternoon and no commit here can make for him.
 > and Canada's Mandatory Reporting Act; confirmed child-safety reports are escalated to NCMEC's
 > CyberTipline and to law enforcement as required.
 
+<!-- COPY END d15c1679 -->
+
+<!-- COPY BEGIN 4e61b7ad [NEEDS HUMAN REVIEW] -->
+
 ## Sources
 
 - SCSensitivityAnalyzer — <https://developer.apple.com/documentation/sensitivecontentanalysis/scsensitivityanalyzer>
@@ -309,3 +374,5 @@ decision he can make in an afternoon and no commit here can make for him.
 - CyberTipline public report form — <https://report.cybertip.org/>
 - Canada Mandatory Reporting Act, current and amendments not in force — <https://laws-lois.justice.gc.ca/eng/acts/I-20.7/FullText.html>
 - Cybertip.ca mandatory reporting — <https://www.cybertip.ca/en/about/mandatory-reporting/>
+
+<!-- COPY END 4e61b7ad -->

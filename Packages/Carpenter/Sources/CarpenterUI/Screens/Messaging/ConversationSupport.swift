@@ -20,6 +20,7 @@ extension View {
                         onCancel: { item.wrappedValue = nil })
                     .ignoresSafeArea()
                 } else {
+                    // COPY BEGIN 9ea7d0c8 [NEEDS HUMAN REVIEW]
                     ContentUnavailableView {
                         Label {
                             Text("This clip cannot be trimmed here", bundle: .module)
@@ -31,6 +32,7 @@ extension View {
                     } actions: {
                         Button { item.wrappedValue = nil } label: { Text("OK", bundle: .module) }
                     }
+                    // COPY END 9ea7d0c8
                 }
             }
         #else

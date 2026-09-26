@@ -106,6 +106,7 @@ extension AppRootView {
         await session.reportFocus(silenced: center.focusStatus.isFocused ?? false)
     }
 
+    // COPY BEGIN 89523c13 [NEEDS HUMAN REVIEW]
     func sharePhoto(_ jpeg: Data) async {
         do {
             try await session.sharePhoto(jpeg, through: media)
@@ -117,6 +118,7 @@ extension AppRootView {
                 detail: SessionProblem.sentence(for: error))
         }
     }
+    // COPY END 89523c13
 
     func collectSharedPhotos() async {
         guard session.showsOthersAvatars else {

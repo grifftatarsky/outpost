@@ -125,9 +125,11 @@ public struct OutpostView: View {
         .scrollEdgeEffectStyle(.soft, for: .top)
         .background(palette.background)
         .refreshable { await onRefresh() }
+        // COPY BEGIN 7f56046a [NEEDS HUMAN REVIEW]
         .searchable(
             text: $query, isPresented: $isSearching,
             prompt: Text("Search posts", bundle: .module))
+        // COPY END 7f56046a
         .onChange(of: isSearching) { _, searching in
             if !searching { query = "" }
         }
@@ -144,6 +146,7 @@ public struct OutpostView: View {
         .outpostAccessSheet(deciding: $deciding) { person, choice in
             await onChangeAccess?(person, choice, nil)
         }
+        // COPY BEGIN ffdc46d2 [NEEDS HUMAN REVIEW]
         .alert(
             Text("That did not go through", bundle: .module),
             isPresented: Binding(
@@ -203,6 +206,7 @@ public struct OutpostView: View {
                         Text("What each of you can read", bundle: .module),
                         systemImage: "person.2.badge.key")
                 }
+        // COPY END ffdc46d2
             }
         }
         .sheet(isPresented: $isComposing) {
@@ -210,6 +214,7 @@ public struct OutpostView: View {
                 .themed(.default)
         }
         .croppingPickedPhoto($pickedPicture) { picked in decidingReach = picked }
+        // COPY BEGIN a2064756 [NEEDS HUMAN REVIEW]
         .confirmationDialog(
             Text("Use this picture where?", bundle: .module),
             isPresented: Binding(
@@ -239,6 +244,7 @@ public struct OutpostView: View {
             Text(
                 "Just on your Outpost leaves your rooms showing the photo from You. Everywhere changes both.",
                 bundle: .module)
+        // COPY END a2064756
         }
     }
 
@@ -247,6 +253,7 @@ public struct OutpostView: View {
         return posts.filter { $0.body.localizedStandardContains(query) }
     }
 
+    // COPY BEGIN c0015e86 [NEEDS HUMAN REVIEW]
     private var composer: some View {
         HStack(spacing: 11) {
             Button { isComposing = true } label: {
@@ -261,6 +268,7 @@ public struct OutpostView: View {
             .buttonStyle(.plain)
         }
     }
+    // COPY END c0015e86
 }
 
 private struct PostRow: View {

@@ -33,11 +33,14 @@ struct PeoplePickerView: View {
             .listSectionIndexVisibility(query.isEmpty ? .visible : .hidden)
         #endif
         .background(palette.background)
+        // COPY BEGIN ec95494d [NEEDS HUMAN REVIEW]
         .searchable(text: $query, prompt: Text("Search people", bundle: .module))
+        // COPY END ec95494d
         .autocorrectionDisabled()
         .overlay {
             if results.isEmpty { emptyState }
         }
+        // COPY BEGIN 83539bd9 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Invite people", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
@@ -51,6 +54,7 @@ struct PeoplePickerView: View {
                 .disabled(selected.isEmpty)
             }
         }
+        // COPY END 83539bd9
     }
 
     private func row(_ connection: Connection) -> some View {
@@ -77,14 +81,17 @@ struct PeoplePickerView: View {
         .accessibilityAddTraits(selected.contains(connection.id) ? [.isSelected] : [])
     }
 
+    // COPY BEGIN 76d88454 [NEEDS HUMAN REVIEW]
     private func detail(for connection: Connection) -> Text {
         if connection.sharedRooms > 0 {
             return Text("^[In \(connection.sharedRooms) room](inflect: true) with you", bundle: .module)
         }
         return Text("You can see their Outpost", bundle: .module)
     }
+    // COPY END 76d88454
 
     private var emptyState: some View {
+        // COPY BEGIN d477694b [NEEDS HUMAN REVIEW]
         ContentUnavailableView {
             Label {
                 query.isEmpty
@@ -99,6 +106,7 @@ struct PeoplePickerView: View {
                 : Text("Try part of their name, or the code shown on their row.", bundle: .module)
         }
         .background(palette.background)
+        // COPY END d477694b
     }
 }
 

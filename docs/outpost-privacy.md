@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 56ed9210 [NEEDS HUMAN REVIEW]
 title: What an Outpost promises
 layout: default
 nav_order: 11
@@ -15,6 +16,10 @@ and each was broken by an independent review.
 1. TOC
 {:toc}
 
+<!-- COPY END 56ed9210 -->
+
+<!-- COPY BEGIN 83e31185 [NEEDS HUMAN REVIEW] -->
+
 ## The question
 
 An Outpost is a member's own page, and they choose who reads it. Everybody who can read a post can
@@ -25,11 +30,19 @@ The app draws C to A as one shared anonymous figure. But C's permanent identifie
 is stored on A's phone underneath that figure. The question was whether it could be moved inside the
 sealed part of the entry.
 
+<!-- COPY END 83e31185 -->
+
+<!-- COPY BEGIN 3ab5854a [NEEDS HUMAN REVIEW] -->
+
 ## Why sealing it does not work
 
 **The person it is hidden from holds the key.** Being let into B's Outpost means holding the key to
 it. Anything sealed with that key, A can open. Putting C's identifier inside the seal hands it to
 exactly the person it was meant to be kept from.
+
+<!-- COPY END 3ab5854a -->
+
+<!-- COPY BEGIN 703c8578 [NEEDS HUMAN REVIEW] -->
 
 ## The two real options
 
@@ -60,6 +73,10 @@ measure, unblockable.
 shape means nothing already written loads. Before release that costs a wipe; after release it costs
 far more.
 
+<!-- COPY END 703c8578 -->
+
+<!-- COPY BEGIN 3b4fc863 [NEEDS HUMAN REVIEW] -->
+
 ## What was done instead
 
 **What travels with the address.** On its own, the identifier is a number. But a stranger reading
@@ -84,6 +101,10 @@ decides per room, so a skipped entry becomes a permanent gap nobody is allowed t
 tell from a real loss. A way to tell *withheld* from *lost* has to exist first. How much is carried
 this way is counted under History check, *Carried for other people*.
 
+<!-- COPY END 3b4fc863 -->
+
+<!-- COPY BEGIN 2ded709f [NEEDS HUMAN REVIEW] -->
+
 ## The promise
 
 **Outposts are not anonymous, and the app does not say they are.**
@@ -105,6 +126,10 @@ this way is counted under History check, *Carried for other people*.
 The nearest familiar thing is a private account on a social network: your followers can see each
 other's replies.
 
+<!-- COPY END 2ded709f -->
+
+<!-- COPY BEGIN b5cf703f [NEEDS HUMAN REVIEW] -->
+
 ## What would reopen it
 
 All three of these, not any one:
@@ -114,6 +139,10 @@ All three of these, not any one:
 2. A way to block and to enforce the abuse list without a stable return address, or a written
    decision that unlinkability wins and blocking gets weaker.
 3. A third Apple Account, because the three-person case cannot be observed with two.
+
+<!-- COPY END b5cf703f -->
+
+<!-- COPY BEGIN 841dbc84 [NEEDS HUMAN REVIEW] -->
 
 ## Two findings from the same study
 
@@ -128,3 +157,5 @@ every device works it out the same way instead of being told, which is also why 
 
 One review finding claimed that somebody let into an Outpost later receives its posts but not the
 comments already under them. It was tested and does not reproduce; the test was kept.
+
+<!-- COPY END 841dbc84 -->

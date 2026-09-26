@@ -22,6 +22,7 @@ public struct SupporterSettings {
         self.onShowBadge = onShowBadge
     }
 
+    // COPY BEGIN 18b805c8 [NEEDS HUMAN REVIEW]
     var standingSentence: Text {
         switch standing {
         case .none:
@@ -36,7 +37,9 @@ public struct SupporterSettings {
                 bundle: .module)
         }
     }
+    // COPY END 18b805c8
 
+    // COPY BEGIN 19b0bece [NEEDS HUMAN REVIEW]
     var standingDetail: Text {
         switch standing {
         case .none: Text("Ended", bundle: .module)
@@ -45,4 +48,5 @@ public struct SupporterSettings {
             Text("Until \(end.formatted(.dateTime.day().month(.abbreviated).year()))", bundle: .module)
         }
     }
+    // COPY END 19b0bece
 }

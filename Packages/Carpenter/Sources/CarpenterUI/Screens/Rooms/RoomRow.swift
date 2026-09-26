@@ -22,6 +22,7 @@ struct RoomRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
+            // COPY BEGIN 7f0b8e62 [NEEDS HUMAN REVIEW]
             Circle()
                 .fill(palette.accentColor)
                 .frame(width: 10, height: 10)
@@ -29,6 +30,7 @@ struct RoomRow: View {
                 .accessibilityLabel(Text("Unread", bundle: .module))
                 .accessibilityHidden(!room.hasUnread)
                 .padding(.trailing, 8)
+            // COPY END 7f0b8e62
 
             if showsAvatar {
                 RoomAvatar(
@@ -77,6 +79,7 @@ struct RoomRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 }
 
+                // COPY BEGIN c88e904a [NEEDS HUMAN REVIEW]
                 if density != .compact {
                     (room.lastMessage.isEmpty
                         ? Text("No messages yet", bundle: .module)
@@ -88,6 +91,7 @@ struct RoomRow: View {
                             reservesSpace: !typeSize.isAccessibilitySize)
                         .multilineTextAlignment(.leading)
                 }
+                // COPY END c88e904a
             }
             .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
         }

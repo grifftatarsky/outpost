@@ -25,6 +25,7 @@ struct PeopleView: View {
         connections.matching(query).sectionedByInitial()
     }
 
+    // COPY BEGIN 5d43ec37 [NEEDS HUMAN REVIEW]
     private var noMatch: some View {
         ContentUnavailableView {
             Label {
@@ -37,10 +38,12 @@ struct PeopleView: View {
         }
         .background(palette.background)
     }
+    // COPY END 5d43ec37
 
     var body: some View {
         Group {
             if connections.isEmpty {
+                // COPY BEGIN f3a777b9 [NEEDS HUMAN REVIEW]
                 ContentUnavailableView {
                     Label {
                         Text("Nobody yet", bundle: .module)
@@ -53,6 +56,7 @@ struct PeopleView: View {
                         bundle: .module)
                 }
                 .background(palette.background)
+                // COPY END f3a777b9
             } else {
                 List {
                     ForEach(sections, id: \.title) { section in
@@ -76,7 +80,9 @@ struct PeopleView: View {
                         .sectionIndexLabel(section.title)
                     }
                 }
+                // COPY BEGIN 2c4e5c96 [NEEDS HUMAN REVIEW]
                 .searchable(text: $query, prompt: Text("Search people", bundle: .module))
+                // COPY END 2c4e5c96
                 .autocorrectionDisabled()
                 .overlay {
                     if sections.isEmpty, !query.isEmpty { noMatch }
@@ -85,7 +91,9 @@ struct PeopleView: View {
                 .background(palette.background)
             }
         }
+        // COPY BEGIN c6849634 [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("People", bundle: .module))
+        // COPY END c6849634
         .toolbarTitleDisplayMode(.inline)
     }
 
@@ -94,6 +102,7 @@ struct PeopleView: View {
             if showsAvatars {
                 PersonAvatarView(member: connection.person, diameter: CarpenterMetrics.messageAvatar)
             }
+            // COPY BEGIN b9b36c32 [NEEDS HUMAN REVIEW]
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: connection.person.displayName)
                     .font(CarpenterFont.rowTitle)
@@ -108,6 +117,7 @@ struct PeopleView: View {
                 .font(CarpenterFont.rowDetail)
                 .foregroundStyle(palette.tertiaryText)
             }
+            // COPY END b9b36c32
         }
         .accessibilityElement(children: .combine)
     }
@@ -171,6 +181,7 @@ public struct PersonDetailView: View {
 
             if canEdit {
                 Section {
+                    // COPY BEGIN fd396c1a [NEEDS HUMAN REVIEW]
                     if onNicknameChange != nil {
                         HStack(spacing: 12) {
                             IconTile("pencil", fill: palette.tileFill(.feature))
@@ -200,11 +211,13 @@ public struct PersonDetailView: View {
                     Text(
                         "A name or photo you set here is yours alone: drawn wherever this person appears, and never sent to anybody — not to them, not to a room. Clear the name to go back to what they shared.",
                         bundle: .module)
+                    // COPY END fd396c1a
                 }
                 .groupedRowSurface()
             }
 
             Section {
+                // COPY BEGIN 68c955a2 [NEEDS HUMAN REVIEW]
                 HStack(spacing: 12) {
                     IconTile("person.text.rectangle.fill", fill: palette.tileFill(.feature))
                     Text("Their name", bundle: .module)
@@ -226,6 +239,7 @@ public struct PersonDetailView: View {
                 Text(
                     "Their name and photo are what they shared, shown where Show others' names and photos are on. The code under their name is theirs for good.",
                     bundle: .module)
+                // COPY END 68c955a2
             }
             .groupedRowSurface()
         }
@@ -238,6 +252,7 @@ public struct PersonDetailView: View {
         .onDisappear { save(now: true) }
     }
 
+    // COPY BEGIN 155232c1 [NEEDS HUMAN REVIEW]
     private var badgedAvatar: some View {
         PersonAvatarView(member: person, diameter: 88)
             .overlay(alignment: .bottomTrailing) {
@@ -252,6 +267,7 @@ public struct PersonDetailView: View {
             }
             .accessibilityLabel(Text("Choose a photo", bundle: .module))
     }
+    // COPY END 155232c1
 
     private func save(now: Bool) {
         guard let onNicknameChange else { return }

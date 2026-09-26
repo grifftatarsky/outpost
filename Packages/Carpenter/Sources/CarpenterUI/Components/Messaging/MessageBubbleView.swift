@@ -121,6 +121,7 @@ public struct MessageRunView: View {
                 .presentationDragIndicator(.visible)
             }
             .confirmingBlock($blocking) { person in await actions?.block?(person) }
+            // COPY BEGIN 1784d27b [NEEDS HUMAN REVIEW]
             .sheet(item: $editing) { message in
                 EditWordsView(
                     title: Text("Edit message", bundle: .module),
@@ -184,6 +185,7 @@ public struct MessageRunView: View {
             } message: {
                 Text(verbatim: problem ?? "")
             }
+            // COPY END 1784d27b
     }
 
     @ViewBuilder
@@ -195,6 +197,7 @@ public struct MessageRunView: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
         } else {
             HStack(alignment: .bottom, spacing: 8) {
+                // COPY BEGIN d42d3ba8 [NEEDS HUMAN REVIEW]
                 if showsAvatars {
                     NavigationLink(value: PersonRoute(run.author.id)) {
                         PersonAvatarView(
@@ -207,6 +210,7 @@ public struct MessageRunView: View {
                     .accessibilityLabel(
                         Text("About \(run.author.displayName)", bundle: .module))
                 }
+                // COPY END d42d3ba8
                 VStack(alignment: .leading, spacing: 3) {
                     if showsRunAuthors {
                         Text(run.author.displayName)
@@ -226,7 +230,9 @@ public struct MessageRunView: View {
         ForEach(Array(run.messages.enumerated()), id: \.element.id) { index, message in
             VStack(alignment: run.isMine ? .trailing : .leading, spacing: 0) {
                 bubble(for: message, at: index)
+                // COPY BEGIN b072bc60 [NEEDS HUMAN REVIEW]
                 .accessibilityAction(named: Text("React", bundle: .module)) { reacting = message }
+                // COPY END b072bc60
                 .overlay(alignment: run.isMine ? .topLeading : .topTrailing) {
                     if !message.reactions.isEmpty {
                         MessageReactions(
@@ -307,6 +313,7 @@ extension MessageRunView {
 
     @ViewBuilder
     fileprivate func menu(for message: Message) -> some View {
+        // COPY BEGIN 66a3f69d [NEEDS HUMAN REVIEW]
         if let onShowDetail {
             Button { onShowDetail(message) } label: {
                 Label {
@@ -316,8 +323,10 @@ extension MessageRunView {
                 }
             }
         }
+        // COPY END 66a3f69d
 
         if !message.isMine {
+            // COPY BEGIN c0f53100 [NEEDS HUMAN REVIEW]
             Button {
                 reacting = nil
                 reporting = message
@@ -328,7 +337,9 @@ extension MessageRunView {
                     Image(systemName: "flag")
                 }
             }
+            // COPY END c0f53100
 
+            // COPY BEGIN 3689765f [NEEDS HUMAN REVIEW]
             if actions?.block != nil {
                 Button(role: .destructive) {
                     reacting = nil
@@ -342,9 +353,11 @@ extension MessageRunView {
                 }
                 .tint(palette.destructive)
             }
+            // COPY END 3689765f
         }
 
         if let actions, !message.isWithdrawn {
+            // COPY BEGIN a6142d0a [NEEDS HUMAN REVIEW]
             if actions.editableFor(message.id) != nil {
                 Button { editing = message } label: {
                     Label {
@@ -354,7 +367,9 @@ extension MessageRunView {
                     }
                 }
             }
+            // COPY END a6142d0a
 
+            // COPY BEGIN 2b852244 [NEEDS HUMAN REVIEW]
             if actions.withdrawableFor(message.id) != nil {
                 Button(role: .destructive) { withdrawing = message } label: {
                     Label {
@@ -365,8 +380,10 @@ extension MessageRunView {
                 }
                 .tint(palette.destructive)
             }
+            // COPY END 2b852244
         }
 
+        // COPY BEGIN 2883aa24 [NEEDS HUMAN REVIEW]
         if onHide != nil {
             Button(role: .destructive) {
                 hiding = message
@@ -379,9 +396,11 @@ extension MessageRunView {
             }
             .tint(palette.destructive)
         }
+        // COPY END 2883aa24
     }
 }
 
+// COPY BEGIN 95bf0122 [NEEDS HUMAN REVIEW]
 extension MessageRunView {
     /// The message being hidden, short enough for a dialog title. Apple asks that a title fit one
     /// line; a long message is cut rather than wrapped, and a message with no words says so.
@@ -392,6 +411,7 @@ extension MessageRunView {
         return Text("Hide \u{201C}\(short)\u{201D}?", bundle: .module)
     }
 }
+// COPY END 95bf0122
 
 extension View {
     fileprivate func presentingViewer(
@@ -472,10 +492,13 @@ struct EditWordsView: View {
                     .foregroundStyle(palette.destructive)
             }
 
+            // COPY BEGIN bd8f3a87 [NEEDS HUMAN REVIEW]
             Text("Everybody sees the new words, and that it was edited.", bundle: .module)
                 .font(CarpenterFont.caption)
                 .foregroundStyle(palette.secondaryText)
+            // COPY END bd8f3a87
 
+            // COPY BEGIN d7f1f84c [NEEDS HUMAN REVIEW]
             Button {
                 Task {
                     saving = true
@@ -488,10 +511,12 @@ struct EditWordsView: View {
             }
             .prominentActionButton()
             .disabled(saving || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            // COPY END d7f1f84c
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(palette.background.ignoresSafeArea())
+        // COPY BEGIN bcfa36ea [NEEDS HUMAN REVIEW]
         .toolbar {
             ToolbarItem(placement: .keyboard) {
                 HStack {
@@ -500,6 +525,7 @@ struct EditWordsView: View {
                 }
             }
         }
+        // COPY END bcfa36ea
         .onAppear {
             text = current
             writing = true

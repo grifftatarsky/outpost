@@ -11,6 +11,7 @@ public struct AccentPickerView: View {
     }
 
     public var body: some View {
+        // COPY BEGIN a6fef78e [NEEDS HUMAN REVIEW]
         ScrollView {
             VStack(spacing: 0) {
                 livePreview
@@ -24,23 +25,28 @@ public struct AccentPickerView: View {
         .background(palette.background)
         .navigationTitle(Text("Color", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
+        // COPY END a6fef78e
     }
 
     private var livePreview: some View {
         VStack(spacing: 14) {
+            // COPY BEGIN d5a308c7 [NEEDS HUMAN REVIEW]
             MessageBubbleView(
                 text: String(localized: "is the Goodyear one a blimp or a zeppelin", bundle: .module),
                 isMine: false,
                 position: .last
             )
             .frame(maxWidth: .infinity, alignment: .leading)
+            // COPY END d5a308c7
 
+            // COPY BEGIN 0b71a495 [NEEDS HUMAN REVIEW]
             MessageBubbleView(
                 text: String(localized: "it has a frame now, so: neither, and both", bundle: .module),
                 isMine: true,
                 position: .last
             )
             .frame(maxWidth: .infinity, alignment: .trailing)
+            // COPY END 0b71a495
         }
         .padding(.horizontal, 16)
         .padding(.top, 18)
@@ -51,6 +57,7 @@ public struct AccentPickerView: View {
         .padding(.horizontal, 16)
     }
 
+    // COPY BEGIN 1ed2b15e [NEEDS HUMAN REVIEW]
     private var scopeNote: some View {
         Text(
             "Applies to every room and your Outpost. Color is a local preference — nobody else sees your choice.",
@@ -62,6 +69,7 @@ public struct AccentPickerView: View {
         .padding(.top, 14)
         .padding(.bottom, 16)
     }
+    // COPY END 1ed2b15e
 
     private var swatches: some View {
         VStack(spacing: 16) {
@@ -135,16 +143,20 @@ private struct AppearanceSample: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
+            // COPY BEGIN dd25d18a [NEEDS HUMAN REVIEW]
             Text(appearance == .dark ? "Dark" : "Light", bundle: .module)
                 .sectionHeading()
                 .kerning(0.55)
                 .textCase(.uppercase)
                 .foregroundStyle(sample.tertiaryText)
+            // COPY END dd25d18a
 
+            // COPY BEGIN cc99c8b7 [NEEDS HUMAN REVIEW]
             bubble("hydrogen, obviously", isMine: false)
                 .frame(maxWidth: .infinity, alignment: .leading)
             bubble("helium coward", isMine: true)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+            // COPY END cc99c8b7
         }
         .padding(14)
         .frame(maxWidth: .infinity)

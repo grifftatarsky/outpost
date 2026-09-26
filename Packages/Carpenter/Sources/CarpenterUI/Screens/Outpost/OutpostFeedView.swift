@@ -99,6 +99,7 @@ public struct OutpostFeedView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .scrollEdgeEffectStyle(.soft, for: .top)
+                // COPY BEGIN f8b2effc [NEEDS HUMAN REVIEW]
                 .overlay {
                     if shown.isEmpty {
                         if let tag {
@@ -112,13 +113,17 @@ public struct OutpostFeedView: View {
                         }
                     }
                 }
+                // COPY END f8b2effc
             }
         }
         .background(palette.background)
+        // COPY BEGIN e624445e [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Outposts", bundle: .module))
+        // COPY END e624445e
         .helpButton()
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
+            // COPY BEGIN 2f69004f [NEEDS HUMAN REVIEW]
             ToolbarItem(placement: .principal) {
                 Text("Outposts", bundle: .module).font(.headline)
             }
@@ -146,6 +151,7 @@ public struct OutpostFeedView: View {
                             .foregroundStyle(palette.primaryText)
                     }
                     .accessibilityLabel(Text("More", bundle: .module))
+            // COPY END 2f69004f
                 }
             }
         }
@@ -166,6 +172,7 @@ public struct OutpostFeedView: View {
             VStack(spacing: 0) {
                 if let tag {
                     HStack(spacing: 6) {
+                        // COPY BEGIN 54a4071c [NEEDS HUMAN REVIEW]
                         Button {
                             withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) { self.tag = nil }
                         } label: {
@@ -179,6 +186,7 @@ public struct OutpostFeedView: View {
                         .buttonStyle(.glass)
                         .tint(palette.accentColor)
                         .accessibilityLabel(Text("Stop filtering by #\(tag)", bundle: .module))
+                        // COPY END 54a4071c
 
                         Spacer(minLength: 0)
                     }
@@ -189,6 +197,7 @@ public struct OutpostFeedView: View {
         }
     }
 
+    // COPY BEGIN d151d459 [NEEDS HUMAN REVIEW]
     private var emptyState: some View {
         ContentUnavailableView {
             Label {
@@ -203,6 +212,7 @@ public struct OutpostFeedView: View {
         }
         .background(palette.background)
     }
+    // COPY END d151d459
 }
 
 private struct PeopleRail: View {
@@ -215,10 +225,12 @@ private struct PeopleRail: View {
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 14) {
+                // COPY BEGIN a0627a01 [NEEDS HUMAN REVIEW]
                 NavigationLink(value: viewer.id) {
                     person(viewer, label: Text("You", bundle: .module), isViewer: true)
                 }
                 .buttonStyle(.plain)
+                // COPY END a0627a01
 
                 ForEach(ordered) { author in
                     NavigationLink(value: author.id) {
@@ -297,6 +309,7 @@ private struct FeedPostRow: View {
 
             VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .firstTextBaseline, spacing: 7) {
+                    // COPY BEGIN c7192446 [NEEDS HUMAN REVIEW]
                     Group {
                         if post.isMine {
                             Text("You", bundle: .module)
@@ -306,6 +319,7 @@ private struct FeedPostRow: View {
                     }
                     .font(CarpenterFont.postAuthor)
                     .foregroundStyle(palette.primaryText)
+                    // COPY END c7192446
 
                     Text(RelativeTimestampFormatter().compact(for: post.postedAt, now: clock.now))
                         .font(CarpenterFont.postDetail)

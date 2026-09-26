@@ -15,6 +15,7 @@ public struct BlockedPeopleView: View {
     public var body: some View {
         List {
             if people.isEmpty {
+                // COPY BEGIN 763fa160 [NEEDS HUMAN REVIEW]
                 ContentUnavailableView {
                     Label {
                         Text("Nobody is blocked", bundle: .module)
@@ -27,9 +28,11 @@ public struct BlockedPeopleView: View {
                         bundle: .module)
                 }
                 .listRowBackground(Color.clear)
+                // COPY END 763fa160
             } else {
                 Section {
                     ForEach(people) { person in
+                        // COPY BEGIN 9779fadf [NEEDS HUMAN REVIEW]
                         PersonRow(name: person.displayName, initials: person.initials, id: person.id)
                             .swipeActions(edge: .trailing) {
                                 Button {
@@ -48,13 +51,16 @@ public struct BlockedPeopleView: View {
                     Text(
                         "Swipe to unblock. Everything they sent while blocked is still here and appears when you do — it was kept, not read.",
                         bundle: .module)
+                        // COPY END 9779fadf
                 }
                 .groupedRowSurface()
             }
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN b977a21f [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Blocked people", bundle: .module))
+        // COPY END b977a21f
         .toolbarTitleDisplayMode(.inline)
     }
 }
@@ -81,14 +87,17 @@ struct ConfirmingBlock: ViewModifier {
         Binding(get: { member != nil }, set: { if !$0 { member = nil } })
     }
 
+    // COPY BEGIN 1e543a83 [NEEDS HUMAN REVIEW]
     private func message(_ person: Member) -> Text {
         Text(
             "You stop seeing anything \(person.displayName) sends, in every room, on all your devices. They are not told, and nothing is erased. You can undo this under You › Safety.",
             bundle: .module)
     }
+    // COPY END 1e543a83
 
     func body(content: Content) -> some View {
         if let leaving {
+            // COPY BEGIN 36a365c9 [NEEDS HUMAN REVIEW]
             content.confirmationDialog(
                 Text("Block this person?", bundle: .module), isPresented: isAsking,
                 titleVisibility: .visible, presenting: member
@@ -110,10 +119,12 @@ struct ConfirmingBlock: ViewModifier {
                 } label: {
                     Text("Cancel", bundle: .module)
                 }
+            // COPY END 36a365c9
             } message: { person in
                 message(person)
             }
         } else {
+            // COPY BEGIN 0018fa26 [NEEDS HUMAN REVIEW]
             content.alert(
                 Text("Block this person?", bundle: .module), isPresented: isAsking, presenting: member
             ) { person in
@@ -126,6 +137,7 @@ struct ConfirmingBlock: ViewModifier {
                 } label: {
                     Text("Cancel", bundle: .module)
                 }
+            // COPY END 0018fa26
             } message: { person in
                 message(person)
             }

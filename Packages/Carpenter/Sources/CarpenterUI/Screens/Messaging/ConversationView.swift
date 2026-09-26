@@ -256,6 +256,7 @@ public struct ConversationView: View {
         .navigationTitle(Text(room.name))
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
+            // COPY BEGIN 81fd2d71 [NEEDS HUMAN REVIEW]
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 0) {
                     Text(room.name)
@@ -268,6 +269,7 @@ public struct ConversationView: View {
                     }
                 }
             }
+            // COPY END 81fd2d71
             if hasRoomActions {
                 ToolbarItem(placement: .primaryAction) { roomMenu }
             }

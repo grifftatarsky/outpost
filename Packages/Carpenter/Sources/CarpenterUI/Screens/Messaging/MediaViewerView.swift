@@ -38,6 +38,7 @@ public struct MediaViewerView: View {
                 }
             }
             .toolbar {
+                // COPY BEGIN ca6cec86 [NEEDS HUMAN REVIEW]
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
                         .accessibilityLabel(Text("Close", bundle: .module))
@@ -57,6 +58,7 @@ public struct MediaViewerView: View {
                                 ? Text("Report this photo", bundle: .module)
                                 : Text("Report this video", bundle: .module))
                     }
+                // COPY END ca6cec86
                 }
             }
         }
@@ -96,7 +98,9 @@ public struct MediaViewerView: View {
                         drag = .zero
                     }
                 }
+                // COPY BEGIN 429482dd [NEEDS HUMAN REVIEW]
                 .accessibilityLabel(Text("Photo", bundle: .module))
+                // COPY END 429482dd
                 .accessibilityZoomAction { action in
                     switch action.direction {
                     case .zoomIn: scale = min(scale * 1.5, Self.maximumScale)
@@ -118,6 +122,7 @@ public struct MediaViewerView: View {
             height: min(max(wanted.height, -slack.height), slack.height))
     }
 
+    // COPY BEGIN cf4bf019 [NEEDS HUMAN REVIEW]
     private func clip(_ url: URL) -> some View {
         VideoPlayer(player: player)
             .ignoresSafeArea()
@@ -132,7 +137,9 @@ public struct MediaViewerView: View {
             }
             .accessibilityLabel(Text("Video", bundle: .module))
     }
+    // COPY END cf4bf019
 
+    // COPY BEGIN ea0585b6 [NEEDS HUMAN REVIEW]
     @ViewBuilder
     private var share: some View {
         if let video = loaded.video {
@@ -153,6 +160,7 @@ public struct MediaViewerView: View {
             .accessibilityLabel(Text("Share or save", bundle: .module))
         }
     }
+    // COPY END ea0585b6
 }
 
 private func + (left: CGSize, right: CGSize) -> CGSize {

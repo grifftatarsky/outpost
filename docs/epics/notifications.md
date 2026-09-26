@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 2d97bebc [NEEDS HUMAN REVIEW]
 title: Notifications
 layout: default
 parent: Roadmap
@@ -14,6 +15,10 @@ Telling somebody a message arrived, and nothing else.
 1. TOC
 {:toc}
 
+<!-- COPY END 2d97bebc -->
+
+<!-- COPY BEGIN ccb9afee [NEEDS HUMAN REVIEW] -->
+
 ## Where this stands
 
 Three subscriptions, each scoped to a record type, exactly one visible. Everything up to the push
@@ -24,6 +29,10 @@ defined on the [Roadmap](../roadmap.md#how-to-read-this).
 
 Every ticket on this page, with its status and what was actually observed, is on the
 [Roadmap](../roadmap.md#where-everything-stands).
+
+<!-- COPY END ccb9afee -->
+
+<!-- COPY BEGIN 2dd0043a [NEEDS HUMAN REVIEW] -->
 
 ## Tickets
 
@@ -51,6 +60,10 @@ that a notification means something.
   arrived with the recipient backgrounded, and no log activity at all.
 - Hardware: Griff reported a banner arriving on a phone from the other account's bell on 2026-09-09.
   Not watched again since the extension changed.
+
+<!-- COPY END 2dd0043a -->
+
+<!-- COPY BEGIN b9158b0a [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — the unverified assumption, the cascade, and what 2026-09-02 settled</summary>
@@ -80,6 +93,10 @@ delivery is unaffected.
 
 </details>
 
+<!-- COPY END b9158b0a -->
+
+<!-- COPY BEGIN cafc1f98 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="notification-previews">
 <summary><b>Notification previews</b> — Complete (hardware proof owed)</summary>
 
@@ -105,6 +122,10 @@ somebody glancing at my phone does not read my conversations.
   same reason as the bell.
 
 **Design.** The four rungs, drawn as the banners each produces.
+
+<!-- COPY END cafc1f98 -->
+
+<!-- COPY BEGIN 73c7dc65 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
 <summary>Record — the rungs, the limit, and why per member rather than per device</summary>
@@ -133,6 +154,10 @@ is how one gets forgotten.
 
 </details>
 
+<!-- COPY END 73c7dc65 -->
+
+<!-- COPY BEGIN 9deefa57 [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="unread-and-the-number-on-the-icon">
 <summary><b>Unread, and the number on the icon</b> — Complete (tested)</summary>
 
@@ -160,6 +185,10 @@ read, so that a badge means something.
 
 **Design.** Boards 02, 34 (pinned variant), 92.
 
+<!-- COPY END 9deefa57 -->
+
+<!-- COPY BEGIN e56ba89c [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1">
 <summary>Record — why the mark is not the receipt, and what it costs</summary>
 
@@ -179,6 +208,10 @@ the phone leaves the dot on the iPad, written down rather than discovered.
 </details>
 
 </details>
+
+<!-- COPY END e56ba89c -->
+
+<!-- COPY BEGIN 02f59010 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="asking-for-notifications-honestly">
 <summary><b>Asking for notifications honestly</b> — Complete (tested)</summary>
@@ -202,6 +235,10 @@ no before the system asks, so that the prompt is not a surprise.
 **Detail.** [Before TestFlight](../pre-testflight.md#permissions-explained-before-they-are-asked).
 
 </details>
+
+<!-- COPY END 02f59010 -->
+
+<!-- COPY BEGIN d9be335f [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="tapping-through-and-what-happens-next">
 <summary><b>Tapping through, and what happens next</b> — Complete (hardware proof owed)</summary>
@@ -233,6 +270,10 @@ the notification is a door rather than an announcement.
 
 </details>
 
+<!-- COPY END d9be335f -->
+
+<!-- COPY BEGIN c1b58e4b [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="a-banner-from-a-person">
 <summary><b>A banner from a person</b> — Complete (hardware proof owed)</summary>
 
@@ -258,6 +299,10 @@ their name — so that Focus treats it as one and my lock screen reads like a co
 **Design.** Messages' banner.
 
 </details>
+
+<!-- COPY END c1b58e4b -->
+
+<!-- COPY BEGIN 0ce85551 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="silenced-notifications-shared">
 <summary><b>Silenced notifications, shared</b> — Complete (tested)</summary>
@@ -294,6 +339,10 @@ theirs.
 
 </details>
 
+<!-- COPY END 0ce85551 -->
+
+<!-- COPY BEGIN 75c6a08d [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="focus-filters">
 <summary><b>Focus filters</b> — Complete (hardware proof owed)</summary>
 
@@ -320,6 +369,10 @@ what was said, so that Work is Work without touching every room's setting by han
 **Design.** The system's Focus filter sheet.
 
 </details>
+
+<!-- COPY END 75c6a08d -->
+
+<!-- COPY BEGIN 13ef2999 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="settings-split-by-what-rings">
 <summary><b>Settings split by what rings</b> — Complete (hardware proof owed)</summary>
@@ -360,6 +413,10 @@ what to count, and why the app's own housekeeping is not in it.
 
 </details>
 
+<!-- COPY END 13ef2999 -->
+
+<!-- COPY BEGIN 55d3305b [NEEDS HUMAN REVIEW] -->
+
 <details markdown="1" id="asking-for-outpost-notifications">
 <summary><b>Asking for Outpost notifications</b> — Complete (tested)</summary>
 
@@ -377,6 +434,10 @@ hear about it, rather than either being rung without being asked or never findin
 **Testing.** Seen on the rig 2026-09-11 on both accounts. No test covers the onboarding step.
 
 </details>
+
+<!-- COPY END 55d3305b -->
+
+<!-- COPY BEGIN ec9de08b [NEEDS HUMAN REVIEW] -->
 
 ## What has actually been observed, 2026-09-02
 
@@ -402,6 +463,10 @@ CloudKit push of any kind arrived. The message appeared the instant Beta was for
 and nothing arrived on its own. On 2026-09-09 Griff saw a banner arrive on a phone.
 
 </details>
+
+<!-- COPY END ec9de08b -->
+
+<!-- COPY BEGIN fef3a188 [NEEDS HUMAN REVIEW] -->
 
 ## Test plan
 
@@ -433,6 +498,12 @@ app, in order, with nothing lost, and the app does not nag or call it an error.
 
 </details>
 
+<!-- COPY END fef3a188 -->
+
+<!-- COPY BEGIN a6a10f77 [NEEDS HUMAN REVIEW] -->
+
 **What would falsify the epic.** A banner for something nobody said. A banner naming a message the
 member has already read. Silence when somebody genuinely sent something. The first is noise, the
 second is a lie, and the third is the feature not existing.
+
+<!-- COPY END a6a10f77 -->

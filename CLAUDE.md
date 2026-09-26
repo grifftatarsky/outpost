@@ -39,6 +39,16 @@ comments. Five comments survive because the lint reads them as mechanism (`cross
 `divides regions`, `intentionally empty`, `reentrancy considered`) plus `// MARK:` and
 `swift-tools-version`. Deleting those breaks the build or the lint.
 
+**Copy review markers are the one kind added since.** At Griff's request on 2026-09-25, every piece of
+copy (the docs, the site config, every string a member reads in the app) sits between
+`COPY BEGIN <id> [<status>]` and `COPY END <id>`, in whatever comment the file takes, so his team can
+review it piece by piece. The status is `NEEDS HUMAN REVIEW`, `HUMAN REVIEWED, UNVERIFIED` or
+`HUMAN REVIEWED & VERIFIED`, and **only a person moves it forward**. Never mark copy reviewed
+yourself, and never delete, reword or re-id a marker. If you change the words inside a chunk, set it
+back to `NEEDS HUMAN REVIEW`. If you add copy, wrap it in a new pair using an id from
+`python3 Scripts/copy-review.py new-id`. The lint fails on a broken pair, and `copy-review.py report`
+counts what is left. See [the decision](docs/decisions.md#copy-carries-a-review-marker-and-only-a-person-moves-it).
+
 If you learn something worth keeping, put it in a doc, not above a line.
 
 The sharpest case, for anybody tempted to trust one: `CloudKitEntrySync` landed on 2026-08-16 at

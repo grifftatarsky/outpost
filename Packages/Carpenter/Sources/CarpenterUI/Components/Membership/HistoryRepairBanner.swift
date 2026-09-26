@@ -23,6 +23,7 @@ struct HistoryRepairBanner: View {
                 .foregroundStyle(palette.secondaryText)
                 .accessibilityAddTraits(.updatesFrequently)
             Spacer(minLength: 0)
+            // COPY BEGIN 12dceaf9 [NEEDS HUMAN REVIEW]
             Button {
                 Task { await onDismiss() }
             } label: {
@@ -33,6 +34,7 @@ struct HistoryRepairBanner: View {
             .accessibilityLabel(
                 status.isComplete
                     ? Text("Dismiss", bundle: .module) : Text("Stop waiting", bundle: .module))
+            // COPY END 12dceaf9
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -46,6 +48,7 @@ struct HistoryRepairBanner: View {
 enum RepairCopy {
     static func line(for status: HistoryRepairStatus) -> Text {
         let asked = names(status.asked)
+        // COPY BEGIN 2d36112a [NEEDS HUMAN REVIEW]
         if !status.isComplete {
             if status.answered.isEmpty {
                 return Text("Asking \(asked) for anything this device is missing…", bundle: .module)
@@ -54,14 +57,18 @@ enum RepairCopy {
                 "\(names(status.answered)) answered. Waiting for \(names(status.waiting)).",
                 bundle: .module)
         }
+        // COPY END 2d36112a
 
+        // COPY BEGIN 0cd3e4b7 [NEEDS HUMAN REVIEW]
         let checked = Text("Checked with \(asked).", bundle: .module)
         let refused = status.unverifiable > 0
             ? Text(
                 "^[\(status.unverifiable) entry](inflect: true) will not verify: a device that signed them had stopped being allowed to speak for its member.",
                 bundle: .module)
             : nil
+        // COPY END 0cd3e4b7
 
+        // COPY BEGIN bcb8d376 [NEEDS HUMAN REVIEW]
         if status.stillMissing == 0 {
             if status.recovered > 0 {
                 let arrived = sentences(
@@ -71,8 +78,10 @@ enum RepairCopy {
             }
             return sentences(checked, refused ?? Text("Nothing is missing.", bundle: .module))
         }
+        // COPY END bcb8d376
 
         let missing: Text
+        // COPY BEGIN ecebc20c [NEEDS HUMAN REVIEW]
         if status.heldByNobodyAsked == status.stillMissing {
             missing = Text(
                 "^[\(status.stillMissing) entry](inflect: true) still missing, and nobody asked has them.",
@@ -86,6 +95,7 @@ enum RepairCopy {
                 "^[\(status.stillMissing) entry](inflect: true) still missing: \(status.heldByNobodyAsked) nobody asked has, \(status.sentButNotArrived) sent and not arrived. Check again.",
                 bundle: .module)
         }
+        // COPY END ecebc20c
         let told = sentences(checked, missing)
         return refused.map { sentences(told, $0) } ?? told
     }

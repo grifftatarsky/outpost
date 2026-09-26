@@ -25,6 +25,7 @@ private struct HelpButton: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            // COPY BEGIN 7e7a014e [NEEDS HUMAN REVIEW]
             .toolbar {
                 if showsHelp {
                     ToolbarItem(placement: .primaryAction) {
@@ -38,6 +39,7 @@ private struct HelpButton: ViewModifier {
                     }
                 }
             }
+            // COPY END 7e7a014e
             .sheet(isPresented: $reading) { HowItWorksView() }
     }
 }

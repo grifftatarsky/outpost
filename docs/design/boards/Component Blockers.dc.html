@@ -22,6 +22,7 @@
 <x-import component-from-global-scope="doc-page" from="./doc-page.js" size="letter" margin="0.85in" hint-size="100%,100%">
 <div class="bl" style="font-family:var(--font-body);color:var(--color-text);max-width:38em">
 
+<!-- COPY BEGIN d28a77ec [NEEDS HUMAN REVIEW] -->
 <div style="font-family:var(--font-heading);font-size:16px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:var(--space-3)">Outpost · design pass · specifications</div>
 
 <h1 style="font-family:var(--font-heading);font-size:44px;line-height:1.05;font-weight:600;letter-spacing:-.015em;margin:0 0 var(--space-4)">Design blockers and specifications</h1>
@@ -29,13 +30,17 @@
 <p style="font-size:18px;line-height:1.6;margin:0 0 var(--space-4);color:var(--color-neutral-800)">What is still open on the design side, the exact values every board draws from, and the accessibility requirement for each of the 84 boards. Component rulings and the changes they ask of the app live in the decision record; this document is only the part that is mine to answer.</p>
 
 <p style="font-size:18px;line-height:1.6;margin:0 0 var(--space-8);color:var(--color-neutral-700);font-style:italic">One blocker remains. Everything the earlier version of this page listed under contrast has been drawn and is specified below rather than pending.</p>
+<!-- COPY END d28a77ec -->
 
+<!-- COPY BEGIN 5cb090a6 [NEEDS HUMAN REVIEW] -->
 <h2 style="font-family:var(--font-heading);font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-4);color:var(--color-text)">Open blockers</h2>
 
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">D2 · Three flows confirmed but never re-read against the app</h3>
 <p style="font-size:16px;line-height:1.65;margin:0 0 var(--space-3)">Boards 23 to 25, the multi-step leave, were confirmed as still wanted. But the app currently leaves on a swipe with no questions asked, so the drawn flow has never been checked against what leaving now does — the steps may describe consequences the code no longer produces. Boards 27 to 30, recovery through nominated friends and the in-app lock, are unbuilt and were confirmed on their own terms rather than against anything.</p>
 <p style="font-size:16px;line-height:1.65;margin:0 0 var(--space-8)">Neither blocks a submission. Both should be read against the app before they are built, which is a session with the code rather than a drawing task.</p>
+<!-- COPY END 5cb090a6 -->
 
+<!-- COPY BEGIN f0f3add6 [NEEDS HUMAN REVIEW] -->
 <h2 style="font-family:var(--font-heading);font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-3);color:var(--color-text);break-before:page">Use exactly this</h2>
 <p style="font-size:16px;line-height:1.6;margin:0 0 var(--space-4);color:var(--color-neutral-800)">Every value the boards are drawn at. Where a value is derived rather than fixed, the derivation is given instead of a hex, because it has to hold at seven accents in two appearances.</p>
 
@@ -51,7 +56,9 @@
 <tr><td style="padding-right:10px">Destructive</td><td style="font-family:ui-monospace,Menlo,monospace">#D1382F</td></tr>
 </tbody>
 </table>
+<!-- COPY END f0f3add6 -->
 
+<!-- COPY BEGIN 3d1422b4 [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Surfaces</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -63,7 +70,9 @@
 <tr><td style="padding-right:10px">Text</td><td style="font-family:ui-monospace,Menlo,monospace">#fff / rgba(235,235,245,.6) / .45 — #000 / rgba(60,60,67,.6)</td></tr>
 </tbody>
 </table>
+<!-- COPY END 3d1422b4 -->
 
+<!-- COPY BEGIN c3af64f0 [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Controls</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-6)">
 <tbody>
@@ -78,11 +87,15 @@
 <tr><td style="padding-right:10px">Hit targets</td><td>44pt minimum, satisfied by a tappable inset rather than by the drawn diameter — the visual disc stays as drawn and the region around it is extended to 44pt. Accent swatches are 40pt drawn, 44pt tappable; reaction-row buttons 38pt drawn, 44pt tappable; reaction chips 30pt drawn, 44pt tappable. Delivery marks are not controls and have no tap area.</td></tr>
 </tbody>
 </table>
+<!-- COPY END c3af64f0 -->
 
+<!-- COPY BEGIN e53fbd8e [NEEDS HUMAN REVIEW] -->
 <h2 style="font-family:var(--font-heading);font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-3);color:var(--color-text);break-before:page">Accessibility, board by board</h2>
 <p style="font-size:16px;line-height:1.6;margin:0 0 var(--space-3);color:var(--color-neutral-800)">Four rules hold everywhere and are not repeated per board: no state is carried by colour alone, every layout is built from system text styles and survives to the largest accessibility size, no control is under 44pt, and nothing announces a count where a sentence is what a person needs. The column below is what each board adds to those.</p>
 <p style="font-size:16px;line-height:1.6;margin:0 0 var(--space-4);color:var(--color-neutral-800)">Where a board's layout cannot survive the largest sizes, the alternate arrangement is named rather than left to whoever builds it.</p>
+<!-- COPY END e53fbd8e -->
 
+<!-- COPY BEGIN ab752fac [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 1 · core</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -103,7 +116,9 @@
 <tr><td style="padding-right:10px">15 Desktop Wall</td><td>Full keyboard path through sidebar, list and detail. Focus ring visible on every stop.</td></tr>
 </tbody>
 </table>
+<!-- COPY END ab752fac -->
 
+<!-- COPY BEGIN 534a7c7e [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 2 · consequential screens</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -119,7 +134,9 @@
 <tr><td style="padding-right:10px">33 Storage</td><td>Sizes spoken in full words. Retention control is a value picker, not a slider.</td></tr>
 </tbody>
 </table>
+<!-- COPY END 534a7c7e -->
 
+<!-- COPY BEGIN e5b992c8 [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turns 3–5 · rooms, Outposts, messages</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -140,7 +157,9 @@
 <tr><td style="padding-right:10px">54 Inbox setting</td><td>Two options as a radio group; each option's description is part of its label. The two pictures are decorative.</td></tr>
 </tbody>
 </table>
+<!-- COPY END e5b992c8 -->
 
+<!-- COPY BEGIN 27c2526a [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 6 · empty, waiting, refused</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -153,7 +172,9 @@
 <tr><td style="padding-right:10px">61 Outposts off</td><td>The switch announces the consequence — tab hidden, nothing deleted — in its hint.</td></tr>
 </tbody>
 </table>
+<!-- COPY END 27c2526a -->
 
+<!-- COPY BEGIN f7fcd756 [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 7 · the two claims</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -163,7 +184,9 @@
 <tr><td style="padding-right:10px">65 One room</td><td>The follow-my-default row announces which default it is following, so the value is never blank.</td></tr>
 </tbody>
 </table>
+<!-- COPY END f7fcd756 -->
 
+<!-- COPY BEGIN cb2b0d47 [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 8 · the first ten minutes</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -176,7 +199,9 @@
 <tr><td style="padding-right:10px">73 Verify the phrase</td><td>Words spoken as words. Match and no-match are equal-weight buttons; skip is a third, clearly labelled with what it forgoes.</td></tr>
 </tbody>
 </table>
+<!-- COPY END cb2b0d47 -->
 
+<!-- COPY BEGIN a6c9cffc [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 9 · rooms, hiding, blocking, reporting</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-4)">
 <tbody>
@@ -192,7 +217,9 @@
 <tr><td style="padding-right:10px">83 App icon</td><td>Each tile is a button labelled by name, with selected state. Tiles are images, so the mark inside them is decorative.</td></tr>
 </tbody>
 </table>
+<!-- COPY END a6c9cffc -->
 
+<!-- COPY BEGIN 430123d9 [NEEDS HUMAN REVIEW] -->
 <h3 style="font-family:var(--font-heading);font-size:18px;font-weight:600;margin:0 0 var(--space-2);color:var(--color-accent-700)">Turn 10 · rulings applied</h3>
 <table class="table" style="font-size:16px;margin:0 0 var(--space-6)">
 <tbody>
@@ -207,11 +234,14 @@
 <tr><td style="padding-right:10px">92 Rooms, light</td><td>As 02. Unread remains a dot that is present or absent and is announced either way.</td></tr>
 </tbody>
 </table>
+<!-- COPY END 430123d9 -->
 
+<!-- COPY BEGIN e1713616 [NEEDS HUMAN REVIEW] -->
 <h2 style="font-family:var(--font-heading);font-size:18px;font-weight:600;letter-spacing:.02em;margin:0 0 var(--space-2);color:var(--color-text)">Closed this pass</h2>
 <p style="font-size:16px;line-height:1.65;margin:0">White text on solid accent fill was the one open design blocker and it is drawn: 77 dark fills, 7 light fills and the three destructive buttons now sit on derived values that clear 4.5:1 at every accent in both appearances, and the derivation rather than the resulting hexes is what is specified above. Cobalt, which an earlier retint had collapsed onto verdigris in both the palette and the swatch rows, is restored — the picker offers seven distinct colours again.</p>
 
 <p style="font-size:16px;line-height:1.65;margin:var(--space-3) 0 0">D1 — the app icon having no glyph-only mark — is closed, and it was never really open. The mark exists: <code>Design/logos/icon/</code> holds 23 glyph-only files, <code>icon_white_&lt;accent&gt;</code> and <code>icon_black_&lt;accent&gt;</code> for each of the seven accents, plus hollow variants. The blocker was raised against the eight full lockups this pass was handed, which are the only files in the set that could not deliver it. Nothing needs drawing and nothing needs requesting of anybody; board 83 draws from the icon set.</p>
+<!-- COPY END e1713616 -->
 
 </div>
 </x-import>

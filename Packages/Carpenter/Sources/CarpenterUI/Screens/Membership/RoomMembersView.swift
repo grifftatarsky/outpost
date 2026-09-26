@@ -94,6 +94,7 @@ public struct RoomMembersView: View {
                     row(member)
                 }
             } header: {
+                // COPY BEGIN b033f3e8 [NEEDS HUMAN REVIEW]
                 Text("^[\(members.count) member](inflect: true)", bundle: .module).sectionHeading()
             } footer: {
                 if members.contains(where: { $0.id != viewer }) {
@@ -110,10 +111,12 @@ public struct RoomMembersView: View {
                     case (false, false):
                         EmptyView()
                     }
+                // COPY END b033f3e8
                 }
             }
             .groupedRowSurface()
 
+            // COPY BEGIN c8050b93 [NEEDS HUMAN REVIEW]
             if !invited.isEmpty {
                 Section {
                     ForEach(invited) { person in
@@ -128,7 +131,9 @@ public struct RoomMembersView: View {
                 }
                 .groupedRowSurface()
             }
+            // COPY END c8050b93
 
+            // COPY BEGIN 37fc6cfa [NEEDS HUMAN REVIEW]
             if let onInvite {
                 Section {
                     Button(action: onInvite) {
@@ -142,16 +147,19 @@ public struct RoomMembersView: View {
                 }
                 .groupedRowSurface()
             }
+            // COPY END 37fc6cfa
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .navigationTitle(Text(verbatim: roomName))
         .toolbarTitleDisplayMode(.inline)
+        // COPY BEGIN 18e78d15 [NEEDS HUMAN REVIEW]
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button { dismiss() } label: { Text("Done", bundle: .module) }
             }
         }
+        // COPY END 18e78d15
         .sheet(item: $removing) { member in
             RemoveMemberView(
                 member: member,
@@ -184,6 +192,7 @@ public struct RoomMembersView: View {
             person(member)
         } else {
             person(member).contextMenu {
+                // COPY BEGIN 6c95b4b6 [NEEDS HUMAN REVIEW]
                 if onBlock != nil {
                     Button(role: .destructive) {
                         blocking = member
@@ -196,7 +205,9 @@ public struct RoomMembersView: View {
                     }
                     .tint(palette.destructive)
                 }
+                // COPY END 6c95b4b6
 
+                // COPY BEGIN 3f84a555 [NEEDS HUMAN REVIEW]
                 if onRemove != nil {
                     Button(role: .destructive) {
                         removing = member
@@ -210,6 +221,7 @@ public struct RoomMembersView: View {
                     }
                     .tint(palette.destructive)
                 }
+                // COPY END 3f84a555
             }
         }
     }
@@ -241,6 +253,7 @@ public struct RoomMembersView: View {
             detail: waiting(person)
         )
         .contextMenu {
+            // COPY BEGIN da937147 [NEEDS HUMAN REVIEW]
             Button {
                 showingPhrase = person
             } label: {
@@ -250,8 +263,10 @@ public struct RoomMembersView: View {
                     Image(systemName: "character.textbox")
                 }
             }
+            // COPY END da937147
 
             if person.awaitsMyApproval, let onDecide {
+                // COPY BEGIN 072f923a [NEEDS HUMAN REVIEW]
                 Button {
                     Task { await onDecide(person.id, true) }
                 } label: {
@@ -261,7 +276,9 @@ public struct RoomMembersView: View {
                         Image(systemName: "person.badge.plus")
                     }
                 }
+                // COPY END 072f923a
 
+                // COPY BEGIN ec57a2a6 [NEEDS HUMAN REVIEW]
                 Button {
                     Task { await onDecide(person.id, false) }
                 } label: {
@@ -271,8 +288,10 @@ public struct RoomMembersView: View {
                         Image(systemName: "hand.raised")
                     }
                 }
+                // COPY END ec57a2a6
             }
 
+            // COPY BEGIN b43a17c1 [NEEDS HUMAN REVIEW]
             if onRescind != nil {
                 Button(role: .destructive) {
                     rescinding = person
@@ -285,9 +304,11 @@ public struct RoomMembersView: View {
                 }
                 .tint(palette.destructive)
             }
+            // COPY END b43a17c1
         }
     }
 
+    // COPY BEGIN 40c0b4a6 [NEEDS HUMAN REVIEW]
     private func waiting(_ person: InvitedPerson) -> Text {
         if person.hasConfirmed {
             if let agreed = person.agreed {
@@ -321,7 +342,9 @@ public struct RoomMembersView: View {
                 "Invited. Nothing back yet — runs out \(person.expiresAt.formatted(.relative(presentation: .named))).",
                 bundle: .module)
     }
+    // COPY END 40c0b4a6
 
+    // COPY BEGIN 93c0f1a5 [NEEDS HUMAN REVIEW]
     private func person(_ member: Member) -> some View {
         NavigationLink(value: PersonRoute(member.id)) {
             PersonRow(
@@ -332,6 +355,7 @@ public struct RoomMembersView: View {
             )
         }
     }
+    // COPY END 93c0f1a5
 }
 
 struct RemoveMemberView: View {
@@ -339,6 +363,7 @@ struct RemoveMemberView: View {
     let roomName: String
     let onRemove: () async -> Void
 
+    // COPY BEGIN c52bb035 [NEEDS HUMAN REVIEW]
     var body: some View {
         MembershipDecisionSheet(
             question: Text("Remove \(member.displayName)?", bundle: .module),
@@ -363,6 +388,7 @@ struct RemoveMemberView: View {
                     bundle: .module))
         }
     }
+    // COPY END c52bb035
 }
 
 struct RescindInvitationView: View {
@@ -370,6 +396,7 @@ struct RescindInvitationView: View {
     let roomName: String
     let onRescind: () async -> Void
 
+    // COPY BEGIN 7cf63d28 [NEEDS HUMAN REVIEW]
     var body: some View {
         MembershipDecisionSheet(
             question: Text("Take back the invitation to \(person.person.displayName)?", bundle: .module),
@@ -405,6 +432,7 @@ struct RescindInvitationView: View {
             }
         }
     }
+    // COPY END 7cf63d28
 }
 
 #if DEBUG

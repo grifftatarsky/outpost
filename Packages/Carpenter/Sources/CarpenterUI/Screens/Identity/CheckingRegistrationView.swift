@@ -15,11 +15,13 @@ public struct CheckingRegistrationView: View {
 
             ProgressView()
 
+            // COPY BEGIN 6ea1adcc [NEEDS HUMAN REVIEW]
             Text("Checking Keychain for existing registration.", bundle: .module)
                 .font(CarpenterFont.rowDetail)
                 .foregroundStyle(palette.secondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
+            // COPY END 6ea1adcc
 
             Spacer(minLength: 0)
 

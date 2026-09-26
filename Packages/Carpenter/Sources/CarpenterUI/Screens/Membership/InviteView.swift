@@ -52,6 +52,7 @@ public struct InviteView: View {
 
                     code
 
+                    // COPY BEGIN e8cba402 [NEEDS HUMAN REVIEW]
                     if let phrase {
                         VerificationPhrase(phrase)
 
@@ -65,7 +66,9 @@ public struct InviteView: View {
                     } else {
                         VerificationPhrasePending()
                     }
+                    // COPY END e8cba402
 
+                    // COPY BEGIN 6e5181ef [NEEDS HUMAN REVIEW]
                     ShareLink(item: shareable) {
                         Text("Send the invite", bundle: .module)
                             .font(CarpenterFont.button)
@@ -76,7 +79,9 @@ public struct InviteView: View {
                                     cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
                     }
                     .foregroundStyle(palette.primaryText)
+                    // COPY END 6e5181ef
 
+                    // COPY BEGIN b0a732df [NEEDS HUMAN REVIEW]
                     if expiresAt >= .distantFuture {
                         Text(
                             "This invite does not expire. It stays good until you take it back.",
@@ -92,20 +97,24 @@ public struct InviteView: View {
                         .font(CarpenterFont.footnote)
                         .foregroundStyle(palette.secondaryText)
                     }
+                    // COPY END b0a732df
                 }
                 .padding(.horizontal, CarpenterMetrics.screenMargin)
                 .padding(.vertical, 24)
             }
             .background(palette.background)
             .navigationTitle(roomName)
+            // COPY BEGIN 59c18bd9 [NEEDS HUMAN REVIEW]
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done", bundle: .module) }
                 }
             }
+            // COPY END 59c18bd9
         }
     }
 
+    // COPY BEGIN bc64ef81 [NEEDS HUMAN REVIEW]
     private var unasked: some View {
         Text(
             "\(roomName) has not been sent this yet. Nothing reaches them until you do.",
@@ -116,9 +125,11 @@ public struct InviteView: View {
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
     }
+    // COPY END bc64ef81
 
     @ViewBuilder private var code: some View {
         if let image = Self.qrCode(for: shareable) {
+            // COPY BEGIN 10f481f0 [NEEDS HUMAN REVIEW]
             Image(image, scale: 1, label: Text("Invite QR code", bundle: .module))
                 .interpolation(.none)
                 .resizable()
@@ -126,12 +137,15 @@ public struct InviteView: View {
                 .frame(maxWidth: 260)
                 .padding(16)
                 .background(.white, in: .rect(cornerRadius: CarpenterMetrics.cardRadius))
+            // COPY END 10f481f0
 
+            // COPY BEGIN 1319e1c3 [NEEDS HUMAN REVIEW]
             Text("Point their camera at this, or send it.", bundle: .module)
                 .font(CarpenterFont.caption)
                 .foregroundStyle(palette.tertiaryText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
+            // COPY END 1319e1c3
         } else {
             Text(invite)
                 .font(.system(.caption2, design: .monospaced))
@@ -176,6 +190,7 @@ struct OutstandingInviteSheet: View {
             } else {
                 NavigationStack {
                     VStack(spacing: 16) {
+                        // COPY BEGIN 996db83f [NEEDS HUMAN REVIEW]
                         if looked {
                             Text(
                                 "There is no invitation standing here any more.", bundle: .module
@@ -186,15 +201,18 @@ struct OutstandingInviteSheet: View {
                         } else {
                             ProgressView()
                         }
+                        // COPY END 996db83f
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(palette.background)
                     .navigationTitle(roomName)
+                    // COPY BEGIN 1df91b86 [NEEDS HUMAN REVIEW]
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button { dismiss() } label: { Text("Done", bundle: .module) }
                         }
                     }
+                    // COPY END 1df91b86
                 }
             }
         }
@@ -228,6 +246,7 @@ public struct StartInviteView: View {
         return today...today.addingTimeInterval(365 * 24 * 60 * 60)
     }
 
+    // COPY BEGIN 9df0413f [NEEDS HUMAN REVIEW]
     static func name(of lifetime: InvitationLifetime) -> Text {
         switch lifetime {
         case .aDay: return Text("A day", bundle: .module)
@@ -239,7 +258,9 @@ public struct StartInviteView: View {
                 "Until \(date.formatted(date: .abbreviated, time: .shortened))", bundle: .module)
         }
     }
+    // COPY END 9df0413f
 
+    // COPY BEGIN a4988e88 [NEEDS HUMAN REVIEW]
     private func lifetimeRow(_ option: InvitationLifetime) -> some View {
         let detail: Text? =
             option == .indefinite
@@ -251,7 +272,9 @@ public struct StartInviteView: View {
             lifetime = option
         }
     }
+    // COPY END a4988e88
 
+    // COPY BEGIN 21132d1a [NEEDS HUMAN REVIEW]
     private var pickedDateRow: some View {
         ChoiceRow(
             title: Text("A date you pick", bundle: .module),
@@ -264,7 +287,9 @@ public struct StartInviteView: View {
             pasting = false
         }
     }
+    // COPY END 21132d1a
 
+    // COPY BEGIN fa250aad [NEEDS HUMAN REVIEW]
     @ViewBuilder
     private var lifetimeSection: some View {
         Section {
@@ -275,10 +300,12 @@ public struct StartInviteView: View {
         }
         .groupedRowSurface()
     }
+    // COPY END fa250aad
 
     @ViewBuilder
     private var pickedDaySection: some View {
         if lifetime.isPickedDate {
+            // COPY BEGIN 11a2625b [NEEDS HUMAN REVIEW]
             Section {
                 DatePicker(
                     selection: $pickedDay,
@@ -293,6 +320,7 @@ public struct StartInviteView: View {
                 }
             }
             .groupedRowSurface()
+            // COPY END 11a2625b
         }
     }
 
@@ -300,6 +328,7 @@ public struct StartInviteView: View {
         NavigationStack {
             List {
                 Section {
+                    // COPY BEGIN 4dacec2d [NEEDS HUMAN REVIEW]
                     TextField(text: $code, axis: .vertical) {
                         Text("Paste their code", bundle: .module)
                     }
@@ -307,9 +336,11 @@ public struct StartInviteView: View {
                     .codeEntry()
                     .lineLimit(4...8)
                     .focused($pasting)
+                    // COPY END 4dacec2d
 
                     PasteCodeButton { code = $0 }
                 } header: {
+                    // COPY BEGIN 15ddcb2d [NEEDS HUMAN REVIEW]
                     Text("Their code", bundle: .module).sectionHeading()
                 } footer: {
                     if failed {
@@ -322,6 +353,7 @@ public struct StartInviteView: View {
                             "Ask them to open \(Branding.displayName), go to You, and send you their code.",
                             bundle: .module)
                     }
+                    // COPY END 15ddcb2d
                 }
                 .groupedRowSurface()
 
@@ -329,6 +361,7 @@ public struct StartInviteView: View {
 
                 pickedDaySection
 
+                // COPY BEGIN 3697f9bd [NEEDS HUMAN REVIEW]
                 Section {
                     Button {
                         Task {
@@ -343,9 +376,11 @@ public struct StartInviteView: View {
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 }
+                // COPY END 3697f9bd
             }
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
+            // COPY BEGIN ef65689a [NEEDS HUMAN REVIEW]
             .toolbar {
                 ToolbarItem(placement: .keyboard) {
                     HStack {
@@ -361,6 +396,7 @@ public struct StartInviteView: View {
                     Button { dismiss() } label: { Text("Cancel", bundle: .module) }
                 }
             }
+            // COPY END ef65689a
         }
     }
 }

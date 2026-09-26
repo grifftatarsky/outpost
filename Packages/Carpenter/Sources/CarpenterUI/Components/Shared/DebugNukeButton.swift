@@ -17,8 +17,10 @@ public struct DebugNukeButton: View {
             confirming = true
         } label: {
             Label {
+                // COPY BEGIN 4987e07b [NEEDS HUMAN REVIEW]
                 Text("Nuke this account", bundle: .module)
                     .font(CarpenterFont.button)
+                // COPY END 4987e07b
             } icon: {
                 Image("NukeMark", bundle: .module)
                     .resizable()
@@ -36,6 +38,7 @@ public struct DebugNukeButton: View {
         .buttonStyle(.plain)
         .tint(palette.destructive)
         .disabled(running)
+        // COPY BEGIN 0303c9a1 [NEEDS HUMAN REVIEW]
         .accessibilityHint(Text("Erases this Apple Account and starts over", bundle: .module))
         .alert(
             Text("Erase this Apple Account?", bundle: .module),
@@ -59,6 +62,7 @@ public struct DebugNukeButton: View {
                 "Erases the CloudKit zone, every key this app has stored, and the log on this device — then starts over. It reaches every device on this Apple Account, not just this one.",
                 bundle: .module
             )
+        // COPY END 0303c9a1
         }
     }
 }

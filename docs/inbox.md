@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 718b2f42 [NEEDS HUMAN REVIEW]
 title: Inbox
 layout: default
 nav_order: 7
@@ -18,6 +19,10 @@ is in `CLAUDE.md` under the traps, and what happened is in git. Checked against 
 
 1. TOC
 {:toc}
+
+<!-- COPY END 718b2f42 -->
+
+<!-- COPY BEGIN 9d913254 [NEEDS HUMAN REVIEW] -->
 
 ## Privacy, on the wire
 
@@ -55,6 +60,10 @@ iOS locks apps behind Face ID better than the app could. What is still missing i
 app talks about what somebody with the phone can see, saying that iOS does the locking; see
 [After TestFlight](after-testflight.md#an-in-app-lock).
 
+<!-- COPY END 9d913254 -->
+
+<!-- COPY BEGIN e80f8f25 [NEEDS HUMAN REVIEW] -->
+
 ## Membership
 
 **A grant can reach somebody just removed.** If a removal entry fails to verify in a round (a device
@@ -83,6 +92,10 @@ by invitation guarantees an answer matches the offer it answers; it does not sto
 swapped. The `.joinRequest` fold checks neither the signature nor the inviter's membership; both are
 checked at write time only.
 
+<!-- COPY END e80f8f25 -->
+
+<!-- COPY BEGIN 7d12cbf4 [NEEDS HUMAN REVIEW] -->
+
 **An invitation to somebody already in the room replaces the one they arrived on.** Nothing refuses
 it, so *Who you are talking to* would show the new offer's date and characters over a check made
 against the old ones. It is the only change in this area that touches people already in rooms, so it
@@ -104,6 +117,10 @@ by the invitation's signature, with a `decodeIfPresent` line and a name in
 given no awaiting invitations, so an invitation to a room showed only under Solos. Both tabs get it
 now, so an invitation to a Solo also shows twice. The fix is for `AwaitingAdmission` to carry the kind
 of room, a wire-visible change to make on purpose.
+
+<!-- COPY END 7d12cbf4 -->
+
+<!-- COPY BEGIN 95fed78f [NEEDS HUMAN REVIEW] -->
 
 ## Correctness
 
@@ -144,6 +161,10 @@ to happen before anybody saves a key from a shipped build.
 what lands in Files is named by the system rather than by the key's fingerprint. Two saved keys cannot
 be told apart from the outside. Not re-checked on a phone since 2026-09-13.
 
+<!-- COPY END 95fed78f -->
+
+<!-- COPY BEGIN 88dfd060 [NEEDS HUMAN REVIEW] -->
+
 ## Tests
 
 **`History from another device survives a relaunch` waits on a wall clock.** It rebuilds the session
@@ -156,6 +177,10 @@ which need booted simulators and minutes each. CI does not run them.
 
 **Nothing measures cost outside the fold and screen reads.** `CausalOrder` on a long log, a round as the
 outbox grows, and laying out a long transcript are unmeasured.
+
+<!-- COPY END 88dfd060 -->
+
+<!-- COPY BEGIN b81482a3 [NEEDS HUMAN REVIEW] -->
 
 ## Cost and scale
 
@@ -178,6 +203,10 @@ republishes it after every write. CloudKit accepted 16MB in a field, so it is no
 member's hundredth message republishes the first ninety-nine to every device. Not measured at any real
 size.
 
+<!-- COPY END b81482a3 -->
+
+<!-- COPY BEGIN 08ff1025 [NEEDS HUMAN REVIEW] -->
+
 ## Unwired or unwatched
 
 **Reaping abandoned device feeds is written and tested, and not wired.** `AbandonedFeeds` decides which
@@ -199,6 +228,10 @@ reached *Join a room* with the paste field empty. Confirm with a real tap.
 
 **The rig holds a room named "Griff"**, made by the first *Send a Solo* before Solos were founded as
 Solos. Left as a specimen.
+
+<!-- COPY END 08ff1025 -->
+
+<!-- COPY BEGIN 53ec92bc [NEEDS HUMAN REVIEW] -->
 
 ## Screens
 
@@ -238,6 +271,10 @@ footer, under the Next button's inset until you scroll.
 system for Focus access, and nothing is saved until that alert is answered, so a check-up can look
 stuck behind a sheet.
 
+<!-- COPY END 53ec92bc -->
+
+<!-- COPY BEGIN 6444fc57 [NEEDS HUMAN REVIEW] -->
+
 ## Accessibility
 
 **Apple's own audit still fails on the Conversation screen**, and this is the one screen in the app
@@ -260,6 +297,10 @@ and the roadmap row now names the gap.
 **Fixed on the way, not parked:** `Later` in `OutpostReviewPrompt` was a 31x16pt button, under the
 44pt floor; and the prompt's `person.2.badge.key.fill` was decorative and unhidden, so VoiceOver read
 the symbol's name aloud.
+
+<!-- COPY END 6444fc57 -->
+
+<!-- COPY BEGIN 3c1b60bb [NEEDS HUMAN REVIEW] -->
 
 ## The switch sweep of 2026-09-17
 
@@ -287,6 +328,10 @@ binding, resolve the binding to the accessor behind it, and grep that accessor o
 `MemberPreferences.swift`, the tests and the settings screens themselves. A hit count of zero is the
 signal. `Scripts/lint/control-label-case.py` now holds the second half automatically.
 
+<!-- COPY END 3c1b60bb -->
+
+<!-- COPY BEGIN 14373dcf [NEEDS HUMAN REVIEW] -->
+
 ## Tooling
 
 **`RandomSource` is a seam nothing uses.** Every byte of key material comes from CryptoKit directly,
@@ -297,6 +342,10 @@ for.
 Reduce Motion anywhere, so one unguarded animation among guarded ones passes. Every animation was read
 at its call site on 2026-09-16 and none is unguarded. Tightening it to per call site is a mechanical
 pass across the tree, with `cross-fade only` added to the cross-fades.
+
+<!-- COPY END 14373dcf -->
+
+<!-- COPY BEGIN 16d05a2e [NEEDS HUMAN REVIEW] -->
 
 ### The conversation screen still costs ~3,500µs a read
 
@@ -311,4 +360,6 @@ lines of `///` remain, for example in `ShortAuthenticationString.swift` and
 does not catch `///`. Found 2026-09-17 during the documentation pass.
 
 **`AppIcon.appiconset` carries Mac sizes of an old drawing.** The Mac is not offered.
+
+<!-- COPY END 16d05a2e -->
 

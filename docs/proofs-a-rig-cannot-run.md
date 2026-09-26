@@ -1,4 +1,5 @@
 ---
+# COPY BEGIN 7d756458 [NEEDS HUMAN REVIEW]
 title: Proofs a rig cannot run
 layout: default
 nav_order: 7
@@ -13,6 +14,10 @@ written. Two reasons only: it needs a third Apple Account, or it needs hardware.
 
 1. TOC
 {:toc}
+
+<!-- COPY END 7d756458 -->
+
+<!-- COPY BEGIN b9a781b3 [NEEDS HUMAN REVIEW] -->
 
 ## Why this page exists
 
@@ -32,6 +37,10 @@ it, a third party needs a third account, and some things need a phone.
 Nothing here blocks TestFlight on its own. What it costs is stated in each row, so the decision to
 ship without them is taken with the cost visible rather than by forgetting they exist.
 
+<!-- COPY END b9a781b3 -->
+
+<!-- COPY BEGIN 6c541474 [NEEDS HUMAN REVIEW] -->
+
 ## Needs a third Apple Account
 
 | Proof | Where it stands | What shipping without it costs |
@@ -41,6 +50,10 @@ ship without them is taken with the cost visible rather than by forgetting they 
 | **Rival epoch secrets from two concurrent advances resolve identically everywhere** | Untested | Two members advancing a room's epoch at the same moment is only possible with three parties. If they resolve differently, members hold different keys for the same epoch and messages stop opening for somebody. |
 | **The narrow grant window with a stale roster, closed end to end** | Untested | A grant issued against a roster that has since changed. With two members the window barely exists; with three it is real. |
 
+<!-- COPY END 6c541474 -->
+
+<!-- COPY BEGIN fc028c33 [NEEDS HUMAN REVIEW] -->
+
 ### What would clear that section
 
 One more Apple Account on the rig, without Advanced Data Protection, signed into a fourth simulator.
@@ -48,6 +61,10 @@ One more Apple Account on the rig, without Advanced Data Protection, signed into
 this app, and that `--reset-account` is destructive to the Apple Account rather than the device.
 
 The work is a scripted pass, not a build. Each row above names what it would prove.
+
+<!-- COPY END fc028c33 -->
+
+<!-- COPY BEGIN 07591ce1 [NEEDS HUMAN REVIEW] -->
 
 ## Needs hardware
 
@@ -69,6 +86,10 @@ real APNs, and the notification extension all run on one. These are what it stil
 | **A line saying somebody added a device** | Needs one account on two phones, for the same reason. | Tested in the suite; never seen drawn from a real second device. |
 | **A TestFlight build offering the free Supporter year** | Needs a build installed from TestFlight, where `AppTransaction` reports the sandbox environment. Debug builds skip the check. | If the detection is wrong, TestFlight testers see no Supporter bar, or an App Store build shows one. |
 
+<!-- COPY END 07591ce1 -->
+
+<!-- COPY BEGIN cf3a8fa4 [NEEDS HUMAN REVIEW] -->
+
 ## Needs something outside the app
 
 | Proof | Why | What it costs |
@@ -77,9 +98,15 @@ real APNs, and the notification extension all run on one. These are what it stil
 | **The report vault** | Same: it has to exist before anything can be filed in it. | Trust and safety is findable in the app and has nowhere to land. |
 | **An invitation expiring at the inviter's relay** | The gate wants an inviter who stays offline past the expiry date. `--clock-ahead-days` can now move one device's clock, which may make this runnable on the rig; it has not been tried. | The expiry is enforced on the device holding the link and in the relay; only the relay half is unproven, and only for the offline-inviter case. |
 
+<!-- COPY END cf3a8fa4 -->
+
+<!-- COPY BEGIN 3c3ca04e [NEEDS HUMAN REVIEW] -->
+
 ## What is NOT on this page
 
 Anything a rig *can* prove. That now includes every one-account round over real CloudKit, the whole
 in-memory suite, and the three-identity triangle above the mailbox, which has been run twice. The
 removal audit's third case — the non-atomic two halves of a removal surviving a crash between them —
 needed a crash harness rather than a third account, and has one: `RemovalSurvivesACrashTests`.
+
+<!-- COPY END 3c3ca04e -->

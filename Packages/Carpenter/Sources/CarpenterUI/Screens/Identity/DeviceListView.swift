@@ -40,6 +40,7 @@ public struct DeviceListView: View {
                         .tag(device.id)
                         .selectionDisabled(!device.isActive || device.isCurrent)
                         .swipeActions(edge: .leading) {
+                            // COPY BEGIN 0bce4c15 [NEEDS HUMAN REVIEW]
                             if onRename != nil {
                                 Button {
                                     draft = device.name ?? ""
@@ -75,18 +76,22 @@ public struct DeviceListView: View {
                     bundle: .module
                 )
                 .fixedSize(horizontal: false, vertical: true)
+                            // COPY END 0bce4c15
             }
             .groupedRowSurface()
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        // COPY BEGIN 53f4599c [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Devices", bundle: .module))
+        // COPY END 53f4599c
         #if os(iOS)
             .environment(
                 \.editMode,
                 .constant(picking ? EditMode.active : EditMode.inactive))
         #endif
         .toolbar {
+            // COPY BEGIN b6eeeacd [NEEDS HUMAN REVIEW]
             if let onPair, !picking {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onPair) {
@@ -126,11 +131,13 @@ public struct DeviceListView: View {
                 .transition(.opacity)  // cross-fade only
             }
         }
+            // COPY END b6eeeacd
         .sheet(isPresented: .init(get: { !confirming.isEmpty }, set: { if !$0 { confirming = [] } })) {
             removalSheet
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        // COPY BEGIN b1dd4c2f [NEEDS HUMAN REVIEW]
         .alert(
             Text("Name this device", bundle: .module),
             isPresented: .init(get: { renaming != nil }, set: { if !$0 { renaming = nil } })
@@ -152,6 +159,7 @@ public struct DeviceListView: View {
             Text(
                 "Only you see this. It travels to your own devices and reaches nobody else.",
                 bundle: .module)
+        // COPY END b1dd4c2f
         }
     }
 
@@ -159,6 +167,7 @@ public struct DeviceListView: View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    // COPY BEGIN 5235a290 [NEEDS HUMAN REVIEW]
                     Group {
                         if confirming.count == 1 {
                             Text("Remove this device?", bundle: .module)
@@ -168,6 +177,7 @@ public struct DeviceListView: View {
                     }
                     .font(CarpenterFont.navigationTitle)
                     .foregroundStyle(palette.primaryText)
+                    // COPY END 5235a290
 
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(confirming) { device in
@@ -183,6 +193,7 @@ public struct DeviceListView: View {
                         }
                     }
 
+                    // COPY BEGIN 99b2a7ba [NEEDS HUMAN REVIEW]
                     Group {
                         if confirming.count == 1 {
                             Text(
@@ -197,6 +208,7 @@ public struct DeviceListView: View {
                     .font(CarpenterFont.rowDetail)
                     .foregroundStyle(palette.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
+                    // COPY END 99b2a7ba
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, CarpenterMetrics.screenMargin)
@@ -204,6 +216,7 @@ public struct DeviceListView: View {
             }
 
             VStack(spacing: 10) {
+                // COPY BEGIN 5f3e3b71 [NEEDS HUMAN REVIEW]
                 Button(role: .destructive) {
                     let going = confirming
                     confirming = []
@@ -215,13 +228,16 @@ public struct DeviceListView: View {
                         .primaryAction()
                 }
                 .destructiveActionButton()
+                // COPY END 5f3e3b71
 
+                // COPY BEGIN b8ef82a2 [NEEDS HUMAN REVIEW]
                 Button { confirming = [] } label: {
                     Text("Cancel", bundle: .module)
                         .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.hitTarget)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(palette.accentColor)
+                // COPY END b8ef82a2
             }
             .padding(.horizontal, CarpenterMetrics.screenMargin)
             .padding(.bottom, 16)
@@ -255,6 +271,7 @@ public struct DeviceListView: View {
                                 device.isActive ? palette.primaryText : palette.tertiaryText)
                     }
 
+                    // COPY BEGIN c7e99e92 [NEEDS HUMAN REVIEW]
                     if device.isCurrent {
                         Text("This device", bundle: .module)
                             .font(CarpenterFont.badge)
@@ -263,6 +280,7 @@ public struct DeviceListView: View {
                             .background(palette.badgeFill, in: .capsule)
                             .foregroundStyle(palette.primaryText)
                     }
+                    // COPY END c7e99e92
                 }
 
                 if device.isNamed {
@@ -272,6 +290,7 @@ public struct DeviceListView: View {
                 }
 
                 if let revokedAt = device.revokedAt {
+                    // COPY BEGIN 247d1fdf [NEEDS HUMAN REVIEW]
                     Text(
                         "Removed \(revokedAt.formatted(date: .abbreviated, time: .shortened))",
                         bundle: .module
@@ -299,6 +318,7 @@ public struct DeviceListView: View {
                     Text("Here since you made this identity", bundle: .module)
                         .font(CarpenterFont.caption)
                         .foregroundStyle(palette.secondaryText)
+                    // COPY END 247d1fdf
                 }
             }
 

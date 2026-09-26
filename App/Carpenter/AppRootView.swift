@@ -108,6 +108,7 @@ struct AppRootView: View {
         #endif
     }
 
+    // COPY BEGIN 7740e80c [NEEDS HUMAN REVIEW]
     var body: some View {
         content
             .alert(
@@ -122,6 +123,7 @@ struct AppRootView: View {
                 Text(problem.detail)
             }
     }
+    // COPY END 7740e80c
 
     struct ActionProblem: Identifiable {
         let id = UUID()
@@ -254,11 +256,13 @@ struct AppRootView: View {
                 ready
 
             case .failed(let reason):
+                // COPY BEGIN 9c1a5749 [NEEDS HUMAN REVIEW]
                 ContentUnavailableView(
                     "Something is wrong with this device's data",
                     systemImage: "exclamationmark.triangle",
                     description: Text(reason)
                 )
+                // COPY END 9c1a5749
             }
         }
     }
@@ -444,6 +448,7 @@ struct AppRootView: View {
         named name: String, access: RoomAccess, inviting people: Set<ParticipantID>
     ) async {
         let room: RoomID
+        // COPY BEGIN 67658d25 [NEEDS HUMAN REVIEW]
         do {
             room = try await session.createRoom(named: name, access: access)
         } catch {
@@ -454,9 +459,11 @@ struct AppRootView: View {
                 detail: SessionProblem.sentence(for: error))
             return
         }
+        // COPY END 67658d25
         await invite(people, to: room, kind: .room)
     }
 
+    // COPY BEGIN 6d023683 [NEEDS HUMAN REVIEW]
     func startSolo(with person: ParticipantID) async -> Invite? {
         let room: RoomID
         do {
@@ -471,6 +478,7 @@ struct AppRootView: View {
         }
         return await invite([person], to: room, kind: .solo)[person]
     }
+    // COPY END 6d023683
 
     @discardableResult
     func invite(
@@ -497,6 +505,7 @@ struct AppRootView: View {
         }
 
         guard !missed.isEmpty else { return issued }
+        // COPY BEGIN 70fdad57 [NEEDS HUMAN REVIEW]
         problem = switch kind {
         case .room:
             ActionProblem(
@@ -513,6 +522,7 @@ struct AppRootView: View {
                         "\(missed.formatted(.list(type: .and))) was not asked, and nothing reached them. Start the solo again to send one."
                 ))
         }
+        // COPY END 70fdad57
         return issued
     }
 

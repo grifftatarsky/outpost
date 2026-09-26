@@ -43,16 +43,19 @@ public struct LeavingRoomView: View {
                             action: { toggle(person.id) })
                     }
                 } header: {
+                    // COPY BEGIN a311e102 [NEEDS HUMAN REVIEW]
                     Text("Stop showing your Outpost to", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
                         "You let these people read your Outpost when you were in \(roomName). Stopping keeps what they have already seen — it ends what they see from today.",
                         bundle: .module)
+                    // COPY END a311e102
                 }
                 .groupedRowSurface()
             }
             .scrollContentBackground(.hidden)
             .background(palette.background)
+            // COPY BEGIN 35542f83 [NEEDS HUMAN REVIEW]
             .navigationTitle(Text("Leaving \(roomName)", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -69,6 +72,7 @@ public struct LeavingRoomView: View {
                     }
                     .tint(palette.destructive)
                 }
+            // COPY END 35542f83
             }
         }
     }

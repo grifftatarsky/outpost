@@ -40,6 +40,7 @@ public struct RestoreFromKeyView: View {
 
     public var body: some View {
         List {
+                // COPY BEGIN ef3ec642 [NEEDS HUMAN REVIEW]
                 Section {
                     SettingsHeaderCard(
                         icon: "key.horizontal.fill",
@@ -49,8 +50,10 @@ public struct RestoreFromKeyView: View {
                             bundle: .module))
                 }
                 .groupedRowSurface()
+                // COPY END ef3ec642
 
                 Section {
+                    // COPY BEGIN 8ac43771 [NEEDS HUMAN REVIEW]
                     TextField(
                         text: $key,
                         prompt: Text("OUTPOST RECOVERY KEY…", bundle: .module),
@@ -74,9 +77,11 @@ public struct RestoreFromKeyView: View {
                             "Nothing is sent anywhere. The key is read on this device and put back in your keychain.",
                             bundle: .module)
                     }
+                    // COPY END 8ac43771
                 }
                 .groupedRowSurface()
 
+                // COPY BEGIN 48aa82d0 [NEEDS HUMAN REVIEW]
                 Section {
                     ChoiceRow(
                         title: Text("No — I still have it, or I am adding a device", bundle: .module),
@@ -105,7 +110,9 @@ public struct RestoreFromKeyView: View {
                     }
                 }
                 .groupedRowSurface()
+                // COPY END 48aa82d0
 
+                // COPY BEGIN 7b506c4b [NEEDS HUMAN REVIEW]
                 Section {
                     SettingsToggle(
                         icon: "hand.wave.fill",
@@ -125,8 +132,10 @@ public struct RestoreFromKeyView: View {
                     }
                 }
                 .groupedRowSurface()
+                // COPY END 7b506c4b
 
                 Section {
+                    // COPY BEGIN 38d1c645 [NEEDS HUMAN REVIEW]
                     Label {
                         Text("Your rooms come back as people reach you again", bundle: .module)
                     } icon: {
@@ -144,11 +153,13 @@ public struct RestoreFromKeyView: View {
                     Text(
                         "Anybody you talked to who is still on this app can hand your history back. Anything nobody kept is gone.",
                         bundle: .module)
+                    // COPY END 38d1c645
                 }
                 .groupedRowSurface()
             }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
+        // COPY BEGIN ad65cb88 [NEEDS HUMAN REVIEW]
         .safeAreaInset(edge: .bottom) {
             Button(action: begin) {
                 Text("Restore this device", bundle: .module).primaryAction()
@@ -160,6 +171,7 @@ public struct RestoreFromKeyView: View {
         }
         .background(palette.background)
         .navigationTitle(Text("Recovery key", bundle: .module))
+        // COPY END ad65cb88
         .toolbarTitleDisplayMode(.inline)
     }
 }

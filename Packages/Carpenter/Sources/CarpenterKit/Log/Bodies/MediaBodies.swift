@@ -87,6 +87,7 @@ public struct MediaBody: Hashable, Sendable, Codable {
 
     public static let galleryLimit = 4
 
+    // COPY BEGIN 29bf1b28 [NEEDS HUMAN REVIEW]
     public static func line(for kind: MediaKind) -> String {
         switch kind {
         case .image:
@@ -95,4 +96,5 @@ public struct MediaBody: Hashable, Sendable, Codable {
             String(localized: "🎬 Video", bundle: .module, comment: "Stands in for a video where only text fits")
         }
     }
+    // COPY END 29bf1b28
 }
