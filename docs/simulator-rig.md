@@ -31,6 +31,7 @@ shut-down twin instead of the running device.
 | `outpost-beta`, iPhone 17 Pro Max | `C8637538-65DC-47B1-9D99-73DA89A8CBC5` | development account B | Outie | 440 × 956 |
 | `outpost-gamma`, iPhone 17 | `0993066E-DA3B-4925-A7C3-F4189A3F7DD7` | none | Trig | 402 × 874 |
 | `outpost-delta`, iPhone 17 | `92E0602F-FCEF-4EDF-BC71-389B3C052E89` | none | Quad | 402 × 874 |
+| `outpost-27`, iPhone 17 Pro, iOS 27 | `EBDFF5AF-7699-4646-93B0-7218985EC2C0` | none | none | 402 × 874 |
 
 Alpha and beta are on two different Apple Accounts, and only they prove anything about CloudKit.
 Gamma and delta have no account and reach each other through a directory instead; see

@@ -229,6 +229,27 @@ process.
 
 <!-- COPY END f3785643 -->
 
+<!-- COPY BEGIN ef9139da [NEEDS HUMAN REVIEW] -->
+
+## Xcode's own tools, for an agent
+
+Xcode 27 exposes its tools to an outside agent through `xcrun mcpbridge`: building, running tests,
+rendering a SwiftUI preview to an image, tapping and typing in a simulator, reading the console, and
+lldb. The first call from a new agent has to open the workspace (`XcodeOpenWorkspace`), which asks
+you in Xcode to approve it. To give Claude Code the tools directly:
+
+```bash
+claude mcp add xcode -- xcrun mcpbridge
+```
+
+`RenderPreview` builds the app's scheme for Xcode's active run destination and returns a picture of
+one `#Preview`, and it can vary dark mode, contrast, Dynamic Type and orientation. That is how the
+search tab was checked on iOS 27 on 2026-09-26. The tools act on Xcode's active scheme and run
+destination, so switch them back when you are done. For the rig, `xcodebuild` and `simctl` are still
+the way to install one build on four simulators.
+
+<!-- COPY END ef9139da -->
+
 <!-- COPY BEGIN 44ff8f19 [NEEDS HUMAN REVIEW] -->
 
 ## Tools in a debug build
