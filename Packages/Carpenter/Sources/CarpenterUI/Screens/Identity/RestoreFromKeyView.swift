@@ -100,9 +100,7 @@ public struct RestoreFromKeyView: View {
                             "Conversations rotate keys, removing the lost or stolen device. Your other devices will need the recovery key.",
                             bundle: .module)
                     case false:
-                        Text(
-                            "No keys are rotated. A device you no longer have would keep reading — you can still cut one off later under Devices.",
-                            bundle: .module)
+                        EmptyView()
                     default:
                         Text(
                             "This app cannot tell a new device from a stolen one, so if your device was lost or stolen your conversations will rotate keys.",
@@ -118,8 +116,6 @@ public struct RestoreFromKeyView: View {
                         icon: "hand.wave.fill",
                         title: Text("Request history backfill", bundle: .module),
                         isOn: $asksPeers)
-                } header: {
-                    Text("Getting your history back", bundle: .module).sectionHeading()
                 } footer: {
                     if asksPeers {
                         Text(
@@ -134,28 +130,6 @@ public struct RestoreFromKeyView: View {
                 .groupedRowSurface()
                 // COPY END 7b506c4b
 
-                Section {
-                    // COPY BEGIN 38d1c645 [NEEDS HUMAN REVIEW]
-                    Label {
-                        Text("Your rooms come back as people reach you again", bundle: .module)
-                    } icon: {
-                        Image(systemName: "checkmark").foregroundStyle(palette.accentColor)
-                    }
-                    Label {
-                        Text("What was said comes back only from the people who still hold it", bundle: .module)
-                    } icon: {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .foregroundStyle(palette.secondaryText)
-                    }
-                } header: {
-                    Text("What to expect", bundle: .module).sectionHeading()
-                } footer: {
-                    Text(
-                        "Anybody you talked to who is still on this app can hand your history back. Anything nobody kept is gone.",
-                        bundle: .module)
-                    // COPY END 38d1c645
-                }
-                .groupedRowSurface()
             }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)

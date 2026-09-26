@@ -86,7 +86,6 @@ public struct HowItWorksView: View {
                             "Media",
                             [
                                 "It syncs when you open it. There is no background service keeping you current, so you learn about messages when you look — a deliberate choice, and the reason this works on iPhone at all when other attempts have not.",
-                                "There is no search yet, and no web version.",
                                 "Media is sent stripped of metadata, and sealed like any other message in the mailbox. Screening is on by default, using an on-device capability, and media is blurred until you decide to look at it. Toggled under Safety.",
                             ]
                         )

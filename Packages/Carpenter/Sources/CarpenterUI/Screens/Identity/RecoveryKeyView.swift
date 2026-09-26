@@ -52,41 +52,6 @@ public struct RecoveryKeyView: View {
                 }
                 .groupedRowSurface()
                 // COPY END deee3b35
-
-                Section {
-                    // COPY BEGIN 4a9f85db [NEEDS HUMAN REVIEW]
-                    Label {
-                        Text("It makes you you again", bundle: .module)
-                    } icon: {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(palette.accentColor)
-                    }
-                    Label {
-                        Text("It does not bring your conversations back", bundle: .module)
-                    } icon: {
-                        Image(systemName: "xmark")
-                            .foregroundStyle(palette.destructive)
-                    }
-                } header: {
-                    Text("What it does", bundle: .module).sectionHeading()
-                } footer: {
-                    Text(
-                        "Your rooms come back because the people in them can address you again, and they send you what was said while you were gone. Anything nobody else still holds is gone.",
-                        bundle: .module)
-                    // COPY END 4a9f85db
-                }
-                .groupedRowSurface()
-
-                // COPY BEGIN 5dcfbe43 [NEEDS HUMAN REVIEW]
-                Section {
-                } footer: {
-                    Text(
-                        "Anybody who has this file can become you, and there is no way to undo that. Keep it where you keep passwords — not in the photos on the phone it is meant to replace.",
-                        bundle: .module)
-                        .foregroundStyle(palette.destructive)
-                }
-                .groupedRowSurface()
-                // COPY END 5dcfbe43
             }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
