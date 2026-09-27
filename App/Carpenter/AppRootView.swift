@@ -70,6 +70,16 @@ struct AppRootView: View {
         return cloud
     }
 
+    var deathmarkBoard: CloudKitDeathmarkBoard? {
+        if testSession != nil { return nil }
+        #if DEBUG
+            if rig != nil { return nil }
+        #endif
+        return Self.cloudDeathmarks
+    }
+
+    static let cloudDeathmarks = CloudKitDeathmarkBoard(container: .default())
+
     var accountRegistry: any AccountRegistry {
         if testSession != nil { return NoOtherMember() }
         #if DEBUG
@@ -391,7 +401,8 @@ struct AppRootView: View {
                     Diagnostics.identity.notice("launch: --reset-account given; clearing this account")
                     await attempting(
                         String(localized: "This account was not cleared"), "reset account"
-                    ) { try await wipe() }
+                    ) { try await wipe(leavingDeathmark: false) }
+                    try? await deathmarkBoard?.clear()
                     Diagnostics.identity.notice("launch: the account is cleared; stopping")
                     exit(0)
                 }

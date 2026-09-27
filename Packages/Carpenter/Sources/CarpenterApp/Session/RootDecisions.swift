@@ -56,16 +56,23 @@ public enum SyncRound {
         public let syncedAt: Date?
         public let deviceSyncFailed: Bool
         public let mailboxFailed: Bool
+        public var erased = false
 
         public var messageForMember: String? { nil }
     }
 
     @MainActor
     public static func run(
+        deathmark: () async -> Bool = { false },
         deviceSync: () async throws -> Void,
         mailbox: () async throws -> Void,
         now: () -> Date = { Date() }
     ) async -> Outcome {
+        if await deathmark() {
+            var outcome = Outcome(syncedAt: nil, deviceSyncFailed: false, mailboxFailed: false)
+            outcome.erased = true
+            return outcome
+        }
         var deviceSyncFailed = false
         do {
             try await deviceSync()

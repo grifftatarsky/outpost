@@ -66,7 +66,10 @@ extension AppRootView {
 
     #endif
 
-    func wipe() async throws {
+    func wipe(leavingDeathmark: Bool = true) async throws {
+        if leavingDeathmark, let board = deathmarkBoard, session.enrolment != nil {
+            try await session.leaveDeathmark(on: board)
+        }
         if testSession == nil {
             try await eraseSharedDeviceState()
         }
@@ -76,9 +79,46 @@ extension AppRootView {
         if let cloud = mailbox as? CloudKitMailbox {
             try await cloud.eraseOutbox()
         }
+        try await deathmarkBoard?.eraseEverythingElse()
 
         await eraseThisDevice()
     }
+
+    func obeyDeathmark() async -> Bool {
+        guard let board = deathmarkBoard else { return false }
+        await finishPendingGlobalErase(on: board)
+        guard session.enrolment != nil, await session.obeyDeathmark(on: board) == .eraseThisDevice else {
+            return false
+        }
+        await eraseThisDevice()
+        return true
+    }
+
+    func eraseEverywhereOrLater() async {
+        if (try? await wipe()) != nil { return }
+        if let prepared = try? session.prepareDeathmark(), let data = try? JSONEncoder().encode(prepared) {
+            UserDefaults.standard.set(data, forKey: Self.pendingDeathmarkKey)
+        }
+        await eraseThisDevice()
+        if let board = deathmarkBoard { await finishPendingGlobalErase(on: board) }
+    }
+
+    func finishPendingGlobalErase(on board: CloudKitDeathmarkBoard) async {
+        guard let data = UserDefaults.standard.data(forKey: Self.pendingDeathmarkKey),
+            let prepared = try? JSONDecoder().decode(PreparedDeathmark.self, from: data)
+        else { return }
+        do {
+            try await prepared.post(on: board)
+            try await board.eraseEverythingElse()
+            UserDefaults.standard.removeObject(forKey: Self.pendingDeathmarkKey)
+            Diagnostics.identity.notice("deathmark: the erase that could not reach iCloud has now reached it")
+        } catch {
+            Diagnostics.identity.error(
+                "deathmark: still can't reach iCloud to finish erasing (\(String(describing: error), privacy: .public))")
+        }
+    }
+
+    static let pendingDeathmarkKey = "deathmark.pending"
 
     private func eraseSharedDeviceState() async throws {
         if let deviceSync {

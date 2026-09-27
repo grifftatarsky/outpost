@@ -68,7 +68,7 @@ extension AppRootView {
     }
 
     func eraseEverywhereFromTheLock() async {
-        await nuke()
+        await eraseEverywhereOrLater()
         try? await Self.appLockStore.remove()
         appLock.forget()
         lockOffered = false

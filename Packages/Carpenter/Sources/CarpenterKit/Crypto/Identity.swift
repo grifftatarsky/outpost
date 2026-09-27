@@ -238,6 +238,7 @@ public struct DeviceKeys: Hashable, Sendable {
 
 enum Domain {
     static let packetContent = "carpenter.packet-content.v1"
+    static let deathmark = "carpenter.deathmark.v1"
     static let participantID = "carpenter.participant-id.v2"
     static let recoverySecret = "carpenter.recovery-secret.v2"
     static let recoveryCheck = "carpenter.recovery-check.v2"

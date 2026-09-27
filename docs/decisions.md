@@ -2771,6 +2771,47 @@ the setting first.
 
 <!-- COPY END 05b0c974 -->
 
+<!-- COPY BEGIN 8d81c4df [NEEDS HUMAN REVIEW] -->
+
+### Erasing everything leaves a deathmark every other device obeys first
+
+**RULED 2026-09-27 by Griff.** "Erase everything should delete all content in iCloud, but leave a
+'deathmark' in it, which propogates to all devices once they hit that icloud. Like the deactivation,
+any contact with iCloud needs to hit the deathmark first. The deathmark carries a checklist of the
+active devices at the time of purge, and the last device to purge deletes the whole container."
+
+Built the same day. *Erase everything* signs a deathmark with the device's own key, naming every
+device of the member that counts at that moment, seals it with a key only the member's devices can
+derive, and posts it in a zone of its own in the member's private database. Then it deletes every
+other zone the app made there and erases the device. Every round on every device asks about the
+deathmark before anything else (`RootDecisionsTests`); a device the deathmark names, signed by a
+device that counted when iCloud stored it, checks itself off and erases itself, and the one that
+finds every name checked off deletes the deathmark's zone. The notification extension checks it too
+and says only that something arrived.
+
+**PROPOSED, the details Griff has not seen:**
+
+- **"The whole container" is every zone the app made.** An app can't delete its CloudKit container;
+  the last device deletes the deathmark's zone, which leaves the member's database as empty as the
+  app can make it.
+- **Only a device that counts can leave one.** A removed device, or anybody who can write to the
+  member's iCloud without their keys, can't make the member's devices erase themselves
+  (`DeathmarkTests`, each guard mutation-checked).
+- **A device not on the list carries on.** One restored with the recovery key afterwards, or approved
+  later, is not erased.
+- **Erasing after wrong codes works offline.** If iCloud can't be reached, the phone prepares the
+  signed deathmark, erases itself anyway, and posts the deathmark the next time the app opens with a
+  connection. Everywhere else, the cloud half still comes first: *Erase everything* touches nothing
+  local until iCloud has the deathmark.
+- **`--reset-account` leaves no deathmark,** so a development account really is empty afterwards.
+
+**What it costs.** A device that never reaches iCloud again keeps what it has, and the deathmark
+waits for it. Tested with the in-memory board. The board's live test (`LiveDeathmarkTests`) is
+written and has not run: both rig accounts asked for their passwords that afternoon. Two devices on
+one account have not run it either, which needs two phones.
+
+<!-- COPY END 8d81c4df -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts

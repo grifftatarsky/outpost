@@ -88,6 +88,25 @@ struct RootDecisionsTests {
         #expect(!outcome.mailboxFailed && !outcome.deviceSyncFailed)
     }
 
+    @Test("A round asks about a deathmark before anything else, and stops there when it says erase")
+    func theDeathmarkComesFirst() async {
+        var order: [String] = []
+        _ = await SyncRound.run(
+            deathmark: { order.append("deathmark"); return false },
+            deviceSync: { order.append("devices") },
+            mailbox: { order.append("mailbox") })
+        #expect(order == ["deathmark", "devices", "mailbox"])
+
+        order = []
+        let outcome = await SyncRound.run(
+            deathmark: { order.append("deathmark"); return true },
+            deviceSync: { order.append("devices") },
+            mailbox: { order.append("mailbox") })
+        #expect(order == ["deathmark"], "a device told to erase itself went on to touch iCloud")
+        #expect(outcome.erased)
+        #expect(outcome.syncedAt == nil)
+    }
+
     @Test("Nothing that fails here is anything the member is shown")
     func failuresAreNotMemberFacing() async {
         let outcome = await SyncRound.run(

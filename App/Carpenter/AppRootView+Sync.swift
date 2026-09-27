@@ -57,6 +57,7 @@ extension AppRootView {
         }
 
         let outcome = await SyncRound.run(
+            deathmark: { await obeyDeathmark() },
             deviceSync: { await session.refreshDeviceSync() },
             mailbox: {
                 guard session.enrolment != nil else { return }
