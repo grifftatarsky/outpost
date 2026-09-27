@@ -69,8 +69,8 @@ to send each other.
 - **Done.** Scaled to 2048 on the long edge, JPEG, redrawn into a fresh context so no location, camera or
   time survives.
 - **Done.** Sealed like everything else: a fresh content key inside the entry's sealed payload; the bytes
-  as a `CKAsset` on their own record in the sender's outbox, deleted once the last recipient has
-  collected, the packet's own rule.
+  as a `CKAsset` on their own record in the sender's outbox, cleared by the sender once every device
+  of everybody it was for has signed for it or after nine days, and put back if it leaves early.
 - **Done.** The bubble is the right shape before a byte arrives, from the pixel size and a forty-pixel
   preview drawn blurred; a fetch that fails says so and retries on a thirty-second backoff; a photo
   the outbox let go of says *No longer available*.

@@ -6,6 +6,12 @@ struct WrittenPacketRecord: Codable, Equatable, Sendable {
     var digest: Data?
 }
 
+struct SentAttachmentRecord: Codable, Equatable, Sendable {
+    var people: Set<ParticipantID>
+    var collectedBy: Set<DeviceID> = []
+    var sentAt: Date
+}
+
 struct PersistedState: Codable, Equatable, Sendable {
     var organisation = RoomsListOrganisation()
     var knownRooms: [RoomID] = []
@@ -31,6 +37,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var unverifiable: [FeedGap] = []
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
+    var attachmentsSent: [AttachmentID: SentAttachmentRecord] = [:]
     var acceptedInvitations: [AcceptedInvitation] = []
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
@@ -96,6 +103,8 @@ struct PersistedState: Codable, Equatable, Sendable {
         spentEntries = try container.decodeIfPresent([SpentEntry].self, forKey: .spentEntries) ?? []
         uploadsLeftForOthers =
             try container.decodeIfPresent([AttachmentID].self, forKey: .uploadsLeftForOthers) ?? []
+        attachmentsSent =
+            try container.decodeIfPresent([AttachmentID: SentAttachmentRecord].self, forKey: .attachmentsSent) ?? [:]
         holesNoticed = try container.decodeIfPresent([RoomID: Date].self, forKey: .holesNoticed) ?? [:]
         askedAutomatically =
             try container.decodeIfPresent([RoomID: Date].self, forKey: .askedAutomatically) ?? [:]

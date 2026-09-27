@@ -668,6 +668,16 @@ changed, is taken back and sent again (`TamperedPacketTests`; the digest reads b
 real account, `CloudKitMailboxTests`). What a person with write access can still do is delay: a
 packet they damage reaches the others one round later.
 
+**Photos and clips the same way** (since 2026-09-27). A photo's record used to be cleared by its
+readers: each removed its own address and the last deleted it, so anybody the outbox is shared with
+could make a photo vanish before the others had it. Now a reader signs for a photo with an
+`AttachmentReceipt`: the same shape as a packet receipt, signed by the reader's device and sealed to the
+sender under the pairwise secret, but under its own domain (`carpenter.attachment-receipt.v1`), so a
+signature over a packet with the same number never counts for a photo. The sender keeps its own
+record of who each photo was for, clears it only once every active device of each of them has
+signed or nine days have passed, and puts back from its own copy a photo that left early
+(`NobodyButTheSenderClearsAPhotoTests`).
+
 It does not leak any participant identifier, any room identifier, any device identifier, or any
 plaintext. **Nothing is ever written with `record[key]` unsealed** — the rule in `CLAUDE.md` exists
 because it was broken once, and that is the next section.

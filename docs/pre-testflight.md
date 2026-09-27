@@ -113,10 +113,10 @@ TestFlight these have to have been seen, not reasoned about:
   fell to one zone at 01:40:17; alpha relaunched and wrote a fresh offer at 01:40:45; beta
   accepted it and read two zones at 01:41:17; a message each way at 01:42 arrived and was read.
 - **Open.** A positive screening verdict, via Apple's test profile on a device.
-- **Done.** The attachment record leaving the sender's outbox after the last acknowledgment. Proved against
-  a real account 2026-09-15, and it was on this list as a *hardware* proof when it never needed one:
-  one recipient collecting leaves the other still owed and the bytes still downloadable; the second
-  one takes the record out of the listing and the bytes with it.
+- **Open.** A photo signed for with receipts and cleared by its sender. Replaced on 2026-09-27 what
+  was proved on 2026-09-15 (readers deleting it), so the live tests in `CloudKitMailboxTests` have to
+  run again: a receipt written onto an attachment record, two written at once, and a photo put back
+  over its record keeping the receipts already on it.
 - **Open.** A member's second device on one Apple Account (hardware only).
 
 <!-- COPY END dd229921 -->

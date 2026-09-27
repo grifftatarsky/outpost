@@ -200,7 +200,13 @@ struct SendingPhotoTests {
         #expect(!theirs.isMine)
         #expect(await bob.holdsAttachment(media.id), "the round did not fetch the photo the entry named")
         #expect(await mailbox.downloadCount == 1)
-        #expect(await mailbox.storedAttachmentCount == 0, "the attachment was not acknowledged")
+        #expect(
+            await mailbox.storedAttachmentCount == 1,
+            "collecting a photo deleted it; only the sender clears what it sent")
+        try await alice.sync(through: mailbox, media: mailbox)
+        #expect(
+            await mailbox.storedAttachmentCount == 0,
+            "the sender did not clear a photo everybody it was for has signed for")
         let opened = try await bob.attachmentData(for: media, sentBy: theirs.author.id, through: mailbox)
         #expect(opened == photo.bytes)
         #expect(await mailbox.downloadCount == 1, "opening a held photo fetched it again")

@@ -81,11 +81,17 @@ public struct CloudKitMailbox: Mailbox, MediaMailbox {
         }
     }
 
-    func locate(recordNamed name: String) async throws -> (CKDatabase, CKRecord)? {
+    func locate(
+        recordNamed name: String, keys: [CKRecord.FieldKey]? = nil
+    ) async throws -> (CKDatabase, CKRecord)? {
         for (database, zone) in try await searchable() {
             let recordID = CKRecord.ID(recordName: name, zoneID: zone)
             do {
-                return (database, try await database.record(for: recordID))
+                guard let keys else { return (database, try await database.record(for: recordID)) }
+                guard let found = try await database.records(for: [recordID], desiredKeys: keys)[recordID] else {
+                    continue
+                }
+                return (database, try found.get())
             } catch let error as CKError where error.code == .unknownItem || error.code == .zoneNotFound {
                 continue
             }

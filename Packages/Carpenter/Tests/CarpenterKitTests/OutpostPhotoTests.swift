@@ -1,4 +1,4 @@
-import CarpenterApp
+@testable import CarpenterApp
 import CarpenterKitTesting
 import Foundation
 import Testing
@@ -42,9 +42,12 @@ struct OutpostPhotoTests {
         await alice.load()
         try await alice.createIdentity(displayName: "Alice")
         try await alice.post(SendingPhotoTests.photo(caption: "Kept"), through: mailbox)
+        alice.persisted.attachmentsSent = [:]
 
         try await alice.sync(through: mailbox, media: mailbox)
-        #expect(await mailbox.storedAttachmentCount == 1, "the sweep took a photo an entry names")
+        #expect(
+            await mailbox.storedAttachmentCount == 1,
+            "the sweep took a photo an entry names, on a device that was not the one looking after it")
 
         let again = TestSession.make(keychain: keychain, at: directory, media: media)
         await again.load()
@@ -267,11 +270,12 @@ struct GalleryAttachmentTests {
 
         let again = TestSession.make(keychain: keychain, at: directory, media: media)
         await again.load()
+        again.persisted.attachmentsSent = [:]
         try await again.sync(through: mailbox, media: mailbox)
 
         #expect(
             await mailbox.storedAttachmentCount == 4,
-            "the sweep deleted pictures an entry names")
+            "the sweep deleted pictures an entry names, on a device that was not the one looking after them")
         let post = try #require(again.feed().first)
         #expect(post.media.count == 4)
         for picture in post.media {

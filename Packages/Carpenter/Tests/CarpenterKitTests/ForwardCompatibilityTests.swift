@@ -96,6 +96,11 @@ extension ForwardCompatibilityTests {
         state.unverifiable = [FeedGap(feed: feed, spans: [SequenceSpan(7, 7)])]
         state.spentEntries = [SpentEntry(feed: feed, seq: 3, hash: entry, room: room)]
         state.uploadsLeftForOthers = [AttachmentID()]
+        state.attachmentsSent = [
+            AttachmentID(): SentAttachmentRecord(
+                people: [ParticipantID(rawValue: WideID.of([9]))], collectedBy: [DeviceID(rawValue: WideID.of([7]))],
+                sentAt: stamp.at)
+        ]
         state.holesNoticed = [room: stamp.at]
         state.askedAutomatically = [room: stamp.at]
         state.keyRotationsOwed = [room]

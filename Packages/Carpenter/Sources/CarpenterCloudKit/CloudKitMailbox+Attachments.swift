@@ -54,22 +54,28 @@ extension CloudKitMailbox {
         return nil
     }
 
-    public func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) async throws {
+    public func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) async throws {
         for attempt in 0..<4 {
             do {
-                guard let (database, record) = try await locate(recordNamed: id.recordName) else {
+                guard
+                    let (database, record) = try await locate(
+                        recordNamed: id.recordName, keys: [PacketWire.receiptTags, PacketWire.receiptValues])
+                else {
                     throw MailboxError.unknownPacket
                 }
-                let wanted = Set(tags.map(\.rawValue))
-                var outstanding = record[PacketWire.outstanding] as? [Data] ?? []
-                outstanding.removeAll { wanted.contains($0) }
-                if outstanding.isEmpty {
-                    _ = try await database.modifyRecords(saving: [], deleting: [record.recordID])
-                } else {
-                    record[PacketWire.outstanding] = outstanding
-                    _ = try await database.modifyRecords(
-                        saving: [record], deleting: [], savePolicy: .ifServerRecordUnchanged)
+                var fields: [String: PacketField] = [:]
+                if let tags = record[PacketWire.receiptTags] as? [Data] { fields[PacketWire.receiptTags] = .dataList(tags) }
+                if let values = record[PacketWire.receiptValues] as? [Data] {
+                    fields[PacketWire.receiptValues] = .dataList(values)
                 }
+                guard PacketWire.adding(receipt, to: &fields),
+                    case .dataList(let tags)? = fields[PacketWire.receiptTags],
+                    case .dataList(let values)? = fields[PacketWire.receiptValues]
+                else { return }
+                record[PacketWire.receiptTags] = tags
+                record[PacketWire.receiptValues] = values
+                _ = try await database.modifyRecords(
+                    saving: [record], deleting: [], savePolicy: .ifServerRecordUnchanged)
                 return
             } catch let error as CKError where error.code == .serverRecordChanged {
                 guard attempt < 3 else { throw error }
@@ -77,26 +83,31 @@ extension CloudKitMailbox {
         }
     }
 
-    public func pendingAttachments() async throws -> [AttachmentID: Set<RecipientTag>] {
-        try await outstandingAttachments(olderThan: nil)
-    }
-
-    public func sweepableAttachments() async throws -> [AttachmentID: Set<RecipientTag>] {
-        try await outstandingAttachments(olderThan: Date().addingTimeInterval(-MailboxRules.sweepAge))
-    }
-
-    private func outstandingAttachments(olderThan settled: Date?) async throws
-        -> [AttachmentID: Set<RecipientTag>]
-    {
+    public func pendingAttachments() async throws -> [AttachmentID: SentAttachment] {
         let records = try await everything(in: outbox, of: container.privateCloudDatabase)
-        var waiting: [AttachmentID: Set<RecipientTag>] = [:]
+        var sent: [AttachmentID: SentAttachment] = [:]
         for record in records where record.recordType == AttachmentRecord.type {
             guard let id = AttachmentID(recordName: record.recordID.recordName) else { continue }
-            if let settled, (record.creationDate ?? .distantPast) >= settled { continue }
-            let outstanding = record[PacketWire.outstanding] as? [Data] ?? []
-            waiting[id] = Set(outstanding.map(RecipientTag.init(rawValue:)))
+            var fields: [String: PacketField] = [:]
+            for key in [AttachmentWire.outstanding, PacketWire.receiptTags, PacketWire.receiptValues] {
+                if let list = record[key] as? [Data] { fields[key] = .dataList(list) }
+            }
+            sent[id] = AttachmentWire.sent(from: fields)
         }
-        return waiting
+        return sent
+    }
+
+    public func sweepableAttachments() async throws -> [AttachmentID: Date] {
+        let settled = Date().addingTimeInterval(-MailboxRules.sweepAge)
+        let records = try await everything(in: outbox, of: container.privateCloudDatabase)
+        var sweepable: [AttachmentID: Date] = [:]
+        for record in records where record.recordType == AttachmentRecord.type {
+            guard let id = AttachmentID(recordName: record.recordID.recordName),
+                let created = record.creationDate, created < settled
+            else { continue }
+            sweepable[id] = record.modificationDate ?? created
+        }
+        return sweepable
     }
 
     public func delete(attachment id: AttachmentID) async throws {

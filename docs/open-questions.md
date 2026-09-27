@@ -17,24 +17,6 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
-<!-- COPY BEGIN 20e5cb9f [NEEDS HUMAN REVIEW] -->
-
-### Should a photo someone deletes from your outbox be sent again?
-
-Raised 2026-09-27. Everybody you talk to can write to your outbox, because that is how they sign for
-what they collect and ring your phone. For messages that no longer matters: your device keeps its own
-record of who each packet was for and what it wrote, and sends again anything deleted or altered
-before everybody has it (`TamperedPacketTests`). Photos and clips still work the old way: each
-reader removes their own address, and the last one deletes it. So a person in one of your rooms can
-delete a photo, or strip the others' addresses from it, before the others fetch it, and it is gone
-for them. They can't read or change what it shows.
-
-Sending it again means your device keeping the sealed copy until everybody has it: small for a
-photo, up to 287 MB for a clip. Recommended: do it for photos now, and for clips keep the sealed
-copy only while it is waiting, with the storage it takes shown in Storage.
-
-<!-- COPY END 20e5cb9f -->
-
 <!-- COPY BEGIN 812d73ea [NEEDS HUMAN REVIEW] -->
 
 ### Should the link to your outbox change when someone leaves your life?

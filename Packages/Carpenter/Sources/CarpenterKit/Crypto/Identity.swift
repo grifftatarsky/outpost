@@ -275,6 +275,7 @@ enum Domain {
     static let epochGrantSignature = "carpenter.epoch-grant-signature.v1"
     static let grantEnvelope = "carpenter.grant-envelope.v1"
     static let packetReceipt = "carpenter.packet-receipt.v1"
+    static let attachmentReceipt = "carpenter.attachment-receipt.v1"
     static let siblingSignature = "carpenter.sibling-signature.v1"
     static let sealedPayload = "carpenter.sealed-payload.v1"
     static let syncPacket = "carpenter.sync-packet.v1"

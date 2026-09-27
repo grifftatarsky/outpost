@@ -57,8 +57,8 @@ struct TheFakeIsNoEasierTests {
             OutgoingAttachment(id: id, ciphertext: Data(count: 16), recipients: [mine]))
 
         #expect(
-            try await mailbox.pendingAttachments()[id] == [mine],
-            "a fresh upload did not report who still owes it")
+            try await mailbox.pendingAttachments()[id]?.recipients == [mine],
+            "a fresh upload did not report who it is for")
         #expect(
             try await mailbox.sweepableAttachments()[id] == nil,
             """
@@ -69,7 +69,7 @@ struct TheFakeIsNoEasierTests {
 
         clock.advance(by: MailboxRules.sweepAge + 1)
         #expect(
-            try await mailbox.sweepableAttachments()[id] == [mine],
+            try await mailbox.sweepableAttachments()[id] != nil,
             "an upload older than the sweep age never became sweepable")
     }
 
@@ -124,8 +124,8 @@ struct TheFakeIsNoEasierTests {
             """)
     }
 
-    @Test("A photo is not handed to somebody it was not sent to")
-    func aPhotoIsNotHandedToAStranger() async throws {
+    @Test("A photo's bytes reach anybody who can read the outbox, as CloudKit's do")
+    func aPhotoIsHandedToAnyReaderOfTheOutbox() async throws {
         let mailbox = InMemoryMailbox()
         let mine = tag()
         let stranger = tag()
@@ -137,13 +137,13 @@ struct TheFakeIsNoEasierTests {
 
         #expect(try await mailbox.download(id, hint: [mine]) == sealed)
         #expect(
-            try await mailbox.download(id, hint: [stranger]) == nil,
+            try await mailbox.download(id, hint: [stranger]) == sealed,
             """
-            The fake handed a photo's bytes to a tag it was never addressed to. The real mailbox \
-            resolves a zone from the recipient's address and finds nothing, so a test that proved \
-            somebody could collect a photo they were not sent was proving it against a fake that \
-            does not check. The bytes are sealed either way — but a test that cannot tell the \
-            difference is the one that lets the seal slip.
+            The fake refused a photo to a tag it was not addressed to. The real mailbox takes the \
+            tag as a hint for which zone to try first and then tries every zone it can read, so \
+            the recipient list never kept anybody out. A fake that enforces it makes a stripped \
+            recipient list look like a lost photo, and hides that the seal is the only thing \
+            that keeps a photo private.
             """)
     }
 }

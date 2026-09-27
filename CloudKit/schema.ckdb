@@ -10,6 +10,8 @@ DEFINE SCHEMA
         attachmentID    STRING,
         blob            ASSET,
         outstanding     LIST<BYTES>,
+        receiptTags     LIST<BYTES>,
+        receiptValues   LIST<BYTES>,
         GRANT WRITE TO "_creator",
         GRANT CREATE TO "_icloud",
         GRANT READ TO "_world"

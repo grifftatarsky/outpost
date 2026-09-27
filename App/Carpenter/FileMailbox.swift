@@ -142,19 +142,32 @@
             return AttachmentWire.attachment(from: stored.fields.mapValues(\.field))?.ciphertext
         }
 
-        func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) throws {
-            for tag in tags {
-                let name = "media-\(id.rawValue.uuidString)-\(tag.rawValue.base64EncodedString().replacingOccurrences(of: "/", with: "_"))"
-                let file = acknowledgements.appending(path: name)
-                if !FileManager.default.fileExists(atPath: file.path) {
-                    try Data().write(to: file, options: .atomic)
-                }
-            }
+        func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) throws {
+            let file = media.appending(path: "\(id.rawValue.uuidString).json")
+            guard let bytes = try? Data(contentsOf: file),
+                let stored = try? JSONDecoder().decode(StoredAttachment.self, from: bytes)
+            else { throw MailboxError.unknownPacket }
+            var fields = stored.fields.mapValues(\.field)
+            guard PacketWire.adding(receipt, to: &fields) else { return }
+            try write(
+                StoredAttachment(owner: stored.owner, fields: fields.mapValues(WireValue.init)), to: file)
         }
 
-        func pendingAttachments() throws -> [AttachmentID: Set<RecipientTag>] { [:] }
+        func pendingAttachments() throws -> [AttachmentID: SentAttachment] {
+            let files = (try? FileManager.default.contentsOfDirectory(at: media, includingPropertiesForKeys: nil)) ?? []
+            var sent: [AttachmentID: SentAttachment] = [:]
+            for file in files where file.pathExtension == "json" {
+                guard let uuid = UUID(uuidString: file.deletingPathExtension().lastPathComponent),
+                    let bytes = try? Data(contentsOf: file),
+                    let stored = try? JSONDecoder().decode(StoredAttachment.self, from: bytes),
+                    stored.owner == owner
+                else { continue }
+                sent[AttachmentID(rawValue: uuid)] = AttachmentWire.sent(from: stored.fields.mapValues(\.field))
+            }
+            return sent
+        }
 
-        func sweepableAttachments() throws -> [AttachmentID: Set<RecipientTag>] { [:] }
+        func sweepableAttachments() throws -> [AttachmentID: Date] { [:] }
 
         func delete(attachment id: AttachmentID) throws {
             try? FileManager.default.removeItem(

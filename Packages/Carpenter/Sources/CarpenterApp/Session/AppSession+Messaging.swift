@@ -63,10 +63,11 @@ extension AppSession {
         if roster.departure(of: me) != nil { throw MembershipError.leftThisRoom }
         if !roster.mayWrite(me) { throw MembershipError.removedFromThisRoom }
 
-        let body = try await upload(
-            media, to: notShutOut(roster.rewrapTargets(of: me)), through: mailbox)
+        let targets = notShutOut(roster.rewrapTargets(of: me))
+        let body = try await upload(media, to: targets, through: mailbox)
         try await append(try Payload.media(body), to: room)
         roomsWithUnsentMessages.insert(room)
+        await recordAttachmentsSent(body.attachment.transferIDs, to: targets)
     }
 
     public func post(_ media: PreparedMedia, through mailbox: any MediaMailbox) async throws {
@@ -99,6 +100,7 @@ extension AppSession {
                     duration: first.duration, extras: Array(bodies.dropFirst()))),
             to: nil)
         if let head { unsentWallPosts.insert(head.hash) }
+        await recordAttachmentsSent(bodies.flatMap(\.attachment.transferIDs), to: readers)
     }
 
     func discard(_ id: AttachmentID, through mailbox: any MediaMailbox) async {

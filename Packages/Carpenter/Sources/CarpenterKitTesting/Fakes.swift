@@ -180,38 +180,50 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
             throw failure
         }
         if let failure = uploadFailures.removeValue(forKey: uploadCount) { throw failure }
+        let now = serverTime()
+        var fields = AttachmentWire.fields(of: attachment)
+        if let held = attachments[attachment.id] {
+            for key in [PacketWire.receiptTags, PacketWire.receiptValues] { fields[key] = held.fields[key] }
+        }
         attachments[attachment.id] = Stored(
-            fields: AttachmentWire.fields(of: attachment), outstanding: attachment.recipients,
-            storedAt: clock.now)
+            fields: fields, outstanding: attachment.recipients,
+            storedAt: attachments[attachment.id]?.storedAt ?? now, modifiedAt: now)
     }
 
     public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) throws -> Data? {
         downloadCount += 1
         guard let entry = attachments[id] else { return nil }
-        guard tags.isEmpty || !entry.outstanding.isDisjoint(with: tags) else { return nil }
         return AttachmentWire.attachment(from: entry.fields)?.ciphertext
     }
 
-    public func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) throws {
+    public func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) throws {
         guard var entry = attachments[id] else { throw MailboxError.unknownPacket }
         attachmentAcknowledgeCount += 1
-        entry.outstanding.subtract(tags)
-        if entry.outstanding.isEmpty {
-            attachments[id] = nil
-        } else {
-            attachments[id] = entry
+        guard PacketWire.adding(receipt, to: &entry.fields) else { return }
+        entry.modifiedAt = serverTime()
+        attachments[id] = entry
+    }
+
+    public func pendingAttachments() throws -> [AttachmentID: SentAttachment] {
+        attachments.reduce(into: [:]) { found, entry in found[entry.key] = AttachmentWire.sent(from: entry.value.fields) }
+    }
+
+    public func tamper(attachment id: AttachmentID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
+        guard var entry = attachments[id] else { return }
+        change(&entry.fields)
+        if case .dataList(let tags)? = entry.fields[AttachmentWire.outstanding] {
+            entry.outstanding = Set(tags.map(RecipientTag.init(rawValue:)))
         }
+        attachments[id] = entry
     }
 
-    public func pendingAttachments() throws -> [AttachmentID: Set<RecipientTag>] {
-        attachments.reduce(into: [:]) { found, entry in found[entry.key] = entry.value.outstanding }
-    }
+    public var storedAttachmentIDs: Set<AttachmentID> { Set(attachments.keys) }
 
-    public func sweepableAttachments() throws -> [AttachmentID: Set<RecipientTag>] {
+    public func sweepableAttachments() throws -> [AttachmentID: Date] {
         let settled = clock.now.addingTimeInterval(-MailboxRules.sweepAge)
         return attachments.reduce(into: [:]) { found, entry in
             guard entry.value.storedAt < settled else { return }
-            found[entry.key] = entry.value.outstanding
+            found[entry.key] = entry.value.modifiedAt
         }
     }
 
@@ -400,14 +412,14 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
     public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) async throws -> Data? {
         throw Refused()
     }
-    public func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) async throws {
+    public func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) async throws {
         throw Refused()
     }
-    public func sweepableAttachments() async throws -> [AttachmentID: Set<RecipientTag>] {
+    public func sweepableAttachments() async throws -> [AttachmentID: Date] {
         throw Refused()
     }
 
-    public func pendingAttachments() async throws -> [AttachmentID: Set<RecipientTag>] {
+    public func pendingAttachments() async throws -> [AttachmentID: SentAttachment] {
         throw Refused()
     }
     public func delete(attachment id: AttachmentID) async throws { throw Refused() }

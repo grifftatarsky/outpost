@@ -145,7 +145,7 @@ struct CloudKitMailboxTests {
         try await mailbox.withdraw(sent.id)
     }
 
-    @Test("A photo's bytes survive the wire, and are offered until collected")
+    @Test("A photo's bytes survive the wire, and a receipt leaves them where they are")
     func anAttachmentSurvivesTheWire() async throws {
         let mailbox = try await LiveCloudKit.mailbox()
         let mine = LiveCloudKit.tag()
@@ -160,17 +160,13 @@ struct CloudKitMailboxTests {
         #expect(
             back == sealed,
             """
-            A photo's sealed bytes changed between upload and download. Media is its own record             type with its own fields, so the packet round trip says nothing about it — and a photo             that comes back altered is one that will never open.
+            A photo's sealed bytes changed between upload and download. Media is its own record \
+            type with its own fields, so the packet round trip says nothing about it — and a photo \
+            that comes back altered is one that will never open.
             """)
         #expect(
-            (try await mailbox.pendingAttachments())[attachment.id] == [mine, second],
-            """
-            A freshly uploaded attachment did not report who still owes it. Until 2026-09-13 this \
-            hid everything under an hour old, and `offerOutpostMedia` re-uploads with
-            `(waiting[id] ?? []).union(newReaders)` under `.allKeys` — so letting a reader in \
-            within an hour of posting overwrote the outstanding list with only the new reader and \
-            silently dropped everybody who had not collected it yet.
-            """)
+            (try await mailbox.pendingAttachments())[attachment.id]?.recipients == [mine, second],
+            "a freshly uploaded attachment did not report who it is for")
         #expect(
             (try await mailbox.sweepableAttachments())[attachment.id] == nil,
             """
@@ -178,53 +174,55 @@ struct CloudKitMailboxTests {
             does not delete an upload whose entry has not been integrated yet.
             """)
 
-        try await mailbox.acknowledge(attachment: attachment.id, by: [mine, second])
+        let receipt = SealedReceipt(tag: mine, sealed: LiveCloudKit.bytes(120))
+        try await mailbox.acknowledge(attachment: attachment.id, with: receipt)
         #expect(
-            (try await mailbox.pendingAttachments())[attachment.id]?.contains(mine) != true,
-            "a collected attachment is still owed, so it is uploaded again every round")
+            (try await mailbox.pendingAttachments())[attachment.id]?.receipts == [receipt],
+            "a receipt written onto an attachment did not come back from the server")
+        #expect(
+            try await mailbox.download(attachment.id, hint: [second]) == sealed,
+            "signing for a photo took its bytes away; only the sender clears what it sent")
 
         try await mailbox.delete(attachment: attachment.id)
     }
 
-    @Test("The last acknowledgment takes the attachment record off the server")
-    func theLastAcknowledgementRetiresTheRecord() async throws {
+    @Test("Two receipts written at once both land, and putting a photo back keeps them")
+    func receiptsDoNotEraseEachOther() async throws {
         let mailbox = try await LiveCloudKit.mailbox()
         let first = LiveCloudKit.tag()
         let second = LiveCloudKit.tag()
         let sealed = LiveCloudKit.bytes(120_000)
         let attachment = OutgoingAttachment(
             id: AttachmentID(), ciphertext: sealed, recipients: [first, second])
+        try await mailbox.upload(attachment)
+
+        let receipts = [
+            SealedReceipt(tag: first, sealed: LiveCloudKit.bytes(96)),
+            SealedReceipt(tag: second, sealed: LiveCloudKit.bytes(96)),
+        ]
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for receipt in receipts {
+                group.addTask { try await mailbox.acknowledge(attachment: attachment.id, with: receipt) }
+            }
+            try await group.waitForAll()
+        }
+        #expect(
+            Set((try await mailbox.pendingAttachments())[attachment.id]?.receipts ?? []) == Set(receipts),
+            """
+            Two recipients signed for a photo at the same moment and one signature was lost. Each \
+            write reads the record and saves it only if nobody changed it since, and retries if \
+            somebody did; a lost signature keeps a photo in iCloud until its time runs out.
+            """)
 
         try await mailbox.upload(attachment)
-        try #require(
-            (try await mailbox.pendingAttachments())[attachment.id] == [first, second],
-            "precondition: both recipients owe it")
-
-        try await mailbox.acknowledge(attachment: attachment.id, by: [first])
         #expect(
-            (try await mailbox.pendingAttachments())[attachment.id] == [second],
-            "one recipient collecting should leave the other still owed, not clear the list")
-        #expect(
-            try await mailbox.download(attachment.id, hint: [second]) == sealed,
-            """
-            The bytes went the moment the FIRST recipient collected them. A photo has to stay until \
-            everybody it was addressed to has it; retiring it early is a picture that never arrives \
-            for the second person and no error anywhere.
-            """)
+            Set((try await mailbox.pendingAttachments())[attachment.id]?.receipts ?? []) == Set(receipts),
+            "putting a photo back over its record dropped the signatures already on it")
 
-        try await mailbox.acknowledge(attachment: attachment.id, by: [second])
+        try await mailbox.delete(attachment: attachment.id)
         #expect(
             (try await mailbox.pendingAttachments())[attachment.id] == nil,
-            """
-            The attachment record is still in the outbox after every recipient acknowledged it. This \
-            is what stops a member's iCloud filling with photographs everybody already has — the \
-            sweep is the backstop, not the mechanism.
-            """)
-        #expect(
-            try await mailbox.download(attachment.id, hint: [first]) == nil,
-            "the record is gone from the listing but the bytes are still downloadable")
-
-        try? await mailbox.delete(attachment: attachment.id)
+            "the sender cleared a photo and it is still in the outbox")
     }
 
     @Test("Packets come back in the order they were written")

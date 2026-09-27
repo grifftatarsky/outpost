@@ -121,15 +121,17 @@ public struct PacketReceipt: Hashable, Sendable, Codable {
     public let device: DeviceID
     public let signature: Data
 
-    static func signed(_ packet: PacketID, participant: ParticipantID, device: DeviceID) -> Data {
+    static func signed(
+        _ packet: PacketID, participant: ParticipantID, device: DeviceID, domain: String = Domain.packetReceipt
+    ) -> Data {
         CanonicalBytes.payload(
-            domain: Domain.packetReceipt,
+            domain: domain,
             fields: [withUnsafeBytes(of: packet.rawValue.uuid) { Data($0) }, participant.rawValue, device.rawValue])
     }
 
-    static func context(_ packet: PacketID, tag: RecipientTag) -> Data {
+    static func context(_ packet: PacketID, tag: RecipientTag, domain: String = Domain.packetReceipt) -> Data {
         CanonicalBytes.payload(
-            domain: Domain.packetReceipt,
+            domain: domain,
             fields: [withUnsafeBytes(of: packet.rawValue.uuid) { Data($0) }, tag.rawValue])
     }
 
@@ -137,28 +139,66 @@ public struct PacketReceipt: Hashable, Sendable, Codable {
         _ packet: PacketID, under tag: RecipientTag, as participant: ParticipantID, by device: DeviceKeys,
         to peer: PairwiseSecret
     ) throws -> SealedReceipt {
+        try seal(packet, under: tag, as: participant, by: device, to: peer, domain: Domain.packetReceipt)
+    }
+
+    static func seal(
+        _ packet: PacketID, under tag: RecipientTag, as participant: ParticipantID, by device: DeviceKeys,
+        to peer: PairwiseSecret, domain: String
+    ) throws -> SealedReceipt {
         let receipt = PacketReceipt(
             participant: participant, device: device.id,
-            signature: try device.sign(signed(packet, participant: participant, device: device.id)))
+            signature: try device.sign(signed(packet, participant: participant, device: device.id, domain: domain)))
         return SealedReceipt(
             tag: tag,
-            sealed: try peer.wrap(try JSONEncoder().encode(receipt), context: context(packet, tag: tag)))
+            sealed: try peer.wrap(
+                try JSONEncoder().encode(receipt), context: context(packet, tag: tag, domain: domain)))
     }
 
     public static func open(
         _ sealed: SealedReceipt, for packet: PacketID, from participant: ParticipantID, with peer: PairwiseSecret,
         by registry: DeviceRegistry
     ) -> PacketReceipt? {
-        guard let plaintext = try? peer.unwrap(sealed.sealed, context: context(packet, tag: sealed.tag)),
+        open(sealed, for: packet, from: participant, with: peer, by: registry, domain: Domain.packetReceipt)
+    }
+
+    static func open(
+        _ sealed: SealedReceipt, for packet: PacketID, from participant: ParticipantID, with peer: PairwiseSecret,
+        by registry: DeviceRegistry, domain: String
+    ) -> PacketReceipt? {
+        guard
+            let plaintext = try? peer.unwrap(
+                sealed.sealed, context: context(packet, tag: sealed.tag, domain: domain)),
             let receipt = try? JSONDecoder().decode(PacketReceipt.self, from: plaintext),
             receipt.participant == participant,
             registry.activeDevices.contains(receipt.device),
             let key = registry.signingKey(for: receipt.device),
             (try? DeviceKeys.isValidSignature(
-                receipt.signature, for: signed(packet, participant: participant, device: receipt.device),
+                receipt.signature,
+                for: signed(packet, participant: participant, device: receipt.device, domain: domain),
                 publicKey: key)) == true
         else { return nil }
         return receipt
+    }
+}
+
+public enum AttachmentReceipt {
+    public static func seal(
+        _ attachment: AttachmentID, under tag: RecipientTag, as participant: ParticipantID, by device: DeviceKeys,
+        to peer: PairwiseSecret
+    ) throws -> SealedReceipt {
+        try PacketReceipt.seal(
+            PacketID(rawValue: attachment.rawValue), under: tag, as: participant, by: device, to: peer,
+            domain: Domain.attachmentReceipt)
+    }
+
+    public static func open(
+        _ sealed: SealedReceipt, for attachment: AttachmentID, from participant: ParticipantID,
+        with peer: PairwiseSecret, by registry: DeviceRegistry
+    ) -> PacketReceipt? {
+        PacketReceipt.open(
+            sealed, for: PacketID(rawValue: attachment.rawValue), from: participant, with: peer, by: registry,
+            domain: Domain.attachmentReceipt)
     }
 }
 

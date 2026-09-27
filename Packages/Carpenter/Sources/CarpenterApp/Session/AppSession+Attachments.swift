@@ -87,22 +87,144 @@ extension AppSession {
         Diagnostics.sync.notice(
             "media: fetched \(name, privacy: .public) bytes=\(bytes.count, privacy: .public)")
 
-        if !tags.isEmpty { await acknowledge(attachment: id, by: tags, through: mailbox) }
+        await signFor(id, from: author, through: mailbox)
         return bytes
     }
 
     private static let attachmentRetryInterval: TimeInterval = 30
 
+    static let attachmentKeptFor = SyncSession.tagWindow * Double(SyncSession.windowLookback + 2)
+
+    private func signFor(_ id: AttachmentID, from author: ParticipantID, through mailbox: any MediaMailbox) async {
+        guard let enrolment, let peer = peers().first(where: { $0.them == author }) else { return }
+        let receipt: SealedReceipt
+        do {
+            receipt = try AttachmentReceipt.seal(
+                id, under: peer.incomingTag(window: SyncSession.window(at: clock.now)),
+                as: enrolment.identity.id, by: enrolment.device, to: peer.secret)
+        } catch {
+            Diagnostics.sync.error(
+                "media: could not sign for an attachment (\(String(describing: error), privacy: .public))")
+            return
+        }
+        await acknowledge(attachment: id, with: receipt, through: mailbox)
+    }
+
     private func acknowledge(
-        attachment id: AttachmentID, by tags: Set<RecipientTag>, through mailbox: any MediaMailbox
+        attachment id: AttachmentID, with receipt: SealedReceipt, through mailbox: any MediaMailbox
     ) async {
         do {
-            try await mailbox.acknowledge(attachment: id, by: tags)
+            try await mailbox.acknowledge(attachment: id, with: receipt)
+            attachmentAcknowledgementsOwed[id] = nil
+        } catch MailboxError.unknownPacket {
             attachmentAcknowledgementsOwed[id] = nil
         } catch {
-            attachmentAcknowledgementsOwed[id] = tags
+            attachmentAcknowledgementsOwed[id] = receipt
             Diagnostics.sync.error(
-                "media: could not acknowledge an attachment; will retry (\(String(describing: error), privacy: .public))")
+                "media: could not sign for an attachment; will retry (\(String(describing: error), privacy: .public))")
+        }
+    }
+
+    func recordAttachmentsSent(_ ids: [AttachmentID], to people: Set<ParticipantID>) async {
+        noteAttachmentsSent(ids, to: people)
+        do { try await saveState() } catch {
+            Diagnostics.sync.error(
+                "media: could not write down who a photo is for (\(String(describing: error), privacy: .public))")
+        }
+    }
+
+    func noteAttachmentsSent(_ ids: [AttachmentID], to people: Set<ParticipantID>) {
+        let addressed = people.intersection(peers().map(\.them))
+        for id in ids {
+            var record = persisted.attachmentsSent[id] ?? SentAttachmentRecord(people: [], sentAt: clock.now)
+            record.people.formUnion(addressed)
+            record.sentAt = clock.now
+            persisted.attachmentsSent[id] = record
+        }
+    }
+
+    private func ownOtherDevices() -> Set<DeviceID> {
+        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return [] }
+        return registry.activeDevices.subtracting([enrolment.device.id])
+    }
+
+    func settleAttachmentsSent(through mailbox: any MediaMailbox) async {
+        guard enrolment != nil, !persisted.attachmentsSent.isEmpty else { return }
+        let stored: [AttachmentID: SentAttachment]
+        do {
+            stored = try await mailbox.pendingAttachments()
+        } catch {
+            Diagnostics.sync.error(
+                "media: could not read the outbox to see who has collected what (\(String(describing: error), privacy: .public))")
+            return
+        }
+        let byPerson = Dictionary(peers().map { ($0.them, $0) }, uniquingKeysWith: { first, _ in first })
+        let window = SyncSession.window(at: clock.now)
+        let myOtherDevices = ownOtherDevices()
+        var cleared = 0
+        var putBack = 0
+        for (id, before) in persisted.attachmentsSent where !uploading.contains(id) {
+            var record = before
+            var owed: Set<ParticipantID> = []
+            for person in record.people {
+                guard let peer = byPerson[person], let registry = replica.registry(for: person) else {
+                    owed.insert(person)
+                    continue
+                }
+                for receipt in stored[id]?.receipts ?? [] {
+                    if let signed = AttachmentReceipt.open(
+                        receipt, for: id, from: person, with: peer.secret, by: registry)
+                    {
+                        record.collectedBy.insert(signed.device)
+                    }
+                }
+                if !registry.activeDevices.isSubset(of: record.collectedBy) { owed.insert(person) }
+            }
+            persisted.attachmentsSent[id] = record
+
+            let everybody = owed.isEmpty && myOtherDevices.isEmpty
+            let expired = clock.now.timeIntervalSince(record.sentAt) > Self.attachmentKeptFor
+            if everybody || expired {
+                if stored[id] != nil {
+                    do { try await mailbox.delete(attachment: id) } catch {
+                        Diagnostics.sync.error(
+                            "media: could not clear a collected attachment (\(String(describing: error), privacy: .public))")
+                        continue
+                    }
+                }
+                persisted.attachmentsSent[id] = nil
+                cleared += 1
+                continue
+            }
+            guard stored[id] == nil else { continue }
+            let ciphertext: Data
+            do {
+                guard let held = try await storage.media.sealed(for: id) else {
+                    persisted.attachmentsSent[id] = nil
+                    Diagnostics.sync.error("media: an attachment left the outbox early and this device no longer holds it")
+                    continue
+                }
+                ciphertext = held
+            } catch {
+                Diagnostics.sync.error(
+                    "media: could not read the kept copy of an attachment (\(String(describing: error), privacy: .public))")
+                continue
+            }
+            let tags = Set(owed.compactMap { byPerson[$0]?.outgoingTag(window: window) })
+            do {
+                try await mailbox.upload(OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: tags))
+                putBack += 1
+            } catch {
+                Diagnostics.sync.error(
+                    "media: could not put back an attachment that left the outbox early (\(String(describing: error), privacy: .public))")
+            }
+        }
+        if cleared > 0 || putBack > 0 {
+            Diagnostics.sync.notice(
+                """
+                media: cleared \(cleared, privacy: .public) attachment(s) everybody collected or that waited too long; \
+                put back \(putBack, privacy: .public) that left the outbox before everybody had them
+                """)
         }
     }
 
@@ -133,15 +255,15 @@ extension AppSession {
                 }
             }
         }
-        for (id, tags) in attachmentAcknowledgementsOwed {
-            await acknowledge(attachment: id, by: tags, through: mailbox)
+        for (id, receipt) in attachmentAcknowledgementsOwed {
+            await acknowledge(attachment: id, with: receipt, through: mailbox)
         }
     }
 
     func sweepAttachments(through mailbox: any MediaMailbox) async {
         guard !sweptAttachments, enrolment != nil else { return }
         sweptAttachments = true
-        let waiting: [AttachmentID: Set<RecipientTag>]
+        let waiting: [AttachmentID: Date]
         do {
             waiting = try await mailbox.sweepableAttachments()
         } catch {
@@ -155,6 +277,20 @@ extension AppSession {
             persisted.uploadsLeftForOthers.removeAll { stored[$0] == nil && waiting[$0] == nil }
         }
         referenced.formUnion(persisted.uploadsLeftForOthers)
+        let kept = Set([ownPhotoReference?.id, ownOutpostPhotoReference?.id].compactMap { $0 })
+        let abandoned = clock.now.addingTimeInterval(-2 * Self.attachmentKeptFor)
+        for (id, written) in waiting
+        where written < abandoned && referenced.contains(id) && !kept.contains(id)
+            && persisted.attachmentsSent[id] == nil && !uploading.contains(id)
+        {
+            do {
+                try await mailbox.delete(attachment: id)
+                Diagnostics.sync.notice("media: cleared an attachment no device of this member is looking after")
+            } catch {
+                Diagnostics.sync.error(
+                    "media: could not clear an abandoned attachment (\(String(describing: error), privacy: .public))")
+            }
+        }
         for id in waiting.keys where !referenced.contains(id) && !uploading.contains(id) {
             do {
                 try await mailbox.delete(attachment: id)

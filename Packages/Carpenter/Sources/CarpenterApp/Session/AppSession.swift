@@ -163,7 +163,7 @@ public final class AppSession {
 
     public internal(set) var metSomebodyNew = false
     var attachmentRetryAfter: [AttachmentID: Date] = [:]
-    var attachmentAcknowledgementsOwed: [AttachmentID: Set<RecipientTag>] = [:]
+    var attachmentAcknowledgementsOwed: [AttachmentID: SealedReceipt] = [:]
     var uploading: Set<AttachmentID> = []
     var sweptAttachments = false
 

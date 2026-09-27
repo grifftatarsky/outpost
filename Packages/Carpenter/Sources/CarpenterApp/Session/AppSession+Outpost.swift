@@ -405,7 +405,8 @@ extension AppSession {
                     try await mailbox.upload(
                         OutgoingAttachment(
                             id: id, ciphertext: ciphertext,
-                            recipients: (waiting[id] ?? []).union(tags)))
+                            recipients: (waiting[id]?.recipients ?? []).union(tags)))
+                    noteAttachmentsSent([id], to: Set(owed))
                     offered += 1
                 } catch {
                     Diagnostics.sync.error(

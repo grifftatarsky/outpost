@@ -398,9 +398,9 @@ A photo is an entry like any other — payload type 16, sealed under the room's 
 forwarded — and its bytes are not in it. The entry names an attachment: an identifier, a fresh
 content key, a SHA-256 of the ciphertext, a pixel size and a forty-pixel preview. The bytes are
 sealed under that key and uploaded as a `CKAsset` on their own record in the sender's outbox,
-addressed to the room's rewrap targets by the same rotating tags a packet uses, acknowledged the
-same way, and **deleted once the last recipient has collected** — the mailbox's own rule, applied to the thing
-that actually costs storage.
+addressed to the room's rewrap targets by the same rotating tags a packet uses, signed for the same
+way, and **cleared by the sender** once every device of everybody it was for has signed, or after nine
+days — see [Only the sender clears a photo](#only-the-sender-clears-a-photo-and-keeps-its-own-copy).
 
 **What this buys.** The packet stays under CloudKit's megabyte; a photo is opened by exactly the
 people who can open the message, because the key is inside the sealed entry; a device can verify
@@ -408,12 +408,11 @@ what it fetched without holding any room key, so bytes can be kept before the ke
 transport learns a size and nothing else. The bytes are kept sealed on the device too, so the one
 thing on disk readable without the Keychain is still nothing.
 
-**Cost, stated plainly.** A device that arrives after the last recipient collected — a new member,
-a phone that was off for a month — finds the entry and not the bytes. The bubble says *"No longer
+**Cost, stated plainly.** A device that arrives after the photo was cleared — a new member, a phone
+that was off for more than nine days — finds the entry and not the bytes. The bubble says *"No longer
 available — the sender's iCloud has let this photo go"* rather than spinning. That is the same cost
 a packet already carries and has never been hidden; a photo is simply where a member notices it.
-A sibling device is in the same position, for the same reason. History repair, built since, brings
-back the entry and not the bytes.
+History repair, built since, brings back the entry and not the bytes.
 
 **Upload first, entry second.** An entry naming bytes nobody can fetch is a bubble that never loads
 on every other device, so the bytes go up before the log hears anything; a failed upload writes no
@@ -2838,6 +2837,45 @@ make a packet of long messages go past iCloud's one-megabyte record.
 **Not measured:** the saving on a real account, which waits for the rig.
 
 <!-- COPY END e08d32a1 -->
+
+<!-- COPY BEGIN 511c4f5b [NEEDS HUMAN REVIEW] -->
+
+### Only the sender clears a photo, and keeps its own copy
+
+**RULED 2026-09-27 by Griff.** "No user should be able to interfere with your own history or
+recipients." And: "your phone should have the file in case it's requested in a history check or
+someone deletes the photo/video for space."
+
+Everybody you talk to can write to your outbox, because that is how they sign for what they collect.
+Until today a photo or clip left it the old way: each reader removed their own address from the
+record and the last one deleted it. So anybody in one of your rooms could delete a photo, or strip
+the others' addresses from it, before the others had it, and it was gone for them.
+
+Now a photo is cleared the way a packet is taken back. A reader's device signs for what it collects
+with a receipt only the sender can open (`AttachmentReceipt`, its own signing domain, so a receipt
+for a packet never counts for a photo). The sender's device keeps its own record of who each photo
+was for, and on every round clears it only when **every active device** of every one of those people
+has signed, or nine days have passed. A photo that leaves the outbox any other way is put back from
+the copy the sender kept. The list of addresses on the record is only a hint now: the real mailbox
+never used it to keep anybody out, and emptying it changes nothing (`NobodyButTheSenderClearsAPhotoTests`).
+
+The sender keeps its sealed copy of every photo and clip after the outbox copy is cleared.
+
+**Claude's choices inside the ruling, not Griff's:** nine days, the same time a packet waits; every
+device of a person rather than the first one, because a member's devices share one inbox and the
+first to collect is not everybody; and a sender who has another device of their own leaves every
+photo the full nine days, because that device reads its member's photos from the same outbox and does
+not sign for them (`APhotoAndTwoDevicesTests`).
+
+**What someone with the outbox link can still do:** delay. A photo they delete is back on the
+sender's next round. A photo whose bytes they replace fails its digest on the reader's side and is
+not kept.
+
+**Not verified on a real account:** a receipt written onto an attachment record, two written at
+once, and a photo put back over its record keeping the receipts already on it. The live tests are
+written (`CloudKitMailboxTests`) and wait for the rig.
+
+<!-- COPY END 511c4f5b -->
 
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 

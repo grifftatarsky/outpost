@@ -12,16 +12,26 @@ public struct OutgoingAttachment: Hashable, Sendable {
     }
 }
 
+public struct SentAttachment: Hashable, Sendable {
+    public let recipients: Set<RecipientTag>
+    public let receipts: [SealedReceipt]
+
+    public init(recipients: Set<RecipientTag>, receipts: [SealedReceipt]) {
+        self.recipients = recipients
+        self.receipts = receipts
+    }
+}
+
 public protocol MediaMailbox: Sendable {
     func upload(_ attachment: OutgoingAttachment) async throws
 
     func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) async throws -> Data?
 
-    func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) async throws
+    func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) async throws
 
-    func pendingAttachments() async throws -> [AttachmentID: Set<RecipientTag>]
+    func pendingAttachments() async throws -> [AttachmentID: SentAttachment]
 
-    func sweepableAttachments() async throws -> [AttachmentID: Set<RecipientTag>]
+    func sweepableAttachments() async throws -> [AttachmentID: Date]
 
     func delete(attachment id: AttachmentID) async throws
 }
@@ -40,6 +50,12 @@ public enum AttachmentWire {
             outstanding: .dataList(recipients),
             blob: .data(attachment.ciphertext),
         ]
+    }
+
+    public static func sent(from fields: [String: PacketField]) -> SentAttachment {
+        let recipients: Set<RecipientTag> =
+            if case .dataList(let tags)? = fields[outstanding] { Set(tags.map(RecipientTag.init(rawValue:))) } else { [] }
+        return SentAttachment(recipients: recipients, receipts: PacketWire.receipts(in: fields))
     }
 
     public static func attachment(from fields: [String: PacketField]) -> (
