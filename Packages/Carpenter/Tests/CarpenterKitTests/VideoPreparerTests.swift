@@ -40,6 +40,28 @@ struct VideoPreparerTests {
         #expect(after.isEmpty, "identifying metadata survived: \(after)")
     }
 
+    @Test("A clip keeps only its picture and sound: no track of timed location or anything else rides along")
+    func timedMetadataIsDropped() async throws {
+        let original = try await TestVideo.make(seconds: 2, timedLocation: true)
+        defer { try? FileManager.default.removeItem(at: original) }
+        let carried = try await AVURLAsset(url: original).loadTracks(withMediaType: .metadata)
+        try #require(!carried.isEmpty, "the fixture carries no timed metadata, so this test proves nothing")
+
+        let prepared = try await VideoPreparer.prepare(original)
+        let file = try #require(prepared.file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let tracks = try await AVURLAsset(url: file).load(.tracks)
+        #expect(
+            tracks.allSatisfy { $0.mediaType == .video || $0.mediaType == .audio },
+            "a clip went out with tracks other than picture and sound: \(tracks.map(\.mediaType.rawValue))")
+
+        let fitted = try await VideoPreparer.prepareToFit(original, limit: 200_000)
+        let fittedFile = try #require(fitted.file)
+        defer { try? FileManager.default.removeItem(at: fittedFile) }
+        let fittedTracks = try await AVURLAsset(url: fittedFile).load(.tracks)
+        #expect(fittedTracks.allSatisfy { $0.mediaType == .video || $0.mediaType == .audio })
+    }
+
     @Test("The first frame becomes a preview that fits the entry")
     func previewFits() async throws {
         let original = try await TestVideo.make(seconds: 1)

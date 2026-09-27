@@ -3,9 +3,11 @@ import CoreVideo
 import Foundation
 
 enum TestVideo {
+    static let timedNote = AVMetadataIdentifier(rawValue: "mdta/com.example.timed-note")
+
     static func make(
         seconds: Int, size: CGSize = CGSize(width: 1280, height: 720), fps: Int32 = 2,
-        tagged: Bool = true, noisy: Bool = false
+        tagged: Bool = true, noisy: Bool = false, timedLocation: Bool = false
     ) async throws -> URL {
         let url = URL.temporaryDirectory.appending(path: "test-clip-\(UUID().uuidString).mov")
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
@@ -38,8 +40,50 @@ enum TestVideo {
         }
 
         writer.add(input)
+
+        var metadataAdaptor: AVAssetWriterInputMetadataAdaptor?
+        if timedLocation {
+            let specs: [[String: Any]] = [
+                [
+                    kCMMetadataFormatDescriptionMetadataSpecificationKey_Identifier as String:
+                        AVMetadataIdentifier.quickTimeMetadataLocationISO6709.rawValue,
+                    kCMMetadataFormatDescriptionMetadataSpecificationKey_DataType as String:
+                        kCMMetadataDataType_QuickTimeMetadataLocation_ISO6709 as String,
+                ],
+                [
+                    kCMMetadataFormatDescriptionMetadataSpecificationKey_Identifier as String:
+                        Self.timedNote.rawValue,
+                    kCMMetadataFormatDescriptionMetadataSpecificationKey_DataType as String:
+                        kCMMetadataBaseDataType_UTF8 as String,
+                ],
+            ]
+            var description: CMFormatDescription?
+            CMMetadataFormatDescriptionCreateWithMetadataSpecifications(
+                allocator: kCFAllocatorDefault, metadataType: kCMMetadataFormatType_Boxed,
+                metadataSpecifications: specs as CFArray, formatDescriptionOut: &description)
+            let metadataInput = AVAssetWriterInput(
+                mediaType: .metadata, outputSettings: nil, sourceFormatHint: description)
+            metadataInput.expectsMediaDataInRealTime = false
+            writer.add(metadataInput)
+            metadataAdaptor = AVAssetWriterInputMetadataAdaptor(assetWriterInput: metadataInput)
+        }
         guard writer.startWriting() else { throw writer.error ?? CocoaError(.fileWriteUnknown) }
         writer.startSession(atSourceTime: .zero)
+        if let metadataAdaptor {
+            let item = AVMutableMetadataItem()
+            item.identifier = .quickTimeMetadataLocationISO6709
+            item.dataType = kCMMetadataDataType_QuickTimeMetadataLocation_ISO6709 as String
+            item.value = "+51.5000-000.1200/" as NSString
+            let note = AVMutableMetadataItem()
+            note.identifier = Self.timedNote
+            note.dataType = kCMMetadataBaseDataType_UTF8 as String
+            note.value = "kitchen table, Tuesday" as NSString
+            let group = AVTimedMetadataGroup(
+                items: [item, note], timeRange: CMTimeRange(start: .zero, duration: CMTime(value: CMTimeValue(seconds), timescale: 1)))
+            while !metadataAdaptor.assetWriterInput.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(5)) }
+            metadataAdaptor.append(group)
+            metadataAdaptor.assetWriterInput.markAsFinished()
+        }
 
         for frame in 0..<Int(Int32(seconds) * fps) {
             while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(5)) }
