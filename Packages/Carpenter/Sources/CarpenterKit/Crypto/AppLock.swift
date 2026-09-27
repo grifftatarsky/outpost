@@ -39,6 +39,7 @@ public struct AppLock: Hashable, Sendable, Codable {
     public var usesBiometrics: Bool
     public var biometricState: Data?
     public var delay: TimeInterval
+    public var eraseAfter: Int?
     var salt: Data
     var verifier: Data
     var rounds: Int
@@ -48,6 +49,11 @@ public struct AppLock: Hashable, Sendable, Codable {
 
     public static let rounds = 300_000
     public static let delays: [TimeInterval] = [0, 60, 300, 900]
+    public static let eraseChoices: [Int?] = [nil, 1, 5, 10]
+
+    public var codesLeftBeforeErasing: Int? {
+        eraseAfter.map { max(0, $0 - failures) }
+    }
 
     public static func make(
         _ code: String, as kind: Code, usesBiometrics: Bool, biometricState: Data? = nil, delay: TimeInterval = 0,

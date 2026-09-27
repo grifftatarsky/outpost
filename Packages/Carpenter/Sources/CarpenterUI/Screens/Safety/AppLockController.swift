@@ -47,6 +47,10 @@ public final class AppLockController {
     public private(set) var checking = false
     public private(set) var loaded = false
     public private(set) var unreadable = false
+    public private(set) var erasing = false
+    public var onEraseEverywhere: (@MainActor () async -> Void)?
+    public var recovery: RecoveryKeyAccess?
+    public var notificationPrivacy: NotificationPrivacy?
 
     private let store: AppLockStore
     private let biometrics: any Biometrics
@@ -155,8 +159,15 @@ public final class AppLockController {
         let snapshot = lock
         let right = await Task.detached(priority: .userInitiated) { snapshot.matches(code) }.value
         guard right else {
+            if lock.codesLeftBeforeErasing == 0 {
+                problem = .erasing
+                erasing = true
+                await onEraseEverywhere?()
+                return false
+            }
             switch lock.afterAWrongCode {
-            case .wrong(let left): problem = .wrong(triesBeforeAWait: left)
+            case .wrong(let left):
+                problem = lock.codesLeftBeforeErasing.map { .wrongBeforeErasing($0) } ?? .wrong(triesBeforeAWait: left)
             case .wait(let wait): problem = .waitUntil(clock().addingTimeInterval(wait))
             case .unlocked: problem = nil
             }
@@ -256,6 +267,22 @@ public final class AppLockController {
         return true
     }
 
+    @discardableResult
+    public func setEraseAfter(_ count: Int?) async -> Bool {
+        guard var lock, spendConfirmation() else { return false }
+        lock.eraseAfter = count
+        return await keep(lock)
+    }
+
+    @discardableResult
+    public func unlock(withRecoveryKey text: String) async -> Bool {
+        guard lock != nil, let recovery, recovery.opens(text) else {
+            problem = .notTheRecoveryKey
+            return false
+        }
+        return await keep(nil)  // reentrancy considered
+    }
+
     public func forget() {
         unreadable = false
         lock = nil
@@ -272,6 +299,38 @@ public enum AppLockProblem: Hashable, Sendable {
     case waitUntil(Date)
     case notSaved
     case needsCode
+    case wrongBeforeErasing(Int)
+    case erasing
+    case notTheRecoveryKey
+}
+
+public struct NotificationPrivacy {
+    public var reveals: @MainActor () -> Bool
+    public var makePrivate: @MainActor () async -> Void
+
+    public init(reveals: @escaping @MainActor () -> Bool, makePrivate: @escaping @MainActor () async -> Void) {
+        self.reveals = reveals
+        self.makePrivate = makePrivate
+    }
+}
+
+public struct RecoveryKeyAccess {
+    public var isSaved: @MainActor () -> Bool
+    public var unsaved: @MainActor () -> (text: String, fingerprint: String)?
+    public var markSaved: @MainActor () async -> Void
+    public var opens: @MainActor (String) -> Bool
+
+    public init(
+        isSaved: @escaping @MainActor () -> Bool,
+        unsaved: @escaping @MainActor () -> (text: String, fingerprint: String)?,
+        markSaved: @escaping @MainActor () async -> Void,
+        opens: @escaping @MainActor (String) -> Bool
+    ) {
+        self.isSaved = isSaved
+        self.unsaved = unsaved
+        self.markSaved = markSaved
+        self.opens = opens
+    }
 }
 
 extension EnvironmentValues {

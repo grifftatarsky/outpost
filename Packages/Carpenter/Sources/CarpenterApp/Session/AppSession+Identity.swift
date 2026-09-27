@@ -465,6 +465,11 @@ extension AppSession {
 
     public var hasUnsavedRecoveryKey: Bool { unsavedRecoveryKey != nil }
 
+    public func recoveryKeyOpens(_ text: String) -> Bool {
+        guard let id = enrolment?.identity.id, let secret = try? RecoveryKey.secret(from: text) else { return false }
+        return secret.identity.id == id
+    }
+
     public var recoveryKeyFingerprint: String? {
         enrolment.map { RecoveryKey.fingerprint(of: $0.identity) }
     }

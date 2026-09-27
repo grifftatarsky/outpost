@@ -29,12 +29,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
 
         Task {
             let rich = await NotificationService.richCopy()
-            if await NotificationService.appIsLocked() {
-                DiagnosticsExport.note("nse: the app lock is on; delivering the generic banner")
-                await self.deliver(MessageNotification.generic, badge: rich.badge, quietly: rich.quietly)
-            } else {
-                await self.deliver(rich.copy, badge: rich.badge, quietly: rich.quietly)
-            }
+            await self.deliver(rich.copy, badge: rich.badge, quietly: rich.quietly)
         }
     }
 
@@ -146,18 +141,6 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
     }
 
     private static let attempts = 6
-
-    private static func appIsLocked() async -> Bool {
-        let full = Bundle.main.bundleIdentifier ?? "app"
-        let container = full.lastIndex(of: ".").map { String(full[..<$0]) } ?? full
-        let store = AppLockStore(
-            keychain: SystemKeychainStore(service: container, accessGroup: sharedKeychainGroup))
-        do {
-            return try await store.load() != nil
-        } catch {
-            return true
-        }
-    }
 
     private static let sharedKeychainGroup: String? = SharedKeychain.group
 }

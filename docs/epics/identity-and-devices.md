@@ -448,8 +448,13 @@ already has. See [the decision](../decisions.md#the-app-lock-is-a-code-the-phone
 - **Built.** Locks behind the app's own 4 to 6 digit code or a passphrase, with Face ID on top if
   wanted, on a timeout the member chooses (right away, 1, 5 or 15 minutes). Offered at setup, after
   the recovery key, and in Settings.
-- **Built.** Notification content respects the lock: while it is on, a banner says only that something
-  arrived. Not yet seen on the rig.
+- **Built.** Notifications follow the member's setting; setting the lock offers to make them private,
+  and says what a banner shows otherwise. In the welcome, notifications come before the lock. Seen in
+  the simulator walk-through (`RigChecks.testANewMemberSavesTheKeyAndLocksTheApp`).
+- **Built.** A glass key button on the lock screen opens the app with the recovery key and turns the
+  lock off (`AppLockControllerTests`).
+- **Built.** Erasing everything after 1, 5 or 10 wrong codes, off unless chosen, with the recovery key
+  offered first (`AppLockControllerTests`). What it erases is the deathmark; see *Erasing everything*.
 - **Built.** The lock is a lock, not a curtain, and says so: the crypto brief and the setup screen say
   it guards the screens and does not encrypt what is stored.
 - **Built.** Wrong codes are counted before they are checked and make you wait; changing the clock or

@@ -324,6 +324,114 @@ struct AppLockControllerTests {
         #expect(!none.isLocked && !none.isCovered && none.loaded)
     }
 
+    private func erasing(after count: Int?) async throws -> (AppLockController, Recording, Uptime, Counter) {
+        let (controller, keychain, uptime) = try await controller()
+        let erased = Counter()
+        controller.onEraseEverywhere = { erased.count += 1 }
+        if let count {
+            await controller.unlock(with: "482913")
+            _ = await controller.confirm("482913")
+            #expect(await controller.setEraseAfter(count))
+            controller.sceneChanged(to: .background)
+            uptime.boot = "boot-restart"
+            uptime.seconds = 1
+            controller.sceneChanged(to: .active)
+            try #require(controller.isLocked, "precondition: locked again")
+        }
+        return (controller, keychain, uptime, erased)
+    }
+
+    final class Counter: @unchecked Sendable { var count = 0 }
+
+    @Test("Set to erase after one wrong code, one wrong code erases everything, and a right one never does")
+    func oneWrongCodeErases() async throws {
+        let (controller, _, _, erased) = try await erasing(after: 1)
+        await controller.unlock(with: "482913")
+        #expect(erased.count == 0, "the right code erased everything")
+        controller.sceneChanged(to: .background)
+        controller.sceneChanged(to: .active)
+        await controller.unlock(with: "000000")
+        #expect(erased.count == 1, "a wrong code did not erase anything")
+        #expect(controller.problem == .erasing)
+    }
+
+    @Test("Set to five, four wrong codes warn and the fifth erases, even across a relaunch")
+    func theCountSurvivesARelaunch() async throws {
+        let (controller, keychain, uptime, erased) = try await erasing(after: 5)
+        for _ in 0..<2 { await controller.unlock(with: "000000") }
+        #expect(controller.problem == .wrongBeforeErasing(3))
+        let again = AppLockController(
+            store: AppLockStore(keychain: keychain), biometrics: Faces(enrolled: Data([1]), matches: false),
+            moment: { uptime.moment })
+        again.onEraseEverywhere = { erased.count += 1 }
+        await again.load()
+        await again.unlock(with: "000000")
+        await again.unlock(with: "000000")
+        #expect(erased.count == 0, "it erased before the count")
+        #expect(again.problem == .wrongBeforeErasing(1))
+        await again.unlock(with: "000000")
+        #expect(erased.count == 1, "the fifth wrong code did not erase")
+    }
+
+    @Test("Off, no number of wrong codes erases anything")
+    func offNeverErases() async throws {
+        let (controller, _, uptime, erased) = try await erasing(after: nil)
+        for _ in 0..<12 {
+            await controller.unlock(with: "000000")
+            uptime.seconds += 3_700
+        }
+        #expect(erased.count == 0)
+    }
+
+    @Test("Turning erasing on, changing it or turning it off all need the code")
+    func erasingNeedsTheCode() async throws {
+        let (controller, _, _) = try await controller()
+        await controller.unlock(with: "482913")
+        #expect(!(await controller.setEraseAfter(1)), "erasing was turned on without the code")
+        #expect(await controller.confirm("482913"))
+        #expect(await controller.setEraseAfter(10))
+        #expect(!(await controller.setEraseAfter(nil)), "erasing was turned off without the code")
+        #expect(controller.lock?.eraseAfter == 10)
+    }
+
+    @Test("A wrong code typed to confirm a change counts toward erasing too")
+    func confirmingCounts() async throws {
+        let (controller, _, _, erased) = try await erasing(after: 1)
+        await controller.unlock(with: "482913")
+        #expect(!(await controller.confirm("111111")))
+        #expect(erased.count == 1, "a wrong code in Settings did not count")
+    }
+
+    @Test("The recovery key for this identity opens the app and turns the lock off; any other key does not")
+    func theRecoveryKeyOpensIt() async throws {
+        let (controller, keychain, _) = try await controller()
+        let genuine = "the member's key"
+        controller.recovery = RecoveryKeyAccess(
+            isSaved: { true }, unsaved: { nil }, markSaved: {}, opens: { $0 == genuine })
+        #expect(!(await controller.unlock(withRecoveryKey: "somebody else's key")))
+        #expect(controller.isLocked && controller.problem == .notTheRecoveryKey)
+        #expect(await controller.unlock(withRecoveryKey: genuine))
+        #expect(!controller.isLocked && !controller.isCovered && controller.lock == nil)
+        #expect(try await AppLockStore(keychain: keychain).load() == nil, "the lock was left in the keychain")
+    }
+
+    @Test("Without a way to check a recovery key, none opens the lock")
+    func noCheckerNoRecovery() async throws {
+        let (controller, _, _) = try await controller()
+        #expect(!(await controller.unlock(withRecoveryKey: "anything")))
+        #expect(controller.isLocked)
+    }
+
+    @Test("A lock saved before erasing existed reads as erasing off")
+    func olderLocksReadAsOff() throws {
+        let lock = try AppLock.make("482913", as: .digits, usesBiometrics: false, rounds: 1_000)
+        var json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(lock)) as? [String: Any])
+        json.removeValue(forKey: "eraseAfter")
+        let decoded = try JSONDecoder().decode(AppLock.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded.eraseAfter == nil)
+        #expect(decoded.matches("482913"))
+    }
+
     @Test("Forgetting the lock after an erase leaves nothing locked or covered")
     func forgetClears() async throws {
         let (controller, _, _) = try await controller()

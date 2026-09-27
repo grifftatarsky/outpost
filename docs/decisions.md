@@ -2795,9 +2795,25 @@ Settings under App lock. See the [crypto brief](crypto-brief.md#the-app-lock).
   syncing and the notification extension drawing a banner until the member typed the code, and a
   forgotten code would lose the history. It stops a person holding an unlocked phone, which is who it
   is for; it does not stop someone who can read the phone's storage directly.
-- **While it is on, a notification says only that something arrived.** A banner with the sender and
-  the words would show exactly what the lock hides. A lock that can't be read (the phone has not been
-  unlocked since it started) counts as on.
+- **Notifications follow the member's own setting, and setting the lock offers to make them private.**
+  **RULED 2026-09-27 by Griff:** "when a user sets it up, ask them if they want to switch their push
+  notifications ... to the most private setting, and note that if they do not, a bad actor with a
+  stolen device could still see data from the notification when it appears." The first build forced
+  every banner down to "New message" while the lock was on; that is gone. Setting a lock, at setup or
+  in Settings, asks once, when notifications are on and show more than that something arrived:
+  *Make them private* sets every level, every room and room updates to show nothing, and the message
+  says what a banner shows otherwise. In the welcome, notifications are asked about before the lock.
+  A lock that can't be read (the phone has not been unlocked since it started) counts as on.
+- **The recovery key opens the lock.** **RULED 2026-09-27 by Griff:** "There should be a recovery key
+  liquid glass bubble in the bottom left, which allows the reco process." A glass key button on the
+  lock screen takes the recovery key; if it is this identity's, the app opens and the lock is turned
+  off, so the member sets a new code in Settings. Nothing is erased. The recovery key already takes
+  the identity over, so it opening the lock gives its holder nothing more.
+- **Erasing after wrong codes, off unless chosen.** **RULED 2026-09-27 by Griff:** off, or after 1, 5
+  or 10 wrong codes, everything is erased everywhere (the deathmark below). Turning it on asks to save
+  the recovery key first if it hasn't been, and warns and asks again if the member declines. Every
+  wrong code counts, wherever the app asks for one; the lock screen says how many are left. Changing
+  the setting needs the code, so a person in the app can't turn it on to wipe the member's data.
 - **Five tries, then waits of one minute, five, fifteen, then an hour each.** A try is written down
   before it is checked, so quitting the app mid-check doesn't reset the count. The wait is timed by
   the phone's own running time, not its clock, so changing the date doesn't end it, and restarting the
@@ -2805,14 +2821,16 @@ Settings under App lock. See the [crypto brief](crypto-brief.md#the-app-lock).
 - **Face ID counts only for the faces the phone knew when the lock was set.** A face added since
   needs the code once. Turning Face ID on, lengthening the time before it locks, changing the code and
   turning the lock off all need the code, entered within the last five minutes, once per change.
-- **Forgetting the code means erasing this phone's copy.** The lock screen offers it, after a warning.
+- **Forgetting the code without the key means erasing this phone's copy.** The lock screen offers it,
+  after a warning.
   Deleting the app does not clear the keychain, so without this a forgotten code would lock the member
   out for good. It gives a thief nothing: coming back needs another device's approval or the recovery
   key.
 - **The app switcher sees a cover the moment the app is not in front**, whatever the grace time.
 
-**What it costs.** Banners lose their words while the lock is on. A member who forgets the code and
-has neither another device nor the recovery key loses what was on that phone.
+**What it costs.** A member who keeps showing notifications has them readable on a locked app. One who
+forgets the code and has neither another device nor the recovery key loses what was on that phone,
+and one who sets erasing at 1 can lose everything to a single typo.
 
 <!-- COPY END d09e6aaf -->
 

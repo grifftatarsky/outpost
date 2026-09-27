@@ -31,6 +31,7 @@ struct AppRootView: View {
     @AppStorage("onboarding.tourSeen") var tourSeen = false
     @AppStorage("onboarding.syncedSplashSeen") var syncedSplashSeen = false
     @AppStorage("onboarding.lockOffered") var lockOffered = false
+    @State var lockOfferOpen = false
     @AppStorage("siri.donationsForgotten") var siriDonationsForgotten = false
     @State var appLock = AppLockController(store: AppRootView.appLockStore)
     @State var otherDevicesAsked = false
@@ -263,7 +264,10 @@ struct AppRootView: View {
                 }
                 .themed(.default)
 
-            case .ready where !lockOffered && appLock.lock == nil && !UITestMode.isOn:
+            case .ready where !lockOffered && !notificationsExplained && appLock.lock == nil && !UITestMode.isOn:
+                notificationsStep
+
+            case .ready where !lockOffered && (appLock.lock == nil || lockOfferOpen) && !UITestMode.isOn:
                 lockOffer
 
             case .ready where session.enrolment?.deviceIsNew == true && !syncedSplashSeen:
@@ -456,7 +460,10 @@ struct AppRootView: View {
         .onChange(of: appLock.isCovered, initial: true) { _, covered in
             coverForLock(covered)
         }
-        .task { await appLock.load() }
+        .task {
+            configureAppLock()
+            await appLock.load()
+        }
         .task { await forgetOldSiriDonations() }
         .environment(\.appLock, appLock)
         .overlay {

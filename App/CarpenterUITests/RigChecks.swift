@@ -29,19 +29,27 @@ final class RigChecks: XCTestCase {
 
     func tapIfThere(_ app: XCUIApplication, _ label: String, timeout: TimeInterval = 2, scrolling: Bool = false) -> Bool {
         let button = app.buttons.matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", label, label + ",")).firstMatch
-        if button.waitForExistence(timeout: timeout), (try? button.snapshot()) != nil, button.isHittable {
+        if button.waitForExistence(timeout: timeout), stillThere(button) {
             button.tap()
             return true
         }
         guard scrolling else { return false }
         for _ in 0..<5 {
             app.swipeUp()
-            if button.exists, button.isHittable {
+            if stillThere(button) {
                 button.tap()
                 return true
             }
         }
         return false
+    }
+
+    func stillThere(_ element: XCUIElement) -> Bool {
+        var there = false
+        XCTExpectFailure("a screen changing under the check makes the element vanish before it is read", strict: false) {
+            there = element.exists && element.isHittable
+        }
+        return there
     }
 
     func settle(_ app: XCUIApplication) {
@@ -59,7 +67,7 @@ final class RigChecks: XCTestCase {
             }
             if !tapped {
                 for label in [
-                    "Familiar and open", "Use these settings", "Not now", "Continue without it",
+                    "Familiar and open", "Use these settings", "Not now", "Not for now", "Continue without it",
                     "Continue", "Get started", "Skip", "Next", "Finish", "Done",
                 ] where tapIfThere(app, label, timeout: 0.5) {
                     tapped = true
@@ -141,6 +149,15 @@ final class RigChecks: XCTestCase {
         XCTAssertTrue(tapIfThere(app, "It's saved", timeout: 3), "no confirmation")
 
         XCTAssertTrue(
+            app.buttons["Continue"].firstMatch.waitForExistence(timeout: 10), "notifications were not offered before the lock")
+        XCTAssertFalse(app.staticTexts["Lock the app"].firstMatch.exists, "the lock was offered before notifications")
+        shoot(app, "lock-3b-notifications-first")
+        XCTAssertTrue(tapIfThere(app, "Continue", timeout: 3))
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        if springboard.buttons["Allow"].waitForExistence(timeout: 8) { springboard.buttons["Allow"].tap() }
+        _ = tapIfThere(app, "Not for now", timeout: 5)
+
+        XCTAssertTrue(
             app.staticTexts["Lock the app"].firstMatch.waitForExistence(timeout: 10), "the lock was not offered at setup")
         shoot(app, "lock-4-offer")
         XCTAssertTrue(app.buttons["Not now"].firstMatch.isHittable, "the offer can't be declined as it opens")
@@ -156,6 +173,10 @@ final class RigChecks: XCTestCase {
         sleep(1)
         XCTAssertTrue(lockButton.isHittable, "the keyboard still covers the button once both codes match")
         lockButton.tap()
+        let makePrivate = app.alerts.buttons["Make them private"].firstMatch
+        XCTAssertTrue(makePrivate.waitForExistence(timeout: 5), "setting the lock did not offer private notifications")
+        shoot(app, "lock-5b-private-notifications")
+        makePrivate.tap()
         sleep(2)
         settle(app)
 

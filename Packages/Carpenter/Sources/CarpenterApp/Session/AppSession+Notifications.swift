@@ -92,6 +92,29 @@ extension AppSession {
         persisted.preferences.isMuted(room) ? .nothing : persisted.preferences.notificationLevel(for: room)
     }
 
+    public var notificationsRevealMore: Bool {
+        let preferences = persisted.preferences
+        if preferences.defaultNotificationLevel != .nothing { return true }
+        let rooms = preferences.roomNotificationLevel.filter { !preferences.isMuted($0.key) }
+        if rooms.contains(where: { $0.value.value != .nothing }) { return true }
+        let messaging = preferences.messagingNotificationChoices
+        if messaging.wantsMessages, messaging.level != .nothing { return true }
+        return messaging.wantsRoomUpdates && messaging.roomUpdateLevel != .nothing
+    }
+
+    public func makeNotificationsPrivate() async {
+        let stamp = stamp()
+        persisted.preferences.setNotificationLevel(.nothing, stamp: stamp)
+        for (room, level) in persisted.preferences.roomNotificationLevel where level.value != .nothing {
+            persisted.preferences.setNotificationLevel(.nothing, for: room, stamp: stamp)
+        }
+        var messaging = persisted.preferences.messagingNotificationChoices
+        messaging.level = .nothing
+        messaging.roomUpdateLevel = .nothing
+        persisted.preferences.setMessagingNotifications(messaging, stamp: stamp)
+        await savePreferences()
+    }
+
     public func followsDefaultNotificationLevel(_ room: RoomID) -> Bool {
         persisted.preferences.followsDefault(room)
     }

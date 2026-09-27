@@ -1,3 +1,4 @@
+import CarpenterApp
 import CarpenterKeychain
 import CarpenterKit
 import CarpenterUI
@@ -54,6 +55,43 @@ extension AppRootView {
         #endif
     }
 
+    func configureAppLock() {
+        appLock.onEraseEverywhere = { await eraseEverywhereFromTheLock() }
+        appLock.recovery = RecoveryKeyAccess(
+            isSaved: { session.recoveryKeySavedAt != nil },
+            unsaved: { session.recoveryKeyText().map { ($0, session.recoveryKeyFingerprint ?? "") } },
+            markSaved: { await session.noteRecoveryKeySaved() },
+            opens: { session.recoveryKeyOpens($0) })
+        appLock.notificationPrivacy = NotificationPrivacy(
+            reveals: { notificationsAllowed == true && session.notificationsRevealMore },
+            makePrivate: { await session.makeNotificationsPrivate() })
+    }
+
+    func eraseEverywhereFromTheLock() async {
+        await nuke()
+        try? await Self.appLockStore.remove()
+        appLock.forget()
+        lockOffered = false
+    }
+
+    var notificationsStep: some View {
+        PermissionExplainerView(
+            .notifications,
+            onContinue: {
+                notificationsExplained = true
+                Task {
+                    await PushRegistration.requestMessageAuthorization()
+                    await readNotificationPermission()
+                    if notificationsAllowed == true, !session.hasAnsweredOutpostNotifications {
+                        askingOutpostNotifications = true
+                    }
+                }
+            },
+            onDecline: { notificationsExplained = true }
+        )
+        .themed(.default)
+    }
+
     func forgetTheLock() async {
         await eraseThisDevice()
         try? await Self.appLockStore.remove()
@@ -65,10 +103,15 @@ extension AppRootView {
         NavigationStack {
             AppLockSetupView(
                 biometricName: appLock.biometricName,
+                revealsNotifications: { appLock.notificationPrivacy?.reveals() ?? false },
                 onLock: { lock in
-                    guard await appLock.turnOn(lock) else { return false }
+                    lockOfferOpen = true
+                    return await appLock.turnOn(lock)
+                },
+                onMakeNotificationsPrivate: { await appLock.notificationPrivacy?.makePrivate() },
+                onDone: {
                     lockOffered = true
-                    return true
+                    lockOfferOpen = false
                 },
                 onNotNow: { lockOffered = true })
         }
