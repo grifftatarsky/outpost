@@ -246,7 +246,8 @@ public struct AppLockSetupView: View {
         .navigationTitle(Text("App Lock", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         // COPY END 61f4704a
-        .onAppear { focus = .code }
+        .onAppear { if onNotNow == nil { focus = .code } }
+        .onChange(of: ready) { _, now in if now { focus = nil } }
     }
 
     private var actions: some View {

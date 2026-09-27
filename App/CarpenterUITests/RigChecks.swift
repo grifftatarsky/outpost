@@ -46,12 +46,16 @@ final class RigChecks: XCTestCase {
 
     func settle(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        var idle = 0
         for _ in 0..<30 {
             var tapped = false
             for label in ["Allow", "Don’t Allow"] where springboard.buttons[label].exists {
                 springboard.buttons[label].tap()
                 tapped = true
                 break
+            }
+            if !tapped, app.buttons["I've saved it"].exists {
+                tapped = saveTheRecoveryKey(app)
             }
             if !tapped {
                 for label in [
@@ -62,9 +66,20 @@ final class RigChecks: XCTestCase {
                     break
                 }
             }
-            if !tapped { break }
+            idle = tapped ? 0 : idle + 1
+            if idle >= 3 { break }
             sleep(1)
         }
+    }
+
+    func saveTheRecoveryKey(_ app: XCUIApplication) -> Bool {
+        guard tapIfThere(app, "Save key", timeout: 2) else { return false }
+        sleep(2)
+        let copy = app.buttons["Copy"].firstMatch
+        if copy.waitForExistence(timeout: 5) { copy.tap() } else { app.swipeDown() }
+        sleep(1)
+        guard tapIfThere(app, "I've saved it", timeout: 5) else { return false }
+        return tapIfThere(app, "It's saved", timeout: 3)
     }
 
     func write(_ value: String, to name: String) {
@@ -128,6 +143,7 @@ final class RigChecks: XCTestCase {
         XCTAssertTrue(
             app.staticTexts["Lock the app"].firstMatch.waitForExistence(timeout: 10), "the lock was not offered at setup")
         shoot(app, "lock-4-offer")
+        XCTAssertTrue(app.buttons["Not now"].firstMatch.isHittable, "the offer can't be declined as it opens")
         let fields = app.secureTextFields
         fields.element(boundBy: 0).tap()
         fields.element(boundBy: 0).typeText("482913")
@@ -137,8 +153,8 @@ final class RigChecks: XCTestCase {
         shoot(app, "lock-5-code-typed")
         let lockButton = app.buttons["Lock the app"].firstMatch
         XCTAssertTrue(lockButton.waitForExistence(timeout: 3), "no button to finish")
-        for _ in 0..<3 where !lockButton.isHittable { app.swipeUp() }
-        XCTAssertTrue(lockButton.isHittable, "the button to finish can't be reached with the keyboard up")
+        sleep(1)
+        XCTAssertTrue(lockButton.isHittable, "the keyboard still covers the button once both codes match")
         lockButton.tap()
         sleep(2)
         settle(app)

@@ -17,6 +17,59 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN 20e5cb9f [NEEDS HUMAN REVIEW] -->
+
+### Should a photo someone deletes from your outbox be sent again?
+
+Raised 2026-09-27. Everybody you talk to can write to your outbox, because that is how they sign for
+what they collect and ring your phone. For messages that no longer matters: your device keeps its own
+record of who each packet was for and what it wrote, and sends again anything deleted or altered
+before everybody has it (`TamperedPacketTests`). Photos and clips still work the old way: each
+reader removes their own address, and the last one deletes it. So a person in one of your rooms can
+delete a photo, or strip the others' addresses from it, before the others fetch it, and it is gone
+for them. They can't read or change what it shows.
+
+Sending it again means your device keeping the sealed copy until everybody has it: small for a
+photo, up to 287 MB for a clip. Recommended: do it for photos now, and for clips keep the sealed
+copy only while it is waiting, with the storage it takes shown in Storage.
+
+<!-- COPY END 20e5cb9f -->
+
+<!-- COPY BEGIN 812d73ea [NEEDS HUMAN REVIEW] -->
+
+### Should the link to your outbox change when someone leaves your life?
+
+Raised 2026-09-27. The link that lets people collect from your outbox also lets them write to it,
+and anybody holding it keeps it: somebody you removed from every room, or a device you removed. They
+can't read what isn't sealed to them, and since tonight they can't make a message miss anybody. They
+can still see when you write and how much, delay a photo as above, and fill your iCloud storage with
+records, since writes to your outbox count against your storage.
+
+Changing the link when a person is removed from the last room you share, or a device is removed,
+cuts all three. It costs every other person one round to pick up the new link, which the rendezvous
+already does. Recommended, together with the agreement key question above.
+
+<!-- COPY END 812d73ea -->
+
+<!-- COPY BEGIN a1b7bf09 [NEEDS HUMAN REVIEW] -->
+
+### Should packets be compressed before they are sealed?
+
+Raised 2026-09-27, from your question. Nothing is compressed today. Measured on sixty short messages
+in one room: the entries as a packet carries them, before sealing, are 51.6 KB of JSON; compressed,
+18 KB (65% less); in a binary encoding without compression, 26 KB (49% less). A whole packet also
+carries keys and certificates, which were not in the measurement. Photos and clips gain nothing;
+they are compressed already.
+
+Two costs. A body that expands when opened needs a hard cap, or one packet from a hostile peer that
+opens to gigabytes stops the app on every launch, and a cap needs Apple's Compression framework,
+which the kit keeps out; it would sit behind a seam like the rest. And size says a little about what
+is inside, so the compressed size would be rounded up to fixed steps. Recommended: compress with a cap
+and rounding, behind a seam, after TestFlight's first build; or the binary encoding now, which has
+neither cost and gets most of the saving.
+
+<!-- COPY END a1b7bf09 -->
+
 <!-- COPY BEGIN 89dafc96 [NEEDS HUMAN REVIEW] -->
 
 ### Should erasing everything remove your other devices too?
