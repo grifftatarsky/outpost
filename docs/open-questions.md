@@ -36,15 +36,33 @@ somebody asks, since a new reader already gets every picture on the wall.
 
 ### Should the link to your outbox change when someone leaves your life?
 
-Raised 2026-09-27. The link that lets people collect from your outbox also lets them write to it,
-and anybody holding it keeps it: somebody you removed from every room, or a device you removed. They
-can't read what isn't sealed to them, and since tonight they can't make a message miss anybody. They
-can still see when you write and how much, delay a photo as above, and fill your iCloud storage with
-records, since writes to your outbox count against your storage.
+Raised 2026-09-27; Griff said yes, and asked which moments it means. Everything you send waits in
+your outbox, a zone in your own iCloud. Each person you talk to was given a link to it, because that
+is how they collect what you left for them and sign for it. Anybody holding the link keeps it for
+good, and can read the outbox and write to it. What they can see is only what isn't sealed to them:
+that you wrote, when, and how much. What they can do is delay a photo, and fill your iCloud storage
+with records of their own.
 
-Changing the link when a person is removed from the last room you share, or a device is removed,
-cuts all three. It costs every other person one round to pick up the new link, which the rendezvous
-already does. Recommended, together with the agreement key question above.
+So the link should change at three moments:
+
+- **You block somebody.** At once.
+- **Somebody shares nothing with you any more:** no room, and no Outpost either way. Nine days after
+  that, the time a packet waits, so the notice that they were removed still reaches them.
+- **You remove one of your devices.** Once every contact has your new hidden address, so the new link
+  can be handed to them where the removed device can't read it.
+
+Everyone else gets the new link from the rendezvous within a minute or so.
+
+**Why it isn't built yet.** Changing a link means deleting the old one. If two people change theirs
+in the same minute, each loses the only way to hand the other the new one, and they can no longer
+reach each other at all. The safe version keeps the old link alive while the new one is handed out:
+a second outbox zone for each change, with the old one deleted once everybody has the new link or
+nine days have passed. That touches every part of the CloudKit mailbox, nothing in the test fakes
+models links or zones, and a mistake cuts you off from people, so it has to be built and proved on
+the rig in one sitting.
+
+Recommended: build it in the next session with the rig signed in, behind a readout in the debug menu
+first, the way deleting abandoned device feeds is planned.
 
 <!-- COPY END 812d73ea -->
 
