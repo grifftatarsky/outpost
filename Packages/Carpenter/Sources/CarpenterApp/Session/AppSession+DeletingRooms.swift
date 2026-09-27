@@ -157,7 +157,7 @@ extension AppSession {
         switch payload.type {
         case .media:
             guard let body = try? payload.decode(MediaBody.self) else { return [] }
-            return Set(body.all.map(\.attachment.id))
+            return Set(body.all.flatMap(\.attachment.transferIDs))
         case .memberPhoto:
             return (try? payload.decode(MemberPhotoBody.self))?.reference.map { [$0.id] } ?? []
         default:

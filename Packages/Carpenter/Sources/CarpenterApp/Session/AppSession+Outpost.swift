@@ -396,8 +396,7 @@ extension AppSession {
             guard let payload = open(entry),
                 payload.type == .media, let body = try? payload.decode(MediaBody.self)
             else { continue }
-            for picture in body.all {
-                let id = picture.attachment.id
+            for id in body.all.flatMap(\.attachment.transferIDs) {
                 guard let ciphertext = try? await storage.media.sealed(for: id) else {
                     gone += 1
                     continue
@@ -499,6 +498,10 @@ extension AppSession {
     func upload(
         _ media: PreparedMedia, to targets: Set<ParticipantID>, through mailbox: any MediaMailbox
     ) async throws -> MediaBody {
+        if let file = media.file {
+            defer { try? FileManager.default.removeItem(at: file) }
+            return try await uploadInParts(media, from: file, to: targets, through: mailbox)
+        }
         let (reference, ciphertext) = try SealedAttachment.seal(media.bytes, kind: media.kind)
         let body = MediaBody(
             attachment: reference, kind: media.kind, width: media.width, height: media.height,
@@ -531,6 +534,44 @@ extension AppSession {
             bytes=\(ciphertext.count, privacy: .public) recipients=\(recipients.count, privacy: .public)
             """)
         return body
+    }
+
+    private func uploadInParts(
+        _ media: PreparedMedia, from file: URL, to targets: Set<ParticipantID>, through mailbox: any MediaMailbox
+    ) async throws -> MediaBody {
+        let window = SyncSession.window(at: clock.now)
+        let recipients = Set(
+            peers().filter { targets.contains($0.them) }.map { $0.outgoingTag(window: window) })
+        let sent = PartsSent()
+        defer { for id in sent.ids { uploading.remove(id) } }
+        let reference: AttachmentReference
+        do {
+            reference = try await SealedAttachment.sealParts(of: file) { [self] part, ciphertext in
+                try await sendPart(part, ciphertext, to: recipients, through: mailbox, noting: sent)
+            }
+        } catch {
+            for id in sent.ids { await discard(id, through: mailbox) }
+            Diagnostics.sync.error(
+                "media: a clip in pieces did not all upload; took back what did (\(String(describing: error), privacy: .public))")
+            throw error
+        }
+        let body = MediaBody(
+            attachment: reference, kind: media.kind, width: media.width, height: media.height,
+            preview: media.preview, caption: media.caption, duration: media.duration)
+        _ = try Payload.media(body)
+        Diagnostics.sync.notice(
+            "media: uploaded a clip in \(sent.ids.count, privacy: .public) piece(s), bytes=\(reference.byteCount, privacy: .public) recipients=\(recipients.count, privacy: .public)")
+        return body
+    }
+
+    private func sendPart(
+        _ part: AttachmentPart, _ ciphertext: Data, to recipients: Set<RecipientTag>,
+        through mailbox: any MediaMailbox, noting sent: PartsSent
+    ) async throws {
+        try await storage.media.store(ciphertext, for: part.id)
+        uploading.insert(part.id)
+        sent.ids.append(part.id)
+        try await mailbox.upload(OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: recipients))
     }
 
     public func outpost() -> [OutpostPost] {
@@ -595,4 +636,9 @@ extension AppSession {
     public func comments(on post: OutpostPost) -> [OutpostComment] {
         projection.comments(on: post.id.entry).filter { !refusesToDraw(from: $0.author.id) }
     }
+}
+
+@MainActor
+final class PartsSent {
+    var ids: [AttachmentID] = []
 }

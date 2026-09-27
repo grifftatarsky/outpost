@@ -19,9 +19,6 @@ public struct StagedAttachment: Identifiable, Sendable {
         self.duration = duration
     }
 
-    public func needsTrim(limit: TimeInterval) -> Bool {
-        kind == .video && (duration ?? 0) > limit
-    }
 }
 
 public enum CompositionStep: Equatable, Sendable {

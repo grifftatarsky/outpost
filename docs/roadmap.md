@@ -214,9 +214,8 @@ Seven epics, 87 tickets, counted 2026-09-17.
 |---|---|---|
 | Text, with formatting | Complete (tested) | Markers covered by the suite. The entries that carry them proved over real cloudkit 2026-09-14; the markers themselves are drawn on the reading device and never cross, so there is nothing further for two accounts to show. |
 | Photos | Complete (tested) | 770 KB up, same bytes down, drawn on the other account: 2026-09-04. |
-| Clips | Complete (tested) | Re-encoded, sent, screened as a file, played on the other account: 2026-09-04. |
+| Clips | Complete (tested) | Re-encoded, sent, screened as a file, played on the other account: 2026-09-04. Up to 287 MB in 16 MB pieces since 2026-09-27: in the package and a 35 MB clip live; not yet between two accounts. |
 | Captions | Complete (tested) | "Ice plants in bloom" under the photo on the other account: 2026-09-04. |
-| Trimming a long clip | Complete (hardware proof owed) | The system trimmer refuses every file on a simulator — [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
 | On-device screening and the blur | Complete (hardware proof owed) | The analyzer ran on the rig and judged clear; `notScreened` and `clear` are both proved. A positive verdict needs Apple's test profile on a device — [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
 | The deny list | Complete (tested) | `BlockingTests`. A listed sender is shut out the same way a blocked one is since 2026-09-14 — not answered rather than not drawn — and the switch plus a round restores them with nothing lost. |
 | Reactions on messages | Complete (tested) | Two-circle stack on the receiving account 2026-09-04. |

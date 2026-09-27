@@ -49,8 +49,10 @@ public enum MediaLoadState: Equatable, Sendable {
 @Observable
 public final class MediaLoader {
     public typealias Source = @MainActor (MediaAttachment, ParticipantID) async throws -> Data?
+    public typealias ClipSource = @MainActor (MediaAttachment, ParticipantID, URL) async throws -> Bool
 
     private let source: Source
+    private let clipSource: ClipSource?
     private let screen: (any MediaScreen)?
     private let defaults: UserDefaults
     private static let revealedKey = "media.revealed"
@@ -72,8 +74,12 @@ public final class MediaLoader {
     nonisolated public static let playingDirectory = FileManager.default.temporaryDirectory
         .appending(path: "playing", directoryHint: .isDirectory)
 
-    public init(source: @escaping Source, screen: (any MediaScreen)?, defaults: UserDefaults = .standard) {
+    public init(
+        source: @escaping Source, clipSource: ClipSource? = nil, screen: (any MediaScreen)?,
+        defaults: UserDefaults = .standard
+    ) {
         self.source = source
+        self.clipSource = clipSource
         self.screen = screen
         self.defaults = defaults
         revealed = Set(defaults.stringArray(forKey: Self.revealedKey) ?? [])
@@ -103,6 +109,12 @@ public final class MediaLoader {
 
     private func fetch(_ attachment: MediaAttachment, from author: ParticipantID) async -> MediaLoadState {
         do {
+            if attachment.kind == .video, let clipSource {
+                let url = try Self.playingFile(for: attachment.id)
+                guard try await clipSource(attachment, author, url) else { return .gone }
+                guard let poster = await Self.poster(of: url) else { return .failed(Self.undecodable) }
+                return .loaded(LoadedMedia(image: poster, verdict: await verdict(videoAt: url), video: url))
+            }
             guard let data = try await source(attachment, author) else { return .gone }
             switch attachment.kind {
             case .image:
@@ -157,6 +169,10 @@ public final class MediaLoader {
             else { return nil }
             return DecodedImage(cgImage: image)
         }.value
+    }
+
+    nonisolated static func playingFile(for id: AttachmentID) throws -> URL {
+        try writeForPlaying(Data(), id: id)
     }
 
     nonisolated static func writeForPlaying(_ data: Data, id: AttachmentID) throws -> URL {

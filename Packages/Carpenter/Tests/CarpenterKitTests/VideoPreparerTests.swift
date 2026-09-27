@@ -17,8 +17,12 @@ struct VideoPreparerTests {
         #expect(prepared.width == 960 && prepared.height == 540, "\(prepared.width)×\(prepared.height)")
         let duration = try #require(prepared.duration)
         #expect(abs(duration - 3) < 0.2, "ran \(duration)s")
-        #expect(!prepared.bytes.isEmpty)
-        #expect(prepared.bytes.count <= SealedAttachment.maximumPlaintextBytes(for: .video))
+        let file = try #require(prepared.file, "a clip is handed over as a file")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let size = (try FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.intValue ?? 0
+        #expect(size > 0)
+        #expect(size <= VideoPreparer.maximumBytes)
+        #expect(prepared.bytes.isEmpty, "a clip was read into memory")
     }
 
     @Test("Location and camera are stripped")
@@ -30,8 +34,7 @@ struct VideoPreparerTests {
 
         let prepared = try await VideoPreparer.prepare(original)
 
-        let output = URL.temporaryDirectory.appending(path: "prepared-\(UUID().uuidString).mp4")
-        try prepared.bytes.write(to: output)
+        let output = try #require(prepared.file)
         defer { try? FileManager.default.removeItem(at: output) }
         let after = try await VideoPreparer.identifyingMetadata(of: output)
         #expect(after.isEmpty, "identifying metadata survived: \(after)")
@@ -49,13 +52,13 @@ struct VideoPreparerTests {
         #expect(ImagePreparer.identifyingMetadata(of: preview).isEmpty)
     }
 
-    @Test("Longer than a minute is refused, with its length")
-    func tooLongIsRefused() async throws {
-        let long = try await TestVideo.make(seconds: 61, size: CGSize(width: 64, height: 64), fps: 1)
+    @Test("A clip longer than a minute is prepared, because the limit is its size, not its length")
+    func lengthIsNotALimit() async throws {
+        let long = try await TestVideo.make(seconds: 75, size: CGSize(width: 64, height: 64), fps: 1)
         defer { try? FileManager.default.removeItem(at: long) }
-        await #expect(throws: VideoPreparer.Failure.tooLong(61)) {
-            try await VideoPreparer.prepare(long)
-        }
+        let prepared = try await VideoPreparer.prepare(long)
+        defer { prepared.file.map { try? FileManager.default.removeItem(at: $0) } }
+        #expect(abs((prepared.duration ?? 0) - 75) < 1)
     }
 
     @Test("Something that is not a clip is refused")

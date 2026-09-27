@@ -623,16 +623,24 @@ struct MediaLoaderTests {
         let original = try await TestVideo.make(seconds: 1, size: CGSize(width: 64, height: 64), fps: 1, tagged: false)
         defer { try? FileManager.default.removeItem(at: original) }
         let prepared = try await VideoPreparer.prepare(original)
+        let file = try #require(prepared.file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let bytes = try Data(contentsOf: file)
         let attachment = MediaAttachment(
             reference: AttachmentReference(
                 id: AttachmentID(), key: Data(repeating: 1, count: 32),
-                digest: Data(repeating: 2, count: 32), byteCount: prepared.bytes.count),
+                digest: Data(repeating: 2, count: 32), byteCount: bytes.count),
             kind: .video, width: prepared.width, height: prepared.height, preview: prepared.preview,
             duration: prepared.duration)
         let screen = FakeMediaScreen()
         await screen.flagVideo(named: "\(attachment.id.rawValue.uuidString).mp4")
         let loader = MediaLoader(
-            source: { _, _ in prepared.bytes }, screen: screen,
+            source: { _, _ in nil },
+            clipSource: { _, _, url in
+                try bytes.write(to: url)
+                return true
+            },
+            screen: screen,
             defaults: UserDefaults(suiteName: "media-tests-\(UUID())")!)
 
         var state = loader.state(of: attachment, sentBy: Self.author)

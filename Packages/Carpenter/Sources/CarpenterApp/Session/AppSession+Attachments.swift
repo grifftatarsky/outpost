@@ -12,40 +12,64 @@ extension AppSession {
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
         guard !refusesToDraw(from: author) else { return nil }
-        let sealed = try await sealedAttachment(attachment.reference, from: author, through: mailbox)
-        return try sealed.map { try SealedAttachment.open($0, with: attachment.reference) }
+        let reference = attachment.reference
+        guard reference.parts == nil else { throw AttachmentError.tooLarge }
+        let sealed = try await sealedPiece(
+            reference.id, digest: reference.digest, from: author, through: mailbox)
+        return try sealed.map { try SealedAttachment.open($0, with: reference) }
+    }
+
+    public func writeClip(
+        for attachment: MediaAttachment, sentBy author: ParticipantID,
+        through mailbox: any MediaMailbox, to file: URL
+    ) async throws -> Bool {
+        guard !refusesToDraw(from: author) else { return false }
+        let reference = attachment.reference
+        guard reference.parts != nil else {
+            guard let data = try await attachmentData(for: attachment, sentBy: author, through: mailbox) else {
+                return false
+            }
+            let handle = try FileHandle(forWritingTo: file)
+            defer { try? handle.close() }
+            try handle.truncate(atOffset: 0)
+            try handle.write(contentsOf: data)
+            return true
+        }
+        return try await SealedAttachment.openParts(reference, into: file) { [self] part in
+            try await sealedPiece(part.id, digest: part.digest, from: author, through: mailbox)
+        }
     }
 
     public func holdsAttachment(_ id: AttachmentID) async -> Bool {
         (try? await storage.media.sealed(for: id)) != nil
     }
 
-    private func sealedAttachment(
-        _ reference: AttachmentReference, from author: ParticipantID,
+    func sealedPiece(
+        _ id: AttachmentID, digest: Data, from author: ParticipantID,
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
-        if let held = try await storage.media.sealed(for: reference.id) { return held }
-        if let inFlight = attachmentTasks[reference.id] { return try await inFlight.value }
+        if let held = try await storage.media.sealed(for: id) { return held }
+        if let inFlight = attachmentTasks[id] { return try await inFlight.value }
 
         let task = Task<Data?, any Error> {
-            try await fetchAttachment(reference, from: author, through: mailbox)
+            try await fetchPiece(id, digest: digest, from: author, through: mailbox)
         }
-        attachmentTasks[reference.id] = task
-        defer { attachmentTasks[reference.id] = nil }
+        attachmentTasks[id] = task
+        defer { attachmentTasks[id] = nil }
         return try await task.value
     }
 
-    private func fetchAttachment(
-        _ reference: AttachmentReference, from author: ParticipantID,
+    private func fetchPiece(
+        _ id: AttachmentID, digest: Data, from author: ParticipantID,
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
         let tags = collectionTags(for: author)
-        let name = Diagnostics.fingerprint(reference.id.rawValue.uuidString)
+        let name = Diagnostics.fingerprint(id.rawValue.uuidString)
         let bytes: Data?
         do {
-            bytes = try await mailbox.download(reference.id, hint: tags)
+            bytes = try await mailbox.download(id, hint: tags)
         } catch {
-            attachmentRetryAfter[reference.id] = clock.now.addingTimeInterval(Self.attachmentRetryInterval)
+            attachmentRetryAfter[id] = clock.now.addingTimeInterval(Self.attachmentRetryInterval)
             Diagnostics.sync.error(
                 "media: could not fetch \(name, privacy: .public) (\(String(describing: error), privacy: .public))")
             throw error
@@ -54,16 +78,16 @@ extension AppSession {
             Diagnostics.sync.notice("media: no outbox holds \(name, privacy: .public) any more")
             return nil
         }
-        guard SealedAttachment.matches(bytes, reference) else {
+        guard Data(SHA256.hash(data: bytes)) == digest else {
             Diagnostics.sync.error(
                 "media: \(name, privacy: .public) downloaded but does not match the entry's digest; not kept")
             throw AttachmentError.digestMismatch
         }
-        try await storage.media.store(bytes, for: reference.id)
+        try await storage.media.store(bytes, for: id)
         Diagnostics.sync.notice(
             "media: fetched \(name, privacy: .public) bytes=\(bytes.count, privacy: .public)")
 
-        if !tags.isEmpty { await acknowledge(attachment: reference.id, by: tags, through: mailbox) }
+        if !tags.isEmpty { await acknowledge(attachment: id, by: tags, through: mailbox) }
         return bytes
     }
 
@@ -97,12 +121,15 @@ extension AppSession {
                 !refusesToDraw(from: entry.author)
             else { continue }
             for picture in body.all {
-                guard !(attachmentRetryAfter[picture.attachment.id].map { $0 > clock.now } ?? false)
-                else { continue }
-                do {
-                    _ = try await sealedAttachment(
-                        picture.attachment, from: entry.author, through: mailbox)
-                } catch {
+                let reference = picture.attachment
+                let pieces = reference.parts.map { $0.map { ($0.id, $0.digest) } } ?? [(reference.id, reference.digest)]
+                for (id, digest) in pieces {
+                    guard !(attachmentRetryAfter[id].map { $0 > clock.now } ?? false) else { continue }
+                    do {
+                        _ = try await sealedPiece(id, digest: digest, from: entry.author, through: mailbox)
+                    } catch {
+                        break
+                    }
                 }
             }
         }
@@ -148,7 +175,7 @@ extension AppSession {
             switch payload.type {
             case .media:
                 if let body = try? payload.decode(MediaBody.self) {
-                    for picture in body.all { ids.insert(picture.attachment.id) }
+                    for picture in body.all { ids.formUnion(picture.attachment.transferIDs) }
                 }
             case .memberPhoto:
                 if let reference = (try? payload.decode(MemberPhotoBody.self))?.reference {

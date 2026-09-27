@@ -429,14 +429,22 @@ bytes from a peer instead.
 
 <!-- COPY BEGIN 59a61b44 [NEEDS HUMAN REVIEW] -->
 
-#### A clip is a minute, sealed whole, and plays from a file
+#### A clip is up to 287 MB, sealed and sent in pieces, and plays from a file
 
-A video is the same entry and the same attachment, re-encoded at 960 × 540 H.264 through Apple's
-`forSharing()` metadata filter, with its first frame as the preview and its length in the entry.
-Two limits follow from sealing the whole file in memory at once, which is what `SealedAttachment`
-does: **a minute at most**, with a longer clip offered the system trimmer first, and **forty megabytes** at
-the sealing ceiling. Chunked sealing is what would
-lift both.
+**RULED 2026-09-27 by Griff:** "Length is also a crazy way to limit lol, just make it a 287mb cap.
+We'll mimic tik tok there."
+
+A video is the same entry, re-encoded at 960 × 540 H.264 through Apple's `forSharing()` metadata
+filter, with its first frame as the preview and its length in the entry. There is no limit on its
+length; the prepared file may be up to 287 MB. It is sealed straight from the file in 16 MB pieces,
+each its own attachment with its own digest, sealed under one key with its place in the clip (which
+piece, of how many) bound in, so pieces can't be swapped, dropped or reordered. The entry names the
+pieces, and a digest over all of them. Each piece is uploaded, fetched, acknowledged and swept like a
+photo, so neither end ever holds the whole clip in memory; the receiver opens the pieces one by one
+into the file the player reads. The system trimmer, which existed only for the old one-minute limit, is
+gone; a clip over 287 MB once prepared is refused with its size. Tested in the package
+(`SealingAClipInPiecesTests`, `SendingAClipInPiecesTests`) and live (a 35 MB clip in three pieces);
+287 MB itself has not been sent live.
 
 **The one place a member's content sits readable without the Keychain.** `AVPlayer` reads files,
 so a clip is opened into the app's temporary directory under complete file protection when it is
@@ -444,7 +452,7 @@ first drawn, and stays there for the launch; the directory is emptied on the nex
 loader that decrypts on demand would remove this and is not built. Said here rather than hidden.
 
 **Screened as a file, and not drawn until the verdict is in.** The system's video analysis reads
-the whole clip — seconds for a minute — and the bubble shows the placeholder until it has answered,
+the whole clip, which takes longer the longer the clip, and the bubble shows the placeholder until it has answered,
 because a clip must not start playing before anybody has looked at it.
 
 <!-- COPY END 59a61b44 -->

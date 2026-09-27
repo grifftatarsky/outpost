@@ -364,6 +364,32 @@ struct CloudKitMailboxTests {
         try await mailbox.delete(attachment: attachment.id)
     }
 
+    @Test("A clip in pieces crosses the real server and opens back into the same file")
+    func aClipInPiecesCrosses() async throws {
+        let mailbox = try await LiveCloudKit.mailbox()
+        let mine = LiveCloudKit.tag()
+        let source = URL.temporaryDirectory.appending(path: "live-clip-\(UUID().uuidString).mp4")
+        let original = LiveCloudKit.bytes(SealedAttachment.partPlaintextBytes * 2 + 3_000_000)
+        try original.write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+
+        let reference = try await SealedAttachment.sealParts(of: source) { part, ciphertext in
+            try await mailbox.upload(OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: [mine]))
+        }
+        let parts = try #require(reference.parts)
+        #expect(parts.count == 3)
+
+        let out = URL.temporaryDirectory.appending(path: "live-opened-\(UUID().uuidString).mp4")
+        defer { try? FileManager.default.removeItem(at: out) }
+        let opened = try await SealedAttachment.openParts(reference, into: out) { part in
+            try await mailbox.download(part.id, hint: [mine])
+        }
+        #expect(opened, "a piece was missing from the server")
+        #expect(try Data(contentsOf: out) == original, "the clip came back different")
+
+        for part in parts { try await mailbox.delete(attachment: part.id) }
+    }
+
     @Test("Acknowledging is what stops a packet being offered again")
     func acknowledgingStopsTheOffer() async throws {
         let mailbox = try await LiveCloudKit.mailbox()

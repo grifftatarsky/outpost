@@ -84,7 +84,9 @@ extension AppSession {
                 bodies.append(try await upload(one, to: readers, through: mailbox))
             }
         } catch {
-            for body in bodies { await discard(body.attachment.id, through: mailbox) }
+            for body in bodies {
+                for id in body.attachment.transferIDs { await discard(id, through: mailbox) }
+            }
             throw error
         }
 
@@ -99,7 +101,7 @@ extension AppSession {
         if let head { unsentWallPosts.insert(head.hash) }
     }
 
-    private func discard(_ id: AttachmentID, through mailbox: any MediaMailbox) async {
+    func discard(_ id: AttachmentID, through mailbox: any MediaMailbox) async {
         do { try await mailbox.delete(attachment: id) } catch {
             Diagnostics.sync.error(
                 "media: could not take back an upload nothing names (\(String(describing: error), privacy: .public))")

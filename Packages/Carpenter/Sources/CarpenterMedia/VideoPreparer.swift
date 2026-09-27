@@ -5,11 +5,11 @@ import Foundation
 
 public enum VideoPreparer {
     public static let preset = AVAssetExportPreset960x540
-    public static let maximumDuration: TimeInterval = 60
+    public static let maximumBytes = SealedAttachment.maximumVideoBytes
 
     public enum Failure: Error, Hashable, Sendable {
         case unreadable
-        case tooLong(TimeInterval)
+        case tooLarge(Int)
         case exportFailed(String)
         case noPoster
     }
@@ -23,27 +23,29 @@ public enum VideoPreparer {
             throw Failure.unreadable
         }
         guard duration.isFinite, duration > 0 else { throw Failure.unreadable }
-        guard duration <= maximumDuration else { throw Failure.tooLong(duration) }
 
         let output = FileManager.default.temporaryDirectory
             .appending(path: "prepared-\(UUID().uuidString).mp4")
-        defer { try? FileManager.default.removeItem(at: output) }
+        var kept = false
+        defer { if !kept { try? FileManager.default.removeItem(at: output) } }
         try await export(asset, to: output)
 
-        let bytes = try Data(contentsOf: output)
+        let size = (try FileManager.default.attributesOfItem(atPath: output.path)[.size] as? NSNumber)?.intValue ?? 0
+        guard size <= maximumBytes else { throw Failure.tooLarge(size) }
         let exported = AVURLAsset(url: output)
         let poster = try await posterFrame(of: exported)
-        let size = try await naturalSize(of: exported)
+        let dimensions = try await naturalSize(of: exported)
 
         let preview = try? ImagePreparer.jpeg(
             try ImagePreparer.scaled(poster, to: ImagePreparer.previewLongestEdge),
             quality: ImagePreparer.previewQuality)
 
+        kept = true
         return PreparedMedia(
             kind: .video,
-            width: size.width,
-            height: size.height,
-            bytes: bytes,
+            width: dimensions.width,
+            height: dimensions.height,
+            file: output,
             preview: preview.flatMap { $0.count <= MediaBody.previewByteCap ? $0 : nil },
             caption: caption,
             duration: duration)

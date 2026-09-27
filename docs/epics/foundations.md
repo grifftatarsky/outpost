@@ -650,7 +650,7 @@ proven, so that the first outside tester is not the first audit.
 - **Done.** *Erase everything* in every build, with its facts checked against the wipe.
 - **Done.** The debug leaves: the Debug section, the launch argument, the demo rooms and *Blur every
   photo* said in the code to be DEBUG-only or removed.
-- **Not done.** The hardware-only proofs: the trimmer, the Keychain hand-off, a positive screening verdict, and
+- **Not done.** The hardware-only proofs: the Keychain hand-off, a positive screening verdict, and
   everything downstream of a push (Griff saw one banner arrive on a phone on 2026-09-09). The
   attachment record leaving the outbox was proved against a real account on 2026-09-15.
 - **Partly.** The operational list. **Done.** The policy sections are written — the privacy policy's retention

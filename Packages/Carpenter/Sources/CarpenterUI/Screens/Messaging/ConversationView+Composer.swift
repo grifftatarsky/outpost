@@ -12,16 +12,6 @@ extension ConversationView {
         let steps = CompositionPlan.steps(text: outgoing, itemCount: items.count)
         guard !steps.isEmpty else { return }
 
-        // COPY BEGIN 21ed86cf [NEEDS HUMAN REVIEW]
-        if items.contains(where: { $0.needsTrim(limit: VideoPreparer.maximumDuration) }) {
-            problem = String(
-                localized: "Trim the video to a minute before sending.", bundle: .module,
-                comment: "Send was tapped with a clip over the limit in the composer")
-            failures += 1
-            return
-        }
-        // COPY END 21ed86cf
-
         draft = ""
         staged = []
         sent += 1
@@ -79,13 +69,8 @@ extension ConversationView {
         case .video(let url):
             let poster = await MediaLoader.poster(of: url)
             let duration = try? await VideoPreparer.duration(of: url)
-            #if os(iOS)
-                Diagnostics.sync.notice(
-                    """
-                    media: staged a clip of \(duration.map { Int($0) } ?? -1, privacy: .public)s; \
-                    the system trimmer \(VideoTrimmerView.canTrim(url) ? "can" : "cannot", privacy: .public) edit it
-                    """)
-            #endif
+            Diagnostics.sync.notice(
+                "media: staged a clip of \(duration.map { Int($0) } ?? -1, privacy: .public)s")
             staged.append(
                 StagedAttachment(picked: picked, kind: .video, thumbnail: poster, duration: duration))
         }
@@ -272,14 +257,10 @@ extension ConversationView {
             .padding(.top, 10)
         }
         .scrollIndicators(.hidden)
-        .presentingTrimmer($trimming, maximumDuration: VideoPreparer.maximumDuration) { item, url in
-            trimmed(item, to: url)
-        }
     }
 
     private func stagedTile(_ item: StagedAttachment) -> some View {
-        let needsTrim = item.needsTrim(limit: VideoPreparer.maximumDuration)
-        return ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topTrailing) {
             Group {
                 if let thumbnail = item.thumbnail {
                     thumbnail.image.resizable().scaledToFill()
@@ -291,23 +272,18 @@ extension ConversationView {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(alignment: .bottomLeading) {
                 if item.kind == .video, let duration = item.duration {
-                    HStack(spacing: 3) {
-                        if needsTrim { Image(systemName: "scissors") }
-                        Text(MediaBubbleView.length(duration))
-                    }
+                    Text(MediaBubbleView.length(duration))
                     .font(.caption2.weight(.semibold).monospacedDigit())
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(needsTrim ? palette.destructiveFill : Color.black.opacity(CarpenterMetrics.mediaOverlayDimming), in: Capsule())
+                    .background(Color.black.opacity(CarpenterMetrics.mediaOverlayDimming), in: Capsule())
                     .padding(4)
                 }
             }
-            .contentShape(.rect)
-            .onTapGesture { if needsTrim { trimming = item } }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(tileLabel(item, needsTrim: needsTrim))
-            .accessibilityAddTraits(needsTrim ? [.isImage, .isButton] : [.isImage])
+            .accessibilityLabel(tileLabel(item))
+            .accessibilityAddTraits(.isImage)
 
             // COPY BEGIN 402dc267 [NEEDS HUMAN REVIEW]
             Button {
@@ -327,24 +303,13 @@ extension ConversationView {
     }
 
     // COPY BEGIN 3034cc7f [NEEDS HUMAN REVIEW]
-    private func tileLabel(_ item: StagedAttachment, needsTrim: Bool) -> Text {
-        switch (item.kind, needsTrim) {
-        case (.image, _):
+    private func tileLabel(_ item: StagedAttachment) -> Text {
+        switch item.kind {
+        case .image:
             Text("Photo, ready to send", bundle: .module)
-        case (.video, false):
+        case .video:
             Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), ready to send", bundle: .module)
-        case (.video, true):
-            Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), longer than a minute. Double-tap to trim.", bundle: .module)
         }
     }
     // COPY END 3034cc7f
-
-    private func trimmed(_ item: StagedAttachment, to url: URL) {
-        guard let index = staged.firstIndex(where: { $0.id == item.id }) else { return }
-        if case .video(let original) = item.picked { try? FileManager.default.removeItem(at: original) }
-        staged[index].picked = .video(url)
-        Task {
-            staged[index].duration = try? await VideoPreparer.duration(of: url)
-        }
-    }
 }

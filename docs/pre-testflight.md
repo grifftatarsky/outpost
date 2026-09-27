@@ -113,7 +113,6 @@ TestFlight these have to have been seen, not reasoned about:
   fell to one zone at 01:40:17; alpha relaunched and wrote a fresh offer at 01:40:45; beta
   accepted it and read two zones at 01:41:17; a message each way at 01:42 arrived and was read.
 - **Open.** A positive screening verdict, via Apple's test profile on a device.
-- **Open.** The system trimmer opening on a phone.
 - **Done.** The attachment record leaving the sender's outbox after the last acknowledgment. Proved against
   a real account 2026-09-15, and it was on this list as a *hardware* proof when it never needed one:
   one recipient collecting leaves the other still owed and the bytes still downloadable; the second
@@ -151,8 +150,8 @@ both were actually looked at:
   surface on any of them for the app's palette to disagree with the system's, which is what this
   section exists to catch. That is a stronger statement than looking at one alert twice, and it is
   the reason this row can close rather than staying a spot check.
-- **Partly.** The photo picker: **Done.** both appearances. The camera, the trimmer and the crop screen are
-  hardware — a simulator's trimmer refuses every file.
+- **Partly.** The photo picker: **Done.** both appearances. The camera and the crop screen are
+  hardware.
 - **Done.** The privacy check-up. **Done.** The onboarding tour, walked on a freshly erased account.
 - **Open.** The notification service extension's own rendering. It is a second process **and it needs a push
   to run at all**, so this is hardware rather than a sweep item.

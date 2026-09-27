@@ -638,7 +638,7 @@ the digest before it touches the ciphertext:
 guard matches(ciphertext, reference) else { throw AttachmentError.digestMismatch }
 ```
 
-Size caps are enforced before sealing — 12 MB for an image, 40 MB for a video.
+Size caps are enforced before sealing: 12 MB for an image, 287 MB for a video, which is sealed in 16 MB pieces.
 
 Separately, `CarpenterMedia.ImagePreparer.redrawn` draws every image into a fresh context before
 encoding, because ImageIO carries a source's Exif block — lens, original time, location — into a

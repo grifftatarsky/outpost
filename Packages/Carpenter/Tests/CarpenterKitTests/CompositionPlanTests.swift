@@ -29,14 +29,4 @@ struct CompositionPlanTests {
                 .media(index: 0, caption: nil), .media(index: 1, caption: nil),
             ])
     }
-
-    @Test("A clip over the limit needs a trim; a photo never does")
-    func trimNeeded() {
-        let clip = StagedAttachment(picked: .video(URL(fileURLWithPath: "/x.mov")), kind: .video, thumbnail: nil, duration: 75)
-        let short = StagedAttachment(picked: .video(URL(fileURLWithPath: "/y.mov")), kind: .video, thumbnail: nil, duration: 12)
-        let photo = StagedAttachment(picked: .image(Data()), kind: .image, thumbnail: nil)
-        #expect(clip.needsTrim(limit: 60))
-        #expect(!short.needsTrim(limit: 60))
-        #expect(!photo.needsTrim(limit: 60))
-    }
 }

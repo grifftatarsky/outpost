@@ -23,7 +23,6 @@ public struct ConversationView: View {
     @State var explainingPhotos = false
     @State var sending: [MediaKind] = []
     @State var staged: [StagedAttachment] = []
-    @State var trimming: StagedAttachment?
 
     let room: RoomSummary
     let entries: [TranscriptEntry]

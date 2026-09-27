@@ -129,8 +129,8 @@ block, a deny list in the binary, and the obligations written down in
 
 **Acceptance criteria**
 
-- **Done.** Up to a minute, with a longer clip sent to the system trimmer first; forty megabytes at the
-  sealing ceiling.
+- **Done.** Any length, up to 287 MB once prepared, sealed and sent in 16 MB pieces (changed
+  2026-09-27; it was a minute, sealed whole).
 - **Done.** Re-encoded at 960 × 540 through the system's `forSharing()` filter, so no location or device
   tag survives.
 - **Done.** Drawn with its first frame, a play mark and its length in glass; played in the system player.
@@ -171,28 +171,6 @@ block, a deny list in the binary, and the obligations written down in
 
 <!-- COPY END 797ebd73 -->
 
-<!-- COPY BEGIN ced5cedf [NEEDS HUMAN REVIEW] -->
-
-<details markdown="1" id="trimming-a-long-clip">
-<summary><b>Trimming a long clip</b> — Complete (hardware proof owed)</summary>
-
-**Story.** As a member with a clip over a minute, I want to trim it in place, so that the limit is a
-step rather than a wall.
-
-**Acceptance criteria**
-
-- **Done.** A red scissors-and-length badge on the tile; the tile opens the system's own trimmer with its
-  maximum set so its handles cannot open wider; send is refused with a sentence until it has been.
-- **Done.** Where the trimmer refuses the file, the fallback says to trim it in Photos and pick it again.
-
-**Testing**
-
-- Device: `canEditVideo(atPath:)` answers no on a simulator for every file, so only the fallback has
-  been seen. The trimmer itself is a device proof still owed.
-
-</details>
-
-<!-- COPY END ced5cedf -->
 
 <!-- COPY BEGIN 93c604e6 [NEEDS HUMAN REVIEW] -->
 
