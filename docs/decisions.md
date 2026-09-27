@@ -921,6 +921,29 @@ devices.
 
 <!-- COPY END 2f66bf36 -->
 
+<!-- COPY BEGIN 24bc4169 [NEEDS HUMAN REVIEW] -->
+
+### When iCloud holds a device, nothing is sent and the screen says why
+
+**RULED 2026-09-27 by Griff:** "Can we disable inputs when ADP is preventing the device from working
+and be clear and concise about why? That's a little different than not being able to access iCloud.
+It's being not allowed to share an identity because of high security settings, and we should
+respect that."
+
+Before each round the app asks iCloud for the account's status. When Apple says the account is
+signed in but not ready for CloudKit (`CKAccountStatus.temporarilyUnavailable`), or CloudKit refuses
+a request because this device isn't trusted by the account's protected storage (a `PCS` error, which
+is what an untrusted device on an Advanced Data Protection account got on 2026-09-01), the app sends
+and fetches nothing, as Apple's documentation asks, and resumes by itself when the account changes.
+Everything already on the device stays readable. The message and post buttons are disabled, and one
+card at the top says the account's security settings haven't let this device into iCloud yet. A new
+device in that state stops before making or joining an identity and says the same.
+
+What it costs: an app can't read whether ADP is on, so the words name ADP as an example rather than
+as the cause. Not measured on an account with ADP on; the rig has none.
+
+<!-- COPY END 24bc4169 -->
+
 <!-- COPY BEGIN 2a36739f [NEEDS HUMAN REVIEW] -->
 
 ### Search is a separate button beside the tab bar

@@ -108,14 +108,14 @@ public struct HowItWorksView: View {
 
     private var comparisons: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // COPY BEGIN 07207d26 [HUMAN REVIEWED, UNVERIFIED]
+            // COPY BEGIN 07207d26 [NEEDS HUMAN REVIEW]
             Text("\(Branding.displayName) vs. The Others", bundle: .module)
                 .font(CarpenterFont.rowTitle)
                 .foregroundStyle(palette.primaryText)
                 .heading()
 
             Text(
-                "The \(Branding.displayName) Dev Opinion is that all of these apps are impressive stacks, and by no means are unsafe. But they are different.\n\nThe \(Branding.displayName) Dev wants to note that iCloud runs on apple and Big Cloud (AWS, GCP, etc.) servers. So does Signal, Whatsapp, Meta—right now, that's the name of the game.",
+                "The \(Branding.displayName) Dev Opinion is that all of these apps are impressive stacks, and by no means are unsafe. But they are different.\n\niCloud runs on Apple's servers and Big Cloud's. So does Signal, and so do WhatsApp and Meta, corporate interests with deals with Big Cloud and Big AI. On hosting, you gain nothing and lose nothing here. If you want more, the source is open, and a debug build can keep its mailbox in a folder you host instead of iCloud. We don't offer that. Technically.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)

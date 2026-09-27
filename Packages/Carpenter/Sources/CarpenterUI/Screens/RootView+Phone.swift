@@ -214,6 +214,9 @@ extension RootView {
         }
         .tabViewSearchActivation(.searchTabSelection)
         .themed(theme.accent)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if iCloudHold { ICloudHoldBanner() }
+        }
         .environment(\.showsAvatars, preferences.showsAvatars)
         .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)
         .environment(\.hapticsEnabled, theme.playsHaptics)

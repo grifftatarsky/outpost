@@ -5,6 +5,7 @@ import SwiftUI
 
 public struct PostComposerView: View {
     @Environment(\.palette) private var palette
+    @Environment(\.iCloudHold) private var iCloudHold
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var writing: Bool
@@ -122,7 +123,7 @@ public struct PostComposerView: View {
                             Text("Post", bundle: .module).bold()
                         }
                     }
-                    .disabled(isEmpty || posting)
+                    .disabled(isEmpty || posting || iCloudHold)
                 }
                 // COPY END b69aa2d3
             }

@@ -117,9 +117,21 @@ public struct RegistrationStalledView: View {
     private var offersARecoveryKey: Bool {
         switch stall {
         case .accountUnreadable, .accountOffline: true
-        case .keychainUnreadable: false
+        case .keychainUnreadable, .heldBySecurity: false
         }
     }
+
+    // COPY BEGIN 7f30cac5 [NEEDS HUMAN REVIEW]
+    private var heldHeadline: Text {
+        Text("iCloud hasn't trusted this device", bundle: .module)
+    }
+
+    private var heldDetail: Text {
+        Text(
+            "Your Apple Account's security settings, such as Advanced Data Protection, keep this device out of iCloud until your other devices trust it. It will set up here once they do.",
+            bundle: .module)
+    }
+    // COPY END 7f30cac5
 
     // COPY BEGIN 4f8229af [HUMAN REVIEWED, UNVERIFIED]
     private var headline: Text {
@@ -130,6 +142,8 @@ public struct RegistrationStalledView: View {
             Text("Could not reach iCloud", bundle: .module)
         case .keychainUnreadable:
             Text("Keychain would not answer", bundle: .module)
+        case .heldBySecurity:
+            heldHeadline
         }
     }
     // COPY END 4f8229af
@@ -145,6 +159,8 @@ public struct RegistrationStalledView: View {
             Text(
                 "iCloud is offline. Check your settings and return here.",
                 bundle: .module)
+        case .heldBySecurity:
+            heldDetail
         case .keychainUnreadable:
             Text(
                 "The Keychain is unreadable. Try locking and unlocking your device.",

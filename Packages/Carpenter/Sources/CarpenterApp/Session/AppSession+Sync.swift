@@ -10,6 +10,10 @@ extension AppSession {
         through mailbox: any Mailbox, media: (any MediaMailbox)? = nil, mode: SyncMode = .full
     ) async throws -> SyncReport {
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
+        guard !isHeldByICloud else {
+            Diagnostics.sync.notice("round: iCloud is holding this device; sending and fetching nothing")
+            return SyncReport()
+        }
         let session = SyncSession(mailbox: mailbox, clock: clock)
 
         var report = SyncReport()

@@ -423,6 +423,9 @@ struct AppRootView: View {
         .onChange(of: openRoom) { _, room in
             PushDesk.viewing = room.map(MessageNotification.thread(for:))
         }
+        .onReceive(NotificationCenter.default.publisher(for: .CKAccountChanged)) { _ in
+            Task { await syncNow() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: Self.becameActive)) { _ in
             Task {
                 await session.recheckForSyncedIdentity()

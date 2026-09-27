@@ -247,7 +247,7 @@ extension AppSession {
     }
 
     func sendOwnEntries() {
-        guard deviceSync != nil, enrolment != nil else { return }
+        guard deviceSync != nil, enrolment != nil, !isHeldByICloud else { return }
         if publishing {
             publishAgain = true
             return

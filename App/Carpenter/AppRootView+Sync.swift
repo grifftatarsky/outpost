@@ -50,6 +50,12 @@ extension AppRootView {
         syncing = true
         defer { syncing = false }
 
+        if testSession == nil {
+            let held = await CloudKitHold.isHeld(.default())
+            session.noteICloudHold(held)
+            if held { return }
+        }
+
         let outcome = await SyncRound.run(
             deviceSync: { await session.refreshDeviceSync() },
             mailbox: {
@@ -103,7 +109,12 @@ extension AppRootView {
                         }
                     }
                 }
-                _ = try await session.sync(through: mailbox, media: cloud)
+                do {
+                    _ = try await session.sync(through: mailbox, media: cloud)
+                } catch where CloudKitHold.isSecurityHold(error) {
+                    session.noteICloudHold(true)
+                    throw error
+                }
             },
         )
 

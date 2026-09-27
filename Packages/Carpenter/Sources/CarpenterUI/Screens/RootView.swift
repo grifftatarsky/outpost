@@ -7,6 +7,7 @@ public struct RootView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.clock) var roomClock
     @Environment(\.stampDevice) var stampDevice
+    @Environment(\.iCloudHold) var iCloudHold
     @State var icons = AppIconStore()
     @Binding var organisation: RoomsListOrganisation
     @State var invite: PresentedInvite?

@@ -182,6 +182,12 @@ extension ConversationView {
     }
 
     private var composerControls: some View {
+        heldableControls
+            .disabled(iCloudHold)
+            .opacity(iCloudHold ? 0.5 : 1)
+    }
+
+    private var heldableControls: some View {
         HStack(alignment: .bottom, spacing: CarpenterMetrics.composerSpacing) {
             if onAttach != nil {
                 // COPY BEGIN 814da02a [NEEDS HUMAN REVIEW]

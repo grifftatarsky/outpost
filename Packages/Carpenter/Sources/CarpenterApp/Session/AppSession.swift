@@ -48,6 +48,8 @@ public final class AppSession {
 
     public internal(set) var enrolment: Enrolment?
 
+    public internal(set) var isHeldByICloud = false
+
     public internal(set) var pendingDevice: DeviceKeys?
     var pendingIdentity: Identity?
     public internal(set) var deviceRequests: [DeviceRequest] = []

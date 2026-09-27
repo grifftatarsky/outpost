@@ -122,6 +122,10 @@ extension AppSession {
         guard occupancy == .empty else {
             if occupancy == .occupied {
                 await awaitApprovalWithoutAnIdentity(store)
+            } else if occupancy == .held {
+                Diagnostics.identity.notice(
+                    "load: iCloud is holding this device (not trusted yet); waiting rather than making a member")
+                state = .registrationStalled(.heldBySecurity)
             } else if occupancy == .offline {
                 Diagnostics.identity.notice(
                     "load: iCloud could not be reached; stopping rather than offering a member")

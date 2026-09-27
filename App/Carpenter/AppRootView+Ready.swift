@@ -460,6 +460,7 @@ extension AppRootView {
             },
             onPostponeReview: { await session.postponeOutpostReview(in: $0) }
         )
+        .environment(\.iCloudHold, session.isHeldByICloud)
         .task {
             guard !UITestMode.isOn else { return }
             await ActiveSyncLoop.run(

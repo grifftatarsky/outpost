@@ -192,6 +192,7 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
     }
 
     public func occupancy() async -> AccountOccupancy {
+        if await CloudKitHold.isHeld(container) { return .held }
         do {
             let batch = try await container.privateCloudDatabase.recordZoneChanges(
                 inZoneWith: zoneID, since: nil, desiredKeys: [], resultsLimit: 1)
@@ -206,6 +207,7 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
     }
 
     static func occupancy(for error: any Error) -> AccountOccupancy {
+        if CloudKitHold.isSecurityHold(error) { return .held }
         guard let ckError = error as? CKError else { return .undetermined }
 
         if ckError.code == .partialFailure {

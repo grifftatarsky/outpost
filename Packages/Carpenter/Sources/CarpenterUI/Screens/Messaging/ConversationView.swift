@@ -7,6 +7,7 @@ public struct ConversationView: View {
     @Environment(\.palette) var palette
     @Environment(\.clock) var clock
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @Environment(\.iCloudHold) var iCloudHold
     @Environment(\.notGoneHelp) var notGoneHelp
 
     @State var draft = ""

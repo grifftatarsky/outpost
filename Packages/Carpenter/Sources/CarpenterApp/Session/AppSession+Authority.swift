@@ -4,6 +4,13 @@ import Foundation
 // MARK: Approvals and removals count in the order iCloud first stored them
 
 extension AppSession {
+    public func noteICloudHold(_ held: Bool) {
+        guard isHeldByICloud != held else { return }
+        isHeldByICloud = held
+        Diagnostics.sync.notice(
+            "iCloud \(held ? "is holding this device: nothing is sent" : "let this device in again", privacy: .public)")
+    }
+
     func authorityNow() -> Date {
         let latest = replica.storedTimes.values.max() ?? .distantPast
         return max(clock.now, latest.addingTimeInterval(0.001))
