@@ -11,6 +11,7 @@ import SwiftUI
         static let shared = LockWindow()
 
         private var window: UIWindow?
+        private var covered: [UIWindow] = []
 
         func show(_ controller: AppLockController, onForget: @escaping () async -> Void) {
             guard window == nil,
@@ -20,13 +21,18 @@ import SwiftUI
             else { return }
             let window = UIWindow(windowScene: scene)
             window.windowLevel = .alert + 1
+            window.accessibilityViewIsModal = true
             window.rootViewController = UIHostingController(
                 rootView: AppLockScreen(controller: controller, onForget: onForget).themed(.default))
+            covered = scene.windows.filter { $0 !== window && !$0.accessibilityElementsHidden }
+            for other in covered { other.accessibilityElementsHidden = true }
             window.makeKeyAndVisible()
             self.window = window
         }
 
         func hide() {
+            for other in covered { other.accessibilityElementsHidden = false }
+            covered = []
             window?.isHidden = true
             window = nil
         }

@@ -143,6 +143,9 @@ final class RigChecks: XCTestCase {
         app.activate()
         let locked = app.staticTexts.matching(NSPredicate(format: "label ENDSWITH %@", "is locked")).firstMatch
         XCTAssertTrue(locked.waitForExistence(timeout: 10), "the app opened without its lock")
+        XCTAssertFalse(
+            app.buttons["You"].firstMatch.exists,
+            "the app under the lock could still be reached, by VoiceOver or anything that reads the screen's elements")
         shoot(app, "lock-6-locked")
         let code = app.secureTextFields.firstMatch
         code.tap()
