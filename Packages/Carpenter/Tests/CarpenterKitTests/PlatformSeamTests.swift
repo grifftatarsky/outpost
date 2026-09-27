@@ -81,31 +81,35 @@ struct InMemoryMailboxTests {
         #expect(try await mailbox.fetch(for: cassilda).count == 1)
     }
 
-    @Test("A packet survives until every recipient has acknowledged it")
+    @Test("A receipt stays with the packet; nobody but the sender takes the packet away")
     func deletesOnlyWhenFullyAcknowledged() async throws {
         let mailbox = InMemoryMailbox()
         let sent = packet("sealed", to: [cassilda, hastur])
         try await mailbox.put(sent)
 
-        try await mailbox.acknowledge(sent.id, by: cassilda)
-        #expect(try await mailbox.fetch(for: cassilda).isEmpty)
+        try await mailbox.acknowledge(sent.id, with: SealedReceipt(tag: cassilda, sealed: Data([1])))
+        #expect(try await mailbox.fetch(for: cassilda).first?.receipts.count == 1)
         #expect(try await mailbox.fetch(for: hastur).count == 1)
         #expect(await mailbox.storedPacketCount == 1)
 
-        try await mailbox.acknowledge(sent.id, by: hastur)
+        try await mailbox.acknowledge(sent.id, with: SealedReceipt(tag: hastur, sealed: Data([2])))
+        #expect(await mailbox.storedPacketCount == 1, "a recipient's receipt removed the packet")
+
+        try await mailbox.withdraw(sent.id)
         #expect(await mailbox.storedPacketCount == 0)
     }
 
-    @Test("Acknowledging twice is not an error and does not double-count")
+    @Test("The same receipt twice is kept once")
     func idempotentAcknowledgement() async throws {
         let mailbox = InMemoryMailbox()
         let sent = packet("sealed", to: [cassilda, hastur])
         try await mailbox.put(sent)
 
-        try await mailbox.acknowledge(sent.id, by: cassilda)
-        try await mailbox.acknowledge(sent.id, by: cassilda)
+        let receipt = SealedReceipt(tag: cassilda, sealed: Data([1]))
+        try await mailbox.acknowledge(sent.id, with: receipt)
+        try await mailbox.acknowledge(sent.id, with: receipt)
 
-        #expect(await mailbox.storedPacketCount == 1)
+        #expect(try await mailbox.sentPackets()[sent.id]?.receipts == [receipt])
     }
 
     @Test("Every write is counted, so the budget in Epic 4 has something to measure")

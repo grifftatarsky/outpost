@@ -22,6 +22,9 @@ extension AppSession {
             try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
         }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
+        if mode == .full, let sent = try? await mailbox.sentPackets() {
+            await settleWhatWasSent(sent, through: mailbox)
+        }
         if mode == .full {
             let sent: SyncReport
             (sent, sending) = try await sendWhatIsOwed(through: session)
@@ -119,7 +122,8 @@ extension AppSession {
     private func takeWhatArrived(
         from peer: Peer, through session: SyncSession, mode: SyncMode, into report: inout SyncReport
     ) async throws {
-        let collected = try await session.collect(as: peer, at: clock.now)
+        let signedFor = ownMemberSignedFor(from: peer)
+        let collected = try await session.collect(as: peer, at: clock.now, alreadyTaken: signedFor)
 
         for (_, reason) in collected.unopened {
             Diagnostics.sync.error(
@@ -199,9 +203,12 @@ extension AppSession {
             }
         }
 
-        if mode == .full {
+        if mode == .full, let enrolment {
+            let (member, device, secret) = (enrolment.identity.id, enrolment.device, peer.secret)
             do {
-                try await session.acknowledge(collected, settled)
+                try await session.acknowledge(collected, settled) { packet, tag in
+                    try PacketReceipt.seal(packet, under: tag, as: member, by: device, to: secret)
+                }
             } catch {
                 Diagnostics.sync.error(
                     "mailbox: could not acknowledge a packet: \(String(describing: error), privacy: .public)")
@@ -280,16 +287,16 @@ extension AppSession {
             persisted.syncedFrontier.observe(entry.feedKey, seq: entry.seq)
         }
 
-        if mode == .full, let waiting = try? await mailbox.pendingDeliveries() {
-            update(\.pendingRecipients, to: waiting)
-            let stillWaiting = Set(waiting.keys)
-            update(\.persisted.outstandingPackets, to: persisted.outstandingPackets.filter {
-                stillWaiting.contains($0.key)
-            })
+        if !report.written.isEmpty {
+            let resent = Set(report.written.flatMap(\.entries))
+            if !persisted.resend.isDisjoint(with: resent) { persisted.resend.subtract(resent) }
         }
+        var waiting = pendingRecipients ?? [:]
         for wrote in report.written {
             persisted.outstandingPackets[wrote.packet] = wrote.entries
+            waiting[wrote.packet] = wrote.recipients
         }
+        if !report.written.isEmpty { update(\.pendingRecipients, to: waiting) }
     }
 
     private func doWhatIsOwed(after report: SyncReport, through session: SyncSession) async {
@@ -332,11 +339,83 @@ extension AppSession {
 
     func unsentEntries() -> [Entry] {
         let sent = persisted.syncedFrontier
-        return replica.heldFeeds
+        let unsent = replica.heldFeeds
             .sorted {
                 if $0.author != $1.author { return $0.author.rawValue.lexicographicallyPrecedes($1.author.rawValue) }
                 return $0.device.rawValue.lexicographicallyPrecedes($1.device.rawValue)
             }
             .flatMap { replica.entries(in: $0, after: sent[$0]) }
+        guard !persisted.resend.isEmpty else { return unsent }
+        let already = Set(unsent.map(\.hash))
+        return unsent + replica.allEntries.filter { persisted.resend.contains($0.hash) && !already.contains($0.hash) }
+    }
+
+    func ownMemberSignedFor(from peer: Peer) -> @Sendable (SyncPacket) -> Bool {
+        guard let registry = replica.registry(for: peer.me) else { return { _ in false } }
+        let (me, secret) = (peer.me, peer.secret)
+        return { packet in
+            packet.receipts.contains { receipt in
+                PacketReceipt.open(receipt, for: packet.id, from: me, with: secret, by: registry) != nil
+            }
+        }
+    }
+
+    private func settleWhatWasSent(_ sent: [PacketID: SentPacket], through mailbox: any Mailbox) async {
+        let mine = persisted.outstandingPackets
+        var waiting: [PacketID: Set<RecipientTag>] = [:]
+        var vanished: [PacketID] = []
+        let current = SyncSession.window(at: clock.now)
+        let reach = SyncSession.windowLookback + 2
+        let windows = (current >= reach ? current - reach : 0)...(current + 1)
+        var addressedTo: [RecipientTag: Peer] = [:]
+        for peer in peers() {
+            for window in windows { addressedTo[peer.outgoingTag(window: window)] = peer }
+        }
+        for (packet, entries) in mine {
+            guard let record = sent[packet] else {
+                vanished.append(packet)
+                persisted.resend.formUnion(entries)
+                continue
+            }
+            let created = record.createdAt ?? clock.now
+            var missing: Set<RecipientTag> = []
+            for tag in record.recipients {
+                guard
+                    let peer = addressedTo[tag],
+                    let registry = replica.registry(for: peer.them),
+                    record.receipts.contains(where: {
+                        $0.tag == tag
+                            && PacketReceipt.open($0, for: packet, from: peer.them, with: peer.secret, by: registry) != nil
+                    })
+                else {
+                    missing.insert(tag)
+                    continue
+                }
+            }
+            let expired = clock.now.timeIntervalSince(created)
+                > SyncSession.tagWindow * Double(SyncSession.windowLookback + 2)
+            if missing.isEmpty || expired {
+                do {
+                    try await mailbox.withdraw(packet)
+                    persisted.outstandingPackets[packet] = nil
+                } catch {
+                    Diagnostics.sync.error(
+                        "mailbox: could not take back a packet everybody has (\(String(describing: error), privacy: .public))")
+                    waiting[packet] = missing
+                }
+            } else {
+                waiting[packet] = missing
+            }
+        }
+        for packet in vanished { persisted.outstandingPackets[packet] = nil }
+        if !vanished.isEmpty {
+            issuedGrants.removeAll()
+            Diagnostics.sync.error(
+                """
+                mailbox: \(vanished.count, privacy: .public) packet(s) left the outbox before everybody \
+                signed for them; sending what they held again
+                """)
+        }
+        update(\.pendingRecipients, to: waiting)
     }
 }

@@ -152,6 +152,7 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     public private(set) var writeCount = 0
     public private(set) var fetchCount = 0
     public private(set) var acknowledgeCount = 0
+    public private(set) var withdrawCount = 0
     public private(set) var bells: [MessageBell] = []
     public private(set) var uploadCount = 0
     public private(set) var downloadCount = 0
@@ -166,8 +167,8 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     public var storedAttachmentCount: Int { attachments.count }
 
     public var serverWrites: Int {
-        writeCount + acknowledgeCount + bells.count + uploadCount + attachmentAcknowledgeCount
-            + attachmentDeleteCount
+        writeCount + acknowledgeCount + withdrawCount + bells.count + uploadCount
+            + attachmentAcknowledgeCount + attachmentDeleteCount
     }
 
     // MARK: Attachments
@@ -268,29 +269,45 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
 
     public func fetch(for tags: Set<RecipientTag>) throws -> [SyncPacket] {
         fetchCount += 1
-        let wanted: [Stored] = order.compactMap { stored[$0] }.filter { !$0.outstanding.isDisjoint(with: tags) }
-        return wanted.compactMap { (entry: Stored) -> SyncPacket? in
-            guard var packet = PacketWire.packet(from: entry.fields) else { return nil }
+        return order.compactMap { stored[$0] }.compactMap { (entry: Stored) -> SyncPacket? in
+            guard var packet = PacketWire.packet(from: entry.fields), !packet.recipients.isDisjoint(with: tags)
+            else { return nil }
             packet.storedAt = entry.modifiedAt
             return packet
         }
     }
 
-    public func pendingDeliveries() throws -> [PacketID: Set<RecipientTag>] {
-        stored.reduce(into: [:]) { found, entry in found[entry.key] = entry.value.outstanding }
+    public func sentPackets() throws -> [PacketID: SentPacket] {
+        stored.reduce(into: [:]) { found, entry in
+            guard let packet = PacketWire.packet(from: entry.value.fields) else { return }
+            found[entry.key] = SentPacket(
+                recipients: packet.recipients, receipts: packet.receipts, createdAt: entry.value.storedAt)
+        }
     }
 
-    public func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) throws {
+    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) throws {
         guard var entry = stored[id] else { throw MailboxError.unknownPacket }
         acknowledgeCount += 1
+        guard PacketWire.adding(receipt, to: &entry.fields) else { return }
+        entry.modifiedAt = serverTime()
+        stored[id] = entry
+    }
 
-        entry.outstanding.subtract(tags)
-        if entry.outstanding.isEmpty {
-            stored[id] = nil
-            order.removeAll { $0 == id }
-        } else {
-            entry.modifiedAt = serverTime()
-            stored[id] = entry
+    public func withdraw(_ id: PacketID) throws {
+        withdrawCount += 1
+        stored[id] = nil
+        order.removeAll { $0 == id }
+    }
+
+    public func delete(packet id: PacketID) {
+        stored[id] = nil
+        order.removeAll { $0 == id }
+    }
+
+    public func pendingRecipients() -> Set<RecipientTag> {
+        stored.values.reduce(into: Set<RecipientTag>()) { tags, entry in
+            guard let packet = PacketWire.packet(from: entry.fields) else { return }
+            tags.formUnion(packet.recipients.subtracting(packet.receipts.map(\.tag)))
         }
     }
 
@@ -358,8 +375,9 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
 
     public func put(_ packet: SyncPacket) async throws { throw Refused() }
     public func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] { throw Refused() }
-    public func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) async throws { throw Refused() }
-    public func pendingDeliveries() async throws -> [PacketID: Set<RecipientTag>] { throw Refused() }
+    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws { throw Refused() }
+    public func sentPackets() async throws -> [PacketID: SentPacket] { throw Refused() }
+    public func withdraw(_ id: PacketID) async throws { throw Refused() }
     public func ring(_ bell: MessageBell) async throws { throw Refused() }
     public func upload(_ attachment: OutgoingAttachment) async throws { throw Refused() }
     public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) async throws -> Data? {

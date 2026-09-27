@@ -405,7 +405,7 @@ struct BlockingTests {
         try await alice.sync(through: mailbox, media: mailbox)
         for _ in 0..<4 { try await bob.sync(through: mailbox, media: mailbox) }
 
-        let waiting = try await mailbox.pendingDeliveries()
+        let waiting = try await mailbox.sentPackets().filter { $0.value.receipts.isEmpty }
         #expect(
             !waiting.isEmpty,
             """

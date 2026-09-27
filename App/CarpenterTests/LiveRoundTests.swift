@@ -1,4 +1,4 @@
-import CarpenterApp
+@testable import CarpenterApp
 import CarpenterCloudKit
 import CarpenterKit
 import CarpenterKitTesting
@@ -149,13 +149,13 @@ struct LiveRoundTests {
         for index in 1...24 { try await rig.alice.send("acknowledge me \(index)", to: rig.room) }
         try await LiveRig.settle([rig.alice, rig.bob], through: rig.mailbox, rounds: 6)
 
-        let outstanding = try await rig.mailbox.pendingDeliveries()
+        let outstanding = try await rig.mailbox.sentPackets()
         #expect(
             outstanding.isEmpty,
             """
-            \(outstanding.count) packet(s) are still offered after both sides settled. An \
-            acknowledgement is a promise the entry is on disk and is what lets a sender stop \
-            offering; a packet left here is one the receiver will be handed again for ever.
+            \(outstanding.count) packet(s) are still offered after both sides settled. A receipt \
+            is a promise the entry is on disk and is what lets a sender take its packet back; a \
+            packet left here is one the receiver will be handed again until it expires.
             """)
     }
 
@@ -168,7 +168,7 @@ struct LiveRoundTests {
         for word in ["first", "second", "third"] {
             try await rig.alice.send(word, to: rig.room)
             try await rig.alice.sync(through: rig.mailbox)
-            let pending = try await rig.mailbox.pendingDeliveries()
+            let pending = try await rig.mailbox.sentPackets()
             for id in pending.keys where !written.contains(id) { written.append(id) }
         }
         #expect(written.count >= 3, "precondition: three packets reached the zone")
@@ -177,6 +177,7 @@ struct LiveRoundTests {
         _ = try await CKContainer.default().privateCloudDatabase.modifyRecords(
             saving: [],
             deleting: [CKRecord.ID(recordName: vanished.rawValue.uuidString, zoneID: rig.zone)])
+        rig.alice.persisted.outstandingPackets[vanished] = nil
 
         try await rig.bob.sync(through: rig.mailbox)
 

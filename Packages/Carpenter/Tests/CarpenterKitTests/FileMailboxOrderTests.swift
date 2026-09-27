@@ -23,7 +23,7 @@ struct FileMailboxOrderTests {
             try await mailbox.put(packet)
             written.append(packet.id)
         }
-        try await mailbox.acknowledge(written[0], by: [carol])
+        try await mailbox.acknowledge(written[0], with: SealedReceipt(tag: carol, sealed: Data([9])))
 
         #expect(
             try await mailbox.fetch(for: [bob]).map(\.id) == written,

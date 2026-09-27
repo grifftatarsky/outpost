@@ -50,6 +50,7 @@ public struct CloudKitMailbox: Mailbox, MediaMailbox {
     public static let scannedFields: [CKRecord.FieldKey] = [
         PacketWire.packetID, PacketWire.outstanding, PacketWire.wrapTags, PacketWire.wrapValues,
         PacketWire.ciphertext, PacketWire.grantTags, PacketWire.grantValues,
+        PacketWire.receiptTags, PacketWire.receiptValues,
         AttachmentWire.attachmentID, BellRecord.ring,
         ShareOfferRecord.sealed, ShareOfferRecord.digest,
     ]

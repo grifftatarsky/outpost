@@ -1,4 +1,4 @@
-import CarpenterApp
+@testable import CarpenterApp
 import CarpenterKitTesting
 import Foundation
 import Testing
@@ -181,7 +181,7 @@ struct HistoryRepairTests {
         }
         let written = await mailbox.writtenPackets.suffix(3)
         #expect(written.count == 3, "precondition: three packets were written")
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         return (alice, bob, room, mailbox)
     }
@@ -250,7 +250,7 @@ struct HistoryRepairTests {
         try await alice.send("last", to: room)
         try await alice.sync(through: mailbox)
         let last = try #require(await mailbox.writtenPackets.last)
-        await mailbox.forget(packet: last)
+        await lose(last, from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).isEmpty, "no clock has mentioned it, so nothing can name it")
         #expect(!bob.messages(in: room).contains { $0.body == "last" })
@@ -293,7 +293,7 @@ struct HistoryRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob, carol])
         try await bob.sync(through: mailbox)
         try await carol.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 1)
@@ -564,7 +564,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         return (alice, bob, room, mailbox)
     }
@@ -607,7 +607,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 1, "precondition: a second hole")
@@ -664,7 +664,7 @@ struct AutomaticRepairTests {
         let beforeAnswer = Set(await mailbox.writtenPackets)
         try await alice.sync(through: mailbox)
         for packet in await mailbox.writtenPackets where !beforeAnswer.contains(packet) {
-            await mailbox.forget(packet: packet)
+            await lose(packet, from: mailbox, sentBy: [alice, bob])
         }
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 1, "precondition: the first hole is still open")
@@ -674,7 +674,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 2, "precondition: two holes, one never asked about")
@@ -709,7 +709,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: other).total == 1, "precondition: the other room has a hole")
 
@@ -816,7 +816,7 @@ struct FinalRefusalThroughTheSessionTests {
             "precondition: Carol accepted it")
 
         for packet in await mailbox.writtenPackets where !beforePad.contains(packet) {
-            await mailbox.forget(packet: packet)
+            await lose(packet, from: mailbox, sentBy: [bob, carol, phone, pad])
         }
 
         try await phone.sync(through: mailbox)
@@ -852,4 +852,11 @@ struct FinalRefusalThroughTheSessionTests {
         let again = await bob.startRepair(in: room)
         #expect(again?.stillMissing == 0, "a fresh repair asked for it all over again")
     }
+}
+
+
+@MainActor
+func lose(_ packet: PacketID, from mailbox: InMemoryMailbox, sentBy senders: [AppSession]) async {
+    await mailbox.forget(packet: packet)
+    for sender in senders { sender.persisted.outstandingPackets[packet] = nil }
 }

@@ -14,6 +14,8 @@ public enum PacketWire {
     public static let ciphertext = "ciphertext"
     public static let grantTags = "grantTags"
     public static let grantValues = "grantValues"
+    public static let receiptTags = "receiptTags"
+    public static let receiptValues = "receiptValues"
 
     public static func fields(of packet: SyncPacket) -> [String: PacketField] {
         let wraps = packet.wraps.sorted {
@@ -59,8 +61,26 @@ public enum PacketWire {
             }
         }
 
-        return SyncPacket(
+        var packet = SyncPacket(
             id: PacketID(rawValue: uuid), wraps: wraps, ciphertext: payload, grants: grants)
+        packet.receipts = receipts(in: fields)
+        return packet
+    }
+
+    public static func receipts(in fields: [String: PacketField]) -> [SealedReceipt] {
+        guard case .dataList(let tags)? = fields[receiptTags], case .dataList(let values)? = fields[receiptValues],
+            tags.count == values.count
+        else { return [] }
+        return zip(tags, values).map { SealedReceipt(tag: RecipientTag(rawValue: $0), sealed: $1) }
+    }
+
+    public static func adding(_ receipt: SealedReceipt, to fields: inout [String: PacketField]) -> Bool {
+        var held = receipts(in: fields)
+        guard !held.contains(receipt) else { return false }
+        held.append(receipt)
+        fields[receiptTags] = .dataList(held.map(\.tag.rawValue))
+        fields[receiptValues] = .dataList(held.map(\.sealed))
+        return true
     }
 
     public static func outstanding(in fields: [String: PacketField]) -> [Data] {

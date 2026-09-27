@@ -263,18 +263,26 @@ struct MailboxConvergenceTests {
         let entries = [try alice.author.post("once", at: start)]
         for entry in entries { try alice.replica.integrate(entry) }
 
+        let (member, device, secret) = (bob.author.identity.id, bob.author.device, bob.peer.secret)
+        let signing: @Sendable (PacketID, RecipientTag) throws -> SealedReceipt = { packet, tag in
+            try PacketReceipt.seal(packet, under: tag, as: member, by: device, to: secret)
+        }
+        let taken: @Sendable (SyncPacket) -> Bool = { !$0.receipts.isEmpty }
+
         _ = try await session.send(entries, to: [alice.peer], at: start)
-        _ = try await session.receive(as: bob.peer, into: &bob.replica, at: start)
+        _ = try await session.receive(as: bob.peer, into: &bob.replica, at: start, signing: signing)
         let before = LogRenderer.render(bob.replica.ordered(), using: bob.author.chain)
 
-        let second = try await session.receive(as: bob.peer, into: &bob.replica, at: start)
+        let second = try await session.receive(
+            as: bob.peer, into: &bob.replica, at: start, signing: signing, alreadyTaken: taken)
 
         #expect(second.packetsFetched == 0)
         #expect(LogRenderer.render(bob.replica.ordered(), using: bob.author.chain) == before)
         #expect(await mailbox.writeCount == 1)
+        #expect(await mailbox.acknowledgeCount == 1, "a packet already signed for was signed for again")
     }
 
-    @Test("A packet is deleted once every recipient has acknowledged it")
+    @Test("A recipient signs for a packet onto it, and the receipt opens only for the sender")
     func acknowledgementDeletes() async throws {
         let mailbox = InMemoryMailbox()
         let session = SyncSession(mailbox: mailbox, clock: TestClock(now: start))
@@ -282,11 +290,30 @@ struct MailboxConvergenceTests {
 
         let entries = [try alice.author.post("hello", at: start)]
         for entry in entries { try alice.replica.integrate(entry) }
-        _ = try await session.send(entries, to: [alice.peer], at: start)
+        let sent = try await session.send(entries, to: [alice.peer], at: start)
+        let packet = try #require(sent.written.first?.packet)
 
-        #expect(await mailbox.storedPacketCount == 1)
-        _ = try await session.receive(as: bob.peer, into: &bob.replica, at: start)
-        #expect(await mailbox.storedPacketCount == 0)
+        let (member, device, secret) = (bob.author.identity.id, bob.author.device, bob.peer.secret)
+        _ = try await session.receive(as: bob.peer, into: &bob.replica, at: start) { packet, tag in
+            try PacketReceipt.seal(packet, under: tag, as: member, by: device, to: secret)
+        }
+        #expect(await mailbox.storedPacketCount == 1, "a recipient's receipt took the packet away")
+        let receipts = try #require(try await mailbox.sentPackets()[packet]?.receipts)
+        #expect(receipts.count == 1)
+
+        var bobsRegistry = DeviceRegistry(identity: bob.author.identity.publicKeys)
+        try bobsRegistry.admit(bob.author.certificate, storedAt: start)
+        let opened = PacketReceipt.open(
+            receipts[0], for: packet, from: member, with: alice.peer.secret, by: bobsRegistry)
+        #expect(opened?.device == device.id)
+        #expect(
+            PacketReceipt.open(receipts[0], for: PacketID(), from: member, with: alice.peer.secret, by: bobsRegistry) == nil,
+            "a receipt for one packet counted for another")
+        #expect(
+            PacketReceipt.open(
+                receipts[0], for: packet, from: member, with: alice.peer.secret,
+                by: DeviceRegistry(identity: bob.author.identity.publicKeys)) == nil,
+            "a receipt from a device the sender does not know counted")
     }
 
     @Test("A forged entry inside a packet is rejected without losing the rest")
@@ -387,7 +414,7 @@ struct FileMailboxTests {
         #expect(try await mailbox.fetch(for: mine.incomingTag(window: 7)).isEmpty)
     }
 
-    @Test("A packet survives until everybody has collected it")
+    @Test("A recipient's receipt leaves the packet in place for the others, and only its sender takes it away")
     func deletedOnlyWhenNobodyIsWaiting() async throws {
         var alice = Author()
         let a = Identity.generate()
@@ -407,11 +434,16 @@ struct FileMailboxTests {
             [try alice.post("both of you", at: start)], for: [toB, toC], window: 7)
         try await mailbox.put(packet)
 
-        try await mailbox.acknowledge(packet.id, by: asB.incomingTag(window: 7))
+        let fromB = try PacketReceipt.seal(
+            packet.id, under: asB.incomingTag(window: 7), as: b.id, by: DeviceKeys.generate(), to: asB.secret)
+        try await mailbox.acknowledge(packet.id, with: fromB)
+        try await mailbox.acknowledge(packet.id, with: fromB)
         #expect(try await mailbox.pendingCount() == 1)
+        #expect(try await mailbox.sentPackets()[packet.id]?.receipts == [fromB], "a receipt was kept twice")
         #expect(try await mailbox.fetch(for: asC.incomingTag(window: 7)).count == 1)
+        #expect(try await mailbox.fetch(for: asB.incomingTag(window: 7)).count == 1, "a receipt hid the packet")
 
-        try await mailbox.acknowledge(packet.id, by: asC.incomingTag(window: 7))
+        try await mailbox.withdraw(packet.id)
         #expect(try await mailbox.pendingCount() == 0)
     }
 
@@ -432,7 +464,8 @@ struct FileMailboxTests {
     func unknownPacket() async throws {
         let mailbox = FileMailbox(directory: scratch())
         await #expect(throws: MailboxError.unknownPacket) {
-            try await mailbox.acknowledge(PacketID(), by: RecipientTag(rawValue: Data([1])))
+            try await mailbox.acknowledge(
+                PacketID(), with: SealedReceipt(tag: RecipientTag(rawValue: Data([1])), sealed: Data([2])))
         }
     }
 }

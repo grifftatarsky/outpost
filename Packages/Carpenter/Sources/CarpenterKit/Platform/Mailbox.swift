@@ -27,6 +27,8 @@ public struct SyncPacket: Hashable, Sendable, Codable {
 
     public var storedAt: Date?
 
+    public var receipts: [SealedReceipt] = []
+
     public var recipients: Set<RecipientTag> { Set(wraps.keys) }
 
     private enum CodingKeys: String, CodingKey {
@@ -103,28 +105,90 @@ public struct MessageBell: Hashable, Sendable {
     }
 }
 
+public struct SealedReceipt: Hashable, Sendable, Codable {
+    public let tag: RecipientTag
+    public let sealed: Data
+
+    public init(tag: RecipientTag, sealed: Data) {
+        self.tag = tag
+        self.sealed = sealed
+    }
+}
+
+public struct PacketReceipt: Hashable, Sendable, Codable {
+    public let participant: ParticipantID
+    public let device: DeviceID
+    public let signature: Data
+
+    static func signed(_ packet: PacketID, participant: ParticipantID, device: DeviceID) -> Data {
+        CanonicalBytes.payload(
+            domain: Domain.packetReceipt,
+            fields: [withUnsafeBytes(of: packet.rawValue.uuid) { Data($0) }, participant.rawValue, device.rawValue])
+    }
+
+    static func context(_ packet: PacketID, tag: RecipientTag) -> Data {
+        CanonicalBytes.payload(
+            domain: Domain.packetReceipt,
+            fields: [withUnsafeBytes(of: packet.rawValue.uuid) { Data($0) }, tag.rawValue])
+    }
+
+    public static func seal(
+        _ packet: PacketID, under tag: RecipientTag, as participant: ParticipantID, by device: DeviceKeys,
+        to peer: PairwiseSecret
+    ) throws -> SealedReceipt {
+        let receipt = PacketReceipt(
+            participant: participant, device: device.id,
+            signature: try device.sign(signed(packet, participant: participant, device: device.id)))
+        return SealedReceipt(
+            tag: tag,
+            sealed: try peer.wrap(try JSONEncoder().encode(receipt), context: context(packet, tag: tag)))
+    }
+
+    public static func open(
+        _ sealed: SealedReceipt, for packet: PacketID, from participant: ParticipantID, with peer: PairwiseSecret,
+        by registry: DeviceRegistry
+    ) -> PacketReceipt? {
+        guard let plaintext = try? peer.unwrap(sealed.sealed, context: context(packet, tag: sealed.tag)),
+            let receipt = try? JSONDecoder().decode(PacketReceipt.self, from: plaintext),
+            receipt.participant == participant,
+            registry.activeDevices.contains(receipt.device),
+            let key = registry.signingKey(for: receipt.device),
+            (try? DeviceKeys.isValidSignature(
+                receipt.signature, for: signed(packet, participant: participant, device: receipt.device),
+                publicKey: key)) == true
+        else { return nil }
+        return receipt
+    }
+}
+
+public struct SentPacket: Hashable, Sendable {
+    public let recipients: Set<RecipientTag>
+    public let receipts: [SealedReceipt]
+    public let createdAt: Date?
+
+    public init(recipients: Set<RecipientTag>, receipts: [SealedReceipt], createdAt: Date?) {
+        self.recipients = recipients
+        self.receipts = receipts
+        self.createdAt = createdAt
+    }
+}
+
 public protocol Mailbox: Sendable {
     func put(_ packet: SyncPacket) async throws
 
     func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket]
 
-    func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) async throws
+    func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws
 
-    func pendingDeliveries() async throws -> [PacketID: Set<RecipientTag>]
+    func sentPackets() async throws -> [PacketID: SentPacket]
+
+    func withdraw(_ id: PacketID) async throws
 
     func ring(_ bell: MessageBell) async throws
 }
 
 extension Mailbox {
-    public func pendingRecipients() async throws -> Set<RecipientTag> {
-        try await pendingDeliveries().values.reduce(into: Set<RecipientTag>()) { $0.formUnion($1) }
-    }
-
     public func fetch(for tag: RecipientTag) async throws -> [SyncPacket] {
         try await fetch(for: [tag])
-    }
-
-    public func acknowledge(_ id: PacketID, by tag: RecipientTag) async throws {
-        try await acknowledge(id, by: [tag])
     }
 }

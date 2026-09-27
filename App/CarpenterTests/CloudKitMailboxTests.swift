@@ -94,7 +94,7 @@ struct CloudKitMailboxTests {
                 """)
         }
 
-        try await mailbox.acknowledge(sent.id, by: [mine, other])
+        try await mailbox.withdraw(sent.id)
     }
 
     @Test("Every field the scan names comes back on the record")
@@ -118,7 +118,7 @@ struct CloudKitMailboxTests {
             stood in the zone.
             """)
 
-        try await mailbox.acknowledge(sent.id, by: [mine])
+        try await mailbox.withdraw(sent.id)
     }
 
     @Test("A packet is readable the instant it is written, without a query")
@@ -137,7 +137,7 @@ struct CloudKitMailboxTests {
             fails, something has gone back to a query. That cost a week once.
             """)
 
-        try await mailbox.acknowledge(sent.id, by: [mine])
+        try await mailbox.withdraw(sent.id)
     }
 
     @Test("A photo's bytes survive the wire, and are offered until collected")
@@ -250,7 +250,7 @@ struct CloudKitMailboxTests {
             about their wall bell, and the peer only re-sends the list when it changes.
             """)
 
-        for id in written { try await mailbox.acknowledge(id, by: [mine]) }
+        for id in written { try await mailbox.withdraw(id) }
     }
 
     @Test("A packet one recipient has taken keeps its place for the others")
@@ -267,7 +267,7 @@ struct CloudKitMailboxTests {
             try await mailbox.put(packet)
             written.append(packet.id)
         }
-        try await mailbox.acknowledge(written[0], by: [carol])
+        try await mailbox.acknowledge(written[0], with: SealedReceipt(tag: carol, sealed: LiveCloudKit.bytes(40)))
 
         let back = try await mailbox.fetch(for: [bob]).map(\.id)
         let places = try written.map { try #require(back.firstIndex(of: $0)) }
@@ -280,7 +280,7 @@ struct CloudKitMailboxTests {
             packet last for everyone still waiting on it, and its older `notifyWalls` wins.
             """)
 
-        for id in written { try await mailbox.acknowledge(id, by: [bob, carol]) }
+        for id in written { try await mailbox.withdraw(id) }
     }
 
     @Test("A packet at the app's own budget is accepted by the real server")
@@ -301,7 +301,7 @@ struct CloudKitMailboxTests {
             else.
             """)
 
-        try await mailbox.acknowledge(sent.id, by: [mine])
+        try await mailbox.withdraw(sent.id)
     }
 
     @Test("A packet over the ceiling is refused, and says which refusal it is")
@@ -340,7 +340,7 @@ struct CloudKitMailboxTests {
             act on.
             """)
 
-        _ = try? await mailbox.acknowledge(huge.id, by: [mine])
+        _ = try? await mailbox.withdraw(huge.id)
     }
 
     @Test("A photo far over the record ceiling still goes, because it is an asset")
@@ -390,7 +390,7 @@ struct CloudKitMailboxTests {
         for part in parts { try await mailbox.delete(attachment: part.id) }
     }
 
-    @Test("Acknowledging is what stops a packet being offered again")
+    @Test("A receipt lands on the real server, the packet stays, and only its sender takes it back")
     func acknowledgingStopsTheOffer() async throws {
         let mailbox = try await LiveCloudKit.mailbox()
         let mine = LiveCloudKit.tag()
@@ -398,17 +398,25 @@ struct CloudKitMailboxTests {
         let sent = SyncPacket(wraps: [mine: LiveCloudKit.bytes(48)], ciphertext: LiveCloudKit.bytes(64))
         try await mailbox.put(sent)
         #expect(
-            (try await mailbox.pendingDeliveries())[sent.id]?.contains(mine) == true,
-            "a packet nobody has collected was not counted as pending")
+            (try await mailbox.sentPackets())[sent.id]?.receipts.isEmpty == true,
+            "a packet nobody has collected came back with a receipt")
 
-        try await mailbox.acknowledge(sent.id, by: [mine])
+        let receipt = SealedReceipt(tag: mine, sealed: LiveCloudKit.bytes(80))
+        try await mailbox.acknowledge(sent.id, with: receipt)
+        try await mailbox.acknowledge(sent.id, with: receipt)
 
         #expect(
-            (try await mailbox.pendingDeliveries())[sent.id]?.contains(mine) != true,
+            (try await mailbox.sentPackets())[sent.id]?.receipts == [receipt],
             """
-            An acknowledged packet is still offered. An acknowledgement is the promise that lets a \
-            sender stop offering; if it does not land on the real server, the sender re-sends \
-            forever or the entry is lost.
+            The receipt did not land on the real server, or landed twice. The sender takes a packet \
+            back only once every recipient's device has signed for it, so a receipt that does not \
+            land leaves the packet offered until it expires.
             """)
+        #expect(
+            (try await mailbox.fetch(for: [mine])).first { $0.id == sent.id }?.receipts == [receipt],
+            "a recipient reading the zone does not see the receipts, so it would collect again")
+
+        try await mailbox.withdraw(sent.id)
+        #expect((try await mailbox.sentPackets())[sent.id] == nil, "the sender could not take its packet back")
     }
 }

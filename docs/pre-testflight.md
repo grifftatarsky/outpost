@@ -313,7 +313,9 @@ Added 2026-09-16, from Griff.
   opt-in behind `CARPENTER_CLOUDKIT_TESTS`. Deploying development to production would have deployed
   nothing and looked like it worked.
 - **Open, and his.** **Deploy development to production**, in the Console, for
-  **`iCloud.com.microgpt.outpost`**. Check with
+  **`iCloud.com.microgpt.outpost`**. Since 2026-09-27 `SyncPacket` also has `receiptTags` and
+  `receiptValues` (receipts replaced acknowledgements that deleted); `CloudKit/schema.ckdb` has them,
+  and development has to have them before production does. Check with
   `xcrun cktool export-schema … --environment production | grep "RECORD TYPE"` — six lines, not one.
 - **The trap, and it was walked into once.** There is a second container,
   `iCloud.com.microgpt.carpenter`, which is **not the app's**. `APP_ICLOUD_CONTAINER` resolves to

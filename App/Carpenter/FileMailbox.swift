@@ -1,6 +1,7 @@
 #if DEBUG
 
     import CarpenterKit
+    import CryptoKit
     import Foundation
     import os
 
@@ -79,35 +80,43 @@
         func fetch(for tags: Set<RecipientTag>) throws -> [SyncPacket] {
             try readPackets()
                 .filter { $0.stored.owner != owner }
-                .filter { !outstanding(of: $0).isDisjoint(with: tags) }
                 .sorted { $0.stored.sequence < $1.stored.sequence }
                 .compactMap { entry in
-                    var packet = PacketWire.packet(from: entry.stored.fields.mapValues(\.field))
-                    packet?.storedAt = entry.written
+                    guard var packet = PacketWire.packet(from: entry.stored.fields.mapValues(\.field)),
+                        !packet.recipients.isDisjoint(with: tags)
+                    else { return nil }
+                    packet.storedAt = entry.written
+                    packet.receipts = receipts(of: entry.id)
                     return packet
                 }
         }
 
-        func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) throws {
+        func acknowledge(_ id: PacketID, with receipt: SealedReceipt) throws {
             guard try readPackets().contains(where: { $0.id == id }) else {
                 throw MailboxError.unknownPacket
             }
-            for tag in tags {
-                let name = "\(id.rawValue.uuidString)-\(tag.rawValue.base64EncodedString().replacingOccurrences(of: "/", with: "_"))"
-                let file = acknowledgements.appending(path: name)
-                if !FileManager.default.fileExists(atPath: file.path) {
-                    try Data().write(to: file, options: .atomic)
-                }
+            let digest = Data(SHA256.hash(data: receipt.tag.rawValue + receipt.sealed)).prefix(12)
+            let name = "\(id.rawValue.uuidString)-\(digest.base64EncodedString().replacingOccurrences(of: "/", with: "_"))"
+            let file = acknowledgements.appending(path: name)
+            if !FileManager.default.fileExists(atPath: file.path) {
+                try JSONEncoder().encode(receipt).write(to: file, options: .atomic)
             }
         }
 
-        func pendingDeliveries() throws -> [PacketID: Set<RecipientTag>] {
+        func sentPackets() throws -> [PacketID: SentPacket] {
             try readPackets()
                 .filter { $0.stored.owner == owner }
                 .reduce(into: [:]) { found, entry in
-                    let waiting = outstanding(of: entry)
-                    if !waiting.isEmpty { found[entry.id] = waiting }
+                    guard let packet = PacketWire.packet(from: entry.stored.fields.mapValues(\.field)) else { return }
+                    found[entry.id] = SentPacket(
+                        recipients: packet.recipients, receipts: receipts(of: entry.id), createdAt: entry.written)
                 }
+        }
+
+        func withdraw(_ id: PacketID) throws {
+            for entry in try readPackets() where entry.id == id && entry.stored.owner == owner {
+                try? FileManager.default.removeItem(at: entry.file)
+            }
         }
 
         func ring(_ bell: MessageBell) throws {
@@ -157,6 +166,7 @@
             let id: PacketID
             let stored: StoredPacket
             let written: Date?
+            let file: URL
         }
 
         private func readPackets() throws -> [Entry] {
@@ -169,19 +179,15 @@
                     let uuid = UUID(uuidString: text)
                 else { return nil }
                 let written = try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
-                return Entry(id: PacketID(rawValue: uuid), stored: stored, written: written)
+                return Entry(id: PacketID(rawValue: uuid), stored: stored, written: written, file: file)
             }
         }
 
-        private func outstanding(of entry: Entry) -> Set<RecipientTag> {
-            guard case .dataList(let tags)? = entry.stored.fields[PacketWire.outstanding]?.field
-            else { return [] }
-            let collected = Set(
-                (try? FileManager.default.contentsOfDirectory(atPath: acknowledgements.path))?
-                    .filter { $0.hasPrefix(entry.id.rawValue.uuidString) } ?? [])
-            return Set(tags.map(RecipientTag.init(rawValue:))).filter { tag in
-                let name = "\(entry.id.rawValue.uuidString)-\(tag.rawValue.base64EncodedString().replacingOccurrences(of: "/", with: "_"))"
-                return !collected.contains(name)
+        private func receipts(of id: PacketID) -> [SealedReceipt] {
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: acknowledgements.path)) ?? []
+            return names.filter { $0.hasPrefix(id.rawValue.uuidString) }.sorted().compactMap { name in
+                guard let bytes = try? Data(contentsOf: acknowledgements.appending(path: name)) else { return nil }
+                return try? JSONDecoder().decode(SealedReceipt.self, from: bytes)
             }
         }
 

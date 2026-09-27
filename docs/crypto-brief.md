@@ -644,9 +644,20 @@ values. **What that leaks, stated plainly:**
 
 - How many recipients a packet has (the length of the tag list).
 - Roughly how much was said (the ciphertext's size).
-- When it was written, and when each recipient collected — the tag is removed from `outstanding` as
-  each one acknowledges, so the relay watches the fan-out drain.
+- When it was written, and when each recipient collected — each recipient's device leaves a sealed
+  receipt on the packet, so the relay watches the receipts arrive.
 - That a set of packets share a recipient *within one day*.
+
+**Receipts, not deletions** (since 2026-09-27). A recipient used to acknowledge a packet by removing
+its address from the sender's record and deleting the record when it was the last. Anybody the outbox
+is shared with can edit it, including a device its member removed, which still holds the identity
+and so can work out the member's addresses. So a removed device could collect a packet meant for its
+member and make it vanish; the member's real devices never saw it until the sender next wrote in that
+room. Now a recipient's device appends a receipt, signed by the device and sealed to the sender under
+the pairwise secret (`PacketReceipt`), and never removes anything. A member's devices skip a packet
+only if one of *their* devices that still counts signed for it. The sender takes a packet back only
+once every recipient has a receipt from a device that counts, or the packet has outlived the address
+lookback; a packet that leaves the outbox any other way is sent again (`NothingIsSnatchedTests`).
 
 It does not leak any participant identifier, any room identifier, any device identifier, or any
 plaintext. **Nothing is ever written with `record[key]` unsealed** — the rule in `CLAUDE.md` exists

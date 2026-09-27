@@ -40,8 +40,8 @@ extension CloudKitMailbox {
             var isOurPeer = false
             for record in records {
                 guard record.recordType == PacketRecord.type else { continue }
-                let outstanding = record[PacketWire.outstanding] as? [Data] ?? []
-                guard outstanding.contains(where: wanted.contains) else { continue }
+                let addressed = record[PacketWire.wrapTags] as? [Data] ?? []
+                guard addressed.contains(where: wanted.contains) else { continue }
                 guard var packet = PacketRecord.read(record) else { continue }
                 packet.storedAt = record.modificationDate
                 packets.append(packet)
@@ -62,25 +62,23 @@ extension CloudKitMailbox {
         return packets
     }
 
-    public func pendingDeliveries() async throws -> [PacketID: Set<RecipientTag>] {
+    public func sentPackets() async throws -> [PacketID: SentPacket] {
         let records = (try? await everything(in: outbox, of: container.privateCloudDatabase)) ?? []
-        var waiting: [PacketID: Set<RecipientTag>] = [:]
+        var sent: [PacketID: SentPacket] = [:]
         for record in records where record.recordType == PacketRecord.type {
-            guard let id = PacketID(recordName: record.recordID.recordName) else { continue }
-            let outstanding = record[PacketWire.outstanding] as? [Data] ?? []
-            waiting[id] = Set(outstanding.map(RecipientTag.init(rawValue:)))
+            guard let id = PacketID(recordName: record.recordID.recordName),
+                let packet = PacketRecord.read(record)
+            else { continue }
+            sent[id] = SentPacket(
+                recipients: packet.recipients, receipts: packet.receipts, createdAt: record.creationDate)
         }
-        return waiting
+        return sent
     }
 
-    public func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) async throws {
-        try await acknowledgeRecord(named: id.recordName, by: tags)
-    }
-
-    func acknowledgeRecord(named name: String, by tags: Set<RecipientTag>) async throws {
+    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
         for attempt in 0..<Self.acknowledgementAttempts {
             do {
-                try await attemptAcknowledgement(recordNamed: name, by: tags)
+                try await attemptAcknowledgement(recordNamed: id.recordName, with: receipt)
                 return
             } catch let error as CKError where error.code == .serverRecordChanged {
                 guard attempt < Self.acknowledgementAttempts - 1 else { throw error }
@@ -90,21 +88,26 @@ extension CloudKitMailbox {
 
     private static let acknowledgementAttempts = 4
 
-    private func attemptAcknowledgement(recordNamed name: String, by tags: Set<RecipientTag>) async throws {
+    private func attemptAcknowledgement(recordNamed name: String, with receipt: SealedReceipt) async throws {
         guard let (database, record) = try await locate(recordNamed: name) else {
             throw MailboxError.unknownPacket
         }
-
-        let wanted = Set(tags.map(\.rawValue))
-        var outstanding = record[PacketWire.outstanding] as? [Data] ?? []
-        outstanding.removeAll { wanted.contains($0) }
-
-        if outstanding.isEmpty {
-            _ = try await database.modifyRecords(saving: [], deleting: [record.recordID])
-        } else {
-            record[PacketWire.outstanding] = outstanding
-            _ = try await database.modifyRecords(
-                saving: [record], deleting: [], savePolicy: .ifServerRecordUnchanged)
+        var fields: [String: PacketField] = [:]
+        if let tags = record[PacketWire.receiptTags] as? [Data] { fields[PacketWire.receiptTags] = .dataList(tags) }
+        if let values = record[PacketWire.receiptValues] as? [Data] {
+            fields[PacketWire.receiptValues] = .dataList(values)
         }
+        guard PacketWire.adding(receipt, to: &fields),
+            case .dataList(let tags)? = fields[PacketWire.receiptTags],
+            case .dataList(let values)? = fields[PacketWire.receiptValues]
+        else { return }
+        record[PacketWire.receiptTags] = tags
+        record[PacketWire.receiptValues] = values
+        _ = try await database.modifyRecords(saving: [record], deleting: [], savePolicy: .ifServerRecordUnchanged)
+    }
+
+    public func withdraw(_ id: PacketID) async throws {
+        _ = try await container.privateCloudDatabase.modifyRecords(
+            saving: [], deleting: [CKRecord.ID(recordName: id.recordName, zoneID: outbox)])
     }
 }

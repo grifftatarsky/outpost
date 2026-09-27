@@ -110,13 +110,15 @@ struct StrandedPacketTests {
         try await alice.send("acknowledge me", to: room)
         let sent = try await alice.sync(through: mailbox)
         let packet = try #require(sent.written.last?.packet)
-        #expect(try await mailbox.pendingDeliveries()[packet] != nil, "precondition: the packet is waiting")
+        #expect(try await mailbox.sentPackets()[packet] != nil, "precondition: the packet is waiting")
 
         clock.advance(by: SyncSession.tagWindow * 2)
         try await bob.sync(through: mailbox)
+        #expect(try await mailbox.sentPackets()[packet]?.receipts.isEmpty == false, "Bob read it and signed for nothing")
+        try await alice.sync(through: mailbox)
 
         #expect(
-            try await mailbox.pendingDeliveries()[packet] == nil,
+            try await mailbox.sentPackets()[packet] == nil,
             "the packet was read but left outstanding, so it will never be deleted")
     }
 }

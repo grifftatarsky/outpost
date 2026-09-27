@@ -65,6 +65,8 @@ DEFINE SCHEMA
         ciphertext      BYTES,
         grantTags       LIST<BYTES>,
         grantValues     LIST<BYTES>,
+        receiptTags     LIST<BYTES>,
+        receiptValues   LIST<BYTES>,
         outstanding     LIST<BYTES>,
         packetID        STRING,
         wrapTags        LIST<BYTES>,

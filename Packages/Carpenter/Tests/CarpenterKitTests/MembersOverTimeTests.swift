@@ -263,10 +263,10 @@ struct AddressedPeersTests {
         let before = Set(await mailbox.writtenPackets)
         try await alice.send("said in our room", to: ours)
         try await alice.sync(through: mailbox)
-        let waiting = try await mailbox.pendingDeliveries()
+        let waiting = try await mailbox.sentPackets()
         let fresh = await mailbox.writtenPackets.filter { !before.contains($0) }
         #expect(fresh.count == 1, "precondition: Alice's round wrote exactly one packet")
-        let recipients = try #require(fresh.first.flatMap { waiting[$0] })
+        let recipients = try #require(fresh.first.flatMap { waiting[$0]?.recipients })
         #expect(
             recipients.count == 1,
             "Alice addressed somebody she has never met — every entry she writes reaches them")

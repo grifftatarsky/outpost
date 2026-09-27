@@ -55,7 +55,26 @@ extension CloudKitMailbox {
     }
 
     public func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) async throws {
-        try await acknowledgeRecord(named: id.recordName, by: tags)
+        for attempt in 0..<4 {
+            do {
+                guard let (database, record) = try await locate(recordNamed: id.recordName) else {
+                    throw MailboxError.unknownPacket
+                }
+                let wanted = Set(tags.map(\.rawValue))
+                var outstanding = record[PacketWire.outstanding] as? [Data] ?? []
+                outstanding.removeAll { wanted.contains($0) }
+                if outstanding.isEmpty {
+                    _ = try await database.modifyRecords(saving: [], deleting: [record.recordID])
+                } else {
+                    record[PacketWire.outstanding] = outstanding
+                    _ = try await database.modifyRecords(
+                        saving: [record], deleting: [], savePolicy: .ifServerRecordUnchanged)
+                }
+                return
+            } catch let error as CKError where error.code == .serverRecordChanged {
+                guard attempt < 3 else { throw error }
+            }
+        }
     }
 
     public func pendingAttachments() async throws -> [AttachmentID: Set<RecipientTag>] {

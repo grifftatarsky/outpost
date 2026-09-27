@@ -56,10 +56,12 @@ public struct SyncReport: Hashable, Sendable {
     public struct WrittenPacket: Hashable, Sendable {
         public let packet: PacketID
         public let entries: Set<EntryHash>
+        public let recipients: Set<RecipientTag>
 
-        public init(packet: PacketID, entries: Set<EntryHash>) {
+        public init(packet: PacketID, entries: Set<EntryHash>, recipients: Set<RecipientTag> = []) {
             self.packet = packet
             self.entries = entries
+            self.recipients = recipients
         }
     }
 
@@ -204,7 +206,8 @@ public struct SyncSession: Sendable {
             report.packetsWritten += 1
             report.entriesSent += batch.count
             report.written.append(
-                SyncReport.WrittenPacket(packet: packet.id, entries: Set(batch.map(\.hash))))
+                SyncReport.WrittenPacket(
+                    packet: packet.id, entries: Set(batch.map(\.hash)), recipients: packet.recipients))
         }
         if batches.count > 1 {
             Diagnostics.sync.notice(
@@ -293,11 +296,13 @@ public struct SyncSession: Sendable {
             public let id: PacketID
             public let delivery: SyncEngine.Delivery
             public let storedAt: Date
+            public let tag: RecipientTag?
 
-            public init(id: PacketID, delivery: SyncEngine.Delivery, storedAt: Date) {
+            public init(id: PacketID, delivery: SyncEngine.Delivery, storedAt: Date, tag: RecipientTag? = nil) {
                 self.id = id
                 self.delivery = delivery
                 self.storedAt = storedAt
+                self.tag = tag
             }
         }
 
@@ -323,7 +328,9 @@ public struct SyncSession: Sendable {
         }
     }
 
-    public func collect(as peer: Peer, at instant: Date? = nil) async throws -> CollectedPackets {
+    public func collect(
+        as peer: Peer, at instant: Date? = nil, alreadyTaken: @Sendable (SyncPacket) -> Bool = { _ in false }
+    ) async throws -> CollectedPackets {
         let now = instant ?? clock.now
         let tags = Self.recentTags(for: peer, at: now)
 
@@ -331,12 +338,12 @@ public struct SyncSession: Sendable {
 
         var opened: [CollectedPackets.Opened] = []
         var unopened: [(PacketID, any Error)] = []
-        for packet in packets {
+        for packet in packets where !alreadyTaken(packet) {
             do {
                 opened.append(
                     CollectedPackets.Opened(
                         id: packet.id, delivery: try Self.unpack(packet, as: peer, at: now),
-                        storedAt: packet.storedAt ?? now))
+                        storedAt: packet.storedAt ?? now, tag: packet.recipients.intersection(tags).first))
             } catch {
                 unopened.append((packet.id, error))
             }
@@ -419,12 +426,16 @@ public struct SyncSession: Sendable {
         return (report, settled)
     }
 
-    public func acknowledge(_ collected: CollectedPackets, _ settled: Set<PacketID>) async throws {
+    public func acknowledge(
+        _ collected: CollectedPackets, _ settled: Set<PacketID>,
+        signing receipt: @Sendable (PacketID, RecipientTag) throws -> SealedReceipt
+    ) async throws {
         var failed: [PacketID: String] = [:]
         var acknowledged = 0
         for packet in collected.packets where settled.contains(packet.id) {
+            guard let tag = packet.tag else { continue }
             do {
-                try await mailbox.acknowledge(packet.id, by: collected.tags)
+                try await mailbox.acknowledge(packet.id, with: try receipt(packet.id, tag))
                 acknowledged += 1
             } catch {
                 failed[packet.id] = String(describing: error)
@@ -437,13 +448,14 @@ public struct SyncSession: Sendable {
 
     public func receive(
         as peer: Peer, into replica: inout Replica, at instant: Date? = nil,
-        acknowledging: Bool = true
+        signing receipt: (@Sendable (PacketID, RecipientTag) throws -> SealedReceipt)? = nil,
+        alreadyTaken: @Sendable (SyncPacket) -> Bool = { _ in false }
     ) async throws -> SyncReport {
-        let collected = try await collect(as: peer, at: instant)
+        let collected = try await collect(as: peer, at: instant, alreadyTaken: alreadyTaken)
         let checked = await replica.signatureChecks(
             for: collected.entries, alsoTrusting: collected.certificates)
         let (report, settled) = Self.integrate(collected, into: &replica, checked: checked)
-        if acknowledging { try await acknowledge(collected, settled) }
+        if let receipt { try await acknowledge(collected, settled, signing: receipt) }
         return report
     }
 }

@@ -22,13 +22,13 @@ private actor RefusingMailbox: Mailbox {
         try await inner.fetch(for: tags)
     }
 
-    func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) async throws {
-        try await inner.acknowledge(id, by: tags)
+    func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
+        try await inner.acknowledge(id, with: receipt)
     }
 
-    func pendingDeliveries() async throws -> [PacketID: Set<RecipientTag>] {
-        try await inner.pendingDeliveries()
-    }
+    func sentPackets() async throws -> [PacketID: SentPacket] { try await inner.sentPackets() }
+
+    func withdraw(_ id: PacketID) async throws { try await inner.withdraw(id) }
 
     func ring(_ bell: MessageBell) async throws {
         try await inner.ring(bell)

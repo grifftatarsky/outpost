@@ -37,8 +37,8 @@ extension CloudKitMailbox {
             return "found it"
         }
 
-        _ = await attempt("acknowledge") {
-            try await acknowledge(packet.id, by: tag)
+        _ = await attempt("withdraw") {
+            try await withdraw(packet.id)
             return "removed"
         }
 

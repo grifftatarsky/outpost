@@ -71,12 +71,16 @@ public actor BudgetedMailbox: Mailbox {
         try await underlying.fetch(for: tags)
     }
 
-    public func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) async throws {
-        try await underlying.acknowledge(id, by: tags)
+    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
+        try await underlying.acknowledge(id, with: receipt)
     }
 
-    public func pendingDeliveries() async throws -> [PacketID: Set<RecipientTag>] {
-        try await underlying.pendingDeliveries()
+    public func sentPackets() async throws -> [PacketID: SentPacket] {
+        try await underlying.sentPackets()
+    }
+
+    public func withdraw(_ id: PacketID) async throws {
+        try await underlying.withdraw(id)
     }
 
     public func ring(_ bell: MessageBell) async throws {
