@@ -18,10 +18,14 @@ extension AppSession {
 
         var report = SyncReport()
         var sending: [Entry] = []
-        if mode == .full { (report, sending) = try await sendWhatIsOwed(through: session) }
-
         for peer in peers() {
             try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
+        }
+        guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
+        if mode == .full {
+            let sent: SyncReport
+            (sent, sending) = try await sendWhatIsOwed(through: session)
+            report = report.adding(sent)
         }
 
         update(\.viewMayBeStale, to: report.entriesRejected > 0 || report.credentialsRejected > 0)

@@ -197,8 +197,18 @@ struct DeletingARoomTests {
         try await rig.bob.deleteRoom(rig.hangar)
 
         try await rig.alice.advanceEpoch(of: rig.hangar)
-        let sent = try await rig.alice.sync(through: rig.mailbox)
-        try #require(sent.packetsWritten > 0, "Alice sent nothing, so this proves nothing")
+        let aliceID = try #require(rig.alice.enrolment?.identity.id)
+        let chain = try #require(rig.alice.chains[rig.hangar])
+        let epoch = try #require(chain.highestKnownEpoch)
+        let pairwise = try #require(rig.alice.pairwiseSecret(with: rig.bobID))
+        let late = try EpochGrant.issue(
+            try chain.secret(for: epoch), at: epoch, in: rig.hangar, link: chain.link(at: epoch), to: pairwise,
+            devices: rig.alice.deviceRecipients(of: rig.bobID)
+        ).signed(by: try #require(rig.alice.enrolment?.device), from: aliceID, to: rig.bobID)
+        let toBob = Peer(secret: pairwise, them: rig.bobID, me: aliceID)
+        try await rig.mailbox.put(
+            try SyncEngine.pack([], for: [toBob], granting: [(to: toBob, grant: late)],
+                window: SyncSession.window(at: TestSession.now)))
         let arrived = try await rig.bob.sync(through: rig.mailbox)
         try #require(!arrived.grantsReceived.isEmpty, "no key reached Bob, so this proves nothing")
 

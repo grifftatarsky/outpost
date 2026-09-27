@@ -122,13 +122,20 @@ struct AppAndExtensionTests {
         let nse = await extensionProcess(rig)
 
         try await rig.alice.send("first", to: rig.room)
-        try await rig.alice.sync(through: rig.mailbox)
+        let sent = try await rig.alice.sync(through: rig.mailbox)
+        let packets = Set(sent.written.map(\.packet))
+        try #require(!packets.isEmpty, "precondition: Alice sent the message")
         try await nse.sync(through: rig.mailbox, mode: .readOnly)
+        #expect(
+            !Set(try await rig.mailbox.pendingDeliveries().keys).isDisjoint(with: packets),
+            "the extension, which only reads, cleared a packet")
         try await rig.app.sync(through: rig.mailbox)
 
         let later = await relaunch(rig)
         #expect(later.messages(in: rig.room).contains { $0.body == "first" })
         #expect(later.integrity.unverifiableOnDisk == 0, "the extension left entries on disk the app could not verify")
-        #expect(try await rig.mailbox.pendingDeliveries().isEmpty, "a packet was left offered for ever")
+        #expect(
+            Set(try await rig.mailbox.pendingDeliveries().keys).isDisjoint(with: packets),
+            "a packet was left offered for ever")
     }
 }
