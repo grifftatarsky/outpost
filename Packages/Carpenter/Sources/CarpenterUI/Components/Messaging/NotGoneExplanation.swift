@@ -231,3 +231,13 @@ struct NotGoneWaitView: View {
         Task { await choice.onChange(wait) }
     }
 }
+
+#if DEBUG
+    #Preview("Not gone yet") {
+        NotGoneExplanation(
+            notGone: NotGone(signal: .newerMessagesCollected(3), hasLeftThisDevice: true),
+            sentAt: Fixtures.now.addingTimeInterval(-3_600), reason: nil, onChangeWait: {}, onShowWaiting: {}
+        )
+        .themed(.default)
+    }
+#endif

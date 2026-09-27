@@ -16,6 +16,7 @@ struct CarpenterMain: App {
         #if DEBUG
             if let shot = SiteShot.requested() {
                 SiteShotView(shot)
+                    .task { await PermissionAsk.runIfAsked() }
             } else {
                 AppRootView()
             }

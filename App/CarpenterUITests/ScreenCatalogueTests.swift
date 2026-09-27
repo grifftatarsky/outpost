@@ -40,6 +40,25 @@ final class ScreenCatalogueTests: XCTestCase {
         }
     }
 
+    func testTheSystemAsksInTheAppsOwnWords() throws {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for (what, answer) in [("camera", "Don’t Allow"), ("focus", "Don’t Allow"), ("notifications", "Allow")] {
+            app = XCUIApplication()
+            app.launchArguments = ["--site-shot", "rooms", "-theme.accent", "verdigris", "--ask", what]
+            app.launch()
+            let alert = springboard.alerts.firstMatch
+            guard alert.waitForExistence(timeout: 8) else { continue }
+            Thread.sleep(forTimeInterval: 0.6)
+            shots += 1
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = String(format: "%03d ", shots) + "system asks › \(what)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            let button = alert.buttons[answer].exists ? alert.buttons[answer] : alert.buttons.element(boundBy: 0)
+            button.tap()
+        }
+    }
+
     private func launch(_ shot: String) {
         app = XCUIApplication()
         app.launchArguments = ["--site-shot", shot, "-theme.accent", "verdigris"]

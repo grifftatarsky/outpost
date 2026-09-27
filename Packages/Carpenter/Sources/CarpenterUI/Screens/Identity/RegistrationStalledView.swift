@@ -189,4 +189,10 @@ public struct RegistrationStalledView: View {
             .themed(.default)
             .preferredColorScheme(.dark)
     }
+
+    #Preview("Stalled — iCloud hasn't trusted this device") {
+        RegistrationStalledView(stall: .heldBySecurity, onRetry: {})
+            .themed(.default)
+            .preferredColorScheme(.light)
+    }
 #endif

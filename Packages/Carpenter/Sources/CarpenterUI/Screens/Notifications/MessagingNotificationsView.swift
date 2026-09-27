@@ -182,3 +182,14 @@ extension RoomUpdateLevel {
     }
     // COPY END a68d11ea
 }
+
+#if DEBUG
+    #Preview("Messaging notifications") {
+        NavigationStack {
+            MessagingNotificationsView(
+                choices: .default, badges: BadgeChoices(messages: true, outposts: true), systemAllows: true,
+                onChange: { _ in }, onBadges: { _ in })
+        }
+        .themed(.default)
+    }
+#endif

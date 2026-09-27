@@ -71,3 +71,13 @@ public struct OutpostDetailSettings {
         self.onSetNotified = onSetNotified
     }
 }
+
+#if DEBUG
+    #Preview("One person's Outpost") {
+        NavigationStack {
+            OutpostDetailSettingsView(
+                person: Fixtures.camilla, isNotified: true, acrossAllOutposts: .each, onSetNotified: { _ in })
+        }
+        .themed(.default)
+    }
+#endif

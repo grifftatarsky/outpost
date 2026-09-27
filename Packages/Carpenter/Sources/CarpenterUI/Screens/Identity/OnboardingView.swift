@@ -30,7 +30,7 @@ public struct OnboardingView: View {
 
     private func create() {
         let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, !creating else { return }
+        if name.isEmpty || creating { return }
         Task {
             creating = true
             problem = await createIdentity(name)

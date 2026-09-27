@@ -200,3 +200,17 @@ public struct BadgeMeaningLine: View {
     }
     // COPY END 4f764fb2
 }
+
+#if DEBUG
+    #Preview("Outpost notifications") {
+        NavigationStack {
+            OutpostNotificationsView(
+                choices: OutpostNotificationChoices(
+                    newPosts: .each, repliesOnPostsICommentedOn: true, repliesOnPostsIReactedTo: false,
+                    commentsOnMyPosts: true, likesOnMyPosts: false),
+                badges: BadgeChoices(messages: true, outposts: true), systemAllows: true,
+                onChange: { _ in }, onBadges: { _ in })
+        }
+        .themed(.default)
+    }
+#endif

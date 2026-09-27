@@ -274,6 +274,32 @@ the system's permission prompts are not there, and neither is anything that need
 
 <!-- COPY END 84215733 -->
 
+<!-- COPY BEGIN 20da20a2 [NEEDS HUMAN REVIEW] -->
+
+## The copy slideshow
+
+Griff reviews every word a member reads in one page: a slide per screen, a picture beside the words,
+a box per string. The tools are in `Scripts/copy-slides`, and they work in a folder of your choosing
+(called `DIR` here), never in the repository.
+
+1. **Slides.** `python3 Scripts/copy-slides/slides.py DIR NEW.json` reads every copy chunk in the app
+   and writes `DIR/slides.json`. `NEW.json` is a list of chunk ids written or changed since his last
+   pass; the page lists them first, under "New or changed by Claude".
+2. **Pictures.** The site shots come from `--site-shot` on a simulator (`simctl launch`, then
+   `simctl io … screenshot` into `DIR/raw/site-<name>.png`). Previews come from
+   `render_previews.py DIR`, through Xcode's tools, which Xcode asks you to approve once. The catalogue
+   comes from `ScreenCatalogueTests` (above), exported into `DIR/catalogue`. `shots.py DIR` fits them
+   to the slides and writes `DIR/shots`.
+3. **Publish** `Scripts/copy-slides/page.html` with `DIR/slides.json` and `DIR/shots/` beside it, to
+   the same page as before, so his saved edits stay.
+4. **Apply a batch.** Export the page's `edits` and `screens` collections into a folder, then run
+   `apply.py EXPORT` to see what changes and `apply.py EXPORT --write` to make them. His words go in
+   and their chunks become `HUMAN REVIEWED, UNVERIFIED`, as do the chunks of every screen he marked
+   done. Removals and notes are listed for doing by hand. Then drop the finished screens, rebuild, and
+   sweep for any screen the slideshow is missing.
+
+<!-- COPY END 20da20a2 -->
+
 <!-- COPY BEGIN 44ff8f19 [NEEDS HUMAN REVIEW] -->
 
 ## Tools in a debug build

@@ -76,3 +76,17 @@ public struct WaitingOnView: View {
         // COPY END f8ad89a0
     }
 }
+
+#if DEBUG
+    #Preview("Waiting on") {
+        NavigationStack {
+            WaitingOnView(
+                roomName: "Hangar 7",
+                people: [
+                    WaitingOnPerson(member: Fixtures.camilla, holding: .missing(3), lastHeard: Fixtures.now),
+                    WaitingOnPerson(member: Fixtures.cassilda, holding: .notCheckedYet, lastHeard: nil),
+                ])
+        }
+        .themed(.default)
+    }
+#endif
