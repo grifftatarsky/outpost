@@ -133,7 +133,7 @@ public enum SyncEngine {
         var addressed: [RecipientTag: [Data]] = [:]
         for issued in granting {
             addressed[issued.to.outgoingTag(window: window), default: []].append(
-                try JSONEncoder().encode(issued.grant))
+                try issued.to.secret.wrap(try JSONEncoder().encode(issued.grant), context: grantContext(id: id)))
         }
 
         return SyncPacket(
@@ -156,8 +156,9 @@ public enum SyncEngine {
             throw SyncError.packetUnreadable
         }
 
-        let grants = (packet.grants[tag] ?? []).compactMap {
-            try? JSONDecoder().decode(EpochGrant.self, from: $0)
+        let grants = (packet.grants[tag] ?? []).compactMap { sealed in
+            (try? peer.secret.unwrap(sealed, context: grantContext(id: packet.id)))
+                .flatMap { try? JSONDecoder().decode(EpochGrant.self, from: $0) }
         }
 
         let body = try JSONDecoder().decode(Body.self, from: plaintext)
@@ -166,6 +167,11 @@ public enum SyncEngine {
             revocations: body.revocations, grants: grants, requests: body.requests,
             answers: body.answers, identities: body.identities, notifyWalls: body.notifyWalls,
             confirmations: body.confirmations)
+    }
+
+    private static func grantContext(id: PacketID) -> Data {
+        CanonicalBytes.payload(
+            domain: Domain.grantEnvelope, fields: [withUnsafeBytes(of: id.rawValue.uuid) { Data($0) }])
     }
 
     private static func wrapContext(id: PacketID) -> Data {

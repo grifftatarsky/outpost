@@ -35,7 +35,9 @@ struct WhoCanSendYouAKeyTests {
         let takerID = try #require(taker.enrolment?.identity.id)
         let grant = try EpochGrant.issue(
             EpochSecret.random(), at: epoch, in: room, link: nil,
-            to: try #require(giver.pairwiseSecret(with: takerID)))
+            to: try #require(giver.pairwiseSecret(with: takerID)),
+            devices: giver.deviceRecipients(of: takerID)
+        ).signed(by: try #require(giver.enrolment?.device), from: giverID, to: takerID)
         return (grant, Peer(secret: try #require(taker.pairwiseSecret(with: giverID)), them: giverID, me: takerID))
     }
 
@@ -48,7 +50,7 @@ struct WhoCanSendYouAKeyTests {
         let highest = try #require(alice.chains[room]?.highestKnownEpoch)
 
         let (grant, from) = try newKey(sentBy: bob, to: alice, in: room, at: highest.next)
-        try await alice.adopt(grant, from: from)
+        try await alice.adopt(grant, from: from, storedAt: .distantFuture)
 
         #expect(
             alice.chains[room]?.highestKnownEpoch == highest,
@@ -65,7 +67,7 @@ struct WhoCanSendYouAKeyTests {
         let highest = try #require(alice.chains[room]?.highestKnownEpoch)
 
         let (grant, from) = try newKey(sentBy: bob, to: alice, in: room, at: highest.next)
-        try await alice.adopt(grant, from: from)
+        try await alice.adopt(grant, from: from, storedAt: .distantFuture)
 
         #expect(alice.chains[room]?.highestKnownEpoch == highest.next)
     }
@@ -79,7 +81,7 @@ struct WhoCanSendYouAKeyTests {
         let highest = try #require(alice.chains[wall]?.highestKnownEpoch)
 
         let (grant, from) = try newKey(sentBy: bob, to: alice, in: wall, at: highest.next)
-        try await alice.adopt(grant, from: from)
+        try await alice.adopt(grant, from: from, storedAt: .distantFuture)
 
         #expect(
             alice.chains[wall]?.highestKnownEpoch == highest,
@@ -98,7 +100,7 @@ struct WhoCanSendYouAKeyTests {
         let wall = alice.outpostRoom(for: carolKeys.participantID)
 
         let (grant, from) = try newKey(sentBy: bob, to: alice, in: wall, at: .initial)
-        try await alice.adopt(grant, from: from)
+        try await alice.adopt(grant, from: from, storedAt: .distantFuture)
 
         #expect(alice.chains[wall] == nil, "a key to Carol's Outpost was accepted from Bob")
     }
@@ -110,7 +112,7 @@ struct WhoCanSendYouAKeyTests {
         let held = try #require(try alice.chains[room]?.secret(for: highest))
 
         let (grant, from) = try newKey(sentBy: bob, to: alice, in: room, at: highest)
-        try await alice.adopt(grant, from: from)
+        try await alice.adopt(grant, from: from, storedAt: .distantFuture)
 
         #expect(
             try alice.chains[room]?.secret(for: highest) == held,

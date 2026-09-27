@@ -272,8 +272,8 @@ Read these before touching sync. Every one cost real time.
   refused, an Outpost's key is taken only from its owner, and a key never replaces one already held
   (`WhoCanSendYouAKeyTests`); what a device that cannot read the room yet should trust is an open
   question.
-- **Anything addressed to a person reaches every device that holds their identity key.** The identity
-  key is in iCloud Keychain, so that includes a device the member removed. Room keys are sealed to
+- **Anything addressed to a person reaches every device that holds their identity key.** Every approved
+  device holds the identity key, and a device the member removed keeps it. Room keys are sealed to
   each device that is not removed (`DeviceSeal`), and a removed device erases itself when it hears.
   Anything new that goes to a member has to be sealed the same way, or removing a device stops
   meaning anything (`PerDeviceKeysTests`, `WhatRemovingADeviceCutsOffTests`).
@@ -286,6 +286,14 @@ Read these before touching sync. Every one cost real time.
   needs the same: a stored time from iCloud, never a date the author chose
   (`WritingOldDatesIntoICloudTests`). And never mix a device's clock with iCloud's unguarded: a
   device times its own new event after everything it has seen, then takes iCloud's time.
+- **The identity proves the person, never the device.** Every device a member approved holds the
+  identity, and a device they removed keeps it. So anything wrapped or sealed only with a key that
+  comes from the identity (the pairwise secret, the sibling feed key) can be written by a removed
+  device. Until 2026-09-27 that included room-key hand-offs and the records a member's devices write
+  for each other, so a removed device could hand a friend a room key it made up and read everything
+  said after. Anything that hands over a key, or changes what a device holds or does, must be signed
+  by a device and checked against that person's registry at the time iCloud stored it
+  (`EpochGrant.isSigned`, `siblingTrust`, `ForgingAKeyTests`).
 - **A second device in a test has to be approved, the way a real one does.** `InMemoryKeychainStore`
   keeps device-only items per device and shares only synchronized ones, through `sibling()`, like
   iCloud Keychain. A test that hands two sessions one keychain, or removes the device key to fake a

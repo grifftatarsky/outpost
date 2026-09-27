@@ -118,7 +118,8 @@ extension AppSession {
                 name: SiblingRecord.Name(writer: enrolment.device.id, kind: kind),
                 sealed: try await SealedSiblingFeed.sealInBackground(
                     feed, for: enrolment.identity, on: enrolment.device.id, as: kind,
-                    to: [DeviceRecipient(device: restored, agreementKey: agreementKey)]))
+                    to: [DeviceRecipient(device: restored, agreementKey: agreementKey)],
+                    signedBy: enrolment.device))
             try await deviceSync.send([record], deleting: [])
             Diagnostics.identity.notice(
                 "removal: the recovery key removed this device; left what it wrote for the restored one")

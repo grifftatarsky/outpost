@@ -172,8 +172,8 @@ extension AppSession {
             }
         }
 
-        for grant in received.grantsReceived {
-            try await adopt(grant, from: peer)
+        for received in received.grantsReceived {
+            try await adopt(received.grant, from: peer, storedAt: received.storedAt)
         }
 
         let owed = entriesNotWrittenDown + received.integrated

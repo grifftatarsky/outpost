@@ -133,7 +133,8 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
 
     public static func seal(
         _ feed: SiblingFeed, for identity: Identity, on device: DeviceID,
-        as kind: SiblingRecord.Kind = .state, to recipients: [DeviceRecipient] = []
+        as kind: SiblingRecord.Kind = .state, to recipients: [DeviceRecipient] = [],
+        signedBy signer: DeviceKeys? = nil
     ) throws -> SealedSiblingFeed {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
@@ -141,23 +142,53 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
         let inner = try ChaChaPoly.seal(
             try encoder.encode(feed), using: key(for: identity), authenticating: context
         ).combined
-        guard !recipients.isEmpty else { return SealedSiblingFeed(ciphertext: inner) }
-
-        let content = SymmetricKey(size: .bits256)
-        let envelope = Envelope(
-            seals: try recipients.map {
-                try DeviceSeal.seal(content.withUnsafeBytes { Data($0) }, to: $0, context: context)
-            },
-            box: try ChaChaPoly.seal(inner, using: content, authenticating: context).combined)
-        return SealedSiblingFeed(ciphertext: Self.envelopeMark + (try encoder.encode(envelope)))
+        var body = inner
+        if !recipients.isEmpty {
+            let content = SymmetricKey(size: .bits256)
+            let envelope = Envelope(
+                seals: try recipients.map {
+                    try DeviceSeal.seal(content.withUnsafeBytes { Data($0) }, to: $0, context: context)
+                },
+                box: try ChaChaPoly.seal(inner, using: content, authenticating: context).combined)
+            body = Self.envelopeMark + (try encoder.encode(envelope))
+        }
+        guard let signer else { return SealedSiblingFeed(ciphertext: body) }
+        guard signer.id == device else { throw CryptoError.deviceMismatch }
+        let signature = try signer.sign(signed(context: context, body: body))
+        return SealedSiblingFeed(ciphertext: Self.signedMark + signature + body)
     }
 
     @concurrent
     public static func sealInBackground(
         _ feed: SiblingFeed, for identity: Identity, on device: DeviceID,
-        as kind: SiblingRecord.Kind = .state, to recipients: [DeviceRecipient] = []
+        as kind: SiblingRecord.Kind = .state, to recipients: [DeviceRecipient] = [],
+        signedBy signer: DeviceKeys? = nil
     ) async throws -> SealedSiblingFeed {
-        try seal(feed, for: identity, on: device, as: kind, to: recipients)
+        try seal(feed, for: identity, on: device, as: kind, to: recipients, signedBy: signer)
+    }
+
+    private static let signedMark = Data("carpenter.signed.v1\n".utf8)
+    private static let signatureLength = 64
+
+    private static func signed(context: Data, body: Data) -> Data {
+        CanonicalBytes.payload(domain: Domain.siblingSignature, fields: [context, body])
+    }
+
+    private var signedParts: (signature: Data, body: Data)? {
+        guard ciphertext.starts(with: Self.signedMark),
+            ciphertext.count >= Self.signedMark.count + Self.signatureLength
+        else { return nil }
+        let rest = ciphertext.dropFirst(Self.signedMark.count)
+        return (Data(rest.prefix(Self.signatureLength)), Data(rest.dropFirst(Self.signatureLength)))
+    }
+
+    public func isSigned(
+        by writerKey: Data, member: ParticipantID, device: DeviceID, as kind: SiblingRecord.Kind
+    ) -> Bool {
+        guard let parts = signedParts else { return false }
+        let context = Self.context(member: member, device: device, kind: kind)
+        return (try? DeviceKeys.isValidSignature(
+            parts.signature, for: Self.signed(context: context, body: parts.body), publicKey: writerKey)) == true
     }
 
     @concurrent
@@ -173,11 +204,12 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
         reading reader: DeviceKeys? = nil
     ) throws -> SiblingFeed {
         let context = Self.context(member: identity.id, device: device, kind: kind)
-        var inner = ciphertext
-        if ciphertext.starts(with: Self.envelopeMark) {
+        let body = signedParts?.body ?? ciphertext
+        var inner = body
+        if body.starts(with: Self.envelopeMark) {
             guard
                 let envelope = try? JSONDecoder().decode(
-                    Envelope.self, from: ciphertext.dropFirst(Self.envelopeMark.count))
+                    Envelope.self, from: body.dropFirst(Self.envelopeMark.count))
             else { throw CryptoError.openFailed }
             guard let reader, let seal = envelope.seals.first(where: { $0.device == reader.id }) else {
                 throw CryptoError.notSealedForThisDevice

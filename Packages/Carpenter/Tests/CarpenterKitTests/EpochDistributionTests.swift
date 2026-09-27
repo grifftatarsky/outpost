@@ -15,6 +15,12 @@ struct EpochDistributionTests {
         return (a, b, secret)
     }
 
+    private let device = DeviceKeys.generate()
+
+    private func to(_ devices: DeviceKeys...) -> [DeviceRecipient] {
+        devices.map { DeviceRecipient(device: $0.id, agreementKey: $0.agreementPublicKey) }
+    }
+
     @Test("A grant opens under the pairwise secret it was issued to")
     func grantRoundTrip() throws {
         let room = RoomID()
@@ -23,11 +29,23 @@ struct EpochDistributionTests {
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
 
         let grant = try EpochGrant.issue(
-            advanced.secret, at: .initial.next, link: advanced.link, to: shared)
+            advanced.secret, at: .initial.next, in: room, link: advanced.link, to: shared, devices: to(device))
 
-        #expect(try grant.open(with: shared) == advanced.secret)
+        #expect(try grant.open(with: shared, as: device) == advanced.secret)
         #expect(grant.room == room)
         #expect(grant.epoch == .initial.next)
+        #expect(throws: CryptoError.notSealedForThisDevice) { try grant.open(with: shared, as: DeviceKeys.generate()) }
+        #expect(throws: CryptoError.notSealedForThisDevice) { try grant.open(with: shared) }
+    }
+
+    @Test("A key handed over without being sealed to a device is refused, even by the right person")
+    func anUnsealedGrantIsRefused() throws {
+        let room = RoomID()
+        let (_, _, shared) = try pair()
+        let (_, founding) = EpochChain.create(room: room)
+        let unsealed = try EpochGrant.issue(founding, at: .initial, in: room, link: nil, to: shared)
+        #expect(unsealed.sealedFor.isEmpty)
+        #expect(throws: CryptoError.notSealedForThisDevice) { try unsealed.open(with: shared, as: device) }
     }
 
     @Test("A grant issued to one member does not open for another")
@@ -39,10 +57,12 @@ struct EpochDistributionTests {
 
         let (_, founding) = EpochChain.create(room: room)
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
+        let carolsDevice = DeviceKeys.generate()
         let grant = try EpochGrant.issue(
-            advanced.secret, at: .initial.next, link: advanced.link, to: toBob)
+            advanced.secret, at: .initial.next, in: room, link: advanced.link, to: toBob,
+            devices: to(device, carolsDevice))
 
-        #expect(throws: CryptoError.openFailed) { try grant.open(with: toCarol) }
+        #expect(throws: CryptoError.openFailed) { try grant.open(with: toCarol, as: carolsDevice) }
     }
 
     @Test("One grant walks a joiner back through every earlier epoch")
@@ -69,9 +89,10 @@ struct EpochDistributionTests {
             try author.record(advanced.link)
         }
 
-        let grant = try EpochGrant.issue(current, at: epoch, link: published[epoch]!, to: shared)
+        let grant = try EpochGrant.issue(
+            current, at: epoch, in: room, link: published[epoch]!, to: shared, devices: to(device))
         var joiner = EpochChain(room: room)
-        try joiner.adopt(grant, using: shared)
+        try joiner.adopt(grant, using: shared, as: device)
 
         var cursor = epoch
         while let step = cursor.previous {
@@ -119,10 +140,10 @@ struct EpochDistributionTests {
         let (_, founding) = EpochChain.create(room: room)
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
         let grant = try EpochGrant.issue(
-            advanced.secret, at: .initial.next, link: advanced.link, to: shared)
+            advanced.secret, at: .initial.next, in: room, link: advanced.link, to: shared, devices: to(device))
 
         var elsewhere = EpochChain(room: RoomID())
-        #expect(throws: (any Error).self) { try elsewhere.adopt(grant, using: shared) }
+        #expect(throws: (any Error).self) { try elsewhere.adopt(grant, using: shared, as: device) }
         #expect(elsewhere.knownEpochs.isEmpty)
     }
 
@@ -136,16 +157,18 @@ struct EpochDistributionTests {
         let (_, founding) = EpochChain.create(room: room)
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
         let grant = try EpochGrant.issue(
-            advanced.secret, at: .initial.next, link: advanced.link, to: shared)
+            advanced.secret, at: .initial.next, in: room, link: advanced.link, to: shared, devices: to(device))
 
         let relabelled = EpochGrant(
             room: moveRoom ? RoomID() : grant.room,
             epoch: moveRoom ? grant.epoch : grant.epoch.next,
             link: grant.link,
-            wrapped: grant.wrapped
+            wrapped: grant.wrapped,
+            sealedFor: grant.sealedFor
         )
 
-        #expect(throws: CryptoError.openFailed) { try relabelled.open(with: shared) }
+        #expect(throws: (any Error).self) { try relabelled.open(with: shared, as: device) }
+        #expect(try grant.open(with: shared, as: device) == advanced.secret)
     }
 
     // MARK: Distribution through the packet
@@ -164,8 +187,9 @@ struct EpochDistributionTests {
         let entry = try author.append(try Payload.post("evening"), at: start, room: room)
 
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
+        let bobsDevice = DeviceKeys.generate()
         let grant = try EpochGrant.issue(
-            advanced.secret, at: .initial.next, link: advanced.link, to: toBob)
+            advanced.secret, at: .initial.next, in: room, link: advanced.link, to: toBob, devices: to(bobsDevice))
 
         let bobFromAlice = Peer(secret: toBob, them: bob.id, me: alice.id)
         let carolFromAlice = Peer(secret: toCarol, them: carol.id, me: alice.id)
@@ -178,7 +202,10 @@ struct EpochDistributionTests {
 
         let asBob = try SyncEngine.unpack(packet, as: aliceFromBob, window: 0)
         #expect(asBob.entries.count == 1)
-        #expect(try asBob.grants.first?.open(with: toBob) == advanced.secret)
+        #expect(try asBob.grants.first?.open(with: toBob, as: bobsDevice) == advanced.secret)
+        #expect(
+            !packet.grants.values.flatMap { $0 }.contains { String(decoding: $0, as: UTF8.self).contains(room.rawValue.uuidString) },
+            "a grant travelled with its room in the clear")
 
         let asCarol = try SyncEngine.unpack(packet, as: aliceFromCarol, window: 0)
         #expect(asCarol.entries.count == 1)
@@ -200,10 +227,11 @@ struct EpochDistributionTests {
         let firstAdvanced = try EpochChain.advance(from: firstFounding, at: .initial, room: first)
         let secondAdvanced = try EpochChain.advance(from: secondFounding, at: .initial, room: second)
         let toFirst = try EpochGrant.issue(
-            firstAdvanced.secret, at: .initial.next, in: first, link: firstAdvanced.link, to: toBob)
+            firstAdvanced.secret, at: .initial.next, in: first, link: firstAdvanced.link, to: toBob,
+            devices: to(device))
         let toSecond = try EpochGrant.issue(
             secondAdvanced.secret, at: .initial.next, in: second, link: secondAdvanced.link,
-            to: toBob)
+            to: toBob, devices: to(device))
 
         let packet = try SyncEngine.pack(
             [], for: [bobFromAlice],
@@ -214,7 +242,7 @@ struct EpochDistributionTests {
         let opened = try SyncEngine.unpack(carried, as: aliceFromBob, window: 0)
 
         #expect(opened.grants.count == 2, "one of the two keys was dropped in the packet")
-        let secrets = try opened.grants.map { try $0.open(with: toBob) }
+        let secrets = try opened.grants.map { try $0.open(with: toBob, as: device) }
         #expect(Set(opened.grants.map(\.room)) == [first, second])
         #expect(Set(secrets) == Set([firstAdvanced.secret, secondAdvanced.secret]))
     }

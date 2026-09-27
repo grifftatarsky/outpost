@@ -12,6 +12,9 @@ public struct EpochGrant: Hashable, Sendable, Codable {
 
     public let sealedFor: [DeviceSeal]
 
+    public private(set) var grantedBy: DeviceID?
+    public private(set) var signature: Data?
+
     init(
         room: RoomID, epoch: EpochNumber, link: EpochLink?, links: [EpochLink] = [], wrapped: Data,
         sealedFor: [DeviceSeal] = []
@@ -24,7 +27,9 @@ public struct EpochGrant: Hashable, Sendable, Codable {
         self.sealedFor = sealedFor
     }
 
-    private enum CodingKeys: String, CodingKey { case room, epoch, link, links, wrapped, sealedFor }
+    private enum CodingKeys: String, CodingKey {
+        case room, epoch, link, links, wrapped, sealedFor, grantedBy, signature
+    }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -34,6 +39,8 @@ public struct EpochGrant: Hashable, Sendable, Codable {
         links = try container.decodeIfPresent([EpochLink].self, forKey: .links) ?? []
         wrapped = try container.decode(Data.self, forKey: .wrapped)
         sealedFor = try container.decodeIfPresent([DeviceSeal].self, forKey: .sealedFor) ?? []
+        grantedBy = try container.decodeIfPresent(DeviceID.self, forKey: .grantedBy)
+        signature = try container.decodeIfPresent(Data.self, forKey: .signature)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -44,6 +51,44 @@ public struct EpochGrant: Hashable, Sendable, Codable {
         try container.encode(links, forKey: .links)
         try container.encode(wrapped, forKey: .wrapped)
         if !sealedFor.isEmpty { try container.encode(sealedFor, forKey: .sealedFor) }
+        try container.encodeIfPresent(grantedBy, forKey: .grantedBy)
+        try container.encodeIfPresent(signature, forKey: .signature)
+    }
+
+    func signingPayload(from granter: ParticipantID, to recipient: ParticipantID, by device: DeviceID) -> Data {
+        func link(_ link: EpochLink) -> Data {
+            CanonicalBytes.payload(
+                domain: Domain.epochLink, fields: [link.room.canonicalBytes, link.epoch.canonicalBytes, link.wrapped])
+        }
+        var fields = [
+            granter.rawValue, recipient.rawValue, device.rawValue, room.canonicalBytes, epoch.canonicalBytes,
+            wrapped, self.link.map(link) ?? Data(), CanonicalBytes.sequence(UInt64(links.count)),
+        ]
+        fields += links.map(link)
+        fields.append(CanonicalBytes.sequence(UInt64(sealedFor.count)))
+        fields += sealedFor.map {
+            CanonicalBytes.payload(domain: Domain.deviceSeal, fields: [$0.device.rawValue, $0.ephemeral, $0.sealed])
+        }
+        return CanonicalBytes.payload(domain: Domain.epochGrantSignature, fields: fields)
+    }
+
+    public func signed(by device: DeviceKeys, from granter: ParticipantID, to recipient: ParticipantID) throws
+        -> EpochGrant
+    {
+        var grant = self
+        grant.grantedBy = device.id
+        grant.signature = try device.sign(signingPayload(from: granter, to: recipient, by: device.id))
+        return grant
+    }
+
+    public func isSigned(
+        from granter: ParticipantID, to recipient: ParticipantID, by registry: DeviceRegistry, storedAt: Date
+    ) -> Bool {
+        guard let grantedBy, let signature, !sealedFor.isEmpty, registry.counts(grantedBy, storedAt: storedAt),
+            let key = registry.signingKey(for: grantedBy)
+        else { return false }
+        return (try? DeviceKeys.isValidSignature(
+            signature, for: signingPayload(from: granter, to: recipient, by: grantedBy), publicKey: key)) == true
     }
 
     public static func issue(
@@ -70,9 +115,6 @@ public struct EpochGrant: Hashable, Sendable, Codable {
 
     public func open(with peer: PairwiseSecret, as device: DeviceKeys? = nil) throws -> EpochSecret {
         let context = Self.context(room: room, epoch: epoch)
-        if sealedFor.isEmpty {
-            return EpochSecret(material: try peer.unwrap(wrapped, context: context))
-        }
         guard let device, let seal = sealedFor.first(where: { $0.device == device.id }) else {
             throw CryptoError.notSealedForThisDevice
         }

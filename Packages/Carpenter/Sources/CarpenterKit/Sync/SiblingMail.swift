@@ -14,10 +14,12 @@ public struct SiblingCursor: Hashable, Sendable, Codable {
 public struct ForwardedGrant: Hashable, Sendable, Codable {
     public let from: ParticipantID
     public let grant: EpochGrant
+    public let storedAt: Date?
 
-    public init(from: ParticipantID, grant: EpochGrant) {
+    public init(from: ParticipantID, grant: EpochGrant, storedAt: Date? = nil) {
         self.from = from
         self.grant = grant
+        self.storedAt = storedAt
     }
 }
 

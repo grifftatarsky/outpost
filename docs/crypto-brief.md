@@ -363,12 +363,28 @@ wrapped: try peer.wrap(secret.material, context: Self.context(room: room, epoch:
 `adopt` refuses a grant for the wrong room before opening it. The filter on `links` is the access
 boundary in code form — whatever is left out of that array is history the recipient cannot reach.
 
-When every device of the recipient that is not removed has a receiving key, the pairwise-wrapped
-secret is sealed again to each of them (`DeviceSeal`: a fresh X25519 key, HKDF-SHA256, ChaChaPoly,
-with the room, epoch and device bound in) and the plain pairwise copy is left empty. Opening needs
-the pairwise secret and the device key, so a removed device, which still has the identity, gets
-nothing. A device that finds a grant sealed only for its siblings passes it on to them
-(`ForwardedGrant`).
+The pairwise-wrapped secret is sealed again to each of the recipient's devices that counts and has a
+receiving key (`DeviceSeal`: a fresh X25519 key, HKDF-SHA256, ChaChaPoly, with the room, epoch and
+device bound in), and the plain pairwise copy is left empty. Opening needs the pairwise secret and the
+device key, so a removed device, which still has the identity, gets nothing. A grant with no device
+seals is never sent and is refused if one arrives (since 2026-09-27; until then a recipient with one
+device lacking a receiving key got a copy anybody with the identity could open). A device that finds
+a grant sealed only for its siblings passes it on to them (`ForwardedGrant`).
+
+**A grant is signed by the device that sent it** (since 2026-09-27). Until then nothing in a grant
+said which device sent it: it was only wrapped under the pairwise secret, which comes from the
+identity, so a removed device, which keeps the identity and the old room keys, could write a newer
+room key "from" its member to any friend, or "from" a friend to its member, into any zone its Apple
+Account can write to. The friend took it as the room's newest key and everything written afterwards
+was readable by the removed device. Now the sending device signs the grant over both people, itself,
+the room, the epoch and every sealed copy (`EpochGrant.signed`), and the recipient takes it only if
+that device counted in the sender's registry when iCloud stored the packet
+(`EpochGrant.isSigned`, `ARemovedDeviceCannotHandOutKeysTests`). What it does not stop: a friend who
+has not yet heard of the removal still takes a key the removed device signs; a removed device still
+signed in to the Apple Account can delay the news by deleting records.
+
+Grants also travel sealed to their recipient under the pairwise secret now; before, each grant sat
+in the packet record as JSON with its room and epoch in the clear.
 
 **Known weakness, named.** A grant's `links` array is the *only* thing standing between a reader and
 the whole room. It is a list somebody has to get right, in a filter, in one place. There is no
@@ -693,8 +709,19 @@ nothing else can.
 
 Mail and catch-ups, which carry room keys, are sealed a second time around that: a random content
 key, sealed to each of the member's devices that is not removed with `DeviceSeal`. The small state
-record, which carries certificates, revocations and settings, is sealed under the identity only, so
-a new device can be read before anybody knows its receiving key.
+record, which carries certificates, revocations and the member's people, is sealed under the identity
+only, so a new device can be read before anybody knows its receiving key.
+
+**Every one of these records is signed by the device that wrote it** (since 2026-09-27). The record's
+name says which device wrote it, and until then nothing proved it: anybody with the identity,
+including a removed device, could write a record in another device's name carrying room keys,
+forwarded keys or settings ("rooms deleted" among them), and the member's other devices took it.
+Now the writer signs the record over its name and sealed bytes, and carries its certificates. A
+record counts in full only if its writer counted when iCloud stored it. From a device that no longer
+counts, a record gives people and entries, which verify on their own, and nothing else; the one
+exception is a device the recovery key removed handing its writing and room keys to the restored
+device, which then gives each room a new key before writing
+(`ARemovedDeviceCannotWriteToSiblingsTests`).
 
 **Named because a reviewer will ask:** this uses an Ed25519 *seed* as HKDF input keying material, and
 key separation orthodoxy says do not use a signing key for anything but signing. It is safe here —

@@ -73,7 +73,17 @@ public struct SyncReport: Hashable, Sendable {
 
     public var bellsRung: Int = 0
 
-    public var grantsReceived: [EpochGrant] = []
+    public struct ReceivedGrant: Hashable, Sendable {
+        public let grant: EpochGrant
+        public let storedAt: Date
+
+        public init(grant: EpochGrant, storedAt: Date) {
+            self.grant = grant
+            self.storedAt = storedAt
+        }
+    }
+
+    public var grantsReceived: [ReceivedGrant] = []
 
     public var repairRequests: [RepairRequest] = []
     public var repairAnswers: [RepairAnswer] = []
@@ -345,7 +355,8 @@ public struct SyncSession: Sendable {
 
         for packet in collected.packets {
             let delivery = packet.delivery
-            report.grantsReceived.append(contentsOf: delivery.grants)
+            report.grantsReceived.append(
+                contentsOf: delivery.grants.map { SyncReport.ReceivedGrant(grant: $0, storedAt: packet.storedAt) })
             report.repairRequests.append(contentsOf: delivery.requests)
             report.repairAnswers.append(contentsOf: delivery.answers)
             if let wishes = delivery.notifyWalls { report.notifyWalls = wishes }

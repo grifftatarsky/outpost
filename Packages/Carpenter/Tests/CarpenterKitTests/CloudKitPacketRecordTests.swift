@@ -16,7 +16,10 @@ struct CloudKitPacketRecordTests {
 
         let room = RoomID()
         let (_, secret) = EpochChain.create(room: room)
-        let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: toBob)
+        let bobsDevice = DeviceKeys.generate()
+        let grant = try EpochGrant.issue(
+            secret, at: .initial, in: room, link: nil, to: toBob,
+            devices: [DeviceRecipient(device: bobsDevice.id, agreementKey: bobsDevice.agreementPublicKey)])
 
         let packet = try SyncEngine.pack(
             [], for: [peerToBob], granting: [(to: peerToBob, grant: grant)], window: 0)
@@ -34,6 +37,6 @@ struct CloudKitPacketRecordTests {
         let bobPeer = Peer(secret: toBob, them: alice.id, me: bob.id)
         let delivery = try SyncEngine.unpack(restored, as: bobPeer, window: 0)
         #expect(delivery.grants.count == 1)
-        #expect(try delivery.grants.first?.open(with: toBob) == secret)
+        #expect(try delivery.grants.first?.open(with: toBob, as: bobsDevice) == secret)
     }
 }

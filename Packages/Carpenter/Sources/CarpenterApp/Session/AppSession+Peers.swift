@@ -108,7 +108,8 @@ extension AppSession {
                         to: Peer(secret: pairwise, them: target, me: enrolment.identity.id),
                         grant: try EpochGrant.issue(
                             secret, at: epoch, in: room, link: link, links: links, to: pairwise,
-                            devices: devices),
+                            devices: devices
+                        ).signed(by: enrolment.device, from: enrolment.identity.id, to: target),
                         receipt: receipt
                     ))
             }
@@ -140,7 +141,14 @@ extension AppSession {
         return replica.knownParticipants.first { outpostRoom(for: $0) == room }
     }
 
-    func adopt(_ grant: EpochGrant, from peer: Peer) async throws {
+    func adopt(_ grant: EpochGrant, from peer: Peer, storedAt: Date) async throws {
+        guard let registry = replica.registry(for: peer.them),
+            grant.isSigned(from: peer.them, to: peer.me, by: registry, storedAt: storedAt)
+        else {
+            Diagnostics.sync.error(
+                "adopt: refused a room key that no device of its sender signed while that device counted")
+            return
+        }
         guard !replica.closedRooms.contains(grant.room) else {
             Diagnostics.sync.notice("adopt: refused a key for a conversation this member deleted")
             return
@@ -159,7 +167,7 @@ extension AppSession {
         do {
             try chain.adopt(grant, using: peer.secret, as: enrolment?.device)
         } catch CryptoError.notSealedForThisDevice {
-            persisted.siblingMail.forward(ForwardedGrant(from: peer.them, grant: grant))
+            persisted.siblingMail.forward(ForwardedGrant(from: peer.them, grant: grant, storedAt: storedAt))
             Diagnostics.sync.notice(
                 "adopt: a room key was sealed for this member's other devices, not this one; passing it on")
             sendOwnEntries()
