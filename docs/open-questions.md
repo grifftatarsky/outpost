@@ -51,25 +51,6 @@ already does. Recommended, together with the agreement key question above.
 
 <!-- COPY END 812d73ea -->
 
-<!-- COPY BEGIN a1b7bf09 [NEEDS HUMAN REVIEW] -->
-
-### Should packets be compressed before they are sealed?
-
-Raised 2026-09-27, from your question. Nothing is compressed today. Measured on sixty short messages
-in one room: the entries as a packet carries them, before sealing, are 51.6 KB of JSON; compressed,
-18 KB (65% less); in a binary encoding without compression, 26 KB (49% less). A whole packet also
-carries keys and certificates, which were not in the measurement. Photos and clips gain nothing;
-they are compressed already.
-
-Two costs. A body that expands when opened needs a hard cap, or one packet from a hostile peer that
-opens to gigabytes stops the app on every launch, and a cap needs Apple's Compression framework,
-which the kit keeps out; it would sit behind a seam like the rest. And size says a little about what
-is inside, so the compressed size would be rounded up to fixed steps. Recommended: compress with a cap
-and rounding, behind a seam, after TestFlight's first build; or the binary encoding now, which has
-neither cost and gets most of the saving.
-
-<!-- COPY END a1b7bf09 -->
-
 <!-- COPY BEGIN 23557077 [NEEDS HUMAN REVIEW] -->
 
 ### Should the app lock hide notification words, and should it encrypt what is stored?

@@ -305,6 +305,15 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
         order.removeAll { $0 == id }
     }
 
+    public func storedCiphertextBytes(of packets: [PacketID]) throws -> Int {
+        packets.reduce(0) { total, id in
+            guard let fields = stored[id]?.fields, case .data(let body)? = fields[PacketWire.ciphertext] else {
+                return total
+            }
+            return total + body.count
+        }
+    }
+
     public func tamper(packet id: PacketID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
         guard var entry = stored[id] else { return }
         change(&entry.fields)

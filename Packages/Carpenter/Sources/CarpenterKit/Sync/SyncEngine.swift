@@ -121,7 +121,7 @@ public enum SyncEngine {
             requests: requests, answers: answers, identities: identities,
             notifyWalls: notifyWalls, confirmations: confirmations)
         let sealed = try ChaChaPoly.seal(
-            try JSONEncoder().encode(body), using: contentKey, authenticating: context)
+            Compressed.pack(try JSONEncoder().encode(body)), using: contentKey, authenticating: context)
 
         var wraps: [RecipientTag: Data] = [:]
         for peer in peers {
@@ -161,7 +161,7 @@ public enum SyncEngine {
                 .flatMap { try? JSONDecoder().decode(EpochGrant.self, from: $0) }
         }
 
-        let body = try JSONDecoder().decode(Body.self, from: plaintext)
+        let body = try JSONDecoder().decode(Body.self, from: try Compressed.unpack(plaintext))
         return Delivery(
             entries: body.entries, certificates: body.certificates,
             revocations: body.revocations, grants: grants, requests: body.requests,

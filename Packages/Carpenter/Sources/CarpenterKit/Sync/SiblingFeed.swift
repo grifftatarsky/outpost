@@ -140,7 +140,7 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
         encoder.outputFormatting = .sortedKeys
         let context = context(member: identity.id, device: device, kind: kind)
         let inner = try ChaChaPoly.seal(
-            try encoder.encode(feed), using: key(for: identity), authenticating: context
+            Compressed.pack(try encoder.encode(feed)), using: key(for: identity), authenticating: context
         ).combined
         var body = inner
         if !recipients.isEmpty {
@@ -226,7 +226,7 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
         else {
             throw CryptoError.openFailed
         }
-        return try JSONDecoder().decode(SiblingFeed.self, from: plaintext)
+        return try JSONDecoder().decode(SiblingFeed.self, from: try Compressed.unpack(plaintext))
     }
 
     private struct Envelope: Codable {

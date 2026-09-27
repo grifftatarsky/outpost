@@ -2812,6 +2812,33 @@ one account have not run it either, which needs two phones.
 
 <!-- COPY END 8d81c4df -->
 
+<!-- COPY BEGIN e08d32a1 [NEEDS HUMAN REVIEW] -->
+
+### What goes to iCloud is compressed before it is sealed
+
+**RULED 2026-09-27 by Griff.** "Let's do compression, best practice for Swift out of box with balanced
+compression." And later: "I'd like real compression now, why not."
+
+A packet's body and every record between a member's devices are compressed with LZFSE, Apple's own
+balanced algorithm, before they are sealed; photos and clips are left alone because they are
+compressed already. Measured in the package: sixty short messages in one room went out as 18.8 KB of
+sealed bytes against 51.5 KB of entries as JSON, 63% less (`CompressionTests`). A body that would not
+get smaller is sent as it is, and one written before compression still opens.
+
+**The cap.** Compressed data can claim to be small and open to something huge. Somebody you talk to
+could seal a packet of a few kilobytes that opens to gigabytes; your phone would try to open it on
+every round, run out of memory and close, again on every launch, because the packet waits in their
+outbox. So a compressed body carries the size it opens to, nothing over 32 MB is opened, and
+anything that opens to more than it claimed is refused before it can grow (`bombsAreRefused`).
+
+**Why not a smaller packet size.** Packets are still cut at 700 KB of JSON. The words inside are
+sealed before the packet is, and sealed words hardly compress, so cutting by compressed size could
+make a packet of long messages go past iCloud's one-megabyte record.
+
+**Not measured:** the saving on a real account, which waits for the rig.
+
+<!-- COPY END e08d32a1 -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts
