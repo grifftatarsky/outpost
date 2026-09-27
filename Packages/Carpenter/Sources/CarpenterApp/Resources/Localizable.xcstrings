@@ -19,8 +19,8 @@
     "That code came from a device that is already set up, so there is nothing to add." : {
       "comment" : "The pasted offer carries no device subkey"
     },
-    "That device is out. ^[%lld conversation](inflect: true) has not turned its key yet, so it can still read what is said there until something does." : {
-      "comment" : "A device was revoked but some rooms did not turn their key"
+    "That device is out, but the key for ^[%lld conversation](inflect: true) has not been rotated yet, so the device can still read new messages there until it is." : {
+      "comment" : "A device was revoked but some rooms' keys were not rotated"
     },
     "That does not read as an invitation. Ask them to send it again — a code picks up stray characters easily." : {
       "comment" : "The pasted text is not an invite"
@@ -37,8 +37,14 @@
     "That invitation was taken back, so there is nothing to answer. The room says who took it back." : {
       "comment" : "Acted on an invitation somebody had withdrawn"
     },
+    "That is too long to send as one message. Split it into a few." : {
+      "comment" : "A message too big to fit in anything the mailbox carries"
+    },
     "That is you." : {
       "comment" : "Tried to invite or grant access to oneself"
+    },
+    "That you left has not been sent yet, so the room would never hear it. Once it has gone, this conversation can be deleted." : {
+      "comment" : "Tried to delete a room before the departure was sent"
     },
     "The fifteen minutes to change these words are up. Everybody who has it already read them as they are." : {
       "comment" : "The edit window has closed"
@@ -81,6 +87,9 @@
     },
     "You are signed out of iCloud, so there is nowhere to leave what you write. Sign in and it will go on its own." : {
       "comment" : "The member is not signed in to iCloud"
+    },
+    "You are still in this conversation. Deleting is for a conversation you have left or been removed from." : {
+      "comment" : "Tried to delete a room this member is still in"
     },
     "You chose to read other people's Outposts without joining in. Change that under Outpost settings on the You page." : {
       "comment" : "Tried to comment or react while set to read only"

@@ -117,7 +117,7 @@ struct FocusFilterTests {
     @Test("The neutral filter lets everything through and is stored as nothing")
     func neutral() {
         let defaults = UserDefaults(suiteName: "focus-\(UUID().uuidString)")!
-        let store = FocusFilterStore(defaults: defaults)
+        let store = FocusFilterStore(defaults: defaults, directory: nil)
         let room = RoomID()
         #expect(store.read().isNeutral)
         #expect(store.read().level(for: room, own: .everything) == .everything)
@@ -134,12 +134,22 @@ struct FocusFilterTests {
         #expect(store.read().isNeutral, "the Focus turning off writes the defaults, which clear it")
     }
 
-    @Test("The room directory round-trips")
-    func directory() {
+    @Test("The room directory round-trips, and room names stay out of preferences and backups")
+    func directory() throws {
         let defaults = UserDefaults(suiteName: "focus-\(UUID().uuidString)")!
-        let store = FocusFilterStore(defaults: defaults)
+        let folder = URL.temporaryDirectory.appending(path: "focus-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let store = FocusFilterStore(defaults: defaults, directory: folder)
         let rooms = [FocusFilterStore.RoomEntry(id: RoomID(), name: "Lanterns"), FocusFilterStore.RoomEntry(id: RoomID(), name: "Kitchen")]
+        defaults.set(Data("[\"old\"]".utf8), forKey: "focusFilter.rooms")
+
         store.writeRooms(rooms)
+
         #expect(store.rooms() == rooms)
+        #expect(defaults.dictionaryRepresentation().values.allSatisfy { value in
+            !String(describing: value).contains("Lanterns")
+        }, "a room's name was written to preferences, which go into backups")
+        #expect(defaults.object(forKey: "focusFilter.rooms") == nil, "the old copy in preferences was left behind")
+        #expect(try folder.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        #expect(FocusFilterStore(defaults: defaults, directory: nil).rooms().isEmpty, "rooms came from somewhere but the file")
     }
 }

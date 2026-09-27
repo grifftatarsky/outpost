@@ -19,18 +19,39 @@ public enum StorageLocation {
     public static func directory(
         container: String,
         appGroup: String? = AppGroup.identifier,
+        root: URL = .applicationSupportDirectory,
         fileManager: FileManager = .default
     ) -> URL {
-        let fallback = URL.applicationSupportDirectory
-            .appending(path: container, directoryHint: .isDirectory)
+        let fallback = root.appending(path: container, directoryHint: .isDirectory)
 
         guard let appGroup,
             let group = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
-        else { return fallback }
+        else {
+            leaveOutOfBackups(fallback, using: fileManager)
+            return fallback
+        }
 
         let shared = group.appending(path: container, directoryHint: .isDirectory)
         migrate(from: fallback, to: shared, using: fileManager)
+        leaveOutOfBackups(shared, using: fileManager)
+        if fileManager.fileExists(atPath: fallback.path) { leaveOutOfBackups(fallback, using: fileManager) }
         return shared
+    }
+
+    public static func leaveOutOfBackups(_ directory: URL, using fileManager: FileManager = .default) {
+        do {
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+            var target = directory
+            if try target.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true {
+                return
+            }
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try target.setResourceValues(values)
+        } catch {
+            Diagnostics.sync.error(
+                "storage: could not leave the store out of backups (\(String(describing: error), privacy: .public))")
+        }
     }
 
     public static func migrate(from: URL, to: URL, using fileManager: FileManager) {

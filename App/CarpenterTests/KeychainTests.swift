@@ -1,5 +1,6 @@
 import CarpenterKeychain
 import Foundation
+import Security
 import Testing
 
 import CarpenterKit
@@ -47,6 +48,76 @@ struct SystemKeychainTests {
         try await store.set(Data([1]), for: key, scope: .device)
         try await store.set(Data([2]), for: key, scope: .synchronized)
 
+        #expect(try await store.data(for: key) == Data([2]))
+    }
+
+    private func accessibility(of key: KeychainKey, synchronized: Bool) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.microgpt.carpenter.tests",
+            kSecAttrAccount as String: key.rawValue,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: synchronized,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { return nil }
+        return (result as? [String: Any])?[kSecAttrAccessible as String] as? String
+    }
+
+    @Test("A key kept on this device can never travel in a backup; one in iCloud Keychain is left as iCloud needs it")
+    func deviceItemsStayOnTheDevice() async throws {
+        let (mine, shared) = (scratchKey(), scratchKey())
+        defer { Task { try? await store.remove(mine); try? await store.remove(shared) } }
+
+        try await store.set(Data([1]), for: mine, scope: .device)
+        try await store.set(Data([2]), for: shared, scope: .synchronized)
+
+        #expect(accessibility(of: mine, synchronized: false) == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
+        #expect(accessibility(of: shared, synchronized: true) == kSecAttrAccessibleAfterFirstUnlock as String)
+    }
+
+    @Test("A key written the old way, which could travel in a backup, is kept on the device the first time it is read")
+    func oldItemsAreMovedOnRead() async throws {
+        let key = scratchKey()
+        defer { Task { try? await store.remove(key) } }
+        let old: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.microgpt.carpenter.tests",
+            kSecAttrAccount as String: key.rawValue,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: false,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecValueData as String: Data([7]),
+        ]
+        #expect(SecItemAdd(old as CFDictionary, nil) == errSecSuccess)
+        #expect(accessibility(of: key, synchronized: false) == kSecAttrAccessibleAfterFirstUnlock as String)
+
+        #expect(try await store.data(for: key) == Data([7]))
+
+        #expect(accessibility(of: key, synchronized: false) == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
+    }
+
+    @Test("Rewriting a key replaces it in place and leaves one copy")
+    func rewritingKeepsOneCopy() async throws {
+        let key = scratchKey()
+        defer { Task { try? await store.remove(key) } }
+        try await store.set(Data([1]), for: key, scope: .device)
+        try await store.set(Data([2]), for: key, scope: .device)
+
+        let all: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.microgpt.carpenter.tests",
+            kSecAttrAccount as String: key.rawValue,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ]
+        var result: CFTypeRef?
+        #expect(SecItemCopyMatching(all as CFDictionary, &result) == errSecSuccess)
+        #expect((result as? [[String: Any]])?.count == 1)
         #expect(try await store.data(for: key) == Data([2]))
     }
 

@@ -980,18 +980,30 @@ noting it here so it is on the record as a known, unaddressed cost.
 ## Where keys actually live
 
 **In plain words.** Your identity lives in your iCloud Keychain so a new phone can pick it up. The
-key belonging to *this particular phone* never leaves it. Everything on disk is encrypted by iOS and
-unreadable until you have unlocked the phone once after it boots.
+key belonging to *this particular phone*, and every room key, never leaves it, not even in a backup.
+Everything on disk is encrypted by iOS, unreadable until you have unlocked the phone once after it
+boots, and left out of iCloud and computer backups.
 
 **What actually happens.**
 
 | Item | Keychain scope | Accessibility |
 |---|---|---|
 | `identity.keys` (both seeds, concatenated) | `.synchronized` — iCloud Keychain | `kSecAttrAccessibleAfterFirstUnlock` |
-| `device.signing` | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlock` |
+| `device.signing`, `device.certificate`, every `epoch.*` room key | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
 
 Everything uses `kSecUseDataProtectionKeychain: true`, and the log, media and document stores are
-written with `FileProtectionType.completeUntilFirstUserAuthentication`.
+written with `FileProtectionType.completeUntilFirstUserAuthentication` in a directory marked
+`isExcludedFromBackup`.
+
+**Fixed 2026-09-27: the device's keys went into backups.** Until then every `.device` item was saved
+`kSecAttrAccessibleAfterFirstUnlock`, which Apple's documentation says migrates "to a new device when
+using encrypted backups", and the store was backed up. Under standard data protection Apple holds the
+keys to iCloud Backup, so a default iCloud Backup held the room keys and the sealed log together: the
+whole history, openable by whoever can open the backup. Items are now `ThisDeviceOnly`, an item saved
+the old way is moved the first time it is read, and the store, the Focus room list and the
+diagnostics files are out of backups (`SystemKeychainTests`, `StoreLeftOutOfBackupsTests`). From
+Apple's documentation, not measured on a device. The cost: restoring a phone from a backup no longer
+brings this app back with it; the recovery key or another device's approval does.
 
 **Two consequences, named.** `afterFirstUnlock` means that on a phone which has been unlocked once
 since boot, the keys are available to the operating system even while the screen is locked. That is

@@ -15,24 +15,32 @@ public struct SystemKeychainStore: KeychainStore {
         if let found = try read(key, in: accessGroup) { return found.data }
 
         guard accessGroup != nil, let legacy = try read(key, in: nil) else { return nil }
-        try? await set(legacy.data, for: key, scope: legacy.synchronized ? .synchronized : .device)
+        let scope: KeychainScope = legacy.synchronized ? .synchronized : .device
+        try await set(legacy.data, for: key, scope: scope)
+        if let group = legacy.group, group != accessGroup {
+            delete(key, in: group, synchronized: legacy.synchronized)
+        }
         return legacy.data
     }
 
-    private func read(
-        _ key: KeychainKey, in group: String?
-    ) throws -> (data: Data, synchronized: Bool)? {
-        var query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key.rawValue,
-            kSecUseDataProtectionKeychain as String: true,
-            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
-            kSecReturnData as String: true,
-            kSecReturnAttributes as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        if let group { query[kSecAttrAccessGroup as String] = group }
+    static func accessibility(for scope: KeychainScope) -> CFString {
+        switch scope {
+        case .device: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        case .synchronized: kSecAttrAccessibleAfterFirstUnlock
+        }
+    }
+
+    private struct Found {
+        let data: Data
+        let synchronized: Bool
+        let group: String?
+    }
+
+    private func read(_ key: KeychainKey, in group: String?) throws -> Found? {
+        var query = match(key, in: group, synchronized: nil)
+        query[kSecReturnData as String] = true
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -42,7 +50,15 @@ public struct SystemKeychainStore: KeychainStore {
             guard let item = result as? [String: Any],
                 let data = item[kSecValueData as String] as? Data
             else { return nil }
-            return (data, (item[kSecAttrSynchronizable as String] as? Bool) ?? false)
+            let found = Found(
+                data: data,
+                synchronized: (item[kSecAttrSynchronizable as String] as? Bool) ?? false,
+                group: item[kSecAttrAccessGroup as String] as? String)
+            let accessible = item[kSecAttrAccessible as String] as? String
+            if !found.synchronized, accessible != Self.accessibility(for: .device) as String {
+                keepOnThisDevice(key, in: found.group ?? group)
+            }
+            return found
         case errSecItemNotFound: return nil
         case errSecMissingEntitlement, errSecNoAccessForItem: return nil
         default: throw KeychainError(status: status)
@@ -50,17 +66,16 @@ public struct SystemKeychainStore: KeychainStore {
     }
 
     public func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) async throws {
-        try await remove(key)
-
-        if case .refused = try write(data, for: key, scope: scope, in: accessGroup),
-            accessGroup != nil
-        {
+        var group = accessGroup
+        if case .refused = try write(data, for: key, scope: scope, in: group), accessGroup != nil {
             Diagnostics.sync.error(
                 "keychain: the shared access group was refused; filing in the app's own group instead")
+            group = nil
             guard case .wrote = try write(data, for: key, scope: scope, in: nil) else {
                 throw KeychainError(status: errSecMissingEntitlement)
             }
         }
+        delete(key, in: group, synchronized: scope != .synchronized)
     }
 
     private enum WriteOutcome { case wrote, refused }
@@ -68,30 +83,44 @@ public struct SystemKeychainStore: KeychainStore {
     private func write(
         _ data: Data, for key: KeychainKey, scope: KeychainScope, in group: String?
     ) throws -> WriteOutcome {
-        var attributes: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key.rawValue,
-            kSecUseDataProtectionKeychain as String: true,
+        let target = match(key, in: group, synchronized: scope == .synchronized)
+        let changes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrSynchronizable as String: (scope == .synchronized),
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrAccessible as String: Self.accessibility(for: scope),
         ]
-        if let group { attributes[kSecAttrAccessGroup as String] = group }
 
-        let status = SecItemAdd(attributes as CFDictionary, nil)
-        switch status {
+        let updated = SecItemUpdate(target as CFDictionary, changes as CFDictionary)
+        switch updated {
+        case errSecSuccess: return .wrote
+        case errSecItemNotFound: break
+        case errSecMissingEntitlement, errSecNoAccessForItem: return .refused
+        default: throw KeychainError(status: updated)
+        }
+
+        let added = SecItemAdd(target.merging(changes) { $1 } as CFDictionary, nil)
+        switch added {
         case errSecSuccess: return .wrote
         case errSecMissingEntitlement, errSecNoAccessForItem: return .refused
-        default: throw KeychainError(status: status)
+        default: throw KeychainError(status: added)
         }
     }
 
-    public func remove(_ key: KeychainKey) async throws {
-        var query = baseQuery(for: key)
-        query[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
+    private func keepOnThisDevice(_ key: KeychainKey, in group: String?) {
+        let changes = [kSecAttrAccessible as String: Self.accessibility(for: .device)]
+        let status = SecItemUpdate(
+            match(key, in: group, synchronized: false) as CFDictionary, changes as CFDictionary)
+        if status != errSecSuccess {
+            Diagnostics.sync.error(
+                "keychain: could not keep an item on this device only (\(status, privacy: .public))")
+        }
+    }
 
-        let status = SecItemDelete(query as CFDictionary)
+    private func delete(_ key: KeychainKey, in group: String?, synchronized: Bool) {
+        SecItemDelete(match(key, in: group, synchronized: synchronized) as CFDictionary)
+    }
+
+    public func remove(_ key: KeychainKey) async throws {
+        let status = SecItemDelete(match(key, in: accessGroup, synchronized: nil) as CFDictionary)
         guard
             status == errSecSuccess || status == errSecItemNotFound
                 || status == errSecMissingEntitlement || status == errSecNoAccessForItem
@@ -100,14 +129,7 @@ public struct SystemKeychainStore: KeychainStore {
         }
 
         if accessGroup != nil {
-            let legacy: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: service,
-                kSecAttrAccount as String: key.rawValue,
-                kSecUseDataProtectionKeychain as String: true,
-                kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
-            ]
-            SecItemDelete(legacy as CFDictionary)
+            SecItemDelete(match(key, in: nil, synchronized: nil) as CFDictionary)
         }
     }
 
@@ -116,9 +138,9 @@ public struct SystemKeychainStore: KeychainStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
         if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
-        query[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
 
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
@@ -126,17 +148,17 @@ public struct SystemKeychainStore: KeychainStore {
         }
     }
 
-    private func baseQuery(for key: KeychainKey) -> [String: Any] {
+    private func match(_ key: KeychainKey, in group: String?, synchronized: Bool?) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key.rawValue,
             kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: synchronized.map { $0 as Any } ?? kSecAttrSynchronizableAny,
         ]
-        if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
+        if let group { query[kSecAttrAccessGroup as String] = group }
         return query
     }
-
 }
 
 public enum SharedKeychain {

@@ -43,14 +43,21 @@ public struct FocusFilterStore: @unchecked Sendable {
     private static let roomsKey = "focusFilter.rooms"
 
     private let defaults: UserDefaults
+    private let directory: URL?
 
-    public init(defaults: UserDefaults) {
+    public init(defaults: UserDefaults, directory: URL?) {
         self.defaults = defaults
+        self.directory = directory
     }
 
     public static var shared: FocusFilterStore {
-        FocusFilterStore(defaults: UserDefaults(suiteName: AppGroup.identifier) ?? .standard)
+        let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier)
+        return FocusFilterStore(
+            defaults: UserDefaults(suiteName: AppGroup.identifier) ?? .standard,
+            directory: group?.appending(path: "Focus", directoryHint: .isDirectory))
     }
+
+    private var roomsFile: URL? { directory?.appending(path: "rooms.json") }
 
     public func read() -> FocusFilter {
         guard let data = defaults.data(forKey: Self.filterKey),
@@ -68,14 +75,21 @@ public struct FocusFilterStore: @unchecked Sendable {
     }
 
     public func rooms() -> [RoomEntry] {
-        guard let data = defaults.data(forKey: Self.roomsKey),
+        guard let roomsFile, let data = try? Data(contentsOf: roomsFile),
             let rooms = try? JSONDecoder().decode([RoomEntry].self, from: data)
         else { return [] }
         return rooms
     }
 
     public func writeRooms(_ rooms: [RoomEntry]) {
-        guard let data = try? JSONEncoder().encode(rooms) else { return }
-        defaults.set(data, forKey: Self.roomsKey)
+        defaults.removeObject(forKey: Self.roomsKey)
+        guard let directory, let roomsFile, let data = try? JSONEncoder().encode(rooms) else { return }
+        StorageLocation.leaveOutOfBackups(directory)
+        do {
+            try data.write(to: roomsFile, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        } catch {
+            Diagnostics.sync.error(
+                "focus: could not keep the room list (\(String(describing: error), privacy: .public))")
+        }
     }
 }
