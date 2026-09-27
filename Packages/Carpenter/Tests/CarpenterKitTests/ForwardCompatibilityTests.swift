@@ -105,6 +105,10 @@ extension ForwardCompatibilityTests {
             AttachmentID(): AskedPhoto(
                 author: ParticipantID(rawValue: WideID.of([9])), entry: entry, askedAt: stamp.at, sent: true)
         ]
+        state.addressAnnounced = [
+            ParticipantID(rawValue: WideID.of([9])): AnnouncedAddress(
+                salt: Data(repeating: 3, count: 32), packet: PacketID(), confirmed: true)
+        ]
         state.photoAsks = [
             PhotoAskRecord(
                 from: ParticipantID(rawValue: WideID.of([9])), entry: entry, attachment: AttachmentID(), at: stamp.at)

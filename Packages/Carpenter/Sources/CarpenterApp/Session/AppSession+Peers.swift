@@ -165,7 +165,20 @@ extension AppSession {
         let held = chains[grant.room]
         var chain = held ?? EpochChain(room: grant.room)
         do {
-            try chain.adopt(grant, using: peer.secret, as: enrolment?.device)
+            var opened = false
+            var lastError: any Error = CryptoError.openFailed
+            for secret in [peer.secret] + alternateSecrets(with: peer.them).filter({ $0 != peer.secret }) {
+                do {
+                    try chain.adopt(grant, using: secret, as: enrolment?.device)
+                    opened = true
+                    break
+                } catch CryptoError.notSealedForThisDevice {
+                    throw CryptoError.notSealedForThisDevice
+                } catch {
+                    lastError = error
+                }
+            }
+            if !opened { throw lastError }
         } catch CryptoError.notSealedForThisDevice {
             persisted.siblingMail.forward(ForwardedGrant(from: peer.them, grant: grant, storedAt: storedAt))
             Diagnostics.sync.notice(

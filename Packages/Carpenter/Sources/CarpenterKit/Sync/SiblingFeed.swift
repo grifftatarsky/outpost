@@ -13,6 +13,20 @@ public struct HeldEpoch: Hashable, Sendable, Codable {
     }
 }
 
+public struct HeldAddress: Hashable, Sendable, Codable {
+    public let owner: ParticipantID?
+    public let salt: AddressSalt
+    public let since: Date
+    public let storedAt: Date?
+
+    public init(owner: ParticipantID?, salt: AddressSalt, since: Date, storedAt: Date?) {
+        self.owner = owner
+        self.salt = salt
+        self.since = since
+        self.storedAt = storedAt
+    }
+}
+
 public struct SiblingFeed: Hashable, Sendable, Codable {
     public let member: ParticipantID?
 
@@ -35,9 +49,11 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
 
     public let people: [IdentityPublicKeys]
 
+    public let addresses: [HeldAddress]
+
     private enum CodingKeys: String, CodingKey {
         case member, writtenAt, entries, certificates, epochs, preferences, collected, through
-        case revocations, forwarded, people
+        case revocations, forwarded, people, addresses
     }
 
     public init(from decoder: any Decoder) throws {
@@ -56,6 +72,7 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         revocations = try container.decodeIfPresent([DeviceRevocation].self, forKey: .revocations) ?? []
         forwarded = try container.decodeIfPresent([ForwardedGrant].self, forKey: .forwarded) ?? []
         people = try container.decodeIfPresent([IdentityPublicKeys].self, forKey: .people) ?? []
+        addresses = try container.decodeIfPresent([HeldAddress].self, forKey: .addresses) ?? []
     }
 
     public init(
@@ -69,7 +86,8 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         through: Int? = nil,
         revocations: [DeviceRevocation] = [],
         forwarded: [ForwardedGrant] = [],
-        people: [IdentityPublicKeys] = []
+        people: [IdentityPublicKeys] = [],
+        addresses: [HeldAddress] = []
     ) {
         self.member = member
         self.writtenAt = writtenAt
@@ -82,6 +100,7 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         self.revocations = revocations
         self.forwarded = forwarded
         self.people = people
+        self.addresses = addresses
     }
 }
 

@@ -167,15 +167,18 @@ extension AppSession {
             guard var record = persisted.attachmentsSent[id] else { continue }
             var owed: Set<ParticipantID> = []
             for person in record.people {
-                guard let peer = byPerson[person], let registry = replica.registry(for: person) else {
+                guard byPerson[person] != nil, let registry = replica.registry(for: person) else {
                     owed.insert(person)
                     continue
                 }
+                let ways = secrets(with: person)
                 for receipt in stored[id]?.receipts ?? [] {
-                    if let signed = AttachmentReceipt.open(
-                        receipt, for: id, from: person, with: peer.secret, by: registry)
-                    {
+                    for secret in ways {
+                        guard let signed = AttachmentReceipt.open(
+                            receipt, for: id, from: person, with: secret, by: registry)
+                        else { continue }
                         record.collectedBy.insert(signed.device)
+                        break
                     }
                 }
                 if !registry.activeDevices.isSubset(of: record.collectedBy) { owed.insert(person) }

@@ -26,6 +26,10 @@ extension AppSession {
             await settleWhatWasSent(sent, through: mailbox)
         }
         if mode == .full {
+            let now = clock.now
+            if addressBook.hasExpired(at: now) { await changeAddressBook { $0.forgetExpired(at: now) } }
+            await rotateIfARemovalNeverChangedIt()
+            await announceAddresses(through: session)
             let sent: SyncReport
             (sent, sending) = try await sendWhatIsOwed(through: session)
             report = report.adding(sent)
@@ -124,8 +128,10 @@ extension AppSession {
     private func takeWhatArrived(
         from peer: Peer, through session: SyncSession, mode: SyncMode, into report: inout SyncReport
     ) async throws {
-        let signedFor = ownMemberSignedFor(from: peer)
-        let collected = try await session.collect(as: peer, at: clock.now, alreadyTaken: signedFor)
+        let alternates = alternateSecrets(with: peer.them)
+        let signedFor = ownMemberSignedFor(from: peer, alternates: alternates)
+        let collected = try await session.collect(
+            as: peer, alternates: alternates, at: clock.now, alreadyTaken: signedFor)
 
         for (_, reason) in collected.unopened {
             Diagnostics.sync.error(
@@ -165,6 +171,8 @@ extension AppSession {
             }
         }
         takeAsks(received.photoAsks, from: peer.them)
+        noticeOldAddresses(collected, from: peer)
+        await takeAddresses(received.addresses, from: peer)
         for answer in received.repairAnswers {
             if let index = persisted.repairs.firstIndex(where: { $0.id == answer.request }) {
                 persisted.repairs[index].answers[peer.them] = answer
@@ -208,9 +216,11 @@ extension AppSession {
 
         if mode == .full, let enrolment {
             let (member, device, secret) = (enrolment.identity.id, enrolment.device, peer.secret)
+            let foundUnder = Dictionary(
+                collected.packets.map { ($0.id, $0.secret ?? secret) }, uniquingKeysWith: { first, _ in first })
             do {
                 try await session.acknowledge(collected, settled) { packet, tag in
-                    try PacketReceipt.seal(packet, under: tag, as: member, by: device, to: secret)
+                    try PacketReceipt.seal(packet, under: tag, as: member, by: device, to: foundUnder[packet] ?? secret)
                 }
             } catch {
                 Diagnostics.sync.error(
@@ -359,12 +369,14 @@ extension AppSession {
         update(\.pendingRecipients, to: waiting)
     }
 
-    func ownMemberSignedFor(from peer: Peer) -> @Sendable (SyncPacket) -> Bool {
+    func ownMemberSignedFor(
+        from peer: Peer, alternates: [PairwiseSecret] = []
+    ) -> @Sendable (SyncPacket) -> Bool {
         guard let registry = replica.registry(for: peer.me) else { return { _ in false } }
-        let (me, secret) = (peer.me, peer.secret)
+        let (me, secrets) = (peer.me, [peer.secret] + alternates)
         return { packet in
             packet.receipts.contains { receipt in
-                PacketReceipt.open(receipt, for: packet.id, from: me, with: secret, by: registry) != nil
+                secrets.contains { PacketReceipt.open(receipt, for: packet.id, from: me, with: $0, by: registry) != nil }
             }
         }
     }
@@ -378,7 +390,12 @@ extension AppSession {
         let windows = (current >= reach ? current - reach : 0)...(current + 1)
         var addressedTo: [RecipientTag: Peer] = [:]
         for peer in peers() {
-            for window in windows { addressedTo[peer.outgoingTag(window: window)] = peer }
+            for secret in [peer.secret] + alternateSecrets(with: peer.them) {
+                let way = Peer(secret: secret, them: peer.them, me: peer.me)
+                for window in windows where addressedTo[way.outgoingTag(window: window)] == nil {
+                    addressedTo[way.outgoingTag(window: window)] = way
+                }
+            }
         }
         var altered: [PacketID] = []
         for (packet, entries) in mine {
@@ -413,6 +430,7 @@ extension AppSession {
             if missing.isEmpty || expired {
                 do {
                     try await mailbox.withdraw(packet)
+                    if missing.isEmpty { confirmAnnouncement(packet) }
                     persisted.outstandingPackets[packet] = nil
                     persisted.packetsWritten[packet] = nil
                 } catch {

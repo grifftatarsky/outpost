@@ -258,9 +258,11 @@ extension AppSession {
             .filter { $0 != me }
             .map { person in
                 let holding: WaitingOnPerson.Holding
-                if let pending = pendingRecipients, let secret = pairwiseSecret(with: person) {
+                if let pending = pendingRecipients, pairwiseSecret(with: person) != nil {
                     let theirs = Set(
-                        (oldest...current).map { secret.recipientTag(window: $0, for: person) })
+                        secrets(with: person).flatMap { secret in
+                            (oldest...current).map { secret.recipientTag(window: $0, for: person) }
+                        })
                     var missing = unsent
                     for (packet, tags) in pending where !tags.isDisjoint(with: theirs) {
                         missing.formUnion(

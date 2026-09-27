@@ -48,12 +48,13 @@ public enum SyncEngine {
         public let notifyWalls: [ParticipantID]?
         public let confirmations: [JoinConfirmedBody]
         public let asks: [PhotoAsk]
+        public let addresses: [AddressAnnouncement]
 
         public init(
             entries: [Entry], certificates: [DeviceCertificate], revocations: [DeviceRevocation],
             grants: [EpochGrant], requests: [RepairRequest] = [], answers: [RepairAnswer] = [],
             identities: [IdentityPublicKeys] = [], notifyWalls: [ParticipantID]? = nil,
-            confirmations: [JoinConfirmedBody] = [], asks: [PhotoAsk] = []
+            confirmations: [JoinConfirmedBody] = [], asks: [PhotoAsk] = [], addresses: [AddressAnnouncement] = []
         ) {
             self.entries = entries
             self.identities = identities
@@ -65,6 +66,7 @@ public enum SyncEngine {
             self.notifyWalls = notifyWalls
             self.confirmations = confirmations
             self.asks = asks
+            self.addresses = addresses
         }
     }
 
@@ -78,13 +80,14 @@ public enum SyncEngine {
         var notifyWalls: [ParticipantID]?
         var confirmations: [JoinConfirmedBody] = []
         var asks: [PhotoAsk] = []
+        var addresses: [AddressAnnouncement] = []
 
         init(
             entries: [Entry] = [], certificates: [DeviceCertificate] = [],
             revocations: [DeviceRevocation] = [], requests: [RepairRequest] = [],
             answers: [RepairAnswer] = [], identities: [IdentityPublicKeys] = [],
             notifyWalls: [ParticipantID]? = nil, confirmations: [JoinConfirmedBody] = [],
-            asks: [PhotoAsk] = []
+            asks: [PhotoAsk] = [], addresses: [AddressAnnouncement] = []
         ) {
             self.entries = entries
             self.identities = identities
@@ -95,6 +98,7 @@ public enum SyncEngine {
             self.notifyWalls = notifyWalls
             self.confirmations = confirmations
             self.asks = asks
+            self.addresses = addresses
         }
 
         init(from decoder: any Decoder) throws {
@@ -112,6 +116,7 @@ public enum SyncEngine {
             confirmations =
                 try container.decodeIfPresent([JoinConfirmedBody].self, forKey: .confirmations) ?? []
             asks = try container.decodeIfPresent([PhotoAsk].self, forKey: .asks) ?? []
+            addresses = try container.decodeIfPresent([AddressAnnouncement].self, forKey: .addresses) ?? []
         }
     }
 
@@ -128,7 +133,8 @@ public enum SyncEngine {
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
         confirmations: [JoinConfirmedBody] = [],
-        asks: [PhotoAsk] = []
+        asks: [PhotoAsk] = [],
+        addresses: [AddressAnnouncement] = []
     ) throws -> SyncPacket {
         let contentKey = SymmetricKey(size: .bits256)
         let context = wrapContext(id: id)
@@ -136,7 +142,7 @@ public enum SyncEngine {
         let body = Body(
             entries: entries, certificates: certificates, revocations: revocations,
             requests: requests, answers: answers, identities: identities,
-            notifyWalls: notifyWalls, confirmations: confirmations, asks: asks)
+            notifyWalls: notifyWalls, confirmations: confirmations, asks: asks, addresses: addresses)
         let sealed = try ChaChaPoly.seal(
             Compressed.pack(try JSONEncoder().encode(body)), using: contentKey, authenticating: context)
 
@@ -183,7 +189,7 @@ public enum SyncEngine {
             entries: body.entries, certificates: body.certificates,
             revocations: body.revocations, grants: grants, requests: body.requests,
             answers: body.answers, identities: body.identities, notifyWalls: body.notifyWalls,
-            confirmations: body.confirmations, asks: body.asks)
+            confirmations: body.confirmations, asks: body.asks, addresses: body.addresses)
     }
 
     private static func grantContext(id: PacketID) -> Data {

@@ -65,21 +65,6 @@ say so, which the crypto brief does.
 
 <!-- COPY END 23557077 -->
 
-<!-- COPY BEGIN cafc78b8 [NEEDS HUMAN REVIEW] -->
-
-### Should your agreement key change when a device is removed?
-
-Raised 2026-09-27. A device you remove keeps your identity's agreement key. It can't read your rooms
-(room keys are sealed to each device that counts) or add a device (only the recovery key or an
-approval can). What it can still do is work out the address every packet to you is left under, so it
-can see who writes to you, when and how much, for as long as it has the key. That is exactly what an
-abuser holding your old phone would want.
-
-The fix is to change the agreement key on every removal and hand the new one only to your devices,
-with your devices telling everyone you talk to. It changes how two people's shared secret is made, so
-it touches every address and every hand-over. Recommended, after the removal work that is in now.
-
-<!-- COPY END cafc78b8 -->
 
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
 

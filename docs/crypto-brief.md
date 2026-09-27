@@ -267,15 +267,34 @@ that none of them can be used to attack another:
 | `shareOfferDigest(of:)` | `HMAC-SHA256(key, "…share-offer-digest.v1" ‖ url)`, first 16 bytes hex | detecting a substituted share URL |
 | `wrap` / `unwrap` | `ChaChaPoly` with the key directly, caller-supplied associated data | epoch grants, packet keys |
 
-**Known weakness, named.** The pairwise secret is **static for the life of the two identities**.
-There is no ratchet. Every device you approve holds your `agreementSeed`, and a device you later
-remove keeps it. With it, anybody can derive every pairwise secret you have ever had or will ever
-have, with everyone, forever. From those they can find every packet addressed to you and open its
-outer envelope: who wrote to you, in which room, when and how much. Room keys inside are sealed again
-to each of your devices that counts, and a grant is never sent without that, so the seed alone opens
-no room. Changing the agreement key when a device is removed is an
-[open question](open-questions.md). This is stated again under [the recovery
-key](#the-recovery-key-is-a-skeleton-key-shown-once).
+**The hidden address changes when a device is removed** (since 2026-09-27). Every device you approve
+holds your `agreementSeed`, and a device you later remove keeps it, so the secret above can be worked
+out by it for good. Removing a device now also gives you a new **address salt**: 32 random bytes kept
+in this device's own keychain (never the synchronized one, which reaches every device on the Apple
+Account) and handed to your other devices only sealed to each of them (`SiblingMail`). The secret
+every packet travels under becomes `PairwiseSecret.derive(mine:theirs:mySalt:theirSalt:)`: the same
+X25519 output, through HKDF under its own domain (`carpenter.pairwise-address.v1`), with both people's
+current salts in the `sharedInfo`, sorted by participant. Nobody with a salt means the old derivation,
+byte for byte (`AnAddressOnlyYourDevicesKnowTests`).
+
+Your contacts hear of it from an `AddressAnnouncement`: the salt sealed to each of *their* devices
+that counts (`DeviceSeal`), signed by one of yours, and adopted only if that device counted when
+iCloud stored the announcement, and only if it was stored after the one they already hold. So a
+removed device can't announce an address of its own, even one it signed before it was removed, and
+an old announcement delivered again can't take the address back. The announcement travels under the
+old secret, with your device certificates and removals in the same packet, and is sent again until
+the contact signs for it. For nine days after a change both sides still listen at the old addresses,
+so nothing written in between is lost, and everyone always listens at the original one, so a contact
+meeting you for the first time, or a device restored from the recovery key (which starts a new salt),
+can always reach you (`ChangingYourHiddenAddressTests`, every guard mutation-checked).
+
+**What a removed device can still do.** It can't work out the new addresses or open anything written
+under them. It can see, once per change per contact, that an announcement was left (it goes under the
+old address), read what was written under the old addresses during the nine days, and write junk under
+the original address that your devices collect and refuse. If it is still signed into your Apple
+Account it can also see how much you write, in your own outbox, without knowing to whom. A comment
+sealed for a wall's owner stays under the original secret, because it is kept in the log for good.
+This is stated again under [the recovery key](#the-recovery-key-is-a-skeleton-key-shown-once).
 
 ---
 
@@ -1049,7 +1068,8 @@ counting at its date. A device that learns the recovery key removed it hands its
 keys to the restored device, sealed to it alone, and erases itself. The restored device gives every
 room it gets a key for, from anybody, a new key before it writes anything there, because a removed
 device holds the old ones (`rekeyBeforeWriting`). Partners hand the member's room keys again whenever
-the member's set of devices changes.
+the member's set of devices changes. A restore also starts a new address salt, since the old one
+lived only on devices that are gone, and announces it the way a removal does.
 
 **The largest key-management risk in the product is still this file.** Whoever holds it is you. The
 mitigations are editorial — where it is shown, what it says, and that it is shown once — plus one

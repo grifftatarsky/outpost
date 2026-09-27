@@ -330,14 +330,15 @@ extension AppSession {
 
         var opened: [String: URL] = [:]
         for peer in peers() {
-            let name = peer.secret.shareOfferName(for: me)
-            guard let sealed = found[name],
-                let body = try? peer.secret.unwrap(
-                    sealed, context: PairwiseSecret.shareOfferContext),
-                let text = String(data: body, encoding: .utf8),
-                let url = URL(string: text)
-            else { continue }
-            opened[name] = url
+            for secret in secrets(with: peer.them) {
+                let name = secret.shareOfferName(for: me)
+                guard let sealed = found[name],
+                    let body = try? secret.unwrap(sealed, context: PairwiseSecret.shareOfferContext),
+                    let text = String(data: body, encoding: .utf8),
+                    let url = URL(string: text)
+                else { continue }
+                opened[name] = url
+            }
         }
         return opened
     }

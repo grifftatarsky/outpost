@@ -103,6 +103,10 @@ extension AppSession {
         persisted.siblingMail.shared(feed.epochs)
         persisted.siblingMail.shared(feed.entries)
         persisted.siblingMail.shared(feed.people)
+        if record.name.kind != .state {
+            persisted.siblingMail.shared(feed.addresses)
+            await keepAddresses(fromSibling: feed.addresses)
+        }
         for forwarded in feed.forwarded where trust == .full {
             guard let secret = pairwiseSecret(with: forwarded.from) else { continue }
             try? await adopt(
@@ -319,9 +323,10 @@ extension AppSession {
             let people = replica.knownParticipants.compactMap { replica.registry(for: $0)?.identity }
                 .sorted { $0.participantID.rawValue.lexicographicallyPrecedes($1.participantID.rawValue) }
             let preferencesDigest = try? SiblingMail.digest(of: persisted.preferences)
+            let addresses = addressBook.held
             let plan = persisted.siblingMail.plan(
                 entries: replica.allEntries, held: held, people: people, preferences: preferencesDigest,
-                me: me, revoked: Set(persisted.revocations.map(\.device)), now: now)
+                addresses: addresses, me: me, revoked: Set(persisted.revocations.map(\.device)), now: now)
 
             let state = SiblingFeed(
                 entries: [], certificates: knownCertificates(), member: enrolment.identity.id,
@@ -339,14 +344,15 @@ extension AppSession {
                     entries: mail.entries, certificates: state.certificates, epochs: mail.epochs,
                     member: enrolment.identity.id, writtenAt: now,
                     preferences: mail.carriesPreferences ? persisted.preferences : MemberPreferences(),
-                    forwarded: mail.forwarded, people: mail.people)))
+                    forwarded: mail.forwarded, people: mail.people, addresses: mail.addresses)))
             }
             if !plan.catchUpsFor.isEmpty {
                 func catchUp(_ entries: [Entry]) -> SiblingFeed {
                     SiblingFeed(
                         entries: entries, certificates: state.certificates, epochs: held,
                         member: enrolment.identity.id, writtenAt: now, preferences: persisted.preferences,
-                        through: plan.through, revocations: persisted.revocations, people: people)
+                        through: plan.through, revocations: persisted.revocations, people: people,
+                        addresses: addresses)
                 }
                 let everything = catchUp(replica.allEntries)
                 for target in plan.catchUpsFor {

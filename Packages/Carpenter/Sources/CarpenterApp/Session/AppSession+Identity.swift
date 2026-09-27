@@ -42,6 +42,7 @@ extension AppSession {
                 identity: identity, device: device, deviceIsNew: existingDevice == nil)
             persisted = try await storage.documents.load(PersistedState.self) ?? PersistedState()
             organisation = persisted.organisation
+            await loadAddressBook()
 
             try await restoreLog(identity: identity)
             let kept = try await store.keptCertificate()
@@ -288,6 +289,8 @@ extension AppSession {
 
         cameBackFromARecoveryKey = true
         persisted.restoredWithTheRecoveryKey = true
+        await loadAddressBook()
+        await rotateAddress(because: "this member came back with the recovery key")
         persisted.preferences.setSavedRecoveryKey(clock.now, stamp: stamp())
         persisted.preferences.setAsksPeersForHistory(askingPeers, stamp: stamp())
         persisted.wantsWhatWasSaid = askingPeers
@@ -558,6 +561,7 @@ extension AppSession {
         }
         recordAuthority()
         try await saveState()
+        await rotateAddress(because: "a device was removed")
         sendOwnEntries()
 
         Diagnostics.identity.notice(

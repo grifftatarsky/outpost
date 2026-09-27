@@ -11,6 +11,7 @@ struct SiblingFeedIsSealedTests {
     private static let other = DeviceID(rawValue: Data(repeating: 0xB2, count: 32))
 
     private static let epochMaterial = Data(repeating: 0x5E, count: 32)
+    private static let addressSalt = Data(repeating: 0x5B, count: 32)
     private static let nickname = "Cassilda"
     private static let displayName = "Camilla"
     private static let blocked = ParticipantID(rawValue: Data(repeating: 0x77, count: 32))
@@ -57,7 +58,12 @@ struct SiblingFeedIsSealedTests {
                     revokedAt: Date(timeIntervalSince1970: 5_000), signature: Data(repeating: 0x0F, count: 64))
             ],
             forwarded: [ForwardedGrant(from: identity.id, grant: forwardedGrant)],
-            people: [friend])
+            people: [friend],
+            addresses: [
+                HeldAddress(
+                    owner: friend.participantID, salt: AddressSalt(number: 2, bytes: addressSalt),
+                    since: Date(timeIntervalSince1970: 6_000), storedAt: Date(timeIntervalSince1970: 6_000))
+            ])
     }
 
     private static func sealed() throws -> SealedSiblingFeed {
@@ -94,6 +100,7 @@ struct SiblingFeedIsSealedTests {
 
         for (name, marker) in [
             ("an epoch secret", Self.epochMaterial),
+            ("an address salt", Self.addressSalt),
             ("a nickname", Data(Self.nickname.utf8)),
             ("the display name", Data(Self.displayName.utf8)),
             ("a blocked person", Self.blocked.rawValue),

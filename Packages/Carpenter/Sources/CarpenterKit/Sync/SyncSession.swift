@@ -96,6 +96,17 @@ public struct SyncReport: Hashable, Sendable {
     public var notifyWalls: [ParticipantID]?
     public var confirmations: [JoinConfirmedBody] = []
     public var photoAsks: [PhotoAsk] = []
+    public var addresses: [ReceivedAddress] = []
+
+    public struct ReceivedAddress: Hashable, Sendable {
+        public let announcement: AddressAnnouncement
+        public let storedAt: Date
+
+        public init(announcement: AddressAnnouncement, storedAt: Date) {
+            self.announcement = announcement
+            self.storedAt = storedAt
+        }
+    }
 
     public init() {}
 
@@ -123,12 +134,14 @@ public struct SyncReport: Hashable, Sendable {
         if let theirs = other.notifyWalls { merged.notifyWalls = theirs }
         merged.confirmations.append(contentsOf: other.confirmations)
         merged.photoAsks.append(contentsOf: other.photoAsks)
+        merged.addresses.append(contentsOf: other.addresses)
         return merged
     }
 
     public var didAnything: Bool {
         packetsWritten > 0 || entriesReceived > 0 || !grantsReceived.isEmpty
             || !repairRequests.isEmpty || !repairAnswers.isEmpty || !confirmations.isEmpty || !photoAsks.isEmpty
+            || !addresses.isEmpty
     }
 }
 
@@ -171,12 +184,13 @@ public struct SyncSession: Sendable {
         notifyWalls: [ParticipantID]? = nil,
         confirming: [JoinConfirmedBody] = [],
         asking: [PhotoAsk] = [],
+        addresses: [AddressAnnouncement] = [],
         announcing: Bool = false
     ) async throws -> SyncReport {
         var report = SyncReport()
         guard !peers.isEmpty,
             !entries.isEmpty || !granting.isEmpty || !requests.isEmpty || !answers.isEmpty
-                || notifyWalls != nil || !confirming.isEmpty || !asking.isEmpty || announcing
+                || notifyWalls != nil || !confirming.isEmpty || !asking.isEmpty || !addresses.isEmpty || announcing
         else { return report }
 
         let now = instant ?? clock.now
@@ -196,7 +210,8 @@ public struct SyncSession: Sendable {
                 identities: first ? identities : [],
                 notifyWalls: first ? notifyWalls : nil,
                 confirmations: first ? confirming : [],
-                asks: first ? asking : [])
+                asks: first ? asking : [],
+                addresses: first ? addresses : [])
             do {
                 try await mailbox.put(packet)
             } catch {
@@ -306,12 +321,17 @@ public struct SyncSession: Sendable {
             public let delivery: SyncEngine.Delivery
             public let storedAt: Date
             public let tag: RecipientTag?
+            public let secret: PairwiseSecret?
 
-            public init(id: PacketID, delivery: SyncEngine.Delivery, storedAt: Date, tag: RecipientTag? = nil) {
+            public init(
+                id: PacketID, delivery: SyncEngine.Delivery, storedAt: Date, tag: RecipientTag? = nil,
+                secret: PairwiseSecret? = nil
+            ) {
                 self.id = id
                 self.delivery = delivery
                 self.storedAt = storedAt
                 self.tag = tag
+                self.secret = secret
             }
         }
 
@@ -338,21 +358,29 @@ public struct SyncSession: Sendable {
     }
 
     public func collect(
-        as peer: Peer, at instant: Date? = nil, alreadyTaken: @Sendable (SyncPacket) -> Bool = { _ in false }
+        as peer: Peer, alternates: [PairwiseSecret] = [], at instant: Date? = nil,
+        alreadyTaken: @Sendable (SyncPacket) -> Bool = { _ in false }
     ) async throws -> CollectedPackets {
         let now = instant ?? clock.now
-        let tags = Self.recentTags(for: peer, at: now)
+        var ways: [(peer: Peer, tags: Set<RecipientTag>)] = []
+        for secret in [peer.secret] + alternates where !ways.contains(where: { $0.peer.secret == secret }) {
+            let way = Peer(secret: secret, them: peer.them, me: peer.me)
+            ways.append((way, Self.recentTags(for: way, at: now)))
+        }
+        let tags = ways.reduce(into: Set<RecipientTag>()) { $0.formUnion($1.tags) }
 
         let packets = try await mailbox.fetch(for: tags)
 
         var opened: [CollectedPackets.Opened] = []
         var unopened: [(PacketID, any Error)] = []
         for packet in packets where !alreadyTaken(packet) {
+            guard let way = ways.first(where: { !$0.tags.isDisjoint(with: packet.recipients) }) else { continue }
             do {
                 opened.append(
                     CollectedPackets.Opened(
-                        id: packet.id, delivery: try Self.unpack(packet, as: peer, at: now),
-                        storedAt: packet.storedAt ?? now, tag: packet.recipients.intersection(tags).first))
+                        id: packet.id, delivery: try Self.unpack(packet, as: way.peer, at: now),
+                        storedAt: packet.storedAt ?? now, tag: packet.recipients.intersection(way.tags).first,
+                        secret: way.peer.secret))
             } catch {
                 unopened.append((packet.id, error))
             }
@@ -378,6 +406,8 @@ public struct SyncSession: Sendable {
             if let wishes = delivery.notifyWalls { report.notifyWalls = wishes }
             report.confirmations.append(contentsOf: delivery.confirmations)
             report.photoAsks.append(contentsOf: delivery.asks)
+            report.addresses.append(
+                contentsOf: delivery.addresses.map { SyncReport.ReceivedAddress(announcement: $0, storedAt: packet.storedAt) })
 
             for identity in delivery.identities { replica.introduce(identity) }
 

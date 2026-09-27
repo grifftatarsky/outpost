@@ -2909,6 +2909,37 @@ account.
 
 <!-- COPY END 77261c6e -->
 
+<!-- COPY BEGIN 61aea84c [NEEDS HUMAN REVIEW] -->
+
+### Your hidden address changes when a device is removed
+
+**RULED 2026-09-27 by Griff.** "Yes, your hidden address should change. Make sure to test all edge
+cases on that change."
+
+A device you remove keeps your identity, and until today that was enough to work out the address
+every packet to you is left under, and to open each packet's outer envelope: who wrote to you, when,
+and how much. Removing a device now gives you a new address salt that only your remaining devices
+hold, and your contacts write to you under a secret that includes it. How it works, and what the
+removed device can still see, is in the
+[crypto brief](crypto-brief.md#the-one-secret-each-pair-of-people-share).
+
+**Claude's choices inside the ruling, not Griff's:** a salt mixed into the secret you and each
+contact already share, rather than a new key pair, so a member who never removes a device keeps
+exactly the secret they have now; an announcement that is newest by iCloud's clock wins, never the
+highest number, so a device can't choose a number nobody can pass; nine days of listening at the old
+addresses, the time a packet waits; the original address always listened to, so a restore or a new
+contact can always get through; a restore starts a new salt, because the old one lives only on
+devices that are gone; a member who removed a device before this build changes their address once;
+and a comment sealed for a wall's owner stays under the original secret, because it is kept for good.
+
+**Needs this build on both sides.** A contact on an older build ignores the announcement and keeps
+writing to the old address, which is still read, but can't read what is written to the new one.
+
+**Not verified on a real account:** the whole change has only run against the fakes. It needs the
+rig: remove a device on alpha, and check beta takes the new address and messages still cross.
+
+<!-- COPY END 61aea84c -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts

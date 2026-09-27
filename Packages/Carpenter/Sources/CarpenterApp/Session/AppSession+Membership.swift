@@ -72,7 +72,9 @@ extension AppSession {
         if let known = cachedPairwise[person] { return known }
         guard let identity = enrolment?.identity,
             let keys = replica.registry(for: person)?.identity,
-            let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)
+            let secret = try? PairwiseSecret.derive(
+                mine: identity, theirs: keys, mySalt: addressBook.ownCurrent,
+                theirSalt: addressBook.current(of: person))
         else { return nil }
         cachedPairwise[person] = secret
         return secret

@@ -103,6 +103,9 @@ public final class AppSession {
     @ObservationIgnored var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
     @ObservationIgnored var cachedComparisonHalves: [ParticipantID: String] = [:]
     @ObservationIgnored var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
+    @ObservationIgnored var addressBook = AddressBook()
+    @ObservationIgnored var addressBookLoaded = false
+    @ObservationIgnored var addressBookWriting: Task<Bool, Never>?
 
     public internal(set) var codeForSharing = ""
 
@@ -304,7 +307,7 @@ public final class AppSession {
         guard owner != enrolment.identity.id else { return try await append(payload, to: nil) }
 
         if !(persisted.preferences.outpostStanding ?? .open).reachesThePostsReaders {
-            guard let theirs = pairwiseSecret(with: owner) else {
+            guard let theirs = legacySecret(with: owner) else {
                 throw AppSessionError.cannotWriteThere
             }
             return try await append(payload, to: nil, alsoFor: theirs)
