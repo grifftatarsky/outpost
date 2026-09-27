@@ -6,6 +6,7 @@ import SwiftUI
 struct PrivacyAndSafetySettingsView: View {
     @Environment(\.palette) private var palette
     @Environment(\.openURL) private var openURL
+    @AppStorage(OtherKeyboards.key) private var otherKeyboards = false
 
     let owner: Member
     @Binding var sharing: NameAndAvatarSharing
@@ -201,6 +202,20 @@ struct PrivacyAndSafetySettingsView: View {
             }
             .groupedRowSurface()
             // COPY END cd652188
+
+            // COPY BEGIN b6505bb1 [NEEDS HUMAN REVIEW]
+            Section {
+                SettingsToggle(
+                    icon: "keyboard.fill",
+                    title: Text("Keyboards from other apps", bundle: .module),
+                    isOn: $otherKeyboards)
+            } footer: {
+                Text(
+                    "A keyboard from another app sees everything you type with it. Off, only Apple's keyboards work here. A change applies the next time the app opens.",
+                    bundle: .module)
+            }
+            .groupedRowSurface()
+            // COPY END b6505bb1
 
             // COPY BEGIN d4b10496 [NEEDS HUMAN REVIEW]
             Section {

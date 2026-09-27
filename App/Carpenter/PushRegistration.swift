@@ -1,5 +1,6 @@
 import CarpenterApp
 import CarpenterKit
+import CarpenterUI
 import CloudKit
 import OSLog
 import SwiftUI
@@ -101,6 +102,13 @@ class PushDesk: NSObject, UNUserNotificationCenterDelegate {
         ) -> Bool {
             adopt()
             return true
+        }
+
+        func application(
+            _ application: UIApplication,
+            shouldAllowExtensionPointIdentifier extensionPointIdentifier: UIApplication.ExtensionPointIdentifier
+        ) -> Bool {
+            OtherKeyboards.allows(extensionPoint: extensionPointIdentifier.rawValue)
         }
 
         func application(

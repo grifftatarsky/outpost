@@ -2750,6 +2750,27 @@ and the most private level shows none. Siri compose is on the roadmap under rese
 
 <!-- COPY END 750fb704 -->
 
+<!-- COPY BEGIN 05b0c974 [NEEDS HUMAN REVIEW] -->
+
+### Keyboards from other apps are refused unless the member allows them
+
+Griff asked on 2026-09-27: "Can we block external keyboards or require them to be allowed
+specifically."
+
+`PROPOSED` — Claude, the same day: both, as one setting. A keyboard from another app receives every
+key typed with it, and one given full access can send them anywhere. Out of the box the app refuses
+them, through `application(_:shouldAllowExtensionPointIdentifier:)`, so every field uses Apple's
+keyboards; *Keyboards from other apps* in Privacy & Safety lets them back in. A change applies the
+next time the app opens, because iOS may ask only once a launch. The rule is tested in the package
+(`OtherKeyboardsTests`) and its identifier against iOS's own on a simulator
+(`KeyboardExtensionPointTests`); the refusal itself has not been seen with a third-party keyboard
+installed.
+
+**What it costs.** Somebody who types in a language only a third-party keyboard offers has to find
+the setting first.
+
+<!-- COPY END 05b0c974 -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts

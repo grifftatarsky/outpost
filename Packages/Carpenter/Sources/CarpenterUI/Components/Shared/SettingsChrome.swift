@@ -138,3 +138,12 @@ struct SettingsHeaderCard: View {
         .groupedRowSurface()
     }
 }
+
+public enum OtherKeyboards {
+    public static let key = "keyboards.othersAllowed"
+    public static let keyboardExtensionPoint = "com.apple.keyboard-service"
+
+    public static func allows(extensionPoint: String, defaults: UserDefaults = .standard) -> Bool {
+        extensionPoint != keyboardExtensionPoint || defaults.bool(forKey: key)
+    }
+}
