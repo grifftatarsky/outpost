@@ -29,7 +29,7 @@ final class RigChecks: XCTestCase {
 
     func tapIfThere(_ app: XCUIApplication, _ label: String, timeout: TimeInterval = 2, scrolling: Bool = false) -> Bool {
         let button = app.buttons.matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", label, label + ",")).firstMatch
-        if button.waitForExistence(timeout: timeout), button.isHittable {
+        if button.waitForExistence(timeout: timeout), (try? button.snapshot()) != nil, button.isHittable {
             button.tap()
             return true
         }
@@ -95,6 +95,94 @@ final class RigChecks: XCTestCase {
         settle(app)
         sleep(2)
         shoot(app, "fifth-home")
+    }
+
+    func testANewMemberSavesTheKeyAndLocksTheApp() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["--mailbox", "/tmp/outpost-lock-check"]
+        app.launch()
+        _ = app.wait(for: .runningForeground, timeout: 20)
+        sleep(3)
+        _ = tapIfThere(app, "Skip")
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "no name field")
+        field.tap()
+        field.typeText("Lockwood")
+        XCTAssertTrue(tapIfThere(app, "Create my identity", timeout: 3), "could not create the identity")
+
+        let saved = app.buttons["I've saved it"]
+        XCTAssertTrue(saved.waitForExistence(timeout: 15), "the recovery key was not shown at setup")
+        shoot(app, "lock-1-recovery-key")
+        XCTAssertFalse(saved.isEnabled, "the key could be marked saved before it was saved anywhere")
+        XCTAssertTrue(tapIfThere(app, "Save key"), "no way to save the key")
+        sleep(2)
+        shoot(app, "lock-2-share-sheet")
+        let copy = app.buttons["Copy"].firstMatch
+        if copy.waitForExistence(timeout: 5) { copy.tap() } else { app.swipeDown() }
+        sleep(1)
+        XCTAssertTrue(saved.waitForExistence(timeout: 5) && saved.isEnabled, "saving did not let the member go on")
+        saved.tap()
+        shoot(app, "lock-3-is-it-saved")
+        XCTAssertTrue(tapIfThere(app, "It's saved", timeout: 3), "no confirmation")
+
+        let lockButton = app.buttons["Lock the app"].firstMatch
+        XCTAssertTrue(lockButton.waitForExistence(timeout: 10), "the lock was not offered at setup")
+        shoot(app, "lock-4-offer")
+        let fields = app.secureTextFields
+        fields.element(boundBy: 0).tap()
+        fields.element(boundBy: 0).typeText("482913")
+        fields.element(boundBy: 1).tap()
+        fields.element(boundBy: 1).typeText("482913")
+        shoot(app, "lock-5-code-typed")
+        lockButton.tap()
+        sleep(2)
+        settle(app)
+
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+        let locked = app.staticTexts.matching(NSPredicate(format: "label ENDSWITH %@", "is locked")).firstMatch
+        XCTAssertTrue(locked.waitForExistence(timeout: 10), "the app opened without its lock")
+        shoot(app, "lock-6-locked")
+        let code = app.secureTextFields.firstMatch
+        code.tap()
+        code.typeText("000000")
+        XCTAssertTrue(tapIfThere(app, "Unlock"), "no unlock button")
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "That's not it")).firstMatch
+                .waitForExistence(timeout: 10),
+            "a wrong code did not say so")
+        shoot(app, "lock-7-wrong-code")
+        code.tap()
+        code.typeText("482913")
+        XCTAssertTrue(tapIfThere(app, "Unlock"), "no unlock button")
+        XCTAssertTrue(app.buttons["You"].firstMatch.waitForExistence(timeout: 10), "the right code did not open the app")
+        shoot(app, "lock-8-open")
+
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+        XCTAssertTrue(locked.waitForExistence(timeout: 10), "the app opened without its lock the second time")
+        for _ in 0..<4 where app.keyboards.count == 0 {
+            app.secureTextFields.firstMatch.tap()
+            sleep(1)
+        }
+        shoot(app, "lock-9-keyboard-up")
+        let forgot = app.buttons["Forgot the code?"].firstMatch
+        XCTAssertTrue(forgot.waitForExistence(timeout: 5), "no way back for somebody who forgot the code")
+        XCTAssertTrue(forgot.isHittable, "the keyboard covers the way back")
+        forgot.tap()
+        let erase = app.alerts.buttons["Erase"].firstMatch
+        XCTAssertTrue(erase.waitForExistence(timeout: 5), "forgetting did not ask before erasing")
+        shoot(app, "lock-10-forgot")
+        erase.tap()
+        sleep(4)
+        XCTAssertFalse(locked.exists, "the lock stayed up after the phone's copy was erased")
+        let fresh = app.textFields.firstMatch
+        XCTAssertTrue(
+            fresh.waitForExistence(timeout: 20) || app.buttons["Skip"].firstMatch.exists,
+            "erasing did not bring the phone back to the start")
+        shoot(app, "lock-11-erased")
     }
 
     func testOfferShown() throws {

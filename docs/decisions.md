@@ -2719,6 +2719,51 @@ does. A lost recovery key and every device lost is the end of that identity.
 
 <!-- COPY END 4d754636 -->
 
+<!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
+
+### The app lock is a code the phone counts, not a key that encrypts
+
+**RULED 2026-09-27 by Griff.** "We should add faceID/PIN4-6/passphrase locking ... it should be
+offered during first use and available in settings."
+
+This reopens the lock Griff canceled on 2026-09-14 because iOS can already require Face ID for an app
+([After TestFlight](after-testflight.md#an-in-app-lock)). What the system's lock can't do is the case
+this app is most exposed to: when Face ID fails it falls back to the phone's passcode, so somebody who
+knows the passcode, a partner or a thief who watched it typed, walks through it. The app's own code is
+not the phone's passcode.
+
+Built the same night: a 4 to 6 digit code or a passphrase of at least 8 characters, with Face ID on
+top if the member wants it. It is offered right after the recovery key at setup and lives in
+Settings under App lock. See the [crypto brief](crypto-brief.md#the-app-lock).
+
+**PROPOSED, the details Griff has not seen:**
+
+- **It guards the screens; it does not encrypt what is stored.** Messages on disk are protected by iOS
+  and the keychain, the same as without the lock. A lock that encrypted the store would stop the app
+  syncing and the notification extension drawing a banner until the member typed the code, and a
+  forgotten code would lose the history. It stops a person holding an unlocked phone, which is who it
+  is for; it does not stop someone who can read the phone's storage directly.
+- **While it is on, a notification says only that something arrived.** A banner with the sender and
+  the words would show exactly what the lock hides. A lock that can't be read (the phone has not been
+  unlocked since it started) counts as on.
+- **Five tries, then waits of one minute, five, fifteen, then an hour each.** A try is written down
+  before it is checked, so quitting the app mid-check doesn't reset the count. The wait is timed by
+  the phone's own running time, not its clock, so changing the date doesn't end it, and restarting the
+  phone starts the wait again rather than ending it.
+- **Face ID counts only for the faces the phone knew when the lock was set.** A face added since
+  needs the code once. Turning Face ID on, lengthening the time before it locks, changing the code and
+  turning the lock off all need the code, entered within the last five minutes, once per change.
+- **Forgetting the code means erasing this phone's copy.** The lock screen offers it, after a warning.
+  Deleting the app does not clear the keychain, so without this a forgotten code would lock the member
+  out for good. It gives a thief nothing: coming back needs another device's approval or the recovery
+  key.
+- **The app switcher sees a cover the moment the app is not in front**, whatever the grace time.
+
+**What it costs.** Banners lose their words while the lock is on. A member who forgets the code and
+has neither another device nor the recovery key loses what was on that phone.
+
+<!-- COPY END d09e6aaf -->
+
 <!-- COPY BEGIN 8aab962a [NEEDS HUMAN REVIEW] -->
 
 ### Recovery is announced, and both sides of it have settings

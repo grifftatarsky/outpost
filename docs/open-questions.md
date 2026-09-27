@@ -17,6 +17,23 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN 23557077 [NEEDS HUMAN REVIEW] -->
+
+### Should the app lock hide notification words, and should it encrypt what is stored?
+
+Raised 2026-09-27, building the lock. Two choices were made so the lock means what it says, and both
+are yours to overrule.
+
+While the lock is on, a banner says only "New message": no sender, no words. Otherwise the lock
+screen of the phone shows what the app's lock hides. Signal and WhatsApp leave this to a separate
+setting instead. Recommended: keep it, and add a setting later if people ask.
+
+The lock does not encrypt the store. Doing that would stop background sync and banners until the
+code was typed, and a forgotten code would take the history with it. Recommended: keep it a door, and
+say so, which the crypto brief does.
+
+<!-- COPY END 23557077 -->
+
 <!-- COPY BEGIN cafc78b8 [NEEDS HUMAN REVIEW] -->
 
 ### Should your agreement key change when a device is removed?

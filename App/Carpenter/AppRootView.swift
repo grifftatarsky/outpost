@@ -30,6 +30,8 @@ struct AppRootView: View {
     @State var arrivingCode: ArrivingCode?
     @AppStorage("onboarding.tourSeen") var tourSeen = false
     @AppStorage("onboarding.syncedSplashSeen") var syncedSplashSeen = false
+    @AppStorage("onboarding.lockOffered") var lockOffered = false
+    @State var appLock = AppLockController(store: AppRootView.appLockStore)
     @State var otherDevicesAsked = false
     @State var syncing = false
     @State var syncAgain = false
@@ -260,6 +262,9 @@ struct AppRootView: View {
                 }
                 .themed(.default)
 
+            case .ready where !lockOffered && appLock.lock == nil && !UITestMode.isOn:
+                lockOffer
+
             case .ready where session.enrolment?.deviceIsNew == true && !syncedSplashSeen:
                 DeviceSyncedView(
                     memberName: session.viewer.displayName,
@@ -443,6 +448,19 @@ struct AppRootView: View {
         }
         .onChange(of: badgeCount, initial: true) { _, count in
             Task { await PushRegistration.setBadge(count) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            appLock.sceneChanged(to: phase)
+        }
+        .onChange(of: appLock.isCovered, initial: true) { _, covered in
+            coverForLock(covered)
+        }
+        .task { await appLock.load() }
+        .environment(\.appLock, appLock)
+        .overlay {
+            if !appLock.loaded {
+                Rectangle().fill(.background).ignoresSafeArea()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }

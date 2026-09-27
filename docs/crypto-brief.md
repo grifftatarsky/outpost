@@ -1084,6 +1084,36 @@ message to draw a banner — and it is a real reduction from `WhenUnlocked`.
 
 <!-- COPY END 4b91a7f5 -->
 
+<!-- COPY BEGIN 9c27f287 [NEEDS HUMAN REVIEW] -->
+
+## The app lock
+
+**In plain words.** The app can ask for its own code, or Face ID, before it shows anything. The code
+is not stored; something only the right code can match is. It is a door on the app's screens, not a
+second layer of encryption on what the app stores.
+
+**What actually happens.** `AppLock` keeps a 32-byte random salt and PBKDF2-HMAC-SHA256 of the code
+over it, 300,000 rounds, compared in constant time. It sits in the keychain as `app.lock`, `.device`
+scope (`AfterFirstUnlockThisDeviceOnly`), so it never leaves the phone, never reaches a backup, and
+survives deleting the app. Every try is written down as a failure before the code is checked and
+cleared only if the code was right. After five failures each further try waits: 1, 5, 15 minutes, then
+an hour. The wait is timed by `CLOCK_MONOTONIC` together with the kernel's boot session id, so setting
+the date does nothing, and a restart starts the wait over rather than ending it
+(`AppLockTests`, `AppLockControllerTests`).
+
+Face ID is asked for with `deviceOwnerAuthenticationWithBiometrics` and no passcode fallback, and it
+counts only when `LAContext.domainState.biometry.stateHash` matches the one taken when Face ID was
+turned on or the code was last entered, so a face enrolled since, by somebody who knows the phone's
+passcode, does not open it.
+
+**What it does not do.** Somebody who can read the phone's storage directly, with a forensic tool or
+a modified app, is not stopped by it: the store is protected by iOS's file protection and the
+keychain, as it is without the lock. A 4-digit code's verifier could be tried against all 10,000
+codes in minutes by anybody who already had the keychain item; the counted tries only bind somebody
+using the app.
+
+<!-- COPY END 9c27f287 -->
+
 <!-- COPY BEGIN 6442968d [NEEDS HUMAN REVIEW] -->
 
 ## What has already gone wrong

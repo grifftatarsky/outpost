@@ -154,6 +154,19 @@ extension YouView {
         .groupedRowSurface()
     }
 
+    private func appLockRow(_ appLock: AppLockController) -> some View {
+        // COPY BEGIN 9c39d599 [NEEDS HUMAN REVIEW]
+        NavigationLink {
+            AppLockSettingsView(controller: appLock)
+        } label: {
+            SettingsRow(
+                icon: "lock.fill", tone: .device,
+                title: Text("App lock", bundle: .module),
+                detail: appLock.lock == nil ? Text("Off", bundle: .module) : Text("On", bundle: .module))
+        }
+        // COPY END 9c39d599
+    }
+
     var thisDevice: some View {
         Section {
             // COPY BEGIN 07edb102 [NEEDS HUMAN REVIEW]
@@ -174,6 +187,9 @@ extension YouView {
                             "Saved \($0.formatted(date: .abbreviated, time: .omitted))",
                             bundle: .module)
                     } ?? Text("Never saved", bundle: .module))
+            }
+            if let appLock {
+                appLockRow(appLock)
             }
             NavigationLink {
                 IntegrityView(report: integrity)

@@ -30,7 +30,12 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
 
         Task {
             let rich = await NotificationService.richCopy()
-            await self.deliver(rich.copy, badge: rich.badge, sender: rich.sender, quietly: rich.quietly)
+            if await NotificationService.appIsLocked() {
+                DiagnosticsExport.note("nse: the app lock is on; delivering the generic banner")
+                await self.deliver(MessageNotification.generic, badge: rich.badge, sender: nil, quietly: rich.quietly)
+            } else {
+                await self.deliver(rich.copy, badge: rich.badge, sender: rich.sender, quietly: rich.quietly)
+            }
         }
     }
 
@@ -85,7 +90,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
                 image: sender.image.map { INImage(imageData: $0) },
                 contactIdentifier: nil, customIdentifier: sender.id.shortCode)
             let intent = INSendMessageIntent(
-                recipients: nil, outgoingMessageType: .outgoingMessageText, content: copy.body,
+                recipients: nil, outgoingMessageType: .outgoingMessageText, content: nil,
                 speakableGroupName: sender.isDirect ? nil : INSpeakableString(spokenPhrase: sender.roomName),
                 conversationIdentifier: sender.threadID, serviceName: nil, sender: person,
                 attachments: nil)
@@ -193,6 +198,18 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
     }
 
     private static let attempts = 6
+
+    private static func appIsLocked() async -> Bool {
+        let full = Bundle.main.bundleIdentifier ?? "app"
+        let container = full.lastIndex(of: ".").map { String(full[..<$0]) } ?? full
+        let store = AppLockStore(
+            keychain: SystemKeychainStore(service: container, accessGroup: sharedKeychainGroup))
+        do {
+            return try await store.load() != nil
+        } catch {
+            return true
+        }
+    }
 
     private static let sharedKeychainGroup: String? = SharedKeychain.group
 }

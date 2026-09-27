@@ -95,6 +95,11 @@ extension AppRootView {
     func eraseThisDevice() async {
         deviceSync = nil
         startedSyncFor = nil
+        askingOutpostNotifications = false
+        explainingNotifications = false
+        redeeming = false
+        restoring = false
+        try? await INInteraction.deleteAll()
 
         let container = worldContainer
         try? await SystemKeychainStore(

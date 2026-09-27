@@ -431,23 +431,31 @@ the backfill and the recoverer's choice, and the restore that asks nobody proved
 <!-- COPY BEGIN 99e8afe2 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="an-in-app-lock">
-<summary><b>An in-app lock</b> — Canceled</summary>
+<summary><b>An in-app lock</b> — Built, not yet on a phone</summary>
 
 **Story.** As a member, I want the app itself to lock, so that an unlocked phone is not an open
 conversation. A stolen unlocked phone currently gives up every room in full.
 
+Canceled 2026-09-14 in favour of iOS's own app lock, and reopened by Griff on 2026-09-27: iOS's lock
+falls back to the phone's passcode, which is the one thing a partner or a thief who watched it typed
+already has. See [the decision](../decisions.md#the-app-lock-is-a-code-the-phone-counts-not-a-key-that-encrypts).
+
 **Acceptance criteria**
 
-- **Canceled.** Canceled 2026-09-14 — iOS locks apps behind Face ID already, and does it better than this
-  could: Settings › Face ID & Passcode › Require Face ID for individual apps. See
-  [After TestFlight](../after-testflight.md#an-in-app-lock). The honesty half of the third criterion
-  survives as a copy change on the Safety pages.
-- **Canceled.** Locks behind the device's own biometric or passcode, on a timeout the member chooses.
-- **Canceled.** Notification content respects the lock and interacts correctly with notification previews.
-- **Canceled.** The lock is a lock, not a curtain: the limit stated rather than implying protection at rest
-  beyond the platform's.
+- **Built.** Locks behind the app's own 4 to 6 digit code or a passphrase, with Face ID on top if
+  wanted, on a timeout the member chooses (right away, 1, 5 or 15 minutes). Offered at setup, after
+  the recovery key, and in Settings.
+- **Built.** Notification content respects the lock: while it is on, a banner says only that something
+  arrived. Not yet seen on the rig.
+- **Built.** The lock is a lock, not a curtain, and says so: the crypto brief and the setup screen say
+  it guards the screens and does not encrypt what is stored.
+- **Built.** Wrong codes are counted before they are checked and make you wait; changing the clock or
+  restarting the phone doesn't end a wait; a face added since the lock was set needs the code; every
+  change that weakens the lock needs the code; a forgotten code can erase this phone's copy
+  (`AppLockTests`, `AppLockControllerTests`, `RigChecks.testANewMemberSavesTheKeyAndLocksTheApp`).
 
-**Design.** Board 30, not built.
+**Design.** Board 30 was drawn and not seen while building this; the screens follow the app's own
+settings patterns instead, and have not been compared with the board.
 
 </details>
 

@@ -29,6 +29,10 @@
 	<key>NSFocusStatusUsageDescription</key>
 	<string>Tells the people you write to that you have notifications silenced, only if you turn that on under Privacy &amp; Safety.</string>
 	<!-- COPY END 9662b091 -->
+	<!-- COPY BEGIN b6501cb1 [NEEDS HUMAN REVIEW] -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID opens the app when you have locked it, instead of typing your code.</string>
+	<!-- COPY END b6501cb1 -->
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>
