@@ -31,6 +31,7 @@ struct AppRootView: View {
     @AppStorage("onboarding.tourSeen") var tourSeen = false
     @AppStorage("onboarding.syncedSplashSeen") var syncedSplashSeen = false
     @AppStorage("onboarding.lockOffered") var lockOffered = false
+    @AppStorage("siri.donationsForgotten") var siriDonationsForgotten = false
     @State var appLock = AppLockController(store: AppRootView.appLockStore)
     @State var otherDevicesAsked = false
     @State var syncing = false
@@ -456,6 +457,7 @@ struct AppRootView: View {
             coverForLock(covered)
         }
         .task { await appLock.load() }
+        .task { await forgetOldSiriDonations() }
         .environment(\.appLock, appLock)
         .overlay {
             if !appLock.loaded {

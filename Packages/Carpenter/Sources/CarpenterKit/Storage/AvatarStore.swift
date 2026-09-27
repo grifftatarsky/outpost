@@ -144,11 +144,6 @@ public struct PersonAvatarStore: Sendable {
         loadPublished(for: person, .outpost)
     }
 
-    public func faceForABanner(from person: ParticipantID, aboutAPost: Bool) -> Data? {
-        if aboutAPost, let wall = loadOutpost(for: person) { return wall }
-        return load(for: person) ?? loadShared(for: person) ?? loadOutpost(for: person)
-    }
-
     public func removeAll() throws {
         guard FileManager.default.fileExists(atPath: directory.path) else { return }
         try FileManager.default.removeItem(at: directory)

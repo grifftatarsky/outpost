@@ -275,7 +275,13 @@ the notification is a door rather than an announcement.
 <!-- COPY BEGIN c1b58e4b [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="a-banner-from-a-person">
-<summary><b>A banner from a person</b> — Complete (hardware proof owed)</summary>
+<summary><b>A banner from a person</b> — Canceled</summary>
+
+**Canceled 2026-09-27.** Griff: "No siri interactions, unless there is a way to do so completely
+privately." Drawing a banner as a message from a person means donating the sender and the
+conversation to Siri, so the extension no longer does it, and a banner is an ordinary notification.
+See [No Siri and no Apple Intelligence](../decisions.md#no-siri-and-no-apple-intelligence). What
+follows is the story as it was built.
 
 **Story.** As a member, I want a message's banner to look like a message from a person — their face,
 their name — so that Focus treats it as one and my lock screen reads like a conversation.

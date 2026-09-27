@@ -92,6 +92,17 @@ extension AppRootView {
         }
     }
 
+    func forgetOldSiriDonations() async {
+        guard !siriDonationsForgotten else { return }
+        do {
+            try await INInteraction.deleteAll()
+            siriDonationsForgotten = true
+        } catch {
+            Diagnostics.sync.error(
+                "siri: could not delete what earlier builds donated (\(String(describing: error), privacy: .public))")
+        }
+    }
+
     func eraseThisDevice() async {
         deviceSync = nil
         startedSyncFor = nil

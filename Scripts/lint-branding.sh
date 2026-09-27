@@ -378,6 +378,25 @@ else
     printf '\nwarning: python3 not found; the copy-marker rule did not run.\n'
 fi
 
+# No Siri and no Apple Intelligence (Griff, 2026-09-27). The notification extension donated every
+#     banner to Siri as an INSendMessageIntent, which put the sender and conversation into the
+#     system's interaction store, outside anything the app seals; erasing never removed it. Nothing
+#     may donate, declare an intent type, index for Spotlight or ask for the communication
+#     capability, and Writing Tools stay off through the theme every screen wears.
+siri=$(
+    # shellcheck disable=SC2086
+    grep -nE 'INInteraction\(|INSendMessageIntent|INPerson\(|\.donate\(\)|CSSearchableItem|AppShortcutsProvider|NSUserActivity\(|\.userActivity\(' $sources 2>/dev/null
+    grep -nE 'NSUserActivityTypes|INSendMessageIntent|usernotifications\.communication|com\.apple\.developer\.siri' \
+        App/Carpenter/Info.plist App/CarpenterNotificationService/Info.plist \
+        App/Carpenter/Carpenter.entitlements App/CarpenterNotificationService/CarpenterNotificationService.entitlements 2>/dev/null
+)
+if [ -n "$siri" ]; then
+    report "error: a Siri or intent surface is back — the app donates nothing to Siri:" "$siri"
+fi
+if ! grep -q 'writingToolsBehavior(.disabled)' Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift; then
+    report "error: Writing Tools are no longer turned off in the theme:" "Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift"
+fi
+
 if [ "$status" -eq 0 ]; then
     echo "branding lint: clean"
 fi

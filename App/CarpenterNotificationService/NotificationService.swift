@@ -3,7 +3,6 @@ import CarpenterCloudKit
 import CarpenterKeychain
 import CarpenterKit
 import CloudKit
-import Intents
 import OSLog
 import UserNotifications
 
@@ -32,34 +31,24 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
             let rich = await NotificationService.richCopy()
             if await NotificationService.appIsLocked() {
                 DiagnosticsExport.note("nse: the app lock is on; delivering the generic banner")
-                await self.deliver(MessageNotification.generic, badge: rich.badge, sender: nil, quietly: rich.quietly)
+                await self.deliver(MessageNotification.generic, badge: rich.badge, quietly: rich.quietly)
             } else {
-                await self.deliver(rich.copy, badge: rich.badge, sender: rich.sender, quietly: rich.quietly)
+                await self.deliver(rich.copy, badge: rich.badge, quietly: rich.quietly)
             }
         }
-    }
-
-    struct Sender {
-        let id: ParticipantID
-        let name: String
-        let image: Data?
-        let roomName: String
-        let isDirect: Bool
-        let threadID: String
     }
 
     struct Rich {
         let copy: NotificationCopy
         let badge: Int?
-        let sender: Sender?
         let quietly: Bool
     }
 
     override func serviceExtensionTimeWillExpire() {
-        Task { await deliver(MessageNotification.generic, badge: nil, sender: nil, quietly: false) }
+        Task { await deliver(MessageNotification.generic, badge: nil, quietly: false) }
     }
 
-    private func deliver(_ copy: NotificationCopy, badge: Int?, sender: Sender?, quietly: Bool) async {
+    private func deliver(_ copy: NotificationCopy, badge: Int?, quietly: Bool) async {
         let taken: ((UNNotificationContent) -> Void, UNMutableNotificationContent)? = lock.withLock {
             guard let handler = contentHandler, let content = bestAttempt else { return nil }
             contentHandler = nil
@@ -82,31 +71,9 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
 
         if quietly { content.interruptionLevel = .passive }
 
-        var final: UNNotificationContent = content
-        if !copy.isGeneric, let sender {
-            let person = INPerson(
-                personHandle: INPersonHandle(value: sender.id.shortCode, type: .unknown),
-                nameComponents: nil, displayName: sender.name,
-                image: sender.image.map { INImage(imageData: $0) },
-                contactIdentifier: nil, customIdentifier: sender.id.shortCode)
-            let intent = INSendMessageIntent(
-                recipients: nil, outgoingMessageType: .outgoingMessageText, content: nil,
-                speakableGroupName: sender.isDirect ? nil : INSpeakableString(spokenPhrase: sender.roomName),
-                conversationIdentifier: sender.threadID, serviceName: nil, sender: person,
-                attachments: nil)
-            let interaction = INInteraction(intent: intent, response: nil)
-            interaction.direction = .incoming
-            do {
-                try await interaction.donate()
-                final = try content.updating(from: intent)
-            } catch {
-                DiagnosticsExport.note("nse: could not attach the sender (\(error))")
-            }
-        }
-
         if let url = DiagnosticsExport.groupURL { DiagnosticsExport.write(to: url, throttled: false) }
 
-        handler(final)
+        handler(content)
     }
 
     @MainActor
@@ -118,7 +85,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
         #if DEBUG
             if TestProfileStore(directory: directory).isAnyProfileActive {
                 DiagnosticsExport.note("nse: a test profile is on; iCloud stays closed")
-                return Rich(copy: MessageNotification.generic, badge: nil, sender: nil, quietly: true)
+                return Rich(copy: MessageNotification.generic, badge: nil, quietly: true)
             }
         #endif
 
@@ -144,14 +111,6 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
                 defaultLevel: session.notificationLevel,
                 levelForRoom: { [session] room in
                     MainActor.assumeIsolated { session.notificationLevel(for: room) }
-                },
-                isDirect: { [session] room in
-                    MainActor.assumeIsolated { session.rooms.first { $0.id == room }?.isDirect ?? false }
-                },
-                authorOfMessage: { [session] room, id in
-                    MainActor.assumeIsolated {
-                        session.messages(in: room).first { $0.id == id }?.author
-                    }
                 })
 
             guard
@@ -165,16 +124,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
 
             DiagnosticsExport.note("nse: found something new after \(attempt + 1) attempt(s)")
 
-            let photos = PersonAvatarStore(directory: directory)
-            let sender = banner.sender.map {
-                Sender(
-                    id: $0.id, name: $0.name,
-                    image: photos.faceForABanner(from: $0.id, aboutAPost: $0.isAboutAPost),
-                    roomName: $0.roomName, isDirect: $0.isDirect, threadID: $0.threadID)
-            }
-            return Rich(
-                copy: banner.copy, badge: session.badgeNumber, sender: sender,
-                quietly: banner.quietly)
+            return Rich(copy: banner.copy, badge: session.badgeNumber, quietly: banner.quietly)
         }
 
         for attempt in 0..<Self.attempts {
@@ -192,9 +142,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
         }
 
         DiagnosticsExport.note("nse: nothing new became visible; delivering the generic banner")
-        return Rich(
-            copy: MessageNotification.generic, badge: session.badgeNumber, sender: nil,
-            quietly: false)
+        return Rich(copy: MessageNotification.generic, badge: session.badgeNumber, quietly: false)
     }
 
     private static let attempts = 6

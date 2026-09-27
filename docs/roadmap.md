@@ -119,7 +119,7 @@ Seven epics, 87 tickets, counted 2026-09-17.
 | Unread, and the number on the icon | Complete (tested) | Dot and badge on beta 2026-09-02, cleared by reading. The extension's half rides on the push. **2026-09-17: the number ignored the member's own switches** — `BadgeCount` counted unread rooms unconditionally, never read `BadgeChoices` and never counted Outposts, so two controls on the Notifications screen did nothing and all four sentences of `BadgeMeaningLine` were false. Fixed, and it is one `AppSession.badgeNumber` the app and the extension share rather than a sum written twice ([Decisions](decisions.md#the-number-on-the-app-icon-is-one-property-and-it-obeys-the-switches)). Measured on Quad: 1 with an unread room, none once the switch was off with the message still unread, and back again. |
 | Asking for notifications honestly | Complete (tested) | Explainer on the first ready screen on both simulators 2026-09-04. |
 | Tapping through, and what happens next | Complete (hardware proof owed) | A banner for a room this member no longer has opens the app and navigates nowhere; one tapped while already in that room does nothing. The decision sits in `AppSession.tapping(_:whileViewing:)` so it is testable (`TappingThroughTests`). Watching a real banner be tapped is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
-| A banner from a person | Complete (hardware proof owed) | The extension attaches the sender, their photo and the conversation to every banner that names them, and since 2026-09-13 a banner about a post prefers the picture on the wall it came from (`ABannersFaceTests`). Seeing one drawn is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
+| A banner from a person | Canceled | Ruled out 2026-09-27 with every other Siri surface: a banner is an ordinary notification, with no sender or photo handed to Siri. See [No Siri and no Apple Intelligence](decisions.md#no-siri-and-no-apple-intelligence). |
 | Silenced notifications, shared | Complete (tested) | Two switches and a custom message (`FocusStatusTests`). Beta's pretend Focus drew *Do Not Disturb*, then *Heads down till six*, over alpha's field 2026-09-06. |
 | Focus filters | Complete (hardware proof owed) | A filter per Focus: which rooms may notify, whether banners carry the words (`FocusFilterTests`). 2026-09-17, found while making the extension's decisions testable: *Show what was said* was applied to a message and not to a post, so a Focus set to hide it still put a post's body on the lock screen. Fixed — the preview switch reaches a post, the room list deliberately does not ([Decisions](decisions.md#a-focus-filters-preview-switch-reaches-a-post-and-its-room-list-does-not)). A simulator has no Focus — [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
 | Settings split by what rings | Complete (hardware proof owed) | Notifications is a master switch over two pages, Messaging and Outposts, each with its own urgency; badges carry a separate setting saying what they count. `NotificationLevelTests`, `BadgeCountTests`, `WhatTheTabsBadgeTests`, driven on the rig 2026-09-11. Seeing one with a real push is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md). |
@@ -274,6 +274,21 @@ Taken from the table rather than from what was last touched, 2026-09-17.
    proof, both suites, a walk, and the VoiceOver pass.
 
 <!-- COPY END e3aa4f04 -->
+
+<!-- COPY BEGIN 39410734 [NEEDS HUMAN REVIEW] -->
+
+## To research
+
+1. **Siri, completely privately.** Griff, 2026-09-27: people may want to ask Siri to write a message.
+   Today the app gives Siri nothing. The question is whether a message can be composed through Siri
+   without the words, the person or the conversation being handed to the system's stores. Nothing
+   is built until the answer is yes.
+2. **Closing the window before a removal is heard.** A stolen phone keeps working until its owner
+   removes it and the people they talk to hear about it, and nothing can start the clock before the
+   owner knows something is wrong. Is there some method, however unusual, that narrows it? Probably
+   not; recorded so the question is asked once properly.
+
+<!-- COPY END 39410734 -->
 
 <!-- COPY BEGIN 94574bfb [NEEDS HUMAN REVIEW] -->
 

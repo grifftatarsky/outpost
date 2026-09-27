@@ -33,10 +33,6 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID opens the app when you have locked it, instead of typing your code.</string>
 	<!-- COPY END b6501cb1 -->
-	<key>NSUserActivityTypes</key>
-	<array>
-		<string>INSendMessageIntent</string>
-	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

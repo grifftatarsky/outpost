@@ -2719,6 +2719,37 @@ does. A lost recovery key and every device lost is the end of that identity.
 
 <!-- COPY END 4d754636 -->
 
+<!-- COPY BEGIN 750fb704 [NEEDS HUMAN REVIEW] -->
+
+### No Siri and no Apple Intelligence
+
+**RULED 2026-09-27 by Griff.** "No siri interactions, unless there is a way to do so completely
+privately. I think people might want the siri compose a message functionality, so you know what—just
+add this to the roadmap to research, 0 siri right now. No apple intelligence either, make sure of
+that."
+
+The notification extension used to donate an `INSendMessageIntent` for every banner that named its
+sender, with the sender's name, photo and conversation, so iOS would draw it as a message from a
+person. That put who wrote to you, and in which conversation, into Siri's interaction store, where
+nothing the app seals reaches and erasing the app never removed it. The donation, both Info.plists'
+`INSendMessageIntent` declaration and the Communication Notifications capability are gone; a banner
+is an ordinary notification whose words follow the member's notification level. On its first launch
+the app deletes everything earlier builds donated, and *Erase everything* deletes it again. Writing
+Tools are turned off for every screen through the theme. The lint fails on any donation, intent
+declaration, Spotlight item, App Shortcut, user activity or the communication capability coming
+back, and on Writing Tools being switched back on.
+
+**What it costs.** Banners no longer carry the sender's face, and Focus decides by app rather than by
+person, so a member cannot let only certain people through a Focus. The Focus filter stays: it only
+tells the app which rooms to announce during a Focus, and it hands nothing to Siri.
+
+**What is not the app's to control.** A member can turn on Apple Intelligence notification
+summaries in Settings; iOS offers no switch for an app to refuse them. The words a summary would
+read are the same words the banner already shows, so the notification level is the member's lever,
+and the most private level shows none. Siri compose is on the roadmap under research.
+
+<!-- COPY END 750fb704 -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts

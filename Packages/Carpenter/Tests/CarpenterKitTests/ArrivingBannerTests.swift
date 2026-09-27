@@ -37,9 +37,7 @@ struct ArrivingBannerTests {
         let forRoom = perRoom ?? level
         return WhatArrived.Surroundings(
             filter: filter, defaultLevel: level,
-            levelForRoom: { _ in forRoom },
-            isDirect: { _ in false },
-            authorOfMessage: { _, _ in Member(id: self.alice, displayName: "Alice") })
+            levelForRoom: { _ in forRoom })
     }
 
     private var nothingSeenYet: BannerSnapshot { BannerSnapshot(post: nil, ask: nil, message: nil) }
@@ -83,7 +81,7 @@ struct ArrivingBannerTests {
     func askSitsBetween() {
         let both = WhatArrived.since(
             nothingSeenYet, post: post(), ask: ask(), message: message(), in: world())
-        #expect(both?.sender?.isAboutAPost == true, "the post did not win")
+        #expect(both?.copy.subtitle == "Posted to their Outpost", "the post did not win")
 
         let withoutPost = WhatArrived.since(
             nothingSeenYet, post: nil, ask: ask(), message: message(), in: world())
@@ -156,56 +154,11 @@ struct ArrivingBannerTests {
         #expect(banner?.copy.body == "the mooring mast drawings are 1:200")
     }
 
-    // MARK: The rule that matters most — a banner never carries a name its words withhold
-
-    @Test("No banner carries a sender unless its words name one")
-    func aSenderIsOnlyAttachedWhenItIsNamed() {
-        var attached = 0
-        for rung in NotificationLevel.allCases {
-            let fromAMessage = WhatArrived.since(
-                nothingSeenYet, post: nil, ask: nil, message: message(),
-                in: world(level: rung, perRoom: rung))
-            if let banner = fromAMessage, banner.sender != nil {
-                attached += 1
-                #expect(
-                    rung.showsSender && !banner.copy.isGeneric,
-                    """
-                    at \(rung) the banner attached Alice as a communication notification — her name \
-                    and her face — while its own words withhold the sender.
-                    """)
-            }
-
-            let fromAPost = WhatArrived.since(
-                nothingSeenYet, post: post(), ask: nil, message: nil,
-                in: world(level: rung, perRoom: rung))
-            if let banner = fromAPost, banner.sender != nil {
-                attached += 1
-                #expect(
-                    rung.showsSender && !banner.copy.isGeneric,
-                    "at \(rung) a post's banner attached its author while its words withhold them")
-            }
-        }
-        #expect(attached > 0, "no level attached a sender at all, so nothing here was checked")
-    }
-
-    @Test("A generic banner never carries a sender")
+    @Test("The level that says nothing draws the generic banner")
     func theGenericBannerIsAnonymous() {
         let banner = WhatArrived.since(
             nothingSeenYet, post: nil, ask: nil, message: message(),
             in: world(level: .nothing, perRoom: .nothing))
         #expect(banner?.copy == MessageNotification.generic)
-        #expect(banner?.sender == nil, "the content-free banner still named who wrote it")
-    }
-
-    @Test("A message with no author to resolve draws no sender")
-    func anUnresolvedAuthorIsNoSender() {
-        let world = WhatArrived.Surroundings(
-            filter: FocusFilter(), defaultLevel: .everything,
-            levelForRoom: { _ in .everything }, isDirect: { _ in false },
-            authorOfMessage: { _, _ in nil })
-        let banner = WhatArrived.since(
-            nothingSeenYet, post: nil, ask: nil, message: message(), in: world)
-        #expect(banner?.copy.body == "are you coming")
-        #expect(banner?.sender == nil)
     }
 }
