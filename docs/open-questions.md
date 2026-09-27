@@ -17,45 +17,21 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
-<!-- COPY BEGIN 21f481a7 [NEEDS HUMAN REVIEW] -->
+<!-- COPY BEGIN cafc78b8 [NEEDS HUMAN REVIEW] -->
 
-### Should adding a device without an approval need a key no device keeps?
+### Should your agreement key change when a device is removed?
 
-Every device that is let in gets the identity key, and the identity key alone can add a device,
-because that is how a restore works: the recovery key is the identity key written down. So a removed
-device can add a device of its own at any time, with no date trick, and that device can then remove
-yours, which makes them erase themselves (measured 2026-09-26). Ordering by iCloud's clock doesn't
-help, because nothing here is out of order. Erasing the removed device with Find My stops it, because
-it can no longer write to your iCloud.
+Raised 2026-09-27. A device you remove keeps your identity's agreement key. It can't read your rooms
+(room keys are sealed to each device that counts) or add a device (only the recovery key or an
+approval can). What it can still do is work out the address every packet to you is left under, so it
+can see who writes to you, when and how much, for as long as it has the key. That is exactly what an
+abuser holding your old phone would want.
 
-The proposal: the recovery key becomes its own key, which no device keeps. A device gets in by
-another device's approval or by the recovery key, and a removed device holds neither. The recovery
-key is made on a device that counts and shown once; to replace it you make a new one on any device
-that counts, and the old one stops working. The cost: the recovery key can't be shown again from
-Settings, only replaced, and its file changes (restoring works the same from the member's side).
+The fix is to change the agreement key on every removal and hand the new one only to your devices,
+with your devices telling everyone you talk to. It changes how two people's shared secret is made, so
+it touches every address and every hand-over. Recommended, after the removal work that is in now.
 
-<!-- COPY END 21f481a7 -->
-
-<!-- COPY BEGIN 1c346b30 [NEEDS HUMAN REVIEW] -->
-
-### Should your identity stay in iCloud Keychain?
-
-Raised 2026-09-26. With approval in place, the copy of the identity in iCloud Keychain no longer
-lets a new device in by itself: it still has to be approved, or use the recovery key. What the
-iCloud Keychain copy still does is put the identity on any device signed in to the member's Apple
-Account. The app won't let that device in, but a reprogrammed app could use the identity the way
-the recovery key does. The member's devices would mark it as added with the recovery key, and it
-could remove their other devices.
-
-Keeping the identity only on devices the member approved (approval already hands it over) would
-close that. The cost: losing every device without the recovery key would lose the account, where
-today a new phone on the same Apple Account at least holds the identity. Griff to decide.
-
-What neither choice stops: a phone that was yours and was taken apart has its keys. Removing it
-stops it receiving, and anything it adds shows up on your other devices. It can still sign as you
-with a date before its removal, which is the limit every signed date in this app has.
-
-<!-- COPY END 1c346b30 -->
+<!-- COPY END cafc78b8 -->
 
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
 

@@ -61,6 +61,7 @@ struct BeingToldAboutARestoreTests {
     }
 
     private func restoreAndSettle(_ rig: Rig) async throws -> AppSession {
+        rig.clock.advance(by: 60)
         let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
@@ -93,6 +94,7 @@ struct BeingToldAboutARestoreTests {
     @Test("The person who was asked is told who came back, and which conversation")
     func thePersonAskedIsTold() async throws {
         let rig = try await rig(peerIsTold: true)
+        let member = rig.original.enrolment?.identity.id
         _ = try await restoreAndSettle(rig)
 
         let ask = try #require(
@@ -102,7 +104,7 @@ struct BeingToldAboutARestoreTests {
             2026-09-13 that a restore is not silent: "you're requesting to fill history you've \
             lost which means you're asking for it".
             """)
-        #expect(ask.person == rig.original.enrolment?.identity.id)
+        #expect(ask.person == member)
         #expect(ask.personName == "Griff", "the banner would not name who came back")
         #expect(ask.room == rig.room)
         #expect(ask.roomName == "Kitchen", "the banner would not name what was asked for")
@@ -280,6 +282,7 @@ struct HoldingHistoryForARestoreTests {
     }
 
     private func restoreAndSettle(_ rig: Rig, rounds: Int = 10) async throws -> AppSession {
+        rig.clock.advance(by: 60)
         let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
@@ -459,6 +462,7 @@ struct NotAskingForHistoryTests {
     }
 
     private func restore(_ rig: Rig, askingPeers: Bool) async throws -> AppSession {
+        rig.clock.advance(by: 60)
         let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()

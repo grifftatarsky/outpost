@@ -289,14 +289,6 @@ public struct DeviceListView: View {
                         .foregroundStyle(palette.tertiaryText)
                 }
 
-                if device.addedWithTheRecoveryKey, device.isActive {
-                    // COPY BEGIN 8177f2ca [NEEDS HUMAN REVIEW]
-                    Text("Added with your recovery key, not approved by a device", bundle: .module)
-                        .font(CarpenterFont.caption)
-                        .foregroundStyle(palette.destructive)
-                    // COPY END 8177f2ca
-                }
-
                 if let revokedAt = device.revokedAt {
                     // COPY BEGIN 247d1fdf [NEEDS HUMAN REVIEW]
                     Text(

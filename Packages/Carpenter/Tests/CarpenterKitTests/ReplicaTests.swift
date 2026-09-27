@@ -13,7 +13,7 @@ struct Author {
     init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil) {
         identity = Identity.generate()
         device = DeviceKeys.generate()
-        certificate = try! DeviceCertificate.issue(
+        certificate = try! DeviceCertificate.recovered(
             for: device.publicKey, by: identity, at: issuedAt)
         self.chain = chain ?? EpochChain.create(room: RoomID()).chain
     }

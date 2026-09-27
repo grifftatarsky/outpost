@@ -32,15 +32,18 @@ struct ComparisonCodeTests {
     func eachKeyCounts() {
         let one = Identity.generate().publicKeys
         let other = Identity.generate().publicKeys
-        let swapped = IdentityPublicKeys(signing: one.signing, agreement: other.agreement)
+        let swapped = IdentityPublicKeys(signing: one.signing, agreement: other.agreement, recovery: one.recovery)
         #expect(ComparisonCode.half(for: one) != ComparisonCode.half(for: swapped))
+        let otherRecovery = IdentityPublicKeys(signing: one.signing, agreement: one.agreement, recovery: other.recovery)
+        #expect(ComparisonCode.half(for: one) != ComparisonCode.half(for: otherRecovery))
     }
 
     @Test("The derivation is pinned, so a later build cannot silently show different codes")
     func pinned() {
         let keys = IdentityPublicKeys(
-            signing: Data(repeating: 0x11, count: 32), agreement: Data(repeating: 0x22, count: 32))
+            signing: Data(repeating: 0x11, count: 32), agreement: Data(repeating: 0x22, count: 32),
+            recovery: Data(repeating: 0x33, count: 32))
         #expect(ComparisonCode.iterations == 4096)
-        #expect(ComparisonCode.half(for: keys) == "RRPM3B8CGJ", "computed independently, in Python, from the layout in the crypto brief")
+        #expect(ComparisonCode.half(for: keys) == "CRC84MG5RX", "computed independently, in Python, from the layout in the crypto brief")
     }
 }

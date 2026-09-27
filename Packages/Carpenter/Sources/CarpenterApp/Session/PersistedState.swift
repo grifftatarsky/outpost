@@ -29,7 +29,6 @@ struct PersistedState: Codable, Equatable, Sendable {
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
     var siblingMail = SiblingMail()
-    var devicesAddedWithTheRecoveryKey: Set<DeviceID> = []
 
     private enum RetiredKeys: String, CodingKey { case awaitingJoin, epochTurnsOwed }
     var knownKeys: [IdentityPublicKeys] = []
@@ -39,6 +38,9 @@ struct PersistedState: Codable, Equatable, Sendable {
     var authorityStored: [Data: Date] = [:]
     var authorityIsLegacy = false
     var authorityPublished: Set<Data> = []
+    var authorityAnnounced: Data?
+    var restoredWithTheRecoveryKey = false
+    var rekeyBeforeWriting: Set<RoomID> = []
 
     var preferences = MemberPreferences()
 
@@ -112,8 +114,6 @@ struct PersistedState: Codable, Equatable, Sendable {
         wantsWhatWasSaid =
             try container.decodeIfPresent(Bool.self, forKey: .wantsWhatWasSaid) ?? false
         siblingMail = try container.decodeIfPresent(SiblingMail.self, forKey: .siblingMail) ?? SiblingMail()
-        devicesAddedWithTheRecoveryKey =
-            try container.decodeIfPresent(Set<DeviceID>.self, forKey: .devicesAddedWithTheRecoveryKey) ?? []
         otherRevocations =
             try container.decodeIfPresent([DeviceRevocation].self, forKey: .otherRevocations) ?? []
         if let stored = try container.decodeIfPresent([Data: Date].self, forKey: .authorityStored) {
@@ -123,5 +123,9 @@ struct PersistedState: Codable, Equatable, Sendable {
             authorityIsLegacy = true
         }
         authorityPublished = try container.decodeIfPresent(Set<Data>.self, forKey: .authorityPublished) ?? []
+        authorityAnnounced = try container.decodeIfPresent(Data.self, forKey: .authorityAnnounced)
+        restoredWithTheRecoveryKey =
+            try container.decodeIfPresent(Bool.self, forKey: .restoredWithTheRecoveryKey) ?? false
+        rekeyBeforeWriting = try container.decodeIfPresent(Set<RoomID>.self, forKey: .rekeyBeforeWriting) ?? []
     }
 }

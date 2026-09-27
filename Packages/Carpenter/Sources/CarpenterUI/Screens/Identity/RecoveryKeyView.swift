@@ -3,25 +3,18 @@ import SwiftUI
 
 public struct RecoveryKeyView: View {
     @Environment(\.palette) private var palette
-    @Environment(\.dismiss) private var dismiss
 
     private let text: String
     private let fingerprint: String
-    private let isFirstTime: Bool
-    private let onSaved: () -> Void
-    private let onSkip: (() -> Void)?
+    private let onSaved: () async -> Void
 
+    @State private var shared = false
     @State private var confirming = false
 
-    public init(
-        text: String, fingerprint: String, isFirstTime: Bool,
-        onSaved: @escaping () -> Void, onSkip: (() -> Void)? = nil
-    ) {
+    public init(text: String, fingerprint: String, onSaved: @escaping () async -> Void) {
         self.text = text
         self.fingerprint = fingerprint
-        self.isFirstTime = isFirstTime
         self.onSaved = onSaved
-        self.onSkip = onSkip
     }
 
     public var body: some View {
@@ -32,7 +25,7 @@ public struct RecoveryKeyView: View {
                         icon: "key.horizontal.fill",
                         title: Text("Your recovery key", bundle: .module),
                         paragraph: Text(
-                            "Save this file in a safe place. This is the only way back into your account if all devices are lost.",
+                            "Save this file in a safe place. It's shown once, now, and none of your devices keep it. It's the only way back if you lose every device, and using it removes every other device.",
                             bundle: .module))
                 }
                 .groupedRowSurface()
@@ -66,71 +59,63 @@ public struct RecoveryKeyView: View {
                     Text("Save key", bundle: .module).primaryAction()
                 }
                 .prominentActionButton()
-                .simultaneousGesture(TapGesture().onEnded { onSaved() })
+                .simultaneousGesture(TapGesture().onEnded { shared = true })
                 // COPY END d46cf88c
 
-                // COPY BEGIN d3255589 [HUMAN REVIEWED, UNVERIFIED]
-                if onSkip != nil {
-                    Button { confirming = true } label: {
-                        Text("Not now", bundle: .module)
-                    }
-                    .quietActionButton()
+                // COPY BEGIN a0892d83 [NEEDS HUMAN REVIEW]
+                Button { confirming = true } label: {
+                    Text("I've saved it", bundle: .module)
                 }
-                // COPY END d3255589
+                .quietActionButton()
+                .disabled(!shared)
+                // COPY END a0892d83
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
         }
         .background(palette.background)
-        // COPY BEGIN 62a19f8e [HUMAN REVIEWED, UNVERIFIED]
+        // COPY BEGIN 62a19f8e [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("Recovery Key", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
+        // COPY END 62a19f8e
+        // COPY BEGIN 74d78710 [NEEDS HUMAN REVIEW]
         .confirmationDialog(
-            Text("Continue without your key?", bundle: .module),
+            Text("Is your key somewhere safe?", bundle: .module),
             isPresented: $confirming, titleVisibility: .visible
         ) {
-            Button(role: .destructive) {
-                dismiss()
-                onSkip?()
+            Button {
+                Task { await onSaved() }
             } label: {
-                Text("Continue without it", bundle: .module)
+                Text("It's saved", bundle: .module)
             }
             Button(role: .cancel) {} label: {
-                Text("Save it first", bundle: .module)
+                Text("Not yet", bundle: .module)
             }
         } message: {
             Text(
-                "You can save it later under You. Until you do, losing every device you own ends this account.",
+                "Once you go on, this key can't be shown again, on this device or any other.",
                 bundle: .module)
-        // COPY END 62a19f8e
         }
+        // COPY END 74d78710
+        .interactiveDismissDisabled()
     }
 }
 
 #if DEBUG
     #Preview("Recovery key") {
         NavigationStack {
-            RecoveryKeyView(
-                text: "OUTPOST RECOVERY KEY v1\n…", fingerprint: "K7M2QX", isFirstTime: true,
-                onSaved: {}, onSkip: {})
+            RecoveryKeyView(text: "OUTPOST RECOVERY KEY v2\n…", fingerprint: "K7M2QX", onSaved: {})
         }
         .themed(.default)
     }
 #endif
 
 public struct RecoveryKeyRow {
-    public let text: () -> String
     public let fingerprint: String
     public let savedAt: Date?
-    public let onSaved: () -> Void
 
-    public init(
-        text: @escaping () -> String, fingerprint: String, savedAt: Date?,
-        onSaved: @escaping () -> Void
-    ) {
-        self.text = text
+    public init(fingerprint: String, savedAt: Date?) {
         self.fingerprint = fingerprint
         self.savedAt = savedAt
-        self.onSaved = onSaved
     }
 }

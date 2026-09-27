@@ -47,7 +47,7 @@ struct ExistingRegistrationTests {
         #expect(app.enrolment == nil)
     }
 
-    @Test("The key arriving from iCloud Keychain does not skip approval")
+    @Test("An identity appearing in the keychain does not skip approval")
     func theKeyArrivingDoesNotSkipApproval() async throws {
         let keychain = InMemoryKeychainStore()
         let app = session(keychain, registry: StubAccountRegistry(hasMember: true))
@@ -55,7 +55,7 @@ struct ExistingRegistrationTests {
         await app.settleRegistration(attempts: 2)
         #expect(app.state == .awaitingApproval)
 
-        _ = try await IdentityStore(keychain: keychain).enrol()
+        try await IdentityStore(keychain: keychain).save(Identity.generate())
 
         #expect(await app.recheckForSyncedIdentity())
         #expect(app.state == .awaitingApproval, "the key arriving let the device in without an approval")
@@ -164,7 +164,7 @@ struct ExistingRegistrationTests {
         try #require(app.state == .awaitingApproval)
         #expect(app.isWaitingForAnIdentity, "the ladder would have stopped looking")
 
-        _ = try await IdentityStore(keychain: keychain).enrol()
+        try await IdentityStore(keychain: keychain).save(Identity.generate())
 
         #expect(await app.recheckForSyncedIdentity())
         #expect(app.state == .awaitingApproval)

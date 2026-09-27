@@ -151,12 +151,13 @@ public struct SyncSession: Sendable {
         answers: [RepairAnswer] = [],
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
-        confirming: [JoinConfirmedBody] = []
+        confirming: [JoinConfirmedBody] = [],
+        announcing: Bool = false
     ) async throws -> SyncReport {
         var report = SyncReport()
         guard !peers.isEmpty,
             !entries.isEmpty || !granting.isEmpty || !requests.isEmpty || !answers.isEmpty
-                || notifyWalls != nil || !confirming.isEmpty
+                || notifyWalls != nil || !confirming.isEmpty || announcing
         else { return report }
 
         let now = instant ?? clock.now

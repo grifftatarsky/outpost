@@ -19,7 +19,7 @@ public struct RemovedDeviceView: View {
             }
         } description: {
             Text(
-                "Another of your devices removed this one. What it held has been erased, and it no longer receives your messages. To use it again, restore it with your recovery key.",
+                "This device was removed, by another of your devices or by your recovery key. What it held has been erased, and it no longer receives your messages. To use it again, restore it with your recovery key, which removes every other device you have.",
                 bundle: .module)
         } actions: {
             Button(action: onRestore) {

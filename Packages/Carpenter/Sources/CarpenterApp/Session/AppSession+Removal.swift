@@ -19,20 +19,20 @@ extension AppSession {
         incomingTask = nil
         deviceSync = nil
 
-        let held = chains
         chains = [:]
-        for (room, chain) in held {
-            for epoch in chain.knownEpochs {
-                try? await storage.keychain.remove(Self.epochKey(room, epoch))
-            }
-        }
+        unsavedRecoveryKey = nil
         let store = IdentityStore(keychain: storage.keychain)
+        do {
+            try await storage.keychain.removeAll()
+        } catch {
+            Diagnostics.identity.error(
+                "removal: the Keychain would not empty (\(String(describing: error), privacy: .public))")
+        }
         await persistOrReport("the mark that this device was removed") {
             try await store.markRemoved()
         }
-        try? await store.forgetDevice()
-        try? await store.forgetCertificate()
         try? await storage.log.removeAll()
+        try? await storage.media.removeAll()
 
         replica = Replica()
         persisted = PersistedState()

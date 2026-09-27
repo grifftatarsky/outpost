@@ -57,10 +57,12 @@ extension AppSession {
                 "mailbox sync: owe \(owedGrants.count, privacy: .public) epoch key(s) to peers; sending")
         }
         let sending = unsentEntries()
+        let authority = ownAuthorityDigest()
+        let announcing = authority != persisted.authorityAnnounced
 
         let reachable = peers().count
         if reachable == 0
-            || (sending.isEmpty && owedGrants.isEmpty && owedConfirmations.isEmpty)
+            || (sending.isEmpty && owedGrants.isEmpty && owedConfirmations.isEmpty && !announcing)
         {
             let unsent = sending.count
             let owed = owedGrants.count
@@ -83,9 +85,9 @@ extension AppSession {
                 sending, to: peers(), certificates: knownCertificates(),
                 revocations: persisted.revocations,
                 granting: owedGrants.map { (to: $0.to, grant: $0.grant) }, at: clock.now,
-                ringing: peersToRing(in: ringingRooms) + ringingWall,
+                ringing: announcing ? peers() : peersToRing(in: ringingRooms) + ringingWall,
                 identities: knownIdentities(), notifyWalls: sayingWishes,
-                confirming: owedConfirmations.map(\.body))
+                confirming: owedConfirmations.map(\.body), announcing: announcing)
         } catch let refused as MailboxFailure {
             cannotSend = refused
             Diagnostics.sync.error(
@@ -96,6 +98,10 @@ extension AppSession {
 
         if report.packetsWritten > 0 {
             for owed in owedGrants { issuedGrants.insert(owed.receipt) }
+            if announcing {
+                persisted.authorityAnnounced = authority
+                Diagnostics.sync.notice("round: told every peer about a change to this member's devices")
+            }
         }
         if report.packetsWritten > 0, report.sendFailure == nil {
             roomsWithUnsentMessages.subtract(ringingRooms)

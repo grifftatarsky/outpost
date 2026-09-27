@@ -18,6 +18,7 @@ public actor IdentityStore {
     public static let deviceKey = KeychainKey("device.signing")
     public static let removedKey = KeychainKey("device.removed")
     public static let certificateKey = KeychainKey("device.certificate")
+    public static let unsavedRecoveryKey = KeychainKey("recovery.unsaved")
 
     private static let seedLength = 32
 
@@ -27,17 +28,8 @@ public actor IdentityStore {
         self.keychain = keychain
     }
 
-    public func enrol() async throws -> Enrolment {
-        let identity: Identity
-        let identityExisted: Bool
-        if let existing = try await loadIdentity() {
-            identity = existing
-            identityExisted = true
-        } else {
-            identity = Identity.generate()
-            try await save(identity)
-            identityExisted = false
-        }
+    public func enrol(founding: Bool = false) async throws -> Enrolment {
+        guard let identity = try await loadIdentity() else { throw CryptoError.noIdentity }
 
         if let device = try await loadDeviceKeys() {
             return Enrolment(identity: identity, device: device, deviceIsNew: false)
@@ -45,25 +37,41 @@ public actor IdentityStore {
 
         let device = DeviceKeys.generate()
         try await save(device)
-        return Enrolment(identity: identity, device: device, deviceIsNew: identityExisted)
+        return Enrolment(identity: identity, device: device, deviceIsNew: !founding)
     }
 
     public func loadIdentity() async throws -> Identity? {
         guard let data = try await keychain.data(for: Self.identityKey) else { return nil }
-        guard data.count == Self.seedLength * 2 else { throw CryptoError.malformedKey }
+        if data.count == Self.seedLength * 2 { throw CryptoError.retiredIdentity }
+        guard data.count == Self.seedLength * 3 else { throw CryptoError.malformedKey }
 
+        let seeds = Array(data)
         return try Identity(
-            signingSeed: data.prefix(Self.seedLength),
-            agreementSeed: data.suffix(Self.seedLength)
+            signingSeed: Data(seeds[0..<Self.seedLength]),
+            agreementSeed: Data(seeds[Self.seedLength..<(Self.seedLength * 2)]),
+            recoveryKey: Data(seeds[(Self.seedLength * 2)...])
         )
     }
 
     public func save(_ identity: Identity) async throws {
         try await keychain.set(
-            identity.signingSeed + identity.agreementSeed,
+            identity.signingSeed + identity.agreementSeed + identity.publicKeys.recovery,
             for: Self.identityKey,
-            scope: .synchronized
+            scope: .device
         )
+    }
+
+    public func keepUnsaved(_ recovery: RecoverySecret) async throws {
+        try await keychain.set(recovery.material, for: Self.unsavedRecoveryKey, scope: .device)
+    }
+
+    public func unsavedRecoveryKey() async throws -> RecoverySecret? {
+        guard let material = try await keychain.data(for: Self.unsavedRecoveryKey) else { return nil }
+        return try RecoverySecret(material: material)
+    }
+
+    public func forgetUnsavedRecoveryKey() async throws {
+        try await keychain.remove(Self.unsavedRecoveryKey)
     }
 
     public func loadDeviceKeys() async throws -> DeviceKeys? {

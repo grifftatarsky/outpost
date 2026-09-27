@@ -62,11 +62,15 @@ struct AppSessionTests {
         let (storage, directory) = storage()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        let enrolled = try await IdentityStore(keychain: storage.keychain).enrol()
+        let recovery = RecoverySecret.generate()
+        let store = IdentityStore(keychain: storage.keychain)
+        try await store.save(recovery.identity)
+        let enrolled = try await store.enrol()
         var state = PersistedState()
-        state.certificates = [
-            try DeviceCertificate.issue(for: enrolled.device, by: enrolled.identity, at: TestSession.now)
-        ]
+        let founding = try DeviceCertificate.recovered(
+            for: enrolled.device, by: recovery.identity, at: TestSession.now)
+        state.certificates = [founding]
+        state.authorityStored = [founding.digest: TestSession.now]
         try await storage.documents.save(state)
 
         let app = session(storage)

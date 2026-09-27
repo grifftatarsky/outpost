@@ -6,8 +6,8 @@ public struct DeviceRegistry: Hashable, Sendable {
         public fileprivate(set) var revokedAt: Date?
         public let approvedBy: DeviceID?
         public fileprivate(set) var revokedBy: DeviceID?
-
-        public var isRoot: Bool { approvedBy == nil }
+        public let recovered: Bool
+        public fileprivate(set) var removedByRecovery: Bool = false
     }
 
     public let identity: IdentityPublicKeys
@@ -16,6 +16,7 @@ public struct DeviceRegistry: Hashable, Sendable {
     private var revocations: Set<DeviceRevocation> = []
     private var stored: [Data: Date] = [:]
     private var standings: [DeviceID: Standing] = [:]
+    private var windows: [DeviceID: Authority] = [:]
 
     public init(identity: IdentityPublicKeys) {
         self.identity = identity
@@ -84,7 +85,8 @@ public struct DeviceRegistry: Hashable, Sendable {
     }
 
     public func isPending(_ device: DeviceID) -> Bool {
-        submitted[device] != nil && standings[device] == nil
+        guard let certificate = submitted[device], standings[device] == nil else { return false }
+        return certificate.approvedBy != nil || certificate.isRecovery
     }
 
     public func agreementKey(for device: DeviceID) -> Data? {
@@ -97,6 +99,10 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public func signingKey(for device: DeviceID) -> Data? {
         standings[device] == nil ? nil : submitted[device]?.devicePublicKey
+    }
+
+    public func counts(_ device: DeviceID, storedAt instant: Date) -> Bool {
+        windows[device]?.covers(instant) ?? false
     }
 
     public func isAuthorized(_ device: DeviceID, at instant: Date) -> Bool {
@@ -123,7 +129,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         return instant < revokedAt
     }
 
-    private struct Authority {
+    private struct Authority: Hashable, Sendable {
         let from: Date
         var until: Date?
 
@@ -140,8 +146,36 @@ public struct DeviceRegistry: Hashable, Sendable {
     }
 
     private mutating func recompute() {
-        var authority: [DeviceID: Authority] = [:]
-        var result: [DeviceID: Standing] = [:]
+        let roots = submitted.values.filter(\.isRecovery).sorted {
+            if $0.issuedAt != $1.issuedAt { return $0.issuedAt < $1.issuedAt }
+            return $0.digest.lexicographicallyPrecedes($1.digest)
+        }
+        var combined: [DeviceID: Standing] = [:]
+        var current: [DeviceID: Authority] = [:]
+        for (index, root) in roots.enumerated().reversed() {
+            let next = index + 1 < roots.count ? roots[index + 1] : nil
+            let (lineage, authority) = replay(from: root)
+            for (device, standing) in lineage where combined[device] == nil {
+                var capped = standing
+                if let next, capped.revokedAt.map({ next.issuedAt < $0 }) ?? true {
+                    capped.revokedAt = next.issuedAt
+                    capped.revokedBy = next.device
+                    capped.removedByRecovery = true
+                }
+                combined[device] = capped
+            }
+            if next == nil { current = authority }
+        }
+        standings = combined
+        windows = current
+    }
+
+    private func replay(from root: DeviceCertificate) -> ([DeviceID: Standing], [DeviceID: Authority]) {
+        var authority: [DeviceID: Authority] = [root.device: Authority(from: .distantPast, until: nil)]
+        var result: [DeviceID: Standing] = [
+            root.device: Standing(
+                addedAt: root.issuedAt, revokedAt: nil, approvedBy: nil, revokedBy: nil, recovered: true)
+        ]
         var removedFirst: [DeviceID: Removal] = [:]
 
         func sortedForReplay<Event>(_ events: [Event], claimed: (Event) -> Date, digest: (Event) -> Data)
@@ -168,7 +202,7 @@ public struct DeviceRegistry: Hashable, Sendable {
             }
         }
 
-        let added = submitted.values.compactMap { certificate in
+        let added = submitted.values.filter { !$0.isRecovery }.compactMap { certificate in
             stored[certificate.digest].map { (order: $0, certificate: certificate) }
         }
         let removed = revocations.compactMap { revocation in
@@ -185,16 +219,15 @@ public struct DeviceRegistry: Hashable, Sendable {
             while progressed {
                 progressed = false
                 for certificate in waiting {
-                    if let approver = certificate.approvedBy {
-                        guard authority[approver]?.covers(instant) == true,
-                            let key = submitted[approver]?.devicePublicKey,
-                            certificate.isApproved(byKey: key)
-                        else { continue }
-                    }
+                    guard let approver = certificate.approvedBy,
+                        authority[approver]?.covers(instant) == true,
+                        let key = submitted[approver]?.devicePublicKey,
+                        certificate.isApproved(byKey: key)
+                    else { continue }
                     authority[certificate.device] = Authority(from: instant, until: nil)
                     result[certificate.device] = Standing(
                         addedAt: certificate.issuedAt, revokedAt: nil, approvedBy: certificate.approvedBy,
-                        revokedBy: nil)
+                        revokedBy: nil, recovered: false)
                     if let earlier = removedFirst[certificate.device] { apply(earlier, to: certificate.device) }
                     waiting.removeAll { $0 == certificate }
                     progressed = true
@@ -215,6 +248,6 @@ public struct DeviceRegistry: Hashable, Sendable {
                 }
             }
         }
-        standings = result
+        return (result, authority)
     }
 }

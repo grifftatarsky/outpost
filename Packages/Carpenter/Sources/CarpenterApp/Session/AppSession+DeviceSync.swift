@@ -82,7 +82,8 @@ extension AppSession {
                 "device sync: a sibling record would not open (\(Diagnostics.fingerprint(writer.rawValue), privacy: .public))")
             return
         }
-        guard await take(feed, storedAt: record.modified ?? clock.now) else { return }
+        let writerRemoved = isRemoved(writer)
+        guard await take(feed, storedAt: record.modified ?? clock.now, fromRemoved: writerRemoved) else { return }
 
         switch record.name.kind {
         case .state:
@@ -98,7 +99,7 @@ extension AppSession {
         persisted.siblingMail.shared(feed.epochs)
         persisted.siblingMail.shared(feed.entries)
         persisted.siblingMail.shared(feed.people)
-        for forwarded in feed.forwarded {
+        for forwarded in feed.forwarded where !writerRemoved {
             guard let secret = pairwiseSecret(with: forwarded.from) else { continue }
             try? await adopt(forwarded.grant, from: Peer(secret: secret, them: forwarded.from, me: enrolment.identity.id))
         }
@@ -108,8 +109,13 @@ extension AppSession {
         sendOwnEntries()
     }
 
+    func isRemoved(_ device: DeviceID) -> Bool {
+        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return false }
+        return registry.standing(of: device)?.revokedAt != nil
+    }
+
     @discardableResult
-    private func take(_ feed: SiblingFeed, storedAt: Date) async -> Bool {
+    private func take(_ feed: SiblingFeed, storedAt: Date, fromRemoved: Bool = false) async -> Bool {
         guard let enrolment else { return false }
 
         if let member = feed.member, member != enrolment.identity.id {
@@ -138,11 +144,17 @@ extension AppSession {
                 certificates: feed.certificates, revocations: feed.revocations, storedAt: storedAt)
         else { return false }
 
-        let deletedAfterMerge = persisted.preferences.merged(with: feed.preferences).roomsDeleted
+        let preferences = fromRemoved ? MemberPreferences() : feed.preferences
+        let deletedAfterMerge = persisted.preferences.merged(with: preferences).roomsDeleted
         for held in feed.epochs
         where chains[held.room]?.knownEpochs.contains(held.epoch) != true
             && !deletedAfterMerge.contains(held.room)
         {
+            if fromRemoved, !persisted.rekeyBeforeWriting.contains(held.room) {
+                persisted.rekeyBeforeWriting.insert(held.room)
+                Diagnostics.identity.notice(
+                    "device sync: took a room key from a removed device; the room gets a new key before anything is written")
+            }
             var chain = chains[held.room] ?? EpochChain(room: held.room)
             chain.adopt(EpochSecret(material: held.material), at: held.epoch)
             chains[held.room] = chain
@@ -153,7 +165,7 @@ extension AppSession {
             }
         }
 
-        let mergedPreferences = persisted.preferences.merged(with: feed.preferences)
+        let mergedPreferences = persisted.preferences.merged(with: preferences)
         let preferencesChanged = mergedPreferences != persisted.preferences
         if preferencesChanged {
             persisted.preferences = mergedPreferences
@@ -236,7 +248,7 @@ extension AppSession {
         return recipients.count == devices.count ? recipients : []
     }
 
-    private func heldEpochs() -> [HeldEpoch] {
+    func heldEpochs() -> [HeldEpoch] {
         chains.flatMap { room, chain in
             chain.knownEpochs.compactMap { epoch in
                 (try? chain.secret(for: epoch)).map {
@@ -276,14 +288,14 @@ extension AppSession {
 
             let state = SiblingFeed(
                 entries: [], certificates: knownCertificates(), member: enrolment.identity.id,
-                collected: persisted.siblingMail.cursors, revocations: persisted.revocations)
+                collected: persisted.siblingMail.cursors, revocations: persisted.revocations, people: people)
             let digest = try? SiblingMail.digest(of: state, on: now)
 
             var drafts: [(kind: SiblingRecord.Kind, feed: SiblingFeed)] = []
             if digest == nil || digest != persisted.siblingMail.lastState {
                 drafts.append((.state, SiblingFeed(
                     entries: [], certificates: state.certificates, member: state.member, writtenAt: now,
-                    collected: state.collected, revocations: state.revocations)))
+                    collected: state.collected, revocations: state.revocations, people: people)))
             }
             if let mail = plan.mail {
                 drafts.append((.mail(mail.number), SiblingFeed(
@@ -300,10 +312,8 @@ extension AppSession {
                         through: plan.through, revocations: persisted.revocations, people: people)
                 }
                 let everything = catchUp(replica.allEntries)
-                let ownOnly = catchUp(replica.allEntries.filter { $0.device == me })
                 for target in plan.catchUpsFor {
-                    let restored = persisted.devicesAddedWithTheRecoveryKey.contains(target)
-                    drafts.append((.catchUp(for: target), restored ? ownOnly : everything))
+                    drafts.append((.catchUp(for: target), everything))
                 }
             }
             let deleting = plan.deletions.map { SiblingRecord.Name(writer: me, kind: $0) }

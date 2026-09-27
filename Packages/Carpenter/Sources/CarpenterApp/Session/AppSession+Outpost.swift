@@ -462,12 +462,37 @@ extension AppSession {
 
     func rotateOwedKey(in room: RoomID) async throws {
         guard persisted.keyRotationsOwed.contains(room) else { return }
-        try await advanceEpoch(of: room)
         persisted.keyRotationsOwed.removeAll { $0 == room }
+        do {
+            try await advanceEpoch(of: room)
+        } catch {
+            persisted.keyRotationsOwed.append(room)
+            throw error
+        }
         try await saveState()
     }
 
+    func rekeyBeforeWriting(_ room: RoomID) async throws {
+        guard persisted.rekeyBeforeWriting.remove(room) != nil else { return }
+        do {
+            try await advanceEpoch(of: room)
+        } catch {
+            persisted.rekeyBeforeWriting.insert(room)
+            throw error
+        }
+        try await saveState()
+        Diagnostics.identity.notice("rekey: gave a room a key no removed device holds before writing in it")
+    }
+
     func settleOwedKeyRotations() async {
+        for room in persisted.rekeyBeforeWriting where chains[room] != nil {
+            do {
+                try await rekeyBeforeWriting(room)
+            } catch {
+                Diagnostics.sync.error(
+                    "mailbox sync: could not give a room a key no removed device holds (\(String(describing: error), privacy: .public))")
+            }
+        }
         for room in persisted.keyRotationsOwed {
             do {
                 try await rotateOwedKey(in: room)

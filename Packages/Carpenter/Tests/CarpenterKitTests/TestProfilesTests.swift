@@ -26,24 +26,25 @@ struct TestProfilesTests {
         #expect(first.container(within: base) == first.container(within: base))
     }
 
-    @Test("A profile's identity is kept on this device and never offered to iCloud Keychain")
+    @Test("Anything a profile keeps stays on this device, even what asks for iCloud Keychain")
     func identityStaysOnTheDevice() async throws {
         let keychain = InMemoryKeychainStore()
-        let identities = IdentityStore(keychain: DeviceOnlyKeychainStore(keychain))
+        let wrapped = DeviceOnlyKeychainStore(keychain)
+        let key = KeychainKey("profile.item")
 
-        _ = try await identities.enrol()
+        try await wrapped.set(Data([1]), for: key, scope: .synchronized)
 
-        #expect(await keychain.scope(for: IdentityStore.identityKey) == .device)
-        #expect(await keychain.scope(for: IdentityStore.deviceKey) == .device)
+        #expect(await keychain.scope(for: key) == .device)
         #expect(await keychain.synchronizedItems.isEmpty)
     }
 
-    @Test("Without the wrapper the identity does go to iCloud Keychain, which is what the wrapper is for")
+    @Test("Without the wrapper an item that asks for iCloud Keychain goes there, which is what the wrapper stops")
     func theWrapperIsWhatKeepsItLocal() async throws {
         let keychain = InMemoryKeychainStore()
-        _ = try await IdentityStore(keychain: keychain).enrol()
+        let key = KeychainKey("profile.item")
+        try await keychain.set(Data([1]), for: key, scope: .synchronized)
 
-        #expect(await keychain.scope(for: IdentityStore.identityKey) == .synchronized)
+        #expect(await keychain.scope(for: key) == .synchronized)
     }
 
     @Test("No list on disk means no profiles, and the iCloud world")

@@ -89,17 +89,25 @@ separately, and each is validated as its own key type at construction.
 
 ## Who you are
 
-**In plain words.** There is no account. When the app first runs it makes two keys and those keys
-*are* you — there is nothing else to be. Nobody can look you up, because there is no directory and
-no name to look up; the only way anyone reaches you is if you hand them a code yourself.
+**In plain words.** There is no account. When the app first runs it makes one random secret, the
+recovery key, and every key that is you comes from it — there is nothing else to be. Nobody can look
+you up, because there is no directory and no name to look up; the only way anyone reaches you is if
+you hand them a code yourself.
 
-**What actually happens.** `Identity.generate()` produces an Ed25519 signing keypair and an X25519
-agreement keypair. Your public name is derived, not chosen:
+**What actually happens** (since 2026-09-27). `RecoverySecret.generate()` makes 32 random bytes.
+HKDF-SHA256 turns them into three seeds under separate labels: an Ed25519 identity signing key, an
+X25519 agreement key, and an Ed25519 **recovery signing key**. Devices are given the first two and
+the recovery key's public half; the recovery secret itself is shown to the member once and kept on no
+device. Your public name commits to all three public keys:
 
 ```
-ParticipantID = SHA256( "carpenter.participant-id.v1" ‖ len(signing) ‖ signing
-                                                     ‖ len(agreement) ‖ agreement )
+ParticipantID = SHA256( "carpenter.participant-id.v2" ‖ len(signing) ‖ signing
+                                                     ‖ len(agreement) ‖ agreement
+                                                     ‖ len(recovery) ‖ recovery )
 ```
+
+So a different recovery key is a different person: nobody holding the identity can swap in a recovery
+key of their own (`TheRecoveryKeyIsItsOwnKeyTests`).
 
 A device gets its own Ed25519 keypair, entirely separate, and its own derived name:
 
@@ -175,6 +183,16 @@ approver counted at the certificate's date. A removal names `revokedBy` and is s
 too, and counts only if that device counted at the removal's date. Order of arrival doesn't matter
 (`DeviceApprovalTests`).
 
+**Only the recovery key or an approval makes a device count** (since 2026-09-27). A certificate
+signed by the identity alone never counts, so holding the identity, which every approved device has,
+lets nobody in. The first device's certificate is signed by the recovery key when the identity is
+made. A certificate signed by the recovery key is a new root: the root is the recovery-signed
+certificate with the latest date *it* carries (the member's recovery key signed that date, so nobody
+else can move it), and only devices whose approvals lead back to the newest root count. Every device
+from an older root stops counting at the new root's date, including anything a thief added. Replaying
+an old recovery certificate, or one published late, changes nothing, because its date is older
+(`DeviceApprovalTests`, `WhatTheRegistryCountsTests`).
+
 **Approvals and removals count in the order iCloud first stored them** (since 2026-09-27). Until then
 the registry ordered them by the dates their authors wrote, and a removed device that keeps the
 identity key could date an approval, or removals of the member's other devices, before its own
@@ -197,11 +215,10 @@ a relaunch. The claimed dates still bound which entries a device may sign. Teste
 `WhatTheRegistryCountsTests`, `WritingOldDatesIntoICloudTests` and `RemembersRemovalsTests`, and live
 in `LiveSiblingFeedTests`.
 
-What it does not stop: anything a device does before its removal reaches iCloud; a device still
+What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
-removal (erasing it with Find My signs it out); and a removed device adding a device as if restored
-with the recovery key, because it holds the identity key. The last is an
-[open question](open-questions.md#should-adding-a-device-without-an-approval-need-a-key-no-device-keeps).
+removal (erasing it with Find My signs it out). A removed device can no longer add a device of its
+own: the identity alone lets nobody in.
 
 **How a new device gets in.** It writes a `request` record holding only its two public keys, the one
 record in the zone that isn't sealed, because the device doesn't have the identity yet. The approving
@@ -251,11 +268,14 @@ that none of them can be used to attack another:
 | `wrap` / `unwrap` | `ChaChaPoly` with the key directly, caller-supplied associated data | epoch grants, packet keys |
 
 **Known weakness, named.** The pairwise secret is **static for the life of the two identities**.
-There is no ratchet. If somebody obtains your `agreementSeed`, they can derive every pairwise secret
-you have ever had or will ever have, with everyone, forever — and from those, unwrap every epoch
-grant they can collect. Identity compromise is total and permanent, and the only remedy is a new
-identity. This is stated again, deliberately, under [the recovery
-key](#the-recovery-key-is-the-whole-of-you-in-a-text-file).
+There is no ratchet. Every device you approve holds your `agreementSeed`, and a device you later
+remove keeps it. With it, anybody can derive every pairwise secret you have ever had or will ever
+have, with everyone, forever. From those they can find every packet addressed to you and open its
+outer envelope: who wrote to you, in which room, when and how much. Room keys inside are sealed again
+to each of your devices that counts, and a grant is never sent without that, so the seed alone opens
+no room. Changing the agreement key when a device is removed is an
+[open question](open-questions.md). This is stated again under [the recovery
+key](#the-recovery-key-is-a-skeleton-key-shown-once).
 
 ---
 
@@ -944,32 +964,42 @@ comparison as matching is a note to yourself; it is not sent to anybody.
 
 <!-- COPY BEGIN 1470b595 [NEEDS HUMAN REVIEW] -->
 
-## The recovery key is the whole of you, in a text file
+## The recovery key is a skeleton key, shown once
 
-**In plain words.** The recovery key file contains your actual keys, in plain text. Anybody who opens
-that file *is* you, permanently, and there is no way to change it or cancel it. The file says so, in
-its own first paragraph.
+**In plain words.** The recovery key is one random secret that every key that is you comes from, plus
+one key nothing else has: the one that can make a device count without an approval. It is shown once,
+when you set up, until you say you've saved it, and then no device keeps it. Using it on a device
+brings your identity back there and removes every other device. There is no way to change it and no
+way to make another one, because a device that could make a new one could lock you out of your own
+identity. Anybody who has it can take your identity over.
 
-**What actually happens.** `RecoveryKey.text` writes both private seeds as **base64, unencrypted**,
-with a fingerprint and an eight-character checksum. There is no passphrase, no key-derivation
-function, no wrapping. The checksum is integrity only — it catches a mistyped file, not an attacker.
+**What actually happens.** `RecoveryKey.text` writes the 32-byte secret and a 3-byte check, in
+Crockford base32, grouped in fours (56 characters), under a header and the paragraph the member reads.
+Reading it accepts the whole file or the key alone, ignores dashes, spaces and case, reads O as 0 and
+I or L as 1, and refuses a key of the wrong length or a failed check as damaged. A file from the old
+format, which held the identity's two seeds, is refused as earlier (`ARecoveryKeyTests`,
+`RestoringFromAKeyTests`).
 
-This is a deliberate design, and the file is honest about it:
+From the secret come the identity signing seed, the agreement seed and the recovery signing seed, by
+HKDF-SHA256 under `carpenter.recovery-secret.v2` with a label each. A device holds the first two and
+the recovery key's public half. The creating device signs the first certificate with the recovery key,
+keeps the secret in its Keychain only until the member confirms it is saved
+(`IdentityStore.unsavedRecoveryKey`), then deletes it.
 
-> Anybody with this file can become you. There is no way to change it and no way to revoke it. Keep
-> it where you keep passwords, not where you keep photographs.
+Restoring derives the identity from the key, makes a new device key, and signs that device's
+certificate with the recovery key. That certificate is the newest root, so every other device stops
+counting at its date. A device that learns the recovery key removed it hands its own writing and room
+keys to the restored device, sealed to it alone, and erases itself. The restored device gives every
+room it gets a key for, from anybody, a new key before it writes anything there, because a removed
+device holds the old ones (`rekeyBeforeWriting`). Partners hand the member's room keys again whenever
+the member's set of devices changes.
 
-**Stated plainly as the largest key-management risk in the product.** Because the pairwise secret is
-static and derived from the agreement seed, whoever holds this file can derive every pairwise secret
-you will ever have, unwrap every epoch grant addressed to you, and sign as you. It is not a password
-that can be changed; it is the identity itself. The mitigations are all editorial — where the file
-is shown, what it says, and how it is offered — and they are the right place for the effort, because
-no amount of cryptography rescues a file the member emails to themselves.
+**The largest key-management risk in the product is still this file.** Whoever holds it is you. The
+mitigations are editorial — where it is shown, what it says, and that it is shown once — plus one
+structural one: no device holds it, so losing a phone never loses the recovery key.
 
-**Worth considering after TestFlight:** offering an optional passphrase over the file
-(`HKDF`/`PBKDF2` → `ChaChaPoly`) would cost one screen and would turn a stolen file from a total
-compromise into a slow one. It is not on the roadmap and this brief is not the place to add it —
-noting it here so it is on the record as a known, unaddressed cost.
+**Worth considering after TestFlight:** an optional passphrase over the file (a password-based KDF →
+`ChaChaPoly`) would turn a stolen file from a total compromise into a slow one.
 
 ---
 
@@ -979,8 +1009,9 @@ noting it here so it is on the record as a known, unaddressed cost.
 
 ## Where keys actually live
 
-**In plain words.** Your identity lives in your iCloud Keychain so a new phone can pick it up. The
-key belonging to *this particular phone*, and every room key, never leaves it, not even in a backup.
+**In plain words.** Your identity lives only on your devices; a new phone gets it when one of yours
+approves it (since 2026-09-27; before that it was in iCloud Keychain, where any device signed in to
+the Apple Account got it). Every key, room keys included, stays on the device, not even in a backup.
 Everything on disk is encrypted by iOS, unreadable until you have unlocked the phone once after it
 boots, and left out of iCloud and computer backups.
 
@@ -988,8 +1019,9 @@ boots, and left out of iCloud and computer backups.
 
 | Item | Keychain scope | Accessibility |
 |---|---|---|
-| `identity.keys` (both seeds, concatenated) | `.synchronized` — iCloud Keychain | `kSecAttrAccessibleAfterFirstUnlock` |
+| `identity.keys` (both seeds and the recovery key's public half) | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
 | `device.signing`, `device.certificate`, every `epoch.*` room key | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+| `recovery.unsaved` (only until the member saves the key) | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
 
 Everything uses `kSecUseDataProtectionKeychain: true`, and the log, media and document stores are
 written with `FileProtectionType.completeUntilFirstUserAuthentication` in a directory marked
@@ -1008,9 +1040,7 @@ brings this app back with it; the recovery key or another device's approval does
 **Two consequences, named.** `afterFirstUnlock` means that on a phone which has been unlocked once
 since boot, the keys are available to the operating system even while the screen is locked. That is
 required — the app has to sync in the background and the notification extension has to decrypt a
-message to draw a banner — and it is a real reduction from `WhenUnlocked`. And the identity's
-presence in iCloud Keychain means its safety rests on Apple's escrow design (end-to-end, with
-hardware-enforced passcode attempt limits) rather than on anything this app does.
+message to draw a banner — and it is a real reduction from `WhenUnlocked`.
 
 ---
 

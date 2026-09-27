@@ -52,6 +52,7 @@ public final class AppSession {
 
     public internal(set) var pendingDevice: DeviceKeys?
     var pendingIdentity: Identity?
+    var unsavedRecoveryKey: RecoverySecret?
     public internal(set) var deviceRequests: [DeviceRequest] = []
     var declinedDeviceRequests: Set<DeviceID> = []
 
@@ -341,6 +342,7 @@ public final class AppSession {
             chains[chainRoom] = chain
             try await persistEpoch(secret, at: .initial, for: chainRoom)
         }
+        if persisted.rekeyBeforeWriting.contains(chainRoom) { try await rekeyBeforeWriting(chainRoom) }
         guard let chain = chains[chainRoom] else { throw AppSessionError.noIdentity }
 
         let entry = try Entry.append(
@@ -376,25 +378,6 @@ public final class AppSession {
             try? replica.admit(certificate, storedAt: at)
         }
 
-        if let enrolment {
-            let registry = replica.registry(for: identity.id)
-            if let standing = registry?.standing(of: enrolment.device.id) {
-                if registry?.agreementKey(for: enrolment.device.id) == nil {
-                    try replica.admit(
-                        DeviceCertificate.issue(for: enrolment.device, by: identity, at: standing.addedAt),
-                        storedAt: clock.now)
-                    persisted.certificates = knownCertificates()
-                }
-            } else if let earlier = persisted.certificates.first(where: {
-                $0.device == enrolment.device.id && $0.devicePublicKey == enrolment.device.publicKey
-                    && $0.isRoot
-            }) {
-                try replica.admit(
-                    DeviceCertificate.issue(for: enrolment.device, by: identity, at: earlier.issuedAt),
-                    storedAt: storedTime(for: earlier.digest, claimed: earlier.issuedAt) ?? earlier.issuedAt)
-                persisted.certificates = knownCertificates()
-            }
-        }
         for revocation in persisted.revocations + persisted.otherRevocations {
             guard let at = storedTime(for: revocation.digest, claimed: revocation.revokedAt) else {
                 Diagnostics.identity.error("authority: a saved removal had no stored time and was left out")

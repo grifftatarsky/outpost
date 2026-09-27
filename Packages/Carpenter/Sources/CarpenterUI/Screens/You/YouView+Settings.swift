@@ -164,22 +164,16 @@ extension YouView {
                     Text(verbatim: ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file))
                 })
             if let recoveryKey {
-                NavigationLink {
-                    RecoveryKeyView(
-                        text: recoveryKey.text(), fingerprint: recoveryKey.fingerprint,
-                        isFirstTime: false, onSaved: recoveryKey.onSaved)
-                } label: {
-                    SettingsRow(
-                        icon: recoveryKey.savedAt == nil
-                            ? "exclamationmark.triangle.fill" : "key.horizontal.fill",
-                        tone: recoveryKey.savedAt == nil ? .destructive : .device,
-                        title: Text("Recovery key", bundle: .module),
-                        detail: recoveryKey.savedAt.map {
-                            Text(
-                                "Last saved \($0.formatted(date: .abbreviated, time: .omitted))",
-                                bundle: .module)
-                        } ?? Text("Never saved", bundle: .module))
-                }
+                SettingsRow(
+                    icon: recoveryKey.savedAt == nil
+                        ? "exclamationmark.triangle.fill" : "key.horizontal.fill",
+                    tone: recoveryKey.savedAt == nil ? .destructive : .device,
+                    title: Text("Recovery key", bundle: .module),
+                    detail: recoveryKey.savedAt.map {
+                        Text(
+                            "Saved \($0.formatted(date: .abbreviated, time: .omitted))",
+                            bundle: .module)
+                    } ?? Text("Never saved", bundle: .module))
             }
             NavigationLink {
                 IntegrityView(report: integrity)

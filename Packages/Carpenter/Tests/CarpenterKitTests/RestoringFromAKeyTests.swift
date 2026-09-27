@@ -17,7 +17,7 @@ struct RestoringFromAKeyTests {
         let key = try #require(original.recoveryKeyText())
         let who = try #require(original.enrolment?.identity.id)
 
-        let fresh = TestSession.make(keychain: InMemoryKeychainStore())
+        let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: TestClock(now: TestSession.now + 60))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: key)
 
@@ -34,7 +34,7 @@ struct RestoringFromAKeyTests {
         let key = try #require(original.recoveryKeyText())
         let oldDevice = try #require(original.enrolment?.device.id)
 
-        let fresh = TestSession.make(keychain: InMemoryKeychainStore())
+        let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: TestClock(now: TestSession.now + 60))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: key)
 
@@ -60,7 +60,7 @@ struct RestoringFromAKeyTests {
 
         let key = try #require(original.recoveryKeyText())
 
-        let fresh = TestSession.make(keychain: InMemoryKeychainStore())
+        let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: TestClock(now: TestSession.now + 60))
         fresh.syncDevices(through: InMemoryEntrySync(relay: relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: key)
@@ -108,6 +108,7 @@ struct RestoringFromAKeyTests {
             original.messages(in: room).contains { $0.body == "said while the phone was gone" },
             "the peer never delivered it to the device that was later lost")
 
+        clock.advance(by: 60)
         let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: clock)
         fresh.syncDevices(through: InMemoryEntrySync(relay: relay))
         await fresh.load()
@@ -158,7 +159,7 @@ struct RestoringFromAKeyTests {
         let key = try #require(original.recoveryKeyText())
 
         func restoring(_ text: String) async -> AppSession.RestoreFailure? {
-            let fresh = TestSession.make(keychain: InMemoryKeychainStore())
+            let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: TestClock(now: TestSession.now + 60))
             await fresh.load()
             do {
                 try await fresh.restore(fromRecoveryKey: text)
@@ -174,17 +175,22 @@ struct RestoringFromAKeyTests {
             await restoring("a shopping list") == .keyRefused(.notARecoveryKey),
             "something that is not a recovery key at all was not named as such")
         #expect(
-            await restoring(key.replacingOccurrences(of: " v1", with: " v99"))
+            await restoring(key.replacingOccurrences(of: " v\(RecoveryKey.version)", with: " v99"))
                 == .keyRefused(.fromANewerVersion(99)),
             "a key from a newer build was read rather than refused with its version")
         #expect(
             await restoring(String(key.dropLast(12))) == .keyRefused(.damaged),
-            """
-            A key whose CHECK line was cut off was accepted. The checksum is the only thing that             catches a file mangled by copy and paste, so it has to be required rather than             honoured when present.
-            """)
+            "a key cut short on its last line was accepted")
+        let line = try #require(key.split(whereSeparator: \.isNewline).first { $0.hasPrefix("KEY: ") })
+        var characters = Array(line)
+        let last = characters.count - 1
+        characters[last] = characters[last] == "0" ? "1" : "0"
         #expect(
-            await restoring(key.replacingOccurrences(of: "SIGNING: ", with: "SIGNING: A"))
-                == .keyRefused(.damaged),
-            "a key with a changed seed was accepted")
+            await restoring(key.replacingOccurrences(of: String(line), with: String(characters))) == .keyRefused(.damaged),
+            "a key with a changed character was accepted")
+        #expect(
+            await restoring("OUTPOST RECOVERY KEY v1\n\nSIGNING: AAAA\nAGREEMENT: AAAA\nCHECK: AAAA")
+                == .keyRefused(.fromAnEarlierVersion),
+            "a key from before the recovery key changed was not named as such")
     }
 }

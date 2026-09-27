@@ -132,7 +132,7 @@ struct IdentitySettingsView: View {
                     title: Text("Where your keys are", bundle: .module))
             } footer: {
                 Text(
-                    "Your keys are kept in your iCloud Keychain, so another device signed into this Apple Account finds them there. If the keychain goes too, your recovery key is the way back — it returns you, and your conversations are asked for from the people who were in them.",
+                    "Your keys are kept on this device only. A new device gets them when one of your devices approves it. If you lose every device, your recovery key is the way back — it returns you, removes every other device, and your conversations are asked for from the people who were in them.",
                     bundle: .module)
             }
             .groupedRowSurface()

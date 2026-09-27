@@ -104,6 +104,8 @@ extension AppRootView {
         try? FileManager.default.removeItem(
             at: URL.applicationSupportDirectory.appending(
                 path: container, directoryHint: .isDirectory))
+        try? FileManager.default.removeItem(at: StorageLocation.directory(container: container))
+        FocusFilterStore.shared.writeRooms([])
 
         do {
             try FileManager.default.removeItem(

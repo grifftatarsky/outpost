@@ -66,13 +66,13 @@ struct PerDeviceKeysTests {
         let identity = Identity.generate()
         let device = DeviceKeys.generate()
         var registry = DeviceRegistry(identity: identity.publicKeys)
-        try registry.admit(try DeviceCertificate.issue(for: device.publicKey, by: identity, at: issued))
+        try registry.admit(try DeviceCertificate.recovered(for: device.publicKey, by: identity, at: issued))
         #expect(registry.agreementKey(for: device.id) == nil)
 
-        try registry.admit(try DeviceCertificate.issue(for: device, by: identity, at: issued.addingTimeInterval(60)))
+        try registry.admit(try DeviceCertificate.recovered(for: device, by: identity, at: issued.addingTimeInterval(60)))
         #expect(registry.agreementKey(for: device.id) == nil, "a certificate with a later date was allowed to move the device's start")
 
-        try registry.admit(try DeviceCertificate.issue(for: device, by: identity, at: issued))
+        try registry.admit(try DeviceCertificate.recovered(for: device, by: identity, at: issued))
         #expect(registry.agreementKey(for: device.id) == device.agreementPublicKey)
         #expect(registry.standing(of: device.id)?.addedAt == issued)
     }
@@ -136,23 +136,30 @@ struct ARemovedDeviceTests {
         #expect(relaunched.state != .removed)
     }
 
-    @Test("Another member's recovery key does not bring a removed device back")
-    func anotherMembersKeyIsRefused() async throws {
+    @Test("A removed device keeps nothing of the member, so another member's recovery key finds nothing of theirs")
+    func aRemovedDeviceKeepsNothing() async throws {
         let keychain = InMemoryKeychainStore()
         let session = TestSession.make(keychain: keychain)
         await session.load()
         try await session.createIdentity(displayName: "Griff")
+        let mine = try #require(session.enrolment?.identity.id)
         await session.eraseAfterRemoval()
+        #expect(try await IdentityStore(keychain: keychain).loadIdentity() == nil, "the identity survived removal")
+        #expect(try await IdentityStore(keychain: keychain).loadDeviceKeys() == nil)
+        #expect(try await IdentityStore(keychain: keychain).unsavedRecoveryKey() == nil)
 
         let other = TestSession.make()
         await other.load()
         try await other.createIdentity(displayName: "Somebody")
         let theirs = try #require(other.recoveryKeyText())
 
-        let relaunched = TestSession.make(keychain: keychain)
+        let relaunched = TestSession.make(keychain: keychain, clock: TestClock(now: TestSession.now + 60))
         await relaunched.load()
-        await #expect(throws: (any Error).self) { try await relaunched.restore(fromRecoveryKey: theirs) }
         #expect(relaunched.state == .removed)
+        try await relaunched.restore(fromRecoveryKey: theirs)
+        #expect(relaunched.enrolment?.identity.id == other.enrolment?.identity.id)
+        #expect(relaunched.enrolment?.identity.id != mine)
+        #expect(relaunched.rooms.isEmpty && relaunched.replica.allEntries.isEmpty, "the first member's history came back")
     }
 
     @Test("What a removed device held is gone from it")

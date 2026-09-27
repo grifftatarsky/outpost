@@ -76,9 +76,9 @@ public enum ComparisonCode {
         var digest = Data(
             SHA256.hash(
                 data: CanonicalBytes.payload(
-                    domain: Domain.comparisonCode, fields: [keys.signing, keys.agreement])))
+                    domain: Domain.comparisonCode, fields: [keys.signing, keys.agreement, keys.recovery])))
         for _ in 0..<iterations {
-            digest = Data(SHA256.hash(data: digest + keys.signing + keys.agreement))
+            digest = Data(SHA256.hash(data: digest + keys.signing + keys.agreement + keys.recovery))
         }
         return ShortAuthenticationString.derive(
             fromTranscript: digest, length: .standard, domain: Domain.comparisonCode)

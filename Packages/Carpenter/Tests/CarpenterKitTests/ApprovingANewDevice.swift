@@ -6,6 +6,10 @@ import Testing
 extension AppSession {
     func approveNewDevice(_ newDevice: AppSession, timeout: TimeInterval = 5) async throws {
         let deadline = Date().addingTimeInterval(timeout)
+        if newDevice.state == .checkingForRegistration {
+            newDevice.checkAccount(with: StubAccountRegistry(hasMember: true))
+            await newDevice.settleRegistration()
+        }
         let pending = try #require(newDevice.pendingDevice?.id, "the new device is not waiting for approval")
         var approved = false
         while !approved, Date() < deadline {

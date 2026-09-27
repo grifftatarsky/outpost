@@ -17,7 +17,7 @@ public struct WelcomeTourView: View {
         let icon: String
     }
 
-    // COPY BEGIN 92143e53 [HUMAN REVIEWED, UNVERIFIED]
+    // COPY BEGIN 92143e53 [NEEDS HUMAN REVIEW]
     private var panels: [Panel] {
         [
             Panel(
@@ -48,7 +48,7 @@ public struct WelcomeTourView: View {
                 id: 4,
                 title: "Drawbacks",
                 body:
-                    "A private and secure architecture does have cons. Your key—identity—lives in your iCloud Keychain. this allows multi-device sync. If it is wiped, the recovery key is the only way back. So if that's gone, the \(Branding.displayName) Dev has no way to help.\n\nThe recovery key brings back your identity, but the conversations themselves are backfilled by request.",
+                    "A private and secure architecture does have cons. Your key—identity—lives only on your devices, and a new device gets it when one of yours approves it. If you lose them all, the recovery key is the only way back. So if that's gone, the \(Branding.displayName) Dev has no way to help.\n\nThe recovery key brings back your identity, but the conversations themselves are backfilled by request.",
                 icon: "exclamationmark.triangle"),
             Panel(
                 id: 5,

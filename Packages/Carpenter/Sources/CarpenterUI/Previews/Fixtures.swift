@@ -237,9 +237,7 @@
         ]
 
         static var savedRecoveryKey: RecoveryKeyRow {
-            RecoveryKeyRow(
-                text: { "" }, fingerprint: "4F2A 91C7 0B6E 3D58", savedAt: ago(days: 12),
-                onSaved: {})
+            RecoveryKeyRow(fingerprint: "4F2A 91C7 0B6E 3D58", savedAt: ago(days: 12))
         }
 
         static let outpostAuthors = [cassilda, hastur, camilla, yhtill, thale]

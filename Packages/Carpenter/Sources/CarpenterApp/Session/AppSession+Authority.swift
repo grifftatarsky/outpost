@@ -1,4 +1,5 @@
 import CarpenterKit
+import CryptoKit
 import Foundation
 
 // MARK: Approvals and removals count in the order iCloud first stored them
@@ -72,8 +73,8 @@ extension AppSession {
     func takeAuthority(
         certificates: [DeviceCertificate], revocations: [DeviceRevocation], storedAt: Date
     ) async -> Bool {
-        guard let enrolment else { return false }
-        let devicesBefore = replica.registry(for: enrolment.identity.id)?.deviceIDs ?? []
+        guard enrolment != nil else { return false }
+        keepUnpublishedAfter(storedAt)
         for certificate in certificates {
             do {
                 try replica.admit(certificate, storedAt: storedAt)
@@ -93,18 +94,59 @@ extension AppSession {
         }
         recordAuthority()
         if thisDeviceWasRemoved {
+            await handOverBeforeErasing()
             await eraseAfterRemoval()
             return false
         }
-        noteDevicesAddedWithTheRecoveryKey(since: devicesBefore)
         return true
+    }
+
+    private func handOverBeforeErasing() async {
+        guard let enrolment, let deviceSync,
+            let registry = replica.registry(for: enrolment.identity.id),
+            let standing = registry.standing(of: enrolment.device.id), standing.removedByRecovery,
+            let restored = standing.revokedBy, let agreementKey = registry.agreementKey(for: restored)
+        else { return }
+        let people = replica.knownParticipants.compactMap { replica.registry(for: $0)?.identity }
+        let feed = SiblingFeed(
+            entries: replica.allEntries.filter { $0.device == enrolment.device.id },
+            certificates: knownCertificates(), epochs: heldEpochs(), member: enrolment.identity.id,
+            writtenAt: clock.now, revocations: persisted.revocations, people: people)
+        do {
+            let kind = SiblingRecord.Kind.catchUp(for: restored)
+            let record = SiblingRecord(
+                name: SiblingRecord.Name(writer: enrolment.device.id, kind: kind),
+                sealed: try await SealedSiblingFeed.sealInBackground(
+                    feed, for: enrolment.identity, on: enrolment.device.id, as: kind,
+                    to: [DeviceRecipient(device: restored, agreementKey: agreementKey)]))
+            try await deviceSync.send([record], deleting: [])
+            Diagnostics.identity.notice(
+                "removal: the recovery key removed this device; left what it wrote for the restored one")
+        } catch {
+            Diagnostics.identity.error(
+                "removal: could not leave what this device wrote for the restored one (\(String(describing: error), privacy: .public))")
+        }
+    }
+
+    func ownAuthorityDigest() -> Data? {
+        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return nil }
+        let digests = (registry.certificates.map(\.digest) + registry.knownRevocations.map(\.digest))
+            .sorted { $0.lexicographicallyPrecedes($1) }
+        return Data(SHA256.hash(data: digests.reduce(Data(), +)))
+    }
+
+    func keepUnpublishedAfter(_ instant: Date) {
+        for event in ownAuthorityEvents() where !persisted.authorityPublished.contains(event.digest) {
+            guard let at = replica.storedTimes[event.digest], at <= instant else { continue }
+            replica.settle(event, storedAt: instant.addingTimeInterval(0.001))
+        }
     }
 
     func ownAuthorityEvents() -> [AuthorityEvent] {
         guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return [] }
         let me = enrolment.device.id
         let added = registry.certificates
-            .filter { $0.approvedBy == me || ($0.isRoot && $0.device == me) }
+            .filter { $0.approvedBy == me || ($0.isRecovery && $0.device == me) }
             .map(AuthorityEvent.added)
         let removed = registry.knownRevocations.filter { $0.revokedBy == me }.map(AuthorityEvent.removed)
         return (added + removed).sorted { $0.digest.lexicographicallyPrecedes($1.digest) }

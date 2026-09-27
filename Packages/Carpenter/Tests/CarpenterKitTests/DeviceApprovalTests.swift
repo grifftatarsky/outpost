@@ -23,7 +23,7 @@ struct DeviceApprovalTests {
     func anApprovedDeviceCounts() throws {
         let (phone, tablet) = (DeviceKeys.generate(), DeviceKeys.generate())
         let registry = try registry([
-            try DeviceCertificate.issue(for: phone, by: identity, at: start),
+            try DeviceCertificate.recovered(for: phone, by: identity, at: start),
             try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
         ])
         #expect(registry.standing(of: tablet.id)?.approvedBy == phone.id)
@@ -34,7 +34,7 @@ struct DeviceApprovalTests {
     func approvalsChain() throws {
         let (phone, tablet, laptop) = (DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate())
         let registry = try registry([
-            try DeviceCertificate.issue(for: phone, by: identity, at: start),
+            try DeviceCertificate.recovered(for: phone, by: identity, at: start),
             try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
             try DeviceCertificate.issue(for: laptop, by: identity, at: start + 120, approvedBy: tablet),
         ])
@@ -45,7 +45,7 @@ struct DeviceApprovalTests {
     func orderDoesNotMatter() throws {
         let (phone, tablet, laptop) = (DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate())
         let certificates = [
-            try DeviceCertificate.issue(for: phone, by: identity, at: start),
+            try DeviceCertificate.recovered(for: phone, by: identity, at: start),
             try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
             try DeviceCertificate.issue(for: laptop, by: identity, at: start + 120, approvedBy: tablet),
         ]
@@ -64,7 +64,7 @@ struct DeviceApprovalTests {
         #expect(!registry.isAuthorized(tablet.id, at: start + 120))
         #expect(registry.isPending(tablet.id))
 
-        try registry.admit(try DeviceCertificate.issue(for: phone, by: identity, at: start))
+        try registry.admit(try DeviceCertificate.recovered(for: phone, by: identity, at: start))
         #expect(registry.isAuthorized(tablet.id, at: start + 120))
     }
 
@@ -77,7 +77,7 @@ struct DeviceApprovalTests {
         forged.signature = try identity.sign(forged.signingPayload)
 
         let registry = try registry([
-            try DeviceCertificate.issue(for: phone, by: identity, at: start), forged,
+            try DeviceCertificate.recovered(for: phone, by: identity, at: start), forged,
         ])
         #expect(!registry.isAuthorized(tablet.id, at: start + 120), "an approval the phone never signed counted")
     }
@@ -87,7 +87,7 @@ struct DeviceApprovalTests {
         let (phone, tablet, stranger) = (DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate())
         let registry = try registry(
             [
-                try DeviceCertificate.issue(for: phone, by: identity, at: start),
+                try DeviceCertificate.recovered(for: phone, by: identity, at: start),
                 try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
                 try DeviceCertificate.issue(for: stranger, by: identity, at: start + 300, approvedBy: tablet),
             ],
@@ -100,7 +100,7 @@ struct DeviceApprovalTests {
         let (phone, tablet, laptop) = (DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate())
         let registry = try registry(
             [
-                try DeviceCertificate.issue(for: phone, by: identity, at: start),
+                try DeviceCertificate.recovered(for: phone, by: identity, at: start),
                 try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
                 try DeviceCertificate.issue(for: laptop, by: identity, at: start + 120, approvedBy: tablet),
             ],
@@ -114,7 +114,7 @@ struct DeviceApprovalTests {
         let (phone, tablet, laptop) = (DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate())
         let registry = try registry(
             [
-                try DeviceCertificate.issue(for: phone, by: identity, at: start),
+                try DeviceCertificate.recovered(for: phone, by: identity, at: start),
                 try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
                 try DeviceCertificate.issue(for: laptop, by: identity, at: start + 120, approvedBy: phone),
             ],
@@ -126,57 +126,94 @@ struct DeviceApprovalTests {
         #expect(registry.isAuthorized(laptop.id, at: start + 400), "a removed device removed another")
     }
 
-    @Test("A certificate made with the identity alone is a root, and says so")
-    func aRootSaysSo() throws {
-        let (phone, restored) = (DeviceKeys.generate(), DeviceKeys.generate())
+    @Test("A certificate made with the identity alone never counts, so holding the identity lets nobody in")
+    func theIdentityAloneLetsNobodyIn() throws {
+        let (phone, intruder) = (DeviceKeys.generate(), DeviceKeys.generate())
         let registry = try registry([
-            try DeviceCertificate.issue(for: phone, by: identity, at: start),
-            try DeviceCertificate.issue(for: restored, by: identity, at: start + 60),
+            try DeviceCertificate.recovered(for: phone, by: identity, at: start),
+            try DeviceCertificate.issue(for: intruder, by: identity.withoutRecovery, at: start + 60),
         ])
-        #expect(registry.standing(of: restored.id)?.isRoot == true)
-        #expect(registry.isAuthorized(restored.id, at: start + 120))
+        #expect(!registry.isAuthorized(intruder.id, at: start + 120))
+        #expect(registry.standing(of: intruder.id) == nil)
+        #expect(!registry.isPending(intruder.id), "a certificate that can never count was waiting as if it might")
+        #expect(registry.activeDevices == [phone.id])
+    }
+
+    @Test("The recovery key makes a device count and removes every other one, including ones a thief added")
+    func theRecoveryKeyResetsTheDevices() throws {
+        let (phone, stolen, thiefs, restored, later) = (
+            DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate(),
+            DeviceKeys.generate()
+        )
+        var registry = DeviceRegistry(identity: identity.publicKeys)
+        try registry.admit(DeviceCertificate.recovered(for: phone, by: identity, at: start), storedAt: start)
+        try registry.admit(
+            DeviceCertificate.issue(for: stolen, by: identity, at: start + 10, approvedBy: phone), storedAt: start + 10)
+        try registry.admit(
+            DeviceCertificate.issue(for: thiefs, by: identity, at: start + 20, approvedBy: stolen), storedAt: start + 20)
+        try registry.revoke(
+            DeviceRevocation.issue(for: phone.id, by: identity, at: start + 30, from: stolen), storedAt: start + 30)
+        #expect(registry.activeDevices == [stolen.id, thiefs.id], "the setup did not model a thief who took over")
+
+        try registry.admit(
+            DeviceCertificate.recovered(for: restored, by: identity, at: start + 100), storedAt: start + 100)
+        #expect(registry.activeDevices == [restored.id])
+        #expect(registry.standing(of: stolen.id)?.removedByRecovery == true)
+        #expect(registry.standing(of: thiefs.id)?.removedByRecovery == true)
+        #expect(registry.standing(of: restored.id)?.recovered == true)
+
+        try registry.admit(
+            DeviceCertificate.issue(for: DeviceKeys.generate(), by: identity, at: start + 90, approvedBy: stolen),
+            storedAt: start + 200)
+        try registry.revoke(
+            DeviceRevocation.issue(for: restored.id, by: identity, at: start + 90, from: thiefs), storedAt: start + 200)
+        #expect(registry.activeDevices == [restored.id], "a removed device acted after the reset")
+
+        try registry.admit(
+            DeviceCertificate.issue(for: later, by: identity, at: start + 300, approvedBy: restored), storedAt: start + 300)
+        #expect(registry.activeDevices == [restored.id, later.id])
+    }
+
+    @Test("Hearing of a reset first and the thief's devices afterwards still removes them")
+    func aResetHeardFirstStillCounts() throws {
+        let (phone, stolen, restored) = (DeviceKeys.generate(), DeviceKeys.generate(), DeviceKeys.generate())
+        var registry = DeviceRegistry(identity: identity.publicKeys)
+        try registry.admit(
+            DeviceCertificate.recovered(for: restored, by: identity, at: start + 100), storedAt: start + 100)
+        try registry.admit(
+            DeviceCertificate.issue(for: stolen, by: identity, at: start + 10, approvedBy: phone), storedAt: start + 10)
+        try registry.admit(DeviceCertificate.recovered(for: phone, by: identity, at: start), storedAt: start)
+        #expect(registry.activeDevices == [restored.id])
     }
 }
 
 @Suite("Approving a device, across two of the member's devices", .serialized)
 @MainActor
 struct ApprovingADeviceTests {
-    @Test("A device restored with the recovery key is flagged on the member's other devices")
-    func aRecoveryRootIsFlagged() async throws {
+    @Test("Restoring with the recovery key on a new device removes the member's other devices, and they erase themselves")
+    func aRestoreRemovesTheOthers() async throws {
         let (keychain, relay) = (InMemoryKeychainStore(), InMemoryEntrySync.Relay())
         let phone = TestSession.make(keychain: keychain)
         phone.syncDevices(through: InMemoryEntrySync(relay: relay))
         await phone.load()
         try await phone.createIdentity(displayName: "Griff")
         let key = try #require(phone.recoveryKeyText())
+        await phone.noteRecoveryKeySaved()
 
-        let restored = TestSession.make(keychain: InMemoryKeychainStore())
+        let restored = TestSession.make(keychain: InMemoryKeychainStore(), clock: TestClock(now: TestSession.now + 60))
         restored.syncDevices(through: InMemoryEntrySync(relay: relay))
         await restored.load()
         try await restored.restore(fromRecoveryKey: key)
         let restoredDevice = try #require(restored.enrolment?.device.id)
+        #expect(restored.state == .ready || restored.state == .needsProfile)
 
-        await phone.settleDeviceSync { phone.devices.contains { $0.id == restoredDevice } }
-        let listed = try #require(phone.devices.first { $0.id == restoredDevice })
-        #expect(listed.addedWithTheRecoveryKey, "a device that skipped approval looked like any other")
-    }
-
-    @Test("A device approved in the ordinary way is not flagged")
-    func anApprovedDeviceIsNotFlagged() async throws {
-        let (keychain, relay) = (InMemoryKeychainStore(), InMemoryEntrySync.Relay())
-        let phone = TestSession.make(keychain: keychain)
-        phone.syncDevices(through: InMemoryEntrySync(relay: relay))
-        await phone.load()
-        try await phone.createIdentity(displayName: "Griff")
-
-        let tablet = TestSession.make(keychain: await keychain.sibling())
-        tablet.syncDevices(through: InMemoryEntrySync(relay: relay))
-        await tablet.load()
-        try await phone.approveNewDevice(tablet)
-        let tabletDevice = try #require(tablet.enrolment?.device.id)
-        await phone.settleDeviceSync()
-
-        #expect(phone.devices.first { $0.id == tabletDevice }?.addedWithTheRecoveryKey == false)
+        await phone.settleDeviceSync { phone.state == .removed }
+        #expect(phone.state == .removed, "the old device kept going after a restore")
+        #expect(phone.enrolment == nil)
+        #expect(try await IdentityStore(keychain: keychain).loadIdentity() == nil, "the removed device kept the identity")
+        let member = try #require(restored.enrolment?.identity.id)
+        let registry = try #require(restored.replica.registry(for: member))
+        #expect(registry.activeDevices == [restoredDevice])
     }
 
     @Test("A recovery key typed on a device waiting for approval lets it in without an approval")
@@ -191,6 +228,8 @@ struct ApprovingADeviceTests {
         let tablet = TestSession.make(keychain: await keychain.sibling())
         tablet.syncDevices(through: InMemoryEntrySync(relay: relay))
         await tablet.load()
+        tablet.checkAccount(with: StubAccountRegistry(hasMember: true))
+        await tablet.settleRegistration()
         try #require(tablet.state == .awaitingApproval)
 
         try await tablet.restore(fromRecoveryKey: key)
@@ -230,6 +269,8 @@ struct ApprovingADeviceTests {
         let tablet = TestSession.make(keychain: await keychain.sibling())
         tablet.syncDevices(through: InMemoryEntrySync(relay: relay))
         await tablet.load()
+        tablet.checkAccount(with: StubAccountRegistry(hasMember: true))
+        await tablet.settleRegistration()
         let waiting = try #require(tablet.pendingDevice?.id)
         await phone.settleDeviceSync { !phone.deviceRequests.isEmpty }
 

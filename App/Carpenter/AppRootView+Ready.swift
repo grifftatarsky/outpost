@@ -122,11 +122,7 @@ extension AppRootView {
             testProfiles: testProfilesControl,
             hiddenMessageCount: session.hiddenMessageCount,
             recoveryKey: session.recoveryKeyFingerprint.map { print in
-                RecoveryKeyRow(
-                    text: { session.recoveryKeyText() ?? "" },
-                    fingerprint: print,
-                    savedAt: session.recoveryKeySavedAt,
-                    onSaved: { Task { await session.noteRecoveryKeyOffered() } })
+                RecoveryKeyRow(fingerprint: print, savedAt: session.recoveryKeySavedAt)
             },
             onRevealHidden: { await session.revealAllHidden() },
             reportsDisplaying: session.reportsDisplaying,

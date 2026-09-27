@@ -40,6 +40,9 @@ extension AppSession {
         for invitation in invitationsOutsideTheirRoom() {
             reachable.insert(invitation.attestation.inviter)
         }
+        if projected.namedRoomIDs().isEmpty {
+            reachable.formUnion(persisted.knownKeys.map(\.participantID))
+        }
         reachable.remove(me)
         return reachable
     }
@@ -92,8 +95,10 @@ extension AppSession {
                 let link = floor.map { epoch > $0 ? chain.link(at: epoch) : nil } ?? chain.link(at: epoch)
                 let links = floor.map { ceiling in chain.everyLink.filter { $0.epoch > ceiling } }
                     ?? chain.everyLink
+                let devices = deviceRecipients(of: target)
+                guard !devices.isEmpty else { continue }
                 let receipt = Self.grantReceipt(
-                    room: room, epoch: epoch, target: target, floor: floor)
+                    room: room, epoch: epoch, target: target, floor: floor, devices: devices)
                 guard !issuedGrants.contains(receipt) else { continue }
 
                 guard let pairwise = pairwiseSecret(with: target) else { continue }
@@ -103,7 +108,7 @@ extension AppSession {
                         to: Peer(secret: pairwise, them: target, me: enrolment.identity.id),
                         grant: try EpochGrant.issue(
                             secret, at: epoch, in: room, link: link, links: links, to: pairwise,
-                            devices: deviceRecipients(of: target)),
+                            devices: devices),
                         receipt: receipt
                     ))
             }
@@ -114,18 +119,19 @@ extension AppSession {
     func deviceRecipients(of participant: ParticipantID) -> [DeviceRecipient] {
         guard let registry = replica.registry(for: participant) else { return [] }
         let devices = registry.activeDevices.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
-        let recipients = devices.compactMap { device in
+        return devices.compactMap { device in
             registry.agreementKey(for: device).map { DeviceRecipient(device: device, agreementKey: $0) }
         }
-        return recipients.count == devices.count ? recipients : []
     }
 
     private static func grantReceipt(
-        room: RoomID, epoch: EpochNumber, target: ParticipantID, floor: EpochNumber?
+        room: RoomID, epoch: EpochNumber, target: ParticipantID, floor: EpochNumber?,
+        devices: [DeviceRecipient]
     ) -> String {
         let since = floor.map { String($0.rawValue) } ?? "all"
+        let to = devices.map { $0.device.rawValue.base64EncodedString() }.joined(separator: ",")
         return
-            "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(target.rawValue.base64EncodedString())|\(since)"
+            "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(target.rawValue.base64EncodedString())|\(since)|\(to)"
     }
 
     private func outpostOwner(of room: RoomID) -> ParticipantID? {
@@ -167,6 +173,11 @@ extension AppSession {
             chain.knownEpochs.count != held?.knownEpochs.count
             || chain.everyLink.count != held?.everyLink.count
         chains[grant.room] = chain
+        if held == nil, persisted.restoredWithTheRecoveryKey,
+            outpostOwner(of: grant.room).map({ $0 == enrolment?.identity.id }) ?? true
+        {
+            persisted.rekeyBeforeWriting.insert(grant.room)
+        }
 
         if !persisted.knownRooms.contains(grant.room) {
             persisted.knownRooms.append(grant.room)

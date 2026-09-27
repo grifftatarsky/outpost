@@ -167,7 +167,7 @@ struct AcknowledgementTests {
         let author = Identity.generate()
         let device = DeviceKeys.generate()
         let chain = EpochChain.create(room: RoomID())
-        let certificate = try DeviceCertificate.issue(
+        let certificate = try DeviceCertificate.recovered(
             for: device.publicKey, by: author, at: .distantPast)
 
         let entry = try Entry.append(
@@ -204,7 +204,7 @@ struct AcknowledgementTests {
             at: .initial, sealedWith: chain.chain)
 
         let stranger = Identity.generate()
-        let strangerCertificate = try DeviceCertificate.issue(
+        let strangerCertificate = try DeviceCertificate.recovered(
             for: DeviceKeys.generate().publicKey, by: stranger, at: .distantPast)
 
         let packet = SyncSession.CollectedPackets(
@@ -215,7 +215,7 @@ struct AcknowledgementTests {
                     delivery: SyncEngine.Delivery(
                         entries: [entry],
                         certificates: [
-                            try DeviceCertificate.issue(
+                            try DeviceCertificate.recovered(
                                 for: knownDevice.publicKey, by: known, at: .distantPast),
                             strangerCertificate,
                         ],
@@ -253,7 +253,7 @@ struct AcknowledgementTests {
                     delivery: SyncEngine.Delivery(
                         entries: [entry],
                         certificates: [
-                            try DeviceCertificate.issue(
+                            try DeviceCertificate.recovered(
                                 for: device.publicKey, by: known, at: .distantPast)
                         ],
                         revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))

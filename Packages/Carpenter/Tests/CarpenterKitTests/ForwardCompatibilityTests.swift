@@ -115,7 +115,6 @@ extension ForwardCompatibilityTests {
         mail.noteState(from: sibling, cursors: [], at: Date(timeIntervalSince1970: 1_786_635_000), me: DeviceID(rawValue: Data(repeating: 0x5A, count: 32)))
         mail.took(mail: 2, from: sibling)
         state.siblingMail = mail
-        state.devicesAddedWithTheRecoveryKey = [DeviceID(rawValue: Data(repeating: 0x5C, count: 32))]
         let other = Identity.generate()
         state.otherRevocations = [
             try DeviceRevocation.issue(
@@ -124,6 +123,9 @@ extension ForwardCompatibilityTests {
         state.authorityStored = [Data(repeating: 0x5D, count: 32): stamp.at]
         state.authorityIsLegacy = true
         state.authorityPublished = [Data(repeating: 0x5E, count: 32)]
+        state.authorityAnnounced = Data(repeating: 0x5F, count: 32)
+        state.restoredWithTheRecoveryKey = true
+        state.rekeyBeforeWriting = [RoomID()]
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)

@@ -10,6 +10,7 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
     public var agreementKey: Data?
     public var approvedBy: DeviceID?
     public var approval: Data?
+    public var recoverySignature: Data?
 
     public init(
         participant: ParticipantID,
@@ -19,7 +20,8 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         signature: Data,
         agreementKey: Data? = nil,
         approvedBy: DeviceID? = nil,
-        approval: Data? = nil
+        approval: Data? = nil,
+        recoverySignature: Data? = nil
     ) {
         self.participant = participant
         self.device = device
@@ -29,6 +31,7 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         self.agreementKey = agreementKey
         self.approvedBy = approvedBy
         self.approval = approval
+        self.recoverySignature = recoverySignature
     }
 
     public static func issue(
@@ -60,7 +63,32 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
             approvedBy: approver)
     }
 
-    public var isRoot: Bool { approvedBy == nil }
+    public static func recovered(
+        for device: DeviceKeys, by identity: Identity, at issuedAt: Date
+    ) throws -> DeviceCertificate {
+        try recovered(
+            for: device.publicKey, agreementKey: device.agreementPublicKey, by: identity, at: issuedAt)
+    }
+
+    public static func recovered(
+        for devicePublicKey: Data, agreementKey: Data? = nil, by identity: Identity, at issuedAt: Date
+    ) throws -> DeviceCertificate {
+        guard let recovery = identity.recovery else { throw CryptoError.notAuthorized }
+        var certificate = DeviceCertificate(
+            participant: identity.id,
+            device: DeviceID(publicKey: devicePublicKey),
+            devicePublicKey: devicePublicKey,
+            issuedAt: issuedAt,
+            signature: Data(),
+            agreementKey: agreementKey,
+            recoverySignature: Data()
+        )
+        certificate.signature = try identity.sign(certificate.signingPayload)
+        certificate.recoverySignature = try recovery.sign(certificate.signingPayload)
+        return certificate
+    }
+
+    public var isRecovery: Bool { recoverySignature != nil }
 
     var signingPayload: Data {
         var fields = [
@@ -71,6 +99,7 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         ]
         if let agreementKey { fields += [Data("agreement-key".utf8), agreementKey] }
         if let approvedBy { fields += [Data("approved-by".utf8), approvedBy.rawValue] }
+        if recoverySignature != nil { fields += [Data(Domain.recoveryReset.utf8)] }
         return CanonicalBytes.payload(domain: Domain.deviceCertificate, fields: fields)
     }
 
@@ -84,17 +113,24 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         guard (approvedBy == nil) == (approval == nil) else {
             throw CryptoError.badSignature
         }
+        guard approvedBy == nil || recoverySignature == nil else {
+            throw CryptoError.badSignature
+        }
         guard try identityKeys.isValidSignature(signature, for: signingPayload) else {
             throw CryptoError.badSignature
+        }
+        if let recoverySignature {
+            guard identityKeys.isValidRecoverySignature(recoverySignature, for: signingPayload) else {
+                throw CryptoError.badSignature
+            }
         }
     }
 
     public var digest: Data {
-        Data(
-            SHA256.hash(
-                data: CanonicalBytes.payload(
-                    domain: Domain.authorityRecord,
-                    fields: [Data("certificate".utf8), signingPayload, signature, approval ?? Data()])))
+        var fields = [Data("certificate".utf8), signingPayload, signature, approval ?? Data()]
+        if let recoverySignature { fields.append(recoverySignature) }
+        return Data(
+            SHA256.hash(data: CanonicalBytes.payload(domain: Domain.authorityRecord, fields: fields)))
     }
 
     func isApproved(byKey approverPublicKey: Data) -> Bool {

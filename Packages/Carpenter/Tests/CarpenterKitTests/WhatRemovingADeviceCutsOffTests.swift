@@ -38,13 +38,12 @@ struct WhatRemovingADeviceCutsOffTests {
             for session in [stolen, peer] { try await session.sync(through: mailbox) }
         }
         await stolen.settleDeviceSync()
-        let key = try #require(stolen.recoveryKeyText())
         let rotatedFrom = stolen.epochsHeld(in: room)
 
         let restored = TestSession.make(keychain: InMemoryKeychainStore(), clock: clock)
         restored.syncDevices(through: InMemoryEntrySync(relay: relay))
         await restored.load()
-        try await restored.restore(fromRecoveryKey: key)
+        try await stolen.approveNewDevice(restored)
         let deadline = Date().addingTimeInterval(5)
         while restored.rooms.isEmpty, Date() < deadline {
             await stolen.refreshDeviceSync()

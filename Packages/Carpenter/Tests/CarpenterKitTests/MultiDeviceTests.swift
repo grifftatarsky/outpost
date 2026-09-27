@@ -18,10 +18,10 @@ struct MultiDeviceTests {
         let phone = DeviceKeys.generate()
         let mac = DeviceKeys.generate()
 
-        let phoneCertificate = try DeviceCertificate.issue(
+        let phoneCertificate = try DeviceCertificate.recovered(
             for: phone.publicKey, by: identity, at: start)
         let macCertificate = try DeviceCertificate.issue(
-            for: mac.publicKey, by: identity, at: start.addingTimeInterval(60))
+            for: mac.publicKey, by: identity, at: start.addingTimeInterval(60), approvedBy: phone)
 
         var hastur = Replica()
         hastur.introduce(identity.publicKeys)
@@ -60,8 +60,8 @@ struct MultiDeviceTests {
 
         var replica = Replica()
         replica.introduce(identity.publicKeys)
-        try replica.admit(DeviceCertificate.issue(for: phone.publicKey, by: identity, at: start))
-        try replica.admit(DeviceCertificate.issue(for: mac.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.recovered(for: phone.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.issue(for: mac.publicKey, by: identity, at: start, approvedBy: phone))
 
         for device in [phone, mac] {
             try replica.integrate(
@@ -83,8 +83,8 @@ struct MultiDeviceTests {
 
         var replica = Replica()
         replica.introduce(identity.publicKeys)
-        try replica.admit(DeviceCertificate.issue(for: kept.publicKey, by: identity, at: start))
-        try replica.admit(DeviceCertificate.issue(for: lost.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.recovered(for: kept.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.issue(for: lost.publicKey, by: identity, at: start, approvedBy: kept))
 
         let room = RoomID()
         let beforeLoss = try Entry.append(

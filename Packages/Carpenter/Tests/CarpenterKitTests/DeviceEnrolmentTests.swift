@@ -33,6 +33,8 @@ struct DeviceEnrolmentTests {
         let second = TestSession.make(keychain: await keychain.sibling(), at: directory)
         second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        second.checkAccount(with: StubAccountRegistry(hasMember: true))
+        await second.settleRegistration()
         return second
     }
 

@@ -251,6 +251,15 @@ struct AppRootView: View {
                 )
                 .themed(.default)
 
+            case .ready where session.hasUnsavedRecoveryKey:
+                NavigationStack {
+                    RecoveryKeyView(
+                        text: session.recoveryKeyText() ?? "",
+                        fingerprint: session.recoveryKeyFingerprint ?? "",
+                        onSaved: { await session.noteRecoveryKeySaved() })
+                }
+                .themed(.default)
+
             case .ready where session.enrolment?.deviceIsNew == true && !syncedSplashSeen:
                 DeviceSyncedView(
                     memberName: session.viewer.displayName,

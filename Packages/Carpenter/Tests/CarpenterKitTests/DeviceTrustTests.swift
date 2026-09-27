@@ -118,7 +118,7 @@ struct DeviceRegistryTests {
         let identity = Identity.generate()
         let device = DeviceKeys.generate()
         var registry = DeviceRegistry(identity: identity.publicKeys)
-        try registry.admit(DeviceCertificate.issue(for: device.publicKey, by: identity, at: issuedAt))
+        try registry.admit(DeviceCertificate.recovered(for: device.publicKey, by: identity, at: issuedAt))
         return Enrolled(identity: identity, device: device, registry: registry)
     }
 
@@ -208,7 +208,7 @@ struct DeviceRegistryTests {
     @Test("Admitting the same certificate twice is idempotent")
     func idempotentAdmit() throws {
         var enrolled = try enrol()
-        let certificate = try DeviceCertificate.issue(
+        let certificate = try DeviceCertificate.recovered(
             for: enrolled.device.publicKey, by: enrolled.identity, at: issuedAt)
 
         try enrolled.registry.admit(certificate)
@@ -234,7 +234,7 @@ struct DeviceRegistryTests {
     @Test("A revoked device cannot be re-admitted by replaying its original certificate")
     func revocationSurvivesReplay() throws {
         var enrolled = try enrol()
-        let certificate = try DeviceCertificate.issue(
+        let certificate = try DeviceCertificate.recovered(
             for: enrolled.device.publicKey, by: enrolled.identity, at: issuedAt)
         let revokedAt = issuedAt.addingTimeInterval(3_600)
 

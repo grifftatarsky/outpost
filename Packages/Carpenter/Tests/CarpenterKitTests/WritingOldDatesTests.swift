@@ -19,7 +19,7 @@ struct WhatTheRegistryCountsTests {
     private func removedStolenDevice(_ devices: Devices) throws -> DeviceRegistry {
         var registry = DeviceRegistry(identity: identity.publicKeys)
         try registry.admit(
-            DeviceCertificate.issue(for: devices.phone, by: identity, at: start), storedAt: start)
+            DeviceCertificate.recovered(for: devices.phone, by: identity, at: start), storedAt: start)
         try registry.admit(
             DeviceCertificate.issue(for: devices.tablet, by: identity, at: start + 10, approvedBy: devices.phone),
             storedAt: start + 10)
@@ -70,7 +70,7 @@ struct WhatTheRegistryCountsTests {
     func arrivalOrderDoesNotMatter() throws {
         let devices = Devices()
         let events: [(AuthorityEvent, Date)] = [
-            (.added(try DeviceCertificate.issue(for: devices.phone, by: identity, at: start)), start),
+            (.added(try DeviceCertificate.recovered(for: devices.phone, by: identity, at: start)), start),
             (.added(try DeviceCertificate.issue(
                 for: devices.stolen, by: identity, at: start + 20, approvedBy: devices.phone)), start + 20),
             (.removed(try DeviceRevocation.issue(
@@ -150,7 +150,7 @@ struct WhatTheRegistryCountsTests {
         let devices = Devices()
         var replica = Replica()
         replica.introduce(identity.publicKeys)
-        let phone = try DeviceCertificate.issue(for: devices.phone, by: identity, at: start)
+        let phone = try DeviceCertificate.recovered(for: devices.phone, by: identity, at: start)
         let stolen = try DeviceCertificate.issue(for: devices.stolen, by: identity, at: start + 20, approvedBy: devices.phone)
         let removal = try DeviceRevocation.issue(for: devices.stolen.id, by: identity, at: start + 1000, from: devices.phone)
         let backDated = try DeviceCertificate.issue(

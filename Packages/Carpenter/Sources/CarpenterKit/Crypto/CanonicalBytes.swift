@@ -53,4 +53,6 @@ public enum CryptoError: Error, Hashable, Sendable {
     case wrongRoom
     case openFailed
     case notAuthorized
+    case noIdentity
+    case retiredIdentity
 }

@@ -10,16 +10,29 @@ extension AppSession {
     public func load() async {
         do {
             let store = IdentityStore(keychain: storage.keychain)
-            guard try await store.loadIdentity() != nil else {
-                state = .checkingForRegistration
-                return
-            }
-            let identity = try await store.loadIdentity()!
             if try await store.wasRemoved() {
                 state = .removed
                 Diagnostics.identity.notice("load: this device was removed; waiting for a recovery key")
                 return
             }
+            let identity: Identity
+            do {
+                guard let found = try await store.loadIdentity() else {
+                    state = .checkingForRegistration
+                    return
+                }
+                identity = found
+            } catch CryptoError.retiredIdentity {
+                Diagnostics.identity.notice(
+                    "load: this device holds an identity from before the recovery key changed; starting over")
+                try await storage.keychain.removeAll()
+                try await storage.log.removeAll()
+                try await storage.media.removeAll()
+                try await storage.documents.save(PersistedState())
+                state = .checkingForRegistration
+                return
+            }
+            unsavedRecoveryKey = try await store.unsavedRecoveryKey()
 
             let existingDevice = try await store.loadDeviceKeys()
             let device = existingDevice ?? DeviceKeys.generate()
@@ -99,7 +112,7 @@ extension AppSession {
                 await load()
                 return
             }
-            if presence != .unreadable, occupancy == .empty || occupancy == .offline { break }
+            if presence != .unreadable, occupancy != .undetermined { break }
             try? await Task.sleep(for: .milliseconds(300))
             if occupancy == .undetermined {
                 occupancy = await accountRegistry?.occupancy() ?? .offline
@@ -211,13 +224,17 @@ extension AppSession {
             return
         }
 
-        let enrolled = try await store.enrol()
+        let recovery = RecoverySecret.generate()
+        let identity = recovery.identity
+        try await store.keepUnsaved(recovery)
+        try await store.save(identity)
+        let enrolled = try await store.enrol(founding: true)
         enrolment = enrolled
+        unsavedRecoveryKey = recovery
 
         replica = Replica()
         replica.introduce(enrolled.identity.publicKeys)
-        let founding = try DeviceCertificate.issue(
-            for: enrolled.device, by: enrolled.identity, at: clock.now)
+        let founding = try DeviceCertificate.recovered(for: enrolled.device, by: identity, at: clock.now)
         try replica.admit(founding, storedAt: authorityNow())
         recordAuthority()
         try await store.keepCertificate(founding)
@@ -235,21 +252,24 @@ extension AppSession {
     ) async throws {
         let store = IdentityStore(keychain: storage.keychain)
 
-        let identity: Identity
+        let recovery: RecoverySecret
         do {
-            identity = try RecoveryKey.identity(from: text)
+            recovery = try RecoveryKey.secret(from: text)
         } catch let failure as RecoveryKey.Failure {
             throw RestoreFailure.keyRefused(failure)
         }
+        let identity = recovery.identity
 
-        if let existing = try await store.loadIdentity() {
-            let removed = try await store.wasRemoved()
-            guard removed || state == .awaitingApproval, existing.id == identity.id else {
+        let existing = try? await store.loadIdentity()
+        if let existing {
+            guard state == .awaitingApproval, existing.id == identity.id else {
                 throw RestoreFailure.thisDeviceAlreadyHasAMember
             }
-            if removed { try await store.clearRemoved() }
         }
 
+        try await store.clearRemoved()
+        try await store.forgetDevice()
+        try await store.forgetCertificate()
         try await store.save(identity)
         let enrolled = try await store.enrol()
         enrolment = enrolled
@@ -258,7 +278,7 @@ extension AppSession {
 
         replica = Replica()
         replica.introduce(enrolled.identity.publicKeys)
-        let restored = try DeviceCertificate.issue(for: enrolled.device, by: enrolled.identity, at: clock.now)
+        let restored = try DeviceCertificate.recovered(for: enrolled.device, by: identity, at: clock.now)
         try replica.admit(restored, storedAt: authorityNow())
         recordAuthority()
         try await store.keepCertificate(restored)
@@ -267,6 +287,8 @@ extension AppSession {
             "recovery: restored \(Diagnostics.fingerprint(enrolled.identity.id.rawValue), privacy: .public) onto a new device")
 
         cameBackFromARecoveryKey = true
+        persisted.restoredWithTheRecoveryKey = true
+        persisted.preferences.setSavedRecoveryKey(clock.now, stamp: stamp())
         persisted.preferences.setAsksPeersForHistory(askingPeers, stamp: stamp())
         persisted.wantsWhatWasSaid = askingPeers
         projectionInputsChanged()
@@ -437,9 +459,11 @@ extension AppSession {
     // MARK: The recovery key
 
     public func recoveryKeyText() -> String? {
-        guard let enrolment else { return nil }
-        return RecoveryKey.text(for: enrolment.identity, createdAt: clock.now)
+        guard let unsavedRecoveryKey else { return nil }
+        return RecoveryKey.text(for: unsavedRecoveryKey, createdAt: clock.now)
     }
+
+    public var hasUnsavedRecoveryKey: Bool { unsavedRecoveryKey != nil }
 
     public var recoveryKeyFingerprint: String? {
         enrolment.map { RecoveryKey.fingerprint(of: $0.identity) }
@@ -447,7 +471,16 @@ extension AppSession {
 
     public var recoveryKeySavedAt: Date? { persisted.preferences.recoveryKeySavedAt }
 
-    public func noteRecoveryKeyOffered() async {
+    public func noteRecoveryKeySaved() async {
+        let store = IdentityStore(keychain: storage.keychain)
+        do {
+            try await store.forgetUnsavedRecoveryKey()
+        } catch {
+            Diagnostics.identity.error(
+                "recovery: could not forget the recovery key after it was saved (\(String(describing: error), privacy: .public))")
+            return
+        }
+        unsavedRecoveryKey = nil
         persisted.preferences.setSavedRecoveryKey(clock.now, stamp: stamp())
         await savePreferences()
     }
@@ -492,8 +525,7 @@ extension AppSession {
                     addedAt: standing.addedAt == .distantPast ? nil : standing.addedAt,
                     revokedAt: standing.revokedAt,
                     hasSpoken: id == enrolment.device.id || spoken.contains(id),
-                    name: persisted.preferences.name(of: id),
-                    addedWithTheRecoveryKey: persisted.devicesAddedWithTheRecoveryKey.contains(id)
+                    name: persisted.preferences.name(of: id)
                 )
             }
             .sorted {

@@ -38,20 +38,20 @@ public struct RestoreFromKeyView: View {
 
     public var body: some View {
         List {
-                // COPY BEGIN ef3ec642 [HUMAN REVIEWED, UNVERIFIED]
+                // COPY BEGIN ef3ec642 [NEEDS HUMAN REVIEW]
                 Section {
                     SettingsHeaderCard(
                         icon: "key.horizontal.fill",
                         title: Text("Use your recovery key", bundle: .module),
                         paragraph: Text(
-                            "Paste the whole file, header line and all.",
+                            "Paste the whole file, header line and all, or type just the key. Restoring here removes every other device you have; approve the ones you still use again afterwards.",
                             bundle: .module))
                 }
                 .groupedRowSurface()
                 // COPY END ef3ec642
 
                 Section {
-                    // COPY BEGIN 8ac43771 [HUMAN REVIEWED, UNVERIFIED]
+                    // COPY BEGIN 8ac43771 [NEEDS HUMAN REVIEW]
                     TextField(
                         text: $key,
                         prompt: Text(verbatim: "\(RecoveryKey.header)…"),
@@ -72,7 +72,7 @@ public struct RestoreFromKeyView: View {
                         Text(problem).foregroundStyle(palette.destructive)
                     } else {
                         Text(
-                            "The key is read on device and restored to the iCloud keychain.",
+                            "The key is read on this device and isn't kept. Your identity is kept on this device only.",
                             bundle: .module)
                     }
                     // COPY END 8ac43771

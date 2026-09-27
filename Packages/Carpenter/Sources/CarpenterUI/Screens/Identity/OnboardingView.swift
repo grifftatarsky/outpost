@@ -155,9 +155,9 @@ public struct OnboardingView: View {
                 }
                 // COPY END d9057934
 
-                // COPY BEGIN ca234160 [HUMAN REVIEWED, UNVERIFIED]
+                // COPY BEGIN ca234160 [NEEDS HUMAN REVIEW]
                 Text(
-                    "Your keys are generated on this device and stored in your iCloud Keychain. \(Branding.displayName) has no account.",
+                    "Your keys are generated and kept on this device. \(Branding.displayName) has no account.",
                     bundle: .module
                 )
                 .font(CarpenterFont.caption)

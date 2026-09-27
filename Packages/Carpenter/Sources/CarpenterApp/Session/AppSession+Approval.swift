@@ -78,7 +78,7 @@ extension AppSession {
             try? check.revoke(revocation, storedAt: approval.stored[revocation.digest] ?? arrived)
         }
         guard let standing = check.registry(for: identity.id)?.standing(of: device.id),
-            standing.revokedAt == nil, !standing.isRoot
+            standing.revokedAt == nil, standing.approvedBy != nil
         else {
             Diagnostics.identity.error("approval: the approval did not approve this device")
             return
@@ -101,22 +101,11 @@ extension AppSession {
         persisted.authorityIsLegacy = false
         await persistOrReport("the approval of this device") { try await saveState() }
 
-        try? await deviceSync?.send(
+        _ = try? await deviceSync?.send(
             [], deleting: [record.name, SiblingRecord.Name(writer: device.id, kind: .request)])
         Diagnostics.identity.notice("approval: this device was approved; opening")
         pendingDevice = nil
         pendingIdentity = nil
         await load()
-    }
-
-    func noteDevicesAddedWithTheRecoveryKey(since before: Set<DeviceID>) {
-        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return }
-        let added = registry.deviceIDs.subtracting(before).filter {
-            $0 != enrolment.device.id && registry.standing(of: $0)?.isRoot == true
-        }
-        guard !added.isEmpty else { return }
-        persisted.devicesAddedWithTheRecoveryKey.formUnion(added)
-        Diagnostics.identity.notice(
-            "approval: \(added.count, privacy: .public) device(s) joined with the recovery key rather than an approval")
     }
 }

@@ -134,7 +134,8 @@ struct RemovingSeveralDevicesTests {
             let keys = DeviceKeys.generate()
             try session.replica.admit(
                 DeviceCertificate.issue(
-                    for: keys.publicKey, by: identity, at: clock.now))
+                    for: keys.publicKey, by: identity, at: clock.now,
+                    approvedBy: try #require(session.enrolment?.device)))
             spares.append(DeviceID(publicKey: keys.publicKey))
         }
         #expect(

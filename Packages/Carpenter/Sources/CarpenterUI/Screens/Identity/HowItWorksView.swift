@@ -41,7 +41,7 @@ public struct HowItWorksView: View {
                             "Account Free",
                             [
                                 "\(Branding.displayName) uses your Keychain as its identity: there is no account and no personal information stored by anyone.",
-                                "Because your key, stored in iCloud Keychain, is your identity, there's no lookup. We do not integrate with Contacts.",
+                                "Because your key, kept on your own devices, is your identity, there's no lookup. We do not integrate with Contacts.",
                             ]
                         )
                         section(
@@ -54,7 +54,7 @@ public struct HowItWorksView: View {
                         section(
                             "Sync and Restore",
                             [
-                                "Your identity—through iCloud Keychain—is synced whenever you open the app on a new device signed into your iCloud account, and one of your other devices approves the new one before it can read anything. If you lose your Keychain, your recovery key allows restoration of your identity, and a restored identity can notify and request the people you talk to for their copies of your conversations, backfilling your history.",
+                                "Your identity reaches a new device only when one of your other devices approves it, and never goes to iCloud Keychain. If you lose every device, your recovery key restores your identity and removes every other device, and a restored identity can notify and request the people you talk to for their copies of your conversations, backfilling your history.",
                             ]
                         )
                         // COPY END b561c670

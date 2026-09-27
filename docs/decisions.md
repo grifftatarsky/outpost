@@ -2618,6 +2618,43 @@ record what is finished, built once. These are the calls made building it.
 
 ## Recovery and devices
 
+<!-- COPY BEGIN 4d754636 [NEEDS HUMAN REVIEW] -->
+
+### The recovery key is a skeleton key no device keeps, made once
+
+**RULED 2026-09-27 by Griff.** "That's what I want a recovery key to be; a unique and powerful key,
+that no malicious actor can determine, acting as a skeleton key to the identity. That way even if
+someone tried to remove your device, the reco key allows the user to restore it, and act as prime to
+kill the stolen toxic device. And it should be one time, on start ... I don't think you can 'make a
+new one.' because then, the stolen device could immediately make a new recovery key, rendering yours
+useless, and totally own your account."
+
+Built the same night. The recovery key is its own random secret; the identity and a recovery signing
+key are derived from it, and the member's name commits to the recovery key's public half. It is shown
+at setup until the member confirms it is saved, then deleted; Settings can't show it again. Only the
+recovery key or an approval by a device that counts lets a device in. See the
+[crypto brief](crypto-brief.md#the-recovery-key-is-a-skeleton-key-shown-once).
+
+**PROPOSED, the details Griff has not seen:**
+
+- **Restoring removes every other device.** The restored device is the only one that counts; the
+  member approves the others again from it. The alternative, letting the member pick which devices
+  stay, would keep anything a thief added unless the member caught it.
+- **The newest recovery certificate wins, by the date it signed.** Ordering them by when iCloud stored
+  them let an old one, published late or uploaded again, act as a fresh reset.
+- **The identity is kept on the member's devices only, not in iCloud Keychain.** The iCloud Keychain
+  copy could no longer let a device in, and it gave the identity to every device signed in to the
+  Apple Account, approved or not. This answers the open question "Should your identity stay in iCloud
+  Keychain?" the way Griff's ruling implies; losing every device now needs the recovery key, which was
+  already true for getting back in.
+- **The creating device keeps the key until the member confirms they saved it.** Closing the app
+  mid-way would otherwise lose it for good.
+
+**What it costs.** Restoring from an iPhone backup no longer brings this app back; the recovery key
+does. A lost recovery key and every device lost is the end of that identity.
+
+<!-- COPY END 4d754636 -->
+
 ### Recovery is a key you download, and it is the only thing that opens a backup
 
 **RULED 2026-09-09 by Griff, and reconfirmed since.** One of the few entries that was correctly attributed before this pass.
@@ -2625,7 +2662,8 @@ record what is finished, built once. These are the calls made building it.
 **2026-09-09, Griff's ruling.** At account creation the member is prompted to download their recovery
 keys, the way GitHub and every enterprise tool prompts for recovery codes. Those keys are their
 identity — the signing and agreement pair their `ParticipantID` is a hash of — and they are **the only
-thing that can unlock a backup file**.
+thing that can unlock a backup file**. (Since 2026-09-27 the file holds one secret the identity is
+derived from, not the two seeds; see the entry above.)
 
 **Two files, opposite risks, and they must never be confused.** The recovery key is small, secret and
 theirs alone: it contains no message and nobody else's data. A backup is large and full of words
