@@ -167,11 +167,10 @@ struct LiveRoundTests {
         var written: [PacketID] = []
         for word in ["first", "second", "third"] {
             try await rig.alice.send(word, to: rig.room)
-            try await rig.alice.sync(through: rig.mailbox)
-            let pending = try await rig.mailbox.sentPackets()
-            for id in pending.keys where !written.contains(id) { written.append(id) }
+            let sent = try await rig.alice.sync(through: rig.mailbox)
+            written.append(contentsOf: sent.written.filter { !$0.entries.isEmpty }.map(\.packet))
         }
-        #expect(written.count >= 3, "precondition: three packets reached the zone")
+        #expect(written.count == 3, "precondition: each message went in a packet of its own")
 
         let vanished = written[1]
         _ = try await CKContainer.default().privateCloudDatabase.modifyRecords(

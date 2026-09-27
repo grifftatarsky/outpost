@@ -220,6 +220,7 @@ extension AppSession {
                     [], to: unsent, at: clock.now,
                     ringing: repair.request.reason == .recovery ? unsent : [],
                     requests: [request])
+                noteWritten(sent)
                 if sent.packetsWritten > 0,
                     let index = persisted.repairs.firstIndex(where: { $0.id == repair.id })
                 {
@@ -253,6 +254,7 @@ extension AppSession {
                     entries, to: [peer], certificates: knownCertificates(),
                     revocations: persisted.revocations, at: clock.now, answers: [answer],
                     identities: knownIdentities())
+                noteWritten(sent)
                 report = report.adding(sent)
                 if sent.sendFailure == nil { answered.insert(duty) }
             } catch {

@@ -291,12 +291,7 @@ extension AppSession {
             let resent = Set(report.written.flatMap(\.entries))
             if !persisted.resend.isDisjoint(with: resent) { persisted.resend.subtract(resent) }
         }
-        var waiting = pendingRecipients ?? [:]
-        for wrote in report.written {
-            persisted.outstandingPackets[wrote.packet] = wrote.entries
-            waiting[wrote.packet] = wrote.recipients
-        }
-        if !report.written.isEmpty { update(\.pendingRecipients, to: waiting) }
+        noteWritten(report)
     }
 
     private func doWhatIsOwed(after report: SyncReport, through session: SyncSession) async {
@@ -348,6 +343,16 @@ extension AppSession {
         guard !persisted.resend.isEmpty else { return unsent }
         let already = Set(unsent.map(\.hash))
         return unsent + replica.allEntries.filter { persisted.resend.contains($0.hash) && !already.contains($0.hash) }
+    }
+
+    func noteWritten(_ report: SyncReport) {
+        guard !report.written.isEmpty else { return }
+        var waiting = pendingRecipients ?? [:]
+        for wrote in report.written {
+            persisted.outstandingPackets[wrote.packet] = wrote.entries
+            waiting[wrote.packet] = wrote.recipients
+        }
+        update(\.pendingRecipients, to: waiting)
     }
 
     func ownMemberSignedFor(from peer: Peer) -> @Sendable (SyncPacket) -> Bool {

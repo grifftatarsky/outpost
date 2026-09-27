@@ -132,38 +132,44 @@ struct SystemKeychainTests {
         #expect(try await store.data(for: key) == nil)
     }
 
-    @Test("An identity survives a round trip through the real Keychain")
+    @Test("An identity survives a round trip through the real Keychain, kept on this device only")
     func identityPersists() async throws {
-        let keychain = SystemKeychainStore(service: "com.microgpt.carpenter.tests.identity.\(UUID().uuidString)")
+        let service = "com.microgpt.carpenter.tests.identity.\(UUID().uuidString)"
+        let keychain = SystemKeychainStore(service: service)
         let store = IdentityStore(keychain: keychain)
+        let identity = RecoverySecret.generate().identity
+        try await store.save(identity)
 
-        let first = try await store.enrol()
+        let first = try await store.enrol(founding: true)
         let second = try await IdentityStore(keychain: keychain).enrol()
 
+        #expect(first.identity == identity)
         #expect(first.identity.id == second.identity.id)
         #expect(first.device.id == second.device.id)
-
         #expect(!first.deviceIsNew, "the founding device is not a second device")
         #expect(!second.deviceIsNew, "re-enrolling the same device is not a new device either")
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: IdentityStore.identityKey.rawValue,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: true,
+        ]
+        #expect(SecItemCopyMatching(query as CFDictionary, nil) == errSecItemNotFound, "the identity went to iCloud Keychain")
+        var local = query
+        local[kSecAttrSynchronizable as String] = false
+        #expect(SecItemCopyMatching(local as CFDictionary, nil) == errSecSuccess, "precondition: the identity is on the device")
 
         try await keychain.remove(IdentityStore.identityKey)
         try await keychain.remove(IdentityStore.deviceKey)
     }
 
-    @Test("A device that finds an identity it did not mint reports itself new")
-    func siblingIsNew() async throws {
+    @Test("Enrolling where no identity is kept refuses, rather than making one nobody can restore")
+    func noIdentityNoEnrolment() async throws {
         let keychain = SystemKeychainStore(
             service: "com.microgpt.carpenter.tests.sibling.\(UUID().uuidString)")
-        let founding = try await IdentityStore(keychain: keychain).enrol()
-
-        try await keychain.remove(IdentityStore.deviceKey)
-        let sibling = try await IdentityStore(keychain: keychain).enrol()
-
-        #expect(sibling.identity.id == founding.identity.id, "the identity is the member's, and shared")
-        #expect(sibling.device.id != founding.device.id, "a device key is per device and never travels")
-        #expect(sibling.deviceIsNew, "this is exactly the case the flag is for")
-
-        try await keychain.remove(IdentityStore.identityKey)
-        try await keychain.remove(IdentityStore.deviceKey)
+        await #expect(throws: CryptoError.noIdentity) { try await IdentityStore(keychain: keychain).enrol() }
+        #expect(try await IdentityStore(keychain: keychain).loadDeviceKeys() == nil)
     }
 }

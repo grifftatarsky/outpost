@@ -244,6 +244,28 @@ struct HistoryRepairTests {
         #expect(bob.repairStatus(of: room) == nil)
     }
 
+    @Test("Packets that ask for history and answer it are taken back once they are signed for, like any other")
+    func repairPacketsAreTakenBack() async throws {
+        let (alice, bob, room, mailbox) = try await withAHole()
+        let before = Set(await mailbox.writtenPackets)
+        _ = try #require(await bob.startRepair(in: room))
+        try await bob.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await bob.sync(through: mailbox)
+        #expect(bob.messages(in: room).map(\.body).contains("second"), "precondition: the repair recovered it")
+        let repairs = Set(await mailbox.writtenPackets).subtracting(before)
+        try #require(!repairs.isEmpty, "precondition: the repair wrote packets")
+
+        for _ in 0..<2 {
+            try await alice.sync(through: mailbox)
+            try await bob.sync(through: mailbox)
+        }
+        let left = try await mailbox.sentPackets()
+        #expect(
+            repairs.filter { left.keys.contains($0) }.isEmpty,
+            "a repair packet its reader signed for was left in the outbox for good")
+    }
+
     @Test("A tail nobody re-sent cannot be named, and a repair still recovers it")
     func tailIsRecoveredThroughHeads() async throws {
         let (alice, bob, room, mailbox) = try await joined()
