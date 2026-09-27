@@ -20,19 +20,24 @@ extension ConversationView {
         Task {
             for step in steps {
                 let reason: String?
+                let unsent: ArraySlice<StagedAttachment>
                 switch step {
                 case .text(let words):
                     reason = await onSend(words)
+                    unsent = []
                 case .media(let index, let caption):
                     guard let onAttach else { return }
                     let item = items[index]
                     sending.append(item.kind)
+                    if item.picked.isMadeToFit { fittingNow += 1 }
                     reason = await onAttach(item.picked, caption)
+                    if item.picked.isMadeToFit { fittingNow -= 1 }
                     if let position = sending.firstIndex(of: item.kind) { sending.remove(at: position) }
+                    unsent = items[index...]
                 }
                 guard let reason else { continue }
                 if draft.isEmpty { draft = outgoing }
-                if staged.isEmpty { staged = items }
+                if staged.isEmpty { staged = Array(unsent) }
                 problem = reason
                 failures += 1
                 return
@@ -66,14 +71,59 @@ extension ConversationView {
                 (try? ImagePreparer.thumbnail(data, edge: 240)).map(DecodedImage.init)
             }.value
             staged.append(StagedAttachment(picked: picked, kind: .image, thumbnail: thumbnail))
-        case .video(let url):
+        case .video(let url), .videoToFit(let url):
             let poster = await MediaLoader.poster(of: url)
             let duration = try? await VideoPreparer.duration(of: url)
             Diagnostics.sync.notice(
                 "media: staged a clip of \(duration.map { Int($0) } ?? -1, privacy: .public)s")
             staged.append(
-                StagedAttachment(picked: picked, kind: .video, thumbnail: poster, duration: duration))
+                StagedAttachment(
+                    picked: picked, kind: .video, thumbnail: poster, duration: duration,
+                    tooLarge: VideoPreparer.sizeIfTooLarge(url)))
         }
+    }
+
+    private var clipTooLarge: Int? {
+        staged.filter { !$0.picked.isMadeToFit }.compactMap(\.tooLarge).max()
+    }
+
+    @ViewBuilder private var fitOffer: some View {
+        // COPY BEGIN 819afbbd [NEEDS HUMAN REVIEW]
+        if let bytes = clipTooLarge {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("This video is \(size). Videos up to 287 MB can be sent.", bundle: .module)
+                    .foregroundStyle(palette.secondaryText)
+                Spacer(minLength: 0)
+                Button {
+                    for index in staged.indices where staged[index].tooLarge != nil {
+                        staged[index].picked = staged[index].picked.madeToFit
+                    }
+                } label: {
+                    Text("Make it fit", bundle: .module).bold()
+                }
+                .buttonStyle(.borderless)
+            }
+            .font(CarpenterFont.footnote)
+            .padding(.horizontal, 12)
+            .transition(.opacity)
+        }
+        // COPY END 819afbbd
+        // COPY BEGIN e49eda14 [NEEDS HUMAN REVIEW]
+        if fittingNow > 0 {
+            Text("Making the video smaller so it fits…", bundle: .module)
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .padding(.horizontal, 12)
+                .transition(.opacity)
+        } else if clipTooLarge == nil, staged.contains(where: \.picked.isMadeToFit) {
+            Text("It will be made smaller to fit when it is sent.", bundle: .module)
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .padding(.horizontal, 12)
+                .transition(.opacity)
+        }
+        // COPY END e49eda14
     }
 
     var composer: some View {
@@ -124,6 +174,7 @@ extension ConversationView {
                     .padding(.horizontal, 12)
                     .transition(.opacity)
             }
+            fitOffer
             composerRow
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: problem)

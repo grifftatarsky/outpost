@@ -5,7 +5,7 @@ import Foundation
 enum TestVideo {
     static func make(
         seconds: Int, size: CGSize = CGSize(width: 1280, height: 720), fps: Int32 = 2,
-        tagged: Bool = true
+        tagged: Bool = true, noisy: Bool = false
     ) async throws -> URL {
         let url = URL.temporaryDirectory.appending(path: "test-clip-\(UUID().uuidString).mov")
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
@@ -49,7 +49,19 @@ enum TestVideo {
             guard let buffer else { throw CocoaError(.fileWriteUnknown) }
             CVPixelBufferLockBaseAddress(buffer, [])
             if let base = CVPixelBufferGetBaseAddress(buffer) {
-                memset(base, Int32(40 + (frame * 9) % 200), CVPixelBufferGetBytesPerRow(buffer) * Int(size.height))
+                let length = CVPixelBufferGetBytesPerRow(buffer) * Int(size.height)
+                if noisy {
+                    var state = UInt64(frame + 1) &* 0x9E37_79B9_7F4A_7C15
+                    let words = base.bindMemory(to: UInt64.self, capacity: length / 8)
+                    for index in 0..<(length / 8) {
+                        state ^= state << 13
+                        state ^= state >> 7
+                        state ^= state << 17
+                        words[index] = state
+                    }
+                } else {
+                    memset(base, Int32(40 + (frame * 9) % 200), length)
+                }
             }
             CVPixelBufferUnlockBaseAddress(buffer, [])
             adaptor.append(buffer, withPresentationTime: CMTime(value: CMTimeValue(frame), timescale: fps))

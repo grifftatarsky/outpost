@@ -27,6 +27,8 @@ extension AppRootView {
             return String(
                 localized: "Videos up to 287 MB can be sent. This one is \(size).",
                 comment: "A clip larger than the limit once prepared")
+        } catch VideoPreparer.Failure.cannotFit {
+            return Self.cannotFit
         } catch {
             Diagnostics.sync.error("attach failed: \(String(describing: error), privacy: .public)")
             return SessionProblem.sentence(for: error)
@@ -50,6 +52,8 @@ extension AppRootView {
                 localized: "Clips up to 287 MB can be posted. One of these is \(size).",
                 comment: "A clip larger than the limit once prepared, picked for a post")
             // COPY END 6f398e13
+        } catch VideoPreparer.Failure.cannotFit {
+            return Self.cannotFit
         } catch {
             Diagnostics.sync.error("post attach failed: \(String(describing: error), privacy: .public)")
             return SessionProblem.sentence(for: error)
@@ -64,12 +68,20 @@ extension AppRootView {
             }.value
         case .video(let url):
             return try await VideoPreparer.prepare(url, caption: caption)
+        case .videoToFit(let url):
+            return try await VideoPreparer.prepareToFit(url, caption: caption)
         }
     }
 
+    // COPY BEGIN d4b9aefa [NEEDS HUMAN REVIEW]
+    private static let cannotFit = String(
+        localized: "This video is too long to make small enough to send.",
+        comment: "Even at the smallest size the app will draw, a clip is over the limit")
+    // COPY END d4b9aefa
+
     private func discardSources(_ picked: [PickedMedia]) {
         for one in picked {
-            guard case .video(let url) = one else { continue }
+            guard let url = one.clip else { continue }
             try? FileManager.default.removeItem(at: url)
         }
     }

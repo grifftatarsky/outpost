@@ -51,10 +51,11 @@ public struct PostComposerView: View {
 
     private struct StagedPhoto: Identifiable {
         let id = UUID()
-        let picked: PickedMedia
+        var picked: PickedMedia
         let kind: MediaKind
         let thumbnail: DecodedImage?
         var duration: TimeInterval?
+        var tooLarge: Int?
     }
 
     public var body: some View {
@@ -98,6 +99,7 @@ public struct PostComposerView: View {
                         .padding(.horizontal, CarpenterMetrics.screenMargin)
                         .padding(.bottom, 8)
                 }
+                fitOffer
 
                 formatBar
             }
@@ -209,7 +211,8 @@ public struct PostComposerView: View {
             let seconds = try? await VideoPreparer.duration(of: clip.url)
             photos.append(
                 StagedPhoto(
-                    picked: .video(clip.url), kind: .video, thumbnail: poster, duration: seconds))
+                    picked: .video(clip.url), kind: .video, thumbnail: poster, duration: seconds,
+                    tooLarge: VideoPreparer.sizeIfTooLarge(clip.url)))
             return
         }
 
@@ -235,6 +238,40 @@ public struct PostComposerView: View {
             bundle: .module, comment: "More pictures were picked than a post can carry")
     }
     // COPY END 832a5951
+
+    private var clipTooLarge: Int? {
+        photos.filter { !$0.picked.isMadeToFit }.compactMap(\.tooLarge).max()
+    }
+
+    @ViewBuilder private var fitOffer: some View {
+        // COPY BEGIN 8ff65f27 [NEEDS HUMAN REVIEW]
+        if let bytes = clipTooLarge {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("This clip is \(size). Clips up to 287 MB can be posted.", bundle: .module)
+                    .foregroundStyle(palette.secondaryText)
+                Spacer(minLength: 0)
+                Button {
+                    for index in photos.indices where photos[index].tooLarge != nil {
+                        photos[index].picked = photos[index].picked.madeToFit
+                    }
+                } label: {
+                    Text("Make it fit", bundle: .module).bold()
+                }
+                .buttonStyle(.borderless)
+            }
+            .font(CarpenterFont.footnote)
+            .padding(.horizontal, CarpenterMetrics.screenMargin)
+            .padding(.bottom, 8)
+        } else if photos.contains(where: \.picked.isMadeToFit) {
+            Text("It will be made smaller to fit when it is posted.", bundle: .module)
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .padding(.horizontal, CarpenterMetrics.screenMargin)
+                .padding(.bottom, 8)
+        }
+        // COPY END 8ff65f27
+    }
 
     private var stagedStrip: some View {
         ScrollView(.horizontal) {

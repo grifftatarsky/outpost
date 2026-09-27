@@ -22,6 +22,7 @@ public struct ConversationView: View {
     @AppStorage("explained.photos") var photosExplained = false
     @State var explainingPhotos = false
     @State var sending: [MediaKind] = []
+    @State var fittingNow = 0
     @State var staged: [StagedAttachment] = []
 
     let room: RoomSummary

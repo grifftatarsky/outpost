@@ -131,8 +131,11 @@ block, a deny list in the binary, and the obligations written down in
 
 - **Done.** Any length, up to 287 MB once prepared, sealed and sent in 16 MB pieces (changed
   2026-09-27; it was a minute, sealed whole).
-- **Done.** Re-encoded at 960 × 540 through the system's `forSharing()` filter, so no location or device
-  tag survives.
+- **Done.** Sent as recorded, copied through the system's `forSharing()` filter with no metadata
+  written, so no location or device tag survives (changed 2026-09-27; it was re-encoded at 960 × 540).
+- **Built, not yet on a phone.** A clip over 287 MB is flagged when it is picked, with its size and
+  *Make it fit*; tapping it re-encodes the clip to land just under the limit. Tested in the package
+  (`FittingAClipTests`, `VideoPreparerTests`); not yet run on a device or sent between two accounts.
 - **Done.** Drawn with its first frame, a play mark and its length in glass; played in the system player.
 - **Done.** Screened as a file before its poster is drawn.
 

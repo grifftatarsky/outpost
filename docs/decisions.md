@@ -434,9 +434,26 @@ bytes from a peer instead.
 **RULED 2026-09-27 by Griff:** "Length is also a crazy way to limit lol, just make it a 287mb cap.
 We'll mimic tik tok there."
 
-A video is the same entry, re-encoded at 960 × 540 H.264 through Apple's `forSharing()` metadata
-filter, with its first frame as the preview and its length in the entry. There is no limit on its
-length; the prepared file may be up to 287 MB. It is sealed straight from the file in 16 MB pieces,
+**RULED 2026-09-27 by Griff:** "No setting for video size—instead, if a user recieves a 'your video
+is too big' or whatever, offer to encode it so it fits."
+
+A video is the same entry, sent as it was recorded: its streams are copied into a new file through
+Apple's `forSharing()` metadata filter with no metadata written, so no location or device tag
+survives. It is re-encoded only when its own format cannot be copied into the file (ProRes, for
+one), and then at Apple's highest-quality HEVC preset, not smaller. Its first frame is the preview and its length is in the entry.
+There is no limit on its length; the file may be up to 287 MB. A clip over that is flagged in the
+composer the moment it is picked, with its size and a *Make it fit* button, and it is not made
+smaller unless the member taps it. Making it fit re-encodes to HEVC at the size and rate that spend 95% of
+the 287 MB over the clip's length: audio at 96 kbps (64 when the clip is long enough that audio
+would be a quarter of it), thirty frames a second below 8 Mbps, and the picture scaled so each pixel
+gets about 0.07 bits a frame, never larger than it was recorded and never below 320 points on its
+long edge. An encoder does not land exactly on a rate, so up to three passes are made: a pass that
+comes out over is followed by a smaller one, then one between the two, and the largest pass that
+fits is kept, stopping early once one reaches 85% of the limit (`FittingAClipTests`,
+`VideoPreparerTests`). A clip that would need less than 150 kbps of picture is refused rather than
+sent unwatchable. Measured in the package on a worst-case fixture of random noise, which no encoder
+can compress: it lands at 84 to 90% of the limit in nine runs of ten and 68% in the tenth. Not yet
+measured on a phone, where a long 4K clip takes minutes a pass. It is sealed straight from the file in 16 MB pieces,
 each its own attachment with its own digest, sealed under one key with its place in the clip (which
 piece, of how many) bound in, so pieces can't be swapped, dropped or reordered. The entry names the
 pieces, and a digest over all of them. Each piece is uploaded, fetched, acknowledged and swept like a
