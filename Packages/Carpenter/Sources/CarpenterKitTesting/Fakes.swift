@@ -281,7 +281,8 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
         stored.reduce(into: [:]) { found, entry in
             guard let packet = PacketWire.packet(from: entry.value.fields) else { return }
             found[entry.key] = SentPacket(
-                recipients: packet.recipients, receipts: packet.receipts, createdAt: entry.value.storedAt)
+                recipients: packet.recipients, receipts: packet.receipts, createdAt: entry.value.storedAt,
+                contentDigest: packet.contentDigest)
         }
     }
 
@@ -302,6 +303,13 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     public func delete(packet id: PacketID) {
         stored[id] = nil
         order.removeAll { $0 == id }
+    }
+
+    public func tamper(packet id: PacketID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
+        guard var entry = stored[id] else { return }
+        change(&entry.fields)
+        entry.modifiedAt = serverTime()
+        stored[id] = entry
     }
 
     public func pendingRecipients() -> Set<RecipientTag> {

@@ -72,6 +72,9 @@ extension ForwardCompatibilityTests {
         state.publishedEntryCount = 3
         state.knownSiblings = [DeviceID(rawValue: WideID.of([7]))]
         state.outstandingPackets = [PacketID(): [entry]]
+        state.packetsWritten = [
+            PacketID(): WrittenPacketRecord(recipients: [RecipientTag(rawValue: Data([4]))], digest: Data([5]))
+        ]
         let feed = FeedKey(author: ParticipantID(rawValue: WideID.of([9])), device: DeviceID(rawValue: WideID.of([7])))
         var heads = VectorClock()
         heads[feed] = 4

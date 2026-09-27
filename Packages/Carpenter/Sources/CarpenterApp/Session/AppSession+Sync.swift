@@ -350,6 +350,7 @@ extension AppSession {
         var waiting = pendingRecipients ?? [:]
         for wrote in report.written {
             persisted.outstandingPackets[wrote.packet] = wrote.entries
+            persisted.packetsWritten[wrote.packet] = WrittenPacketRecord(recipients: wrote.recipients, digest: wrote.digest)
             waiting[wrote.packet] = wrote.recipients
         }
         update(\.pendingRecipients, to: waiting)
@@ -376,15 +377,22 @@ extension AppSession {
         for peer in peers() {
             for window in windows { addressedTo[peer.outgoingTag(window: window)] = peer }
         }
+        var altered: [PacketID] = []
         for (packet, entries) in mine {
             guard let record = sent[packet] else {
                 vanished.append(packet)
                 persisted.resend.formUnion(entries)
                 continue
             }
+            let written = persisted.packetsWritten[packet]
+            if let digest = written?.digest, let now = record.contentDigest, now != digest {
+                altered.append(packet)
+                persisted.resend.formUnion(entries)
+                continue
+            }
             let created = record.createdAt ?? clock.now
             var missing: Set<RecipientTag> = []
-            for tag in record.recipients {
+            for tag in written?.recipients ?? record.recipients {
                 guard
                     let peer = addressedTo[tag],
                     let registry = replica.registry(for: peer.them),
@@ -403,6 +411,7 @@ extension AppSession {
                 do {
                     try await mailbox.withdraw(packet)
                     persisted.outstandingPackets[packet] = nil
+                    persisted.packetsWritten[packet] = nil
                 } catch {
                     Diagnostics.sync.error(
                         "mailbox: could not take back a packet everybody has (\(String(describing: error), privacy: .public))")
@@ -412,7 +421,24 @@ extension AppSession {
                 waiting[packet] = missing
             }
         }
-        for packet in vanished { persisted.outstandingPackets[packet] = nil }
+        for packet in altered {
+            try? await mailbox.withdraw(packet)
+            persisted.outstandingPackets[packet] = nil
+            persisted.packetsWritten[packet] = nil
+            waiting[packet] = nil
+        }
+        if !altered.isEmpty {
+            issuedGrants.removeAll()
+            Diagnostics.sync.error(
+                """
+                mailbox: \(altered.count, privacy: .public) packet(s) were changed on the server after this \
+                device wrote them; taking them back and sending what they held again
+                """)
+        }
+        for packet in vanished {
+            persisted.outstandingPackets[packet] = nil
+            persisted.packetsWritten[packet] = nil
+        }
         if !vanished.isEmpty {
             issuedGrants.removeAll()
             Diagnostics.sync.error(

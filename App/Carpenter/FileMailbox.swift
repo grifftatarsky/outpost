@@ -109,7 +109,8 @@
                 .reduce(into: [:]) { found, entry in
                     guard let packet = PacketWire.packet(from: entry.stored.fields.mapValues(\.field)) else { return }
                     found[entry.id] = SentPacket(
-                        recipients: packet.recipients, receipts: receipts(of: entry.id), createdAt: entry.written)
+                        recipients: packet.recipients, receipts: receipts(of: entry.id), createdAt: entry.written,
+                        contentDigest: packet.contentDigest)
                 }
         }
 

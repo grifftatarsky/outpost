@@ -57,11 +57,15 @@ public struct SyncReport: Hashable, Sendable {
         public let packet: PacketID
         public let entries: Set<EntryHash>
         public let recipients: Set<RecipientTag>
+        public let digest: Data?
 
-        public init(packet: PacketID, entries: Set<EntryHash>, recipients: Set<RecipientTag> = []) {
+        public init(
+            packet: PacketID, entries: Set<EntryHash>, recipients: Set<RecipientTag> = [], digest: Data? = nil
+        ) {
             self.packet = packet
             self.entries = entries
             self.recipients = recipients
+            self.digest = digest
         }
     }
 
@@ -207,7 +211,8 @@ public struct SyncSession: Sendable {
             report.entriesSent += batch.count
             report.written.append(
                 SyncReport.WrittenPacket(
-                    packet: packet.id, entries: Set(batch.map(\.hash)), recipients: packet.recipients))
+                    packet: packet.id, entries: Set(batch.map(\.hash)), recipients: packet.recipients,
+                    digest: packet.contentDigest))
         }
         if batches.count > 1 {
             Diagnostics.sync.notice(

@@ -1,6 +1,11 @@
 import CarpenterKit
 import Foundation
 
+struct WrittenPacketRecord: Codable, Equatable, Sendable {
+    var recipients: Set<RecipientTag>
+    var digest: Data?
+}
+
 struct PersistedState: Codable, Equatable, Sendable {
     var organisation = RoomsListOrganisation()
     var knownRooms: [RoomID] = []
@@ -12,6 +17,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var publishedEntryCount = 0
     var knownSiblings: [DeviceID] = []
     var outstandingPackets: [PacketID: Set<EntryHash>] = [:]
+    var packetsWritten: [PacketID: WrittenPacketRecord] = [:]
     var repairs: [HistoryRepair] = []
     var repairDuties: [RepairDuty] = []
     var restoreAsks: [RestoreAskRecord] = []
@@ -109,6 +115,8 @@ struct PersistedState: Codable, Equatable, Sendable {
         outstandingPackets =
             try container.decodeIfPresent([PacketID: Set<EntryHash>].self, forKey: .outstandingPackets)
             ?? [:]
+        packetsWritten =
+            try container.decodeIfPresent([PacketID: WrittenPacketRecord].self, forKey: .packetsWritten) ?? [:]
         preferences =
             try container.decodeIfPresent(MemberPreferences.self, forKey: .preferences)
             ?? MemberPreferences()

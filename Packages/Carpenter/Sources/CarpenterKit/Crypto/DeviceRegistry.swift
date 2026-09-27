@@ -109,15 +109,6 @@ public struct DeviceRegistry: Hashable, Sendable {
         standings[device].map { Self.covers($0, instant) } ?? false
     }
 
-    public func isValidSignature(
-        _ signature: Data, for message: Data, from device: DeviceID, at instant: Date
-    ) throws -> Bool {
-        guard isAuthorized(device, at: instant), let publicKey = signingKey(for: device) else {
-            return false
-        }
-        return try DeviceKeys.isValidSignature(signature, for: message, publicKey: publicKey)
-    }
-
     private mutating func note(_ digest: Data, _ instant: Date) {
         if let known = stored[digest], known <= instant { return }
         stored[digest] = instant

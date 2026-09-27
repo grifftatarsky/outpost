@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public struct RecipientTag: Hashable, Sendable, Codable {
@@ -165,11 +166,40 @@ public struct SentPacket: Hashable, Sendable {
     public let recipients: Set<RecipientTag>
     public let receipts: [SealedReceipt]
     public let createdAt: Date?
+    public let contentDigest: Data?
 
-    public init(recipients: Set<RecipientTag>, receipts: [SealedReceipt], createdAt: Date?) {
+    public init(
+        recipients: Set<RecipientTag>, receipts: [SealedReceipt], createdAt: Date?, contentDigest: Data? = nil
+    ) {
         self.recipients = recipients
         self.receipts = receipts
         self.createdAt = createdAt
+        self.contentDigest = contentDigest
+    }
+}
+
+extension SyncPacket {
+    public var contentDigest: Data {
+        let byTag: (RecipientTag, RecipientTag) -> Bool = { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
+        var fields = [Data(id.rawValue.uuidString.utf8), count(wraps.count)]
+        for tag in wraps.keys.sorted(by: byTag) {
+            fields.append(tag.rawValue)
+            fields.append(wraps[tag] ?? Data())
+        }
+        fields.append(ciphertext)
+        let granted = grants.filter { !$0.value.isEmpty }
+        fields.append(count(granted.count))
+        for tag in granted.keys.sorted(by: byTag) {
+            let values = (grants[tag] ?? []).sorted { $0.lexicographicallyPrecedes($1) }
+            fields.append(tag.rawValue)
+            fields.append(count(values.count))
+            fields.append(contentsOf: values)
+        }
+        return Data(SHA256.hash(data: CanonicalBytes.payload(domain: Domain.packetContent, fields: fields)))
+    }
+
+    private func count(_ value: Int) -> Data {
+        withUnsafeBytes(of: UInt32(clamping: value).bigEndian) { Data($0) }
     }
 }
 

@@ -93,6 +93,11 @@ struct CloudKitMailboxTests {
                 fail on 2026-09-13 for a difference that costs nothing.
                 """)
         }
+        #expect(
+            found.contentDigest == sent.contentDigest,
+            "a packet nobody touched reads back as altered, so every round would send it again")
+        let listed = try #require(try await mailbox.sentPackets()[sent.id])
+        #expect(listed.contentDigest == sent.contentDigest, "the outbox listing reads an untouched packet as altered")
 
         try await mailbox.withdraw(sent.id)
     }

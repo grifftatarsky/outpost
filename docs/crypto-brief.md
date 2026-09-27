@@ -659,6 +659,15 @@ only if one of *their* devices that still counts signed for it. The sender takes
 once every recipient has a receipt from a device that counts, or the packet has outlived the address
 lookback; a packet that leaves the outbox any other way is sent again (`NothingIsSnatchedTests`).
 
+**The sender's own record, not the server's** (since 2026-09-27). The sender used to read who a packet
+was for from the packet record on the server, which the same people can edit, so one recipient could
+strip the others from it, sign for their own copy and have the sender take back a packet nobody else
+had collected. The sender now keeps its own list of who each packet was for, and a digest of what it
+wrote, and settles against those: a packet altered in place, a recipient stripped or the sealed words
+changed, is taken back and sent again (`TamperedPacketTests`; the digest reads back unchanged from a
+real account, `CloudKitMailboxTests`). What a person with write access can still do is delay: a
+packet they damage reaches the others one round later.
+
 It does not leak any participant identifier, any room identifier, any device identifier, or any
 plaintext. **Nothing is ever written with `record[key]` unsealed** — the rule in `CLAUDE.md` exists
 because it was broken once, and that is the next section.

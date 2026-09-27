@@ -41,7 +41,8 @@ public actor FileMailbox: Mailbox {
     public func sentPackets() throws -> [PacketID: SentPacket] {
         try all().values.reduce(into: [:]) { found, stored in
             found[stored.packet.id] = SentPacket(
-                recipients: stored.packet.recipients, receipts: stored.receipts ?? [], createdAt: stored.written)
+                recipients: stored.packet.recipients, receipts: stored.receipts ?? [], createdAt: stored.written,
+                contentDigest: stored.packet.contentDigest)
         }
     }
 

@@ -70,7 +70,8 @@ extension CloudKitMailbox {
                 let packet = PacketRecord.read(record)
             else { continue }
             sent[id] = SentPacket(
-                recipients: packet.recipients, receipts: packet.receipts, createdAt: record.creationDate)
+                recipients: packet.recipients, receipts: packet.receipts, createdAt: record.creationDate,
+                contentDigest: packet.contentDigest)
         }
         return sent
     }
