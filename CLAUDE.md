@@ -59,6 +59,26 @@ touched. Five days later that comment was restated, more confidently, in `archit
 type was written the same evening and never called. Nobody re-derived any of it from the code for
 four weeks, and every room key the member held went to CloudKit in the clear the whole time.
 
+## Before building, and before saying it works
+
+Griff asked for these on 2026-09-26, after a session in which features were built to the letter of
+the request and then broke in the cases they existed for: device keys that a removed device could
+get around, an approval that passed its test and crashed the app, and a hole that sat in the crypto
+brief labelled a limit.
+
+1. **Write down what it must guarantee before writing code.** Two or three plain sentences: what the
+   feature promises, and who it must stop — a removed device, a thief who knows the passcode and runs
+   a modified app, a second Apple Account, a device that was offline. Griff confirms them. The first
+   tests try to break exactly those sentences.
+2. **No "known limit" without Griff's yes.** A gap found while working is fixed, or it goes to him as
+   a question with a recommendation. A limit written into a doc that he never agreed to is a dropped
+   ball with paperwork.
+3. **"Fixed" and "passing" mean the code was reread and a test did what the app does.** Anything that
+   crosses the network runs on the rig. A claim from an earlier commit or doc is checked against the
+   code before it is repeated. Otherwise the word is "not verified".
+4. **One thing at a time, finished.** A feature is done when the sentences in rule 1 hold on the rig,
+   not when it builds.
+
 ## Spend tokens like they are Griff's, because they are
 
 - **Read narrowly.** `grep -n` for the symbol, then read the twenty lines around it. Do not read a
