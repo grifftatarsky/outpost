@@ -173,8 +173,15 @@ identity signs. `DeviceRegistry` replays certificates and removals in time order
 counts if it has no approver (the first device, or one restored with the recovery key) or if its
 approver counted at the certificate's date. A removal names `revokedBy` and is signed by that device
 too, and counts only if that device counted at the removal's date. Order of arrival doesn't matter
-(`DeviceApprovalTests`). The same self-reported-date limit applies: a device that was removed and
-reprogrammed can date an approval before its removal.
+(`DeviceApprovalTests`). **This is not safe against a removed device, measured 2026-09-26.** Every
+approval and removal carries a date its author wrote, and the registry orders them by that date. A
+removed device keeps the identity key, so a modified copy of the app on it can sign an approval of a
+new device dated before its own removal, and the registry counts the new device. It can also sign
+removals of the member's other devices dated before its own removal; the registry then counts those
+removals and drops the removal of the stolen device, because its author was by then "removed". The
+registry part is measured; that the member's real devices would then erase themselves is read from
+the code that erases a device on hearing it was removed, not run. Not fixed; the proposed fix is in
+[open questions](open-questions.md).
 
 **How a new device gets in.** It writes a `request` record holding only its two public keys, the one
 record in the zone that isn't sealed, because the device doesn't have the identity yet. The approving

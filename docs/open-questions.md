@@ -17,6 +17,24 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN f14669d8 [NEEDS HUMAN REVIEW] -->
+
+### May approvals and removals be ordered by iCloud's clock instead of the device's?
+
+A removed device can still get back in, and can cut the member's real devices out, by writing dates
+in the past (measured 2026-09-26; the [crypto brief](crypto-brief.md) has the detail). Nothing a
+device writes about itself can settle which came first, because the thief controls the device.
+
+The proposal: order approvals and removals by when iCloud first stored them. CloudKit stamps every
+record with its own time when it is saved, and no device can set that time. A removal that reached
+iCloud before an approval or removal from the removed device wins, whatever date that device wrote.
+The cost is trusting Apple's clock for the order of these events (not for their contents, which stay
+signed and sealed), and a device approved in the minutes before its approver was removed may need
+approving again. The alternative, without Apple's clock, is a chain where each event names the last
+one its author saw; it stops back-dating but cannot settle two devices removing each other at once.
+
+<!-- COPY END f14669d8 -->
+
 <!-- COPY BEGIN 1c346b30 [NEEDS HUMAN REVIEW] -->
 
 ### Should your identity stay in iCloud Keychain?
