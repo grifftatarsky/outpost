@@ -61,6 +61,9 @@ extension AppSession {
             return
         case .approval:
             return
+        case .authority:
+            await takeAuthority(record)
+            return
         case .state, .mail, .catchUp:
             break
         }
@@ -79,7 +82,7 @@ extension AppSession {
                 "device sync: a sibling record would not open (\(Diagnostics.fingerprint(writer.rawValue), privacy: .public))")
             return
         }
-        guard await take(feed) else { return }
+        guard await take(feed, storedAt: record.modified ?? clock.now) else { return }
 
         switch record.name.kind {
         case .state:
@@ -89,7 +92,7 @@ extension AppSession {
             persisted.siblingMail.took(mail: number, from: writer)
         case .catchUp:
             persisted.siblingMail.took(catchUpThrough: feed.through ?? 0, from: writer)
-        case .request, .approval:
+        case .request, .approval, .authority:
             break
         }
         persisted.siblingMail.shared(feed.epochs)
@@ -106,7 +109,7 @@ extension AppSession {
     }
 
     @discardableResult
-    private func take(_ feed: SiblingFeed) async -> Bool {
+    private func take(_ feed: SiblingFeed, storedAt: Date) async -> Bool {
         guard let enrolment else { return false }
 
         if let member = feed.member, member != enrolment.identity.id {
@@ -130,23 +133,10 @@ extension AppSession {
             if !persisted.knownKeys.contains(keys) { persisted.knownKeys.append(keys) }
         }
         let certificatesBefore = Set(knownCertificates())
-        let devicesBefore = replica.registry(for: enrolment.identity.id)?.deviceIDs ?? []
-        for certificate in feed.certificates {
-            do {
-                try replica.admit(certificate)
-            } catch {
-                integrity.certificatesRefused += 1
-                Diagnostics.sync.error(
-                    "device sync: refused a certificate for one of your own devices — entries it signed cannot verify here (\(String(describing: error), privacy: .public))")
-            }
-        }
-
-        takeRevocations(feed.revocations)
-        if thisDeviceWasRemoved {
-            await eraseAfterRemoval()
-            return false
-        }
-        noteDevicesAddedWithTheRecoveryKey(since: devicesBefore)
+        guard
+            await takeAuthority(
+                certificates: feed.certificates, revocations: feed.revocations, storedAt: storedAt)
+        else { return false }
 
         let deletedAfterMerge = persisted.preferences.merged(with: feed.preferences).roomsDeleted
         for held in feed.epochs
@@ -236,7 +226,7 @@ extension AppSession {
         guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return [] }
         let devices: [DeviceID]
         switch kind {
-        case .state, .request, .approval: return []
+        case .state, .request, .approval, .authority: return []
         case .mail: devices = active
         case .catchUp(let target): devices = [target]
         }
@@ -244,13 +234,6 @@ extension AppSession {
             registry.agreementKey(for: device).map { DeviceRecipient(device: device, agreementKey: $0) }
         }
         return recipients.count == devices.count ? recipients : []
-    }
-
-    func takeRevocations(_ revocations: [DeviceRevocation]) {
-        for revocation in revocations where !persisted.revocations.contains(revocation) {
-            guard (try? replica.revoke(revocation)) != nil else { continue }
-            persisted.revocations.append(revocation)
-        }
     }
 
     private func heldEpochs() -> [HeldEpoch] {
@@ -278,7 +261,9 @@ extension AppSession {
 
         repeat {
             publishAgain = false
-            guard let deviceSync, let enrolment else { return }
+            guard let deviceSync, enrolment != nil else { return }
+            await publishAuthority(through: deviceSync)
+            guard let enrolment else { return }
             let me = enrolment.device.id
             let now = clock.now
             let held = heldEpochs()

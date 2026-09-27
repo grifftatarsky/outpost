@@ -59,14 +59,30 @@ public struct DeviceApproval: Hashable, Sendable, Codable {
     public let agreementSeed: Data
     public let certificates: [DeviceCertificate]
     public let revocations: [DeviceRevocation]
+    public let stored: [Data: Date]
+
+    private enum CodingKeys: String, CodingKey {
+        case signingSeed, agreementSeed, certificates, revocations, stored
+    }
 
     public init(
-        identity: Identity, certificates: [DeviceCertificate], revocations: [DeviceRevocation]
+        identity: Identity, certificates: [DeviceCertificate], revocations: [DeviceRevocation],
+        stored: [Data: Date] = [:]
     ) {
         signingSeed = identity.signingSeed
         agreementSeed = identity.agreementSeed
         self.certificates = certificates
         self.revocations = revocations
+        self.stored = stored
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        signingSeed = try container.decode(Data.self, forKey: .signingSeed)
+        agreementSeed = try container.decode(Data.self, forKey: .agreementSeed)
+        certificates = try container.decodeIfPresent([DeviceCertificate].self, forKey: .certificates) ?? []
+        revocations = try container.decodeIfPresent([DeviceRevocation].self, forKey: .revocations) ?? []
+        stored = try container.decodeIfPresent([Data: Date].self, forKey: .stored) ?? [:]
     }
 
     public func identity() throws -> Identity {

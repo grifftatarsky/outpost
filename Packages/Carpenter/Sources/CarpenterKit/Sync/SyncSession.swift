@@ -281,6 +281,13 @@ public struct SyncSession: Sendable {
         public struct Opened: Sendable {
             public let id: PacketID
             public let delivery: SyncEngine.Delivery
+            public let storedAt: Date
+
+            public init(id: PacketID, delivery: SyncEngine.Delivery, storedAt: Date) {
+                self.id = id
+                self.delivery = delivery
+                self.storedAt = storedAt
+            }
         }
 
         public let tags: Set<RecipientTag>
@@ -317,7 +324,8 @@ public struct SyncSession: Sendable {
             do {
                 opened.append(
                     CollectedPackets.Opened(
-                        id: packet.id, delivery: try Self.unpack(packet, as: peer, at: now)))
+                        id: packet.id, delivery: try Self.unpack(packet, as: peer, at: now),
+                        storedAt: packet.storedAt ?? now))
             } catch {
                 unopened.append((packet.id, error))
             }
@@ -346,7 +354,7 @@ public struct SyncSession: Sendable {
 
             var rejected = 0
             for certificate in delivery.certificates {
-                do { try replica.admit(certificate) } catch {
+                do { try replica.admit(certificate, storedAt: packet.storedAt) } catch {
                     rejected += 1
                     report.refusals.append(
                         SyncReport.Refusal(
@@ -355,7 +363,7 @@ public struct SyncSession: Sendable {
                 }
             }
             for revocation in delivery.revocations {
-                do { try replica.revoke(revocation) } catch {
+                do { try replica.revoke(revocation, storedAt: packet.storedAt) } catch {
                     rejected += 1
                     report.refusals.append(
                         SyncReport.Refusal(

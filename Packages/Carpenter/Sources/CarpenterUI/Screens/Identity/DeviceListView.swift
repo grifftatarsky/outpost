@@ -197,11 +197,11 @@ public struct DeviceListView: View {
                     Group {
                         if confirming.count == 1 {
                             Text(
-                                "It will not be able to read anything sent from now on. What it already sent stays.",
+                                "It will not be able to read anything sent from now on. What it already sent stays. If it was lost or stolen, erase it in Find My too.",
                                 bundle: .module)
                         } else {
                             Text(
-                                "They will not be able to read anything sent from now on. What they already sent stays. Every room's key is rotated once, however many you remove.",
+                                "They will not be able to read anything sent from now on. What they already sent stays. Every room's key is rotated once, however many you remove. If any were lost or stolen, erase them in Find My too.",
                                 bundle: .module)
                         }
                     }

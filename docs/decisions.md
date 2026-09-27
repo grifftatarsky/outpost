@@ -889,14 +889,37 @@ What it costs: a new device needs one of the member's other devices open, or the
 Losing every device without the recovery key loses the account. The identity key still travels
 through iCloud Keychain, so somebody signed in to the member's Apple Account on their own device
 gets it: the app won't let that device in without an approval, but a reprogrammed app could use the
-identity the way the recovery key does, and the member's devices would mark it. See
-[Open questions](open-questions.md#should-your-identity-stay-in-icloud-keychain).
+identity the way the recovery key does. The member's devices would mark it, and it could then remove
+the member's other devices. See
+[Open questions](open-questions.md#should-adding-a-device-without-an-approval-need-a-key-no-device-keeps).
 
 Tested in the package (`DeviceApprovalTests`, `ApprovingADeviceTests`, `DeviceEnrolmentTests`) and
 the request and approval records on real CloudKit on one account (`LiveSiblingFeedTests`). Not yet
 run on two real devices.
 
 <!-- COPY END bb86e179 -->
+
+<!-- COPY BEGIN 2f66bf36 [NEEDS HUMAN REVIEW] -->
+
+### Approvals and removals count in the order iCloud first stored them
+
+**RULED 2026-09-27 by Griff**, on ordering by time: "I think if only iCloud can make that work,
+that's good." And: "do it, but do it carefully, test effectively, and consult apple documentation."
+
+A device's own clock can't settle which came first, because a thief controls the device. Each
+approval and removal is also stored as its own record in the member's zone, named after a hash of
+its contents, and it counts from when iCloud first stored that record. A removal needs a device that
+counted at that moment; the identity key alone can't remove anything. How it works, and what it
+doesn't stop, is in the [crypto brief](crypto-brief.md).
+
+What it costs: the order of these events rests on Apple's clock (their contents stay signed and
+sealed). A device approved in the moments before its approver's removal reached iCloud may need
+approving again. These records are kept for good, one small record per approval or removal.
+
+Tested in the package, and the record times on real CloudKit on one account. Not yet on two real
+devices.
+
+<!-- COPY END 2f66bf36 -->
 
 <!-- COPY BEGIN 2a36739f [NEEDS HUMAN REVIEW] -->
 

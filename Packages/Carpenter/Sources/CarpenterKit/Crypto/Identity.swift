@@ -203,6 +203,7 @@ enum Domain {
     static let deviceApproval = "carpenter.device-approval.v1"
     static let deviceApprovalCode = "carpenter.device-approval-code.v1"
     static let deviceRevocation = "carpenter.device-revocation.v1"
+    static let authorityRecord = "carpenter.authority-record.v1"
     static let verificationPhrase = "carpenter.verification-phrase.v1"
     static let comparisonCode = "carpenter.comparison-code.v1"
 

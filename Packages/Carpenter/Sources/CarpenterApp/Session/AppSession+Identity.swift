@@ -33,10 +33,13 @@ extension AppSession {
             try await restoreLog(identity: identity)
             let kept = try await store.keptCertificate()
             let registered = replica.registry(for: identity.id)?.standing(of: device.id) != nil
-            if !registered, let kept, kept.device == device.id, kept.devicePublicKey == device.publicKey,
-                (try? replica.admit(kept)) != nil
+            let keptAt = kept.flatMap { persisted.authorityStored[$0.digest] ?? $0.issuedAt }
+            if !registered, let kept, let keptAt, kept.device == device.id,
+                kept.devicePublicKey == device.publicKey,
+                (try? replica.admit(kept, storedAt: keptAt)) != nil
             {
                 persisted.certificates = Array(Set(persisted.certificates + [kept]))
+                persisted.authorityStored[kept.digest] = min(persisted.authorityStored[kept.digest] ?? keptAt, keptAt)
             }
             let known = replica.registry(for: identity.id).map {
                 $0.standing(of: device.id) != nil || $0.isPending(device.id)
@@ -211,8 +214,8 @@ extension AppSession {
         replica.introduce(enrolled.identity.publicKeys)
         let founding = try DeviceCertificate.issue(
             for: enrolled.device, by: enrolled.identity, at: clock.now)
-        try replica.admit(founding)
-        persisted.certificates = knownCertificates()
+        try replica.admit(founding, storedAt: authorityNow())
+        recordAuthority()
         try await store.keepCertificate(founding)
 
         try await setDisplayName(displayName)
@@ -252,8 +255,8 @@ extension AppSession {
         replica = Replica()
         replica.introduce(enrolled.identity.publicKeys)
         let restored = try DeviceCertificate.issue(for: enrolled.device, by: enrolled.identity, at: clock.now)
-        try replica.admit(restored)
-        persisted.certificates = knownCertificates()
+        try replica.admit(restored, storedAt: authorityNow())
+        recordAuthority()
         try await store.keepCertificate(restored)
 
         Diagnostics.sync.notice(
@@ -510,10 +513,11 @@ extension AppSession {
         for device in wanted {
             let revocation = try DeviceRevocation.issue(
                 for: device, by: enrolment.identity, at: clock.now, from: enrolment.device)
-            try replica.revoke(revocation)
-            persisted.revocations.append(revocation)
+            try replica.revoke(revocation, storedAt: authorityNow())
         }
+        recordAuthority()
         try await saveState()
+        sendOwnEntries()
 
         Diagnostics.identity.notice(
             """

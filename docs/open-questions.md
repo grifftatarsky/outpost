@@ -17,23 +17,24 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
-<!-- COPY BEGIN f14669d8 [NEEDS HUMAN REVIEW] -->
+<!-- COPY BEGIN 21f481a7 [NEEDS HUMAN REVIEW] -->
 
-### May approvals and removals be ordered by iCloud's clock instead of the device's?
+### Should adding a device without an approval need a key no device keeps?
 
-A removed device can still get back in, and can cut the member's real devices out, by writing dates
-in the past (measured 2026-09-26; the [crypto brief](crypto-brief.md) has the detail). Nothing a
-device writes about itself can settle which came first, because the thief controls the device.
+Every device that is let in gets the identity key, and the identity key alone can add a device,
+because that is how a restore works: the recovery key is the identity key written down. So a removed
+device can add a device of its own at any time, with no date trick, and that device can then remove
+yours, which makes them erase themselves (measured 2026-09-26). Ordering by iCloud's clock doesn't
+help, because nothing here is out of order. Erasing the removed device with Find My stops it, because
+it can no longer write to your iCloud.
 
-The proposal: order approvals and removals by when iCloud first stored them. CloudKit stamps every
-record with its own time when it is saved, and no device can set that time. A removal that reached
-iCloud before an approval or removal from the removed device wins, whatever date that device wrote.
-The cost is trusting Apple's clock for the order of these events (not for their contents, which stay
-signed and sealed), and a device approved in the minutes before its approver was removed may need
-approving again. The alternative, without Apple's clock, is a chain where each event names the last
-one its author saw; it stops back-dating but cannot settle two devices removing each other at once.
+The proposal: the recovery key becomes its own key, which no device keeps. A device gets in by
+another device's approval or by the recovery key, and a removed device holds neither. The recovery
+key is made on a device that counts and shown once; to replace it you make a new one on any device
+that counts, and the old one stops working. The cost: the recovery key can't be shown again from
+Settings, only replaced, and its file changes (restoring works the same from the member's side).
 
-<!-- COPY END f14669d8 -->
+<!-- COPY END 21f481a7 -->
 
 <!-- COPY BEGIN 1c346b30 [NEEDS HUMAN REVIEW] -->
 

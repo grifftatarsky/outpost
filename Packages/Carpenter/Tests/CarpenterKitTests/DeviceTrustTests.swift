@@ -162,7 +162,8 @@ struct DeviceRegistryTests {
         let revokedAt = issuedAt.addingTimeInterval(3_600)
 
         try enrolled.registry.revoke(
-            DeviceRevocation.issue(for: enrolled.device.id, by: enrolled.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device))
 
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt))
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(1)))
@@ -174,7 +175,8 @@ struct DeviceRegistryTests {
         let revokedAt = issuedAt.addingTimeInterval(3_600)
 
         try enrolled.registry.revoke(
-            DeviceRevocation.issue(for: enrolled.device.id, by: enrolled.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device))
 
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: issuedAt))
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(-1)))
@@ -199,7 +201,7 @@ struct DeviceRegistryTests {
         #expect(throws: CryptoError.unknownDevice) {
             try enrolled.registry.revoke(
                 DeviceRevocation.issue(
-                    for: DeviceKeys.generate().id, by: enrolled.identity, at: issuedAt))
+                    for: DeviceKeys.generate().id, by: enrolled.identity, at: issuedAt, from: enrolled.device))
         }
     }
 
@@ -237,7 +239,8 @@ struct DeviceRegistryTests {
         let revokedAt = issuedAt.addingTimeInterval(3_600)
 
         try enrolled.registry.revoke(
-            DeviceRevocation.issue(for: enrolled.device.id, by: enrolled.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device))
         try enrolled.registry.admit(certificate)
 
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(1)))

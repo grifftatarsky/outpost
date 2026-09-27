@@ -284,6 +284,67 @@ struct LiveSiblingFeedTests {
         try? await reinstalled.forgetOwnContribution()
     }
 
+    @Test("iCloud stamps when a record was first stored, keeps it through a rewrite, and a recreated record gets a later one")
+    func iCloudKeepsTheFirstStoredTime() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let mine = device()
+        let first = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        let written = try mail(1, from: mine, carrying: Data([1]), for: identity)
+        try await first.send([written], deleting: [])
+        let stored = try #require(try await record(written.name))
+        let created = try #require(stored.creationDate)
+        let modified = try #require(stored.modificationDate)
+
+        try? await Task.sleep(for: .seconds(2))
+        let rewriter = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        try await rewriter.send([try mail(1, from: mine, carrying: Data([2]), for: identity)], deleting: [])
+        let rewritten = try #require(try await record(written.name))
+        #expect(rewritten.creationDate == created, "a rewrite changed when iCloud says the record was first stored")
+        #expect(
+            (rewritten.modificationDate ?? .distantPast) > modified,
+            "a rewrite did not move the record's last-stored time")
+
+        try await rewriter.send([], deleting: [written.name])
+        try? await Task.sleep(for: .seconds(2))
+        let recreator = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        try await recreator.send([try mail(1, from: mine, carrying: Data([3]), for: identity)], deleting: [])
+        let recreated = try #require(try await record(written.name))
+        #expect(
+            (recreated.creationDate ?? .distantPast) > created,
+            "a record deleted and made again kept its old first-stored time")
+
+        try? await recreator.forgetOwnContribution()
+    }
+
+    @Test("An approval already in iCloud is not overwritten, and a second writer is told when it was first stored")
+    func anApprovalIsStoredOnce() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let (phone, tablet) = (DeviceKeys.generate(), DeviceKeys.generate())
+        let approval = AuthorityEvent.added(
+            try DeviceCertificate.issue(for: tablet, by: identity, at: Date(), approvedBy: phone))
+        let record = try approval.record(sealedFor: identity, by: phone.id)
+
+        let first = CloudKitEntrySync(container: .default(), device: phone.id, stateStore: store())
+        let firstStored = try #require(try await first.send([record], deleting: [])[record.name])
+        try? await Task.sleep(for: .seconds(2))
+        let second = CloudKitEntrySync(container: .default(), device: phone.id, stateStore: store())
+        let secondStored = try #require(try await second.send([record], deleting: [])[record.name])
+        #expect(secondStored == firstStored, "a second write of the same approval reported a different first-stored time")
+
+        let server = try #require(try await self.record(record.name))
+        #expect(server.creationDate == firstStored)
+        #expect(
+            try AuthorityEvent(
+                record: SiblingRecord(
+                    name: record.name,
+                    sealed: SealedSiblingFeed(ciphertext: try #require(server["feed"] as? Data))),
+                openedWith: identity) == approval)
+
+        try? await second.forgetOwnContribution()
+    }
+
     private actor Records {
         private var seen: [SiblingRecord] = []
         func add(_ record: SiblingRecord) { seen.append(record) }

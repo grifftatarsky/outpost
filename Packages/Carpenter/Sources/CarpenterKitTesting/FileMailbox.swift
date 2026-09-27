@@ -31,7 +31,11 @@ public actor FileMailbox: Mailbox {
                 $0.written != $1.written
                     ? $0.written < $1.written : $0.packet.id.rawValue.uuidString < $1.packet.id.rawValue.uuidString
             }
-            .map(\.packet)
+            .map { stored in
+                var packet = stored.packet
+                packet.storedAt = stored.written
+                return packet
+            }
     }
 
     public func pendingDeliveries() throws -> [PacketID: Set<RecipientTag>] {

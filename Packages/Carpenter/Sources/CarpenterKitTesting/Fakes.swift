@@ -130,9 +130,16 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
         var fields: [String: PacketField]
         var outstanding: Set<RecipientTag>
         var storedAt: Date = .distantPast
+        var modifiedAt: Date = .distantPast
     }
 
     private let clock: any Clock
+    private var serverNow = Date.distantPast
+
+    private func serverTime() -> Date {
+        serverNow = max(serverNow.addingTimeInterval(0.001), clock.now)
+        return serverNow
+    }
 
     private var stored: [PacketID: Stored] = [:]
     private var order: [PacketID] = []
@@ -253,16 +260,20 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
             throw MailboxError.recordTooLarge(
                 bytes: weight, ceiling: MailboxRules.recordByteCeiling)
         }
+        let now = serverTime()
         stored[packet.id] = Stored(
-            fields: fields, outstanding: packet.recipients, storedAt: clock.now)
+            fields: fields, outstanding: packet.recipients, storedAt: now, modifiedAt: now)
         order.append(packet.id)
     }
 
     public func fetch(for tags: Set<RecipientTag>) throws -> [SyncPacket] {
         fetchCount += 1
-        return order.compactMap { stored[$0] }
-            .filter { !$0.outstanding.isDisjoint(with: tags) }
-            .compactMap { PacketWire.packet(from: $0.fields) }
+        let wanted: [Stored] = order.compactMap { stored[$0] }.filter { !$0.outstanding.isDisjoint(with: tags) }
+        return wanted.compactMap { (entry: Stored) -> SyncPacket? in
+            guard var packet = PacketWire.packet(from: entry.fields) else { return nil }
+            packet.storedAt = entry.modifiedAt
+            return packet
+        }
     }
 
     public func pendingDeliveries() throws -> [PacketID: Set<RecipientTag>] {
@@ -278,6 +289,7 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
             stored[id] = nil
             order.removeAll { $0 == id }
         } else {
+            entry.modifiedAt = serverTime()
             stored[id] = entry
         }
     }

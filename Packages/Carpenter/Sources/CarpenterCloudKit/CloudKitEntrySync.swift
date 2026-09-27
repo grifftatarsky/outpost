@@ -24,6 +24,7 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
     private var starting: Task<Void, any Error>?
 
     private var known: [CKRecord.ID: CKRecord] = [:]
+    private var firstStored: [CKRecord.ID: Date] = [:]
 
     public init(container: CKContainer, device: DeviceID, stateStore: any DocumentStore) {
         self.container = container
@@ -135,9 +136,12 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
         self.handler = handler
     }
 
-    public func send(_ records: [SiblingRecord], deleting: [SiblingRecord.Name]) async throws {
+    @discardableResult
+    public func send(_ records: [SiblingRecord], deleting: [SiblingRecord.Name]) async throws
+        -> [SiblingRecord.Name: Date]
+    {
         try await start()
-        guard let engine else { return }
+        guard let engine else { return [:] }
 
         var changes: [CKSyncEngine.PendingRecordZoneChange] = []
         for record in records {
@@ -150,7 +154,7 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
             pending[id] = nil
             changes.append(.deleteRecord(id))
         }
-        guard !changes.isEmpty else { return }
+        guard !changes.isEmpty else { return [:] }
         engine.state.add(pendingRecordZoneChanges: changes)
         Diagnostics.sync.notice(
             "device sync: staged \(records.count, privacy: .public) record(s), \(records.reduce(0) { $0 + $1.sealed.ciphertext.count }, privacy: .public) sealed bytes, and \(deleting.count, privacy: .public) deletion(s)")
@@ -160,6 +164,9 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
         } catch let error as CKError where Self.isOnlyConflicts(error) {
             Diagnostics.sync.notice("device sync: writing again over the server's copy")
             try await engine.sendChanges()
+        }
+        return records.reduce(into: [:]) { times, record in
+            times[record.name] = firstStored[recordID(for: record.name)]
         }
     }
 
@@ -290,13 +297,26 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
         for record in records {
             known[record.recordID] = record
             pending[record.recordID] = nil
+            if let created = record.creationDate { firstStored[record.recordID] = created }
         }
-        for id in deleted { known[id] = nil }
+        for id in deleted {
+            known[id] = nil
+            firstStored[id] = nil
+        }
     }
 
-    fileprivate func resolve(_ record: CKRecord) {
+    fileprivate func resolve(_ record: CKRecord) -> Bool {
         known[record.recordID] = record
-        Diagnostics.sync.notice("device sync: adopted the server's copy after a conflict")
+        guard let name = SiblingRecord.Name(recordName: record.recordID.recordName),
+            case .authority = name.kind
+        else {
+            Diagnostics.sync.notice("device sync: adopted the server's copy after a conflict")
+            return true
+        }
+        pending[record.recordID] = nil
+        if let created = record.creationDate { firstStored[record.recordID] = created }
+        Diagnostics.sync.notice("device sync: an approval or removal was already stored; keeping the server's")
+        return false
     }
 
     fileprivate func received(_ records: [CKRecord]) {
@@ -306,7 +326,10 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
                 continue
             }
             guard name.writer != device, let data = record[Self.payloadKey] as? Data else { continue }
-            arrivals.append(SiblingRecord(name: name, sealed: SealedSiblingFeed(ciphertext: data)))
+            arrivals.append(
+                SiblingRecord(
+                    name: name, sealed: SealedSiblingFeed(ciphertext: data), created: record.creationDate,
+                    modified: record.modificationDate))
         }
         guard delivering == nil, !arrivals.isEmpty else { return }
         delivering = Task.detached { [weak self] in
@@ -349,9 +372,9 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
                     if failure.error.code == .serverRecordChanged,
                         let server = failure.error.serverRecord
                     {
-                        await owner.resolve(server)
-
-                        syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(failure.record.recordID)])
+                        if await owner.resolve(server) {
+                            syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(failure.record.recordID)])
+                        }
                     } else {
                         Diagnostics.sync.error(
                             "device sync: save failed: \(String(describing: failure.error), privacy: .public)")

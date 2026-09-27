@@ -22,13 +22,14 @@ extension AppSession {
         let certificate = try DeviceCertificate.issue(
             for: request.devicePublicKey, agreementKey: request.agreementKey, by: enrolment.identity,
             at: clock.now, approvedBy: enrolment.device)
-        try replica.admit(certificate)
-        persisted.certificates = knownCertificates()
+        try replica.admit(certificate, storedAt: authorityNow())
+        recordAuthority()
         try await saveState()
 
+        let own = replica.registry(for: enrolment.identity.id)
         let approval = DeviceApproval(
-            identity: enrolment.identity, certificates: knownCertificates(),
-            revocations: persisted.revocations)
+            identity: enrolment.identity, certificates: own?.certificates ?? [],
+            revocations: own?.knownRevocations ?? [], stored: own?.storedTimes ?? [:])
         try await deviceSync.send(
             [try approval.record(from: enrolment.device.id, to: request)],
             deleting: [SiblingRecord.Name(writer: request.device, kind: .request)])
@@ -67,10 +68,15 @@ extension AppSession {
             return
         }
 
+        let arrived = record.modified ?? clock.now
         var check = Replica()
         check.introduce(identity.publicKeys)
-        for certificate in approval.certificates { try? check.admit(certificate) }
-        for revocation in approval.revocations { try? check.revoke(revocation) }
+        for certificate in approval.certificates {
+            try? check.admit(certificate, storedAt: approval.stored[certificate.digest] ?? arrived)
+        }
+        for revocation in approval.revocations {
+            try? check.revoke(revocation, storedAt: approval.stored[revocation.digest] ?? arrived)
+        }
         guard let standing = check.registry(for: identity.id)?.standing(of: device.id),
             standing.revokedAt == nil, !standing.isRoot
         else {
@@ -91,6 +97,8 @@ extension AppSession {
         }
         persisted.certificates = approval.certificates
         persisted.revocations = approval.revocations
+        persisted.authorityStored = check.storedTimes
+        persisted.authorityIsLegacy = false
         await persistOrReport("the approval of this device") { try await saveState() }
 
         try? await deviceSync?.send(

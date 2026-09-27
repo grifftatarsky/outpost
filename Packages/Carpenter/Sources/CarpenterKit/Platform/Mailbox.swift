@@ -25,18 +25,26 @@ public struct SyncPacket: Hashable, Sendable, Codable {
 
     public let grants: [RecipientTag: [Data]]
 
+    public var storedAt: Date?
+
     public var recipients: Set<RecipientTag> { Set(wraps.keys) }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, wraps, ciphertext, grants
+    }
 
     public init(
         id: PacketID = PacketID(),
         wraps: [RecipientTag: Data],
         ciphertext: Data,
-        grants: [RecipientTag: [Data]] = [:]
+        grants: [RecipientTag: [Data]] = [:],
+        storedAt: Date? = nil
     ) {
         self.id = id
         self.wraps = wraps
         self.ciphertext = ciphertext
         self.grants = grants
+        self.storedAt = storedAt
     }
 }
 

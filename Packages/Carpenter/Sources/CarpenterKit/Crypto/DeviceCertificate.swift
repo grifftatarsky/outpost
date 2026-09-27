@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public struct DeviceCertificate: Hashable, Sendable, Codable {
@@ -88,6 +89,14 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         }
     }
 
+    public var digest: Data {
+        Data(
+            SHA256.hash(
+                data: CanonicalBytes.payload(
+                    domain: Domain.authorityRecord,
+                    fields: [Data("certificate".utf8), signingPayload, signature, approval ?? Data()])))
+    }
+
     func isApproved(byKey approverPublicKey: Data) -> Bool {
         guard let approval else { return false }
         return (try? DeviceKeys.isValidSignature(approval, for: signingPayload, publicKey: approverPublicKey))
@@ -157,6 +166,14 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
         guard try identityKeys.isValidSignature(signature, for: signingPayload) else {
             throw CryptoError.badSignature
         }
+    }
+
+    public var digest: Data {
+        Data(
+            SHA256.hash(
+                data: CanonicalBytes.payload(
+                    domain: Domain.authorityRecord,
+                    fields: [Data("revocation".utf8), signingPayload, signature, revokerSignature ?? Data()])))
     }
 
     func isSigned(byKey revokerPublicKey: Data) -> Bool {

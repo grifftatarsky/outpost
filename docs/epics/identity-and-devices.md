@@ -161,8 +161,14 @@ somebody signed in to my Apple Account can't read my messages.
 **Built 2026-09-26.** The new device shows a six-character code and waits. My other devices ask
 "Approve a new device?" with the same code. Approving hands the new device my identity and its
 certificate, sealed to it. The recovery key is the only other way in, and a device let in that way
-is marked on my other devices. Removals are signed by the device that made them, and a removed device
-can't approve or remove anything. [Decisions](../decisions.md#a-new-device-needs-approval-from-one-of-your-devices).
+is marked on my other devices. Removals are signed by the device that made them.
+
+**Changed 2026-09-27.** A removed device could date an approval or a removal before its removal and
+have it count. Approvals and removals now count in the order iCloud first stored them, so nothing a
+removed device signs after its removal reached iCloud counts, whatever date it writes. It can still
+add a device as if restored with the recovery key, because it holds the identity key; that is an
+[open question](../open-questions.md#should-adding-a-device-without-an-approval-need-a-key-no-device-keeps).
+[Decisions](../decisions.md#a-new-device-needs-approval-from-one-of-your-devices).
 
 **Testing.** `DeviceApprovalTests` (which certificates count), `ApprovingADeviceTests` and
 `DeviceEnrolmentTests` (two devices through the relay), and a live CloudKit test for the request and

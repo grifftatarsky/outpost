@@ -277,6 +277,15 @@ Read these before touching sync. Every one cost real time.
   each device that is not removed (`DeviceSeal`), and a removed device erases itself when it hears.
   Anything new that goes to a member has to be sealed the same way, or removing a device stops
   meaning anything (`PerDeviceKeysTests`, `WhatRemovingADeviceCutsOffTests`).
+- **A date a device writes is not an order.** Approvals and removals were replayed by the dates
+  their authors signed, so a removed device that kept the identity key could date an approval of a
+  device of its own, or removals of the member's other devices, before its own removal, and all of
+  it counted (measured 2026-09-26). They now count in the order iCloud first stored them: each is its
+  own record named after a hash of its contents, because CloudKit keeps a record's `creationDate`
+  through a rewrite but not its contents' hash. Anything new that decides who may act for a member
+  needs the same: a stored time from iCloud, never a date the author chose
+  (`WritingOldDatesIntoICloudTests`). And never mix a device's clock with iCloud's unguarded: a
+  device times its own new event after everything it has seen, then takes iCloud's time.
 - **A second device in a test has to be approved, the way a real one does.** `InMemoryKeychainStore`
   keeps device-only items per device and shares only synchronized ones, through `sibling()`, like
   iCloud Keychain. A test that hands two sessions one keychain, or removes the device key to fake a

@@ -76,10 +76,10 @@ struct SiblingMailTests {
 
         let left = await devices.relay.names(from: device)
         #expect(
-            left.allSatisfy { $0.kind == .state },
+            left.allSatisfy { $0.isKeptForGood },
             """
             Mail your other device already collected is still in iCloud: \(left.map(\.recordName)). \
-            Only this device's small state record should remain.
+            Only this device's small state record, and its approvals and removals, should remain.
             """)
     }
 
@@ -95,7 +95,9 @@ struct SiblingMailTests {
         await alone.settleDeviceSync()
 
         let device = try #require(alone.enrolment?.device.id)
-        #expect(await relay.names(from: device).map(\.kind) == [.state])
+        let left = await relay.names(from: device)
+        #expect(left.filter { $0.kind == .state }.count == 1)
+        #expect(left.allSatisfy { $0.isKeptForGood }, "more than the state record and the founding certificate: \(left.map(\.recordName))")
     }
 
     @Test("A device added later gets everything once, and the hand-over is then deleted")
@@ -123,7 +125,7 @@ struct SiblingMailTests {
         #expect(added.messages(in: room).count == 8, "the new device did not get the history")
         let device = try #require(original.enrolment?.device.id)
         let left = await relay.names(from: device)
-        #expect(left.allSatisfy { $0.kind == .state }, "the hand-over outlived its use: \(left.map(\.recordName))")
+        #expect(left.allSatisfy { $0.isKeptForGood }, "the hand-over outlived its use: \(left.map(\.recordName))")
     }
 
     @Test("A device away for longer than mail is kept is caught up when it comes back")
@@ -157,7 +159,7 @@ struct SiblingMailTests {
 
         let device = try #require(original.enrolment?.device.id)
         #expect(
-            await relay.names(from: device).allSatisfy { $0.kind == .state },
+            await relay.names(from: device).allSatisfy { $0.isKeptForGood },
             "mail nobody collected for a month is still in iCloud")
 
         let deadline = Date().addingTimeInterval(5)
@@ -193,5 +195,14 @@ struct SiblingMailTests {
         }
         #expect(SiblingRecord.Name(recordName: "mail-ab-0") == nil)
         #expect(SiblingRecord.Name(recordName: "feed-") == nil)
+    }
+}
+
+extension SiblingRecord.Name {
+    fileprivate var isKeptForGood: Bool {
+        switch kind {
+        case .state, .authority: true
+        case .mail, .catchUp, .request, .approval: false
+        }
     }
 }

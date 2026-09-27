@@ -180,6 +180,7 @@ public final class AppSession {
     var stateOnDisk: PersistedState?
 
     func saveState() async throws {
+        keepAuthorityTimes()
         let previous = stateWrites
         let write = Task { @MainActor [self] in
             _ = try? await previous?.value
@@ -365,25 +366,41 @@ public final class AppSession {
         replica.introduce(identity.publicKeys)
 
         for keys in persisted.knownKeys { replica.introduce(keys) }
-        for certificate in persisted.certificates { try? replica.admit(certificate) }
+        for certificate in persisted.certificates {
+            guard let at = storedTime(for: certificate.digest, claimed: certificate.issuedAt) else {
+                Diagnostics.identity.error("authority: a saved certificate had no stored time and was left out")
+                continue
+            }
+            try? replica.admit(certificate, storedAt: at)
+        }
 
         if let enrolment {
             let registry = replica.registry(for: identity.id)
             if let standing = registry?.standing(of: enrolment.device.id) {
                 if registry?.agreementKey(for: enrolment.device.id) == nil {
                     try replica.admit(
-                        DeviceCertificate.issue(for: enrolment.device, by: identity, at: standing.addedAt))
+                        DeviceCertificate.issue(for: enrolment.device, by: identity, at: standing.addedAt),
+                        storedAt: clock.now)
                     persisted.certificates = knownCertificates()
                 }
             } else if let earlier = persisted.certificates.first(where: {
                 $0.device == enrolment.device.id && $0.devicePublicKey == enrolment.device.publicKey
                     && $0.isRoot
             }) {
-                try replica.admit(DeviceCertificate.issue(for: enrolment.device, by: identity, at: earlier.issuedAt))
+                try replica.admit(
+                    DeviceCertificate.issue(for: enrolment.device, by: identity, at: earlier.issuedAt),
+                    storedAt: storedTime(for: earlier.digest, claimed: earlier.issuedAt) ?? earlier.issuedAt)
                 persisted.certificates = knownCertificates()
             }
         }
-        for revocation in persisted.revocations { try? replica.revoke(revocation) }
+        for revocation in persisted.revocations + persisted.otherRevocations {
+            guard let at = storedTime(for: revocation.digest, claimed: revocation.revokedAt) else {
+                Diagnostics.identity.error("authority: a saved removal had no stored time and was left out")
+                continue
+            }
+            try? replica.revoke(revocation, storedAt: at)
+        }
+        if enrolment != nil { recordAuthority() }
         replica.restore(spent: persisted.spentEntries, closing: persisted.preferences.roomsDeleted)
 
         let loaded = try await storage.log.loadAll()

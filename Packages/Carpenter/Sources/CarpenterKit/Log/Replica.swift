@@ -78,24 +78,50 @@ public struct Replica: Sendable {
         revision = UUID()
     }
 
-    public mutating func admit(_ certificate: DeviceCertificate) throws {
+    public mutating func admit(_ certificate: DeviceCertificate, storedAt: Date) throws {
         guard var registry = registries[certificate.participant] else {
             throw LogError.unknownParticipant
         }
-        try registry.admit(certificate)
+        try registry.admit(certificate, storedAt: storedAt)
         guard registry != registries[certificate.participant] else { return }
         registries[certificate.participant] = registry
         revision = UUID()
     }
 
-    public mutating func revoke(_ revocation: DeviceRevocation) throws {
+    mutating func admit(_ certificate: DeviceCertificate) throws {
+        try admit(certificate, storedAt: certificate.issuedAt)
+    }
+
+    public mutating func revoke(_ revocation: DeviceRevocation, storedAt: Date) throws {
         guard var registry = registries[revocation.participant] else {
             throw LogError.unknownParticipant
         }
-        try registry.revoke(revocation)
+        try registry.revoke(revocation, storedAt: storedAt)
         guard registry != registries[revocation.participant] else { return }
         registries[revocation.participant] = registry
         revision = UUID()
+    }
+
+    mutating func revoke(_ revocation: DeviceRevocation) throws {
+        try revoke(revocation, storedAt: revocation.revokedAt)
+    }
+
+    public mutating func settle(_ event: AuthorityEvent, storedAt: Date) {
+        guard var registry = registries[event.participant] else { return }
+        registry.settle(event.digest, storedAt: storedAt)
+        guard registry != registries[event.participant] else { return }
+        registries[event.participant] = registry
+        revision = UUID()
+    }
+
+    public var storedTimes: [Data: Date] {
+        registries.values.reduce(into: [:]) { times, registry in
+            times.merge(registry.storedTimes) { min($0, $1) }
+        }
+    }
+
+    public var knownRevocations: [DeviceRevocation] {
+        registries.values.flatMap(\.knownRevocations)
     }
 
     public var knownParticipants: Set<ParticipantID> { Set(registries.keys) }

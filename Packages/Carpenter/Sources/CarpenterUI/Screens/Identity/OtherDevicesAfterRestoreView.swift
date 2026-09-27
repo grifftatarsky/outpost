@@ -29,7 +29,7 @@ public struct OtherDevicesAfterRestoreView: View {
                     icon: "ipad.and.iphone",
                     title: Text("Your other devices", bundle: .module),
                     paragraph: Text(
-                        "These devices are still signed in as you. Remove any you no longer have. A removed device can't read anything sent from now on, and erases what it holds the next time it opens.",
+                        "These devices are still signed in as you. Remove any you no longer have, and erase lost ones in Find My. A removed device can't read anything sent from now on, and erases what it holds the next time it opens.",
                         bundle: .module))
                 // COPY END 07998163
 

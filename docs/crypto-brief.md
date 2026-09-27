@@ -173,15 +173,35 @@ identity signs. `DeviceRegistry` replays certificates and removals in time order
 counts if it has no approver (the first device, or one restored with the recovery key) or if its
 approver counted at the certificate's date. A removal names `revokedBy` and is signed by that device
 too, and counts only if that device counted at the removal's date. Order of arrival doesn't matter
-(`DeviceApprovalTests`). **This is not safe against a removed device, measured 2026-09-26.** Every
-approval and removal carries a date its author wrote, and the registry orders them by that date. A
-removed device keeps the identity key, so a modified copy of the app on it can sign an approval of a
-new device dated before its own removal, and the registry counts the new device. It can also sign
-removals of the member's other devices dated before its own removal; the registry then counts those
-removals and drops the removal of the stolen device, because its author was by then "removed". The
-registry part is measured; that the member's real devices would then erase themselves is read from
-the code that erases a device on hearing it was removed, not run. Not fixed; the proposed fix is in
-[open questions](open-questions.md).
+(`DeviceApprovalTests`).
+
+**Approvals and removals count in the order iCloud first stored them** (since 2026-09-27). Until then
+the registry ordered them by the dates their authors wrote, and a removed device that keeps the
+identity key could date an approval, or removals of the member's other devices, before its own
+removal (measured 2026-09-26). Now every approval and removal is also written to the member's zone as
+its own record, named `authority-<writer>-<digest>`, where the digest is SHA-256 over the event's
+signed fields and signatures. CloudKit stamps `creationDate` when a record ID is first saved and keeps
+it when the record is rewritten; a record deleted and saved again gets a new, later one. That is
+Apple's documentation for `CKRecord.creationDate`, and `iCloudKeepsTheFirstStoredTime` measures it
+on the rig. Because the name is the digest, a record rewritten with other contents keeps its old time
+but is refused when opened.
+
+`DeviceRegistry` replays events in stored-time order. An approval counts only if its approver counted
+at that stored time; a removal counts only if it names a device, never the identity key alone, that
+counted at that stored time. Learning an earlier stored time moves an event earlier; a later
+sighting never moves it later. A device times its own new approval or removal after everything it has
+already seen, then takes iCloud's time once its record is stored; a new device starts from its
+approver's times. Other members order a member's approvals and removals by when the packet carrying
+them was last stored (`modificationDate`, which a rewrite can only move later), and keep them across
+a relaunch. The claimed dates still bound which entries a device may sign. Tested in
+`WhatTheRegistryCountsTests`, `WritingOldDatesIntoICloudTests` and `RemembersRemovalsTests`, and live
+in `LiveSiblingFeedTests`.
+
+What it does not stop: anything a device does before its removal reaches iCloud; a device still
+signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
+removal (erasing it with Find My signs it out); and a removed device adding a device as if restored
+with the recovery key, because it holds the identity key. The last is an
+[open question](open-questions.md#should-adding-a-device-without-an-approval-need-a-key-no-device-keeps).
 
 **How a new device gets in.** It writes a `request` record holding only its two public keys, the one
 record in the zone that isn't sealed, because the device doesn't have the identity yet. The approving

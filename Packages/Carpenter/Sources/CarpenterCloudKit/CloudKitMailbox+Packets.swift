@@ -42,7 +42,8 @@ extension CloudKitMailbox {
                 guard record.recordType == PacketRecord.type else { continue }
                 let outstanding = record[PacketWire.outstanding] as? [Data] ?? []
                 guard outstanding.contains(where: wanted.contains) else { continue }
-                guard let packet = PacketRecord.read(record) else { continue }
+                guard var packet = PacketRecord.read(record) else { continue }
+                packet.storedAt = record.modificationDate
                 packets.append(packet)
                 isOurPeer = true
             }

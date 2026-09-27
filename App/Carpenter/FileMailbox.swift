@@ -81,7 +81,11 @@
                 .filter { $0.stored.owner != owner }
                 .filter { !outstanding(of: $0).isDisjoint(with: tags) }
                 .sorted { $0.stored.sequence < $1.stored.sequence }
-                .compactMap { PacketWire.packet(from: $0.stored.fields.mapValues(\.field)) }
+                .compactMap { entry in
+                    var packet = PacketWire.packet(from: entry.stored.fields.mapValues(\.field))
+                    packet?.storedAt = entry.written
+                    return packet
+                }
         }
 
         func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) throws {
@@ -152,18 +156,20 @@
         private struct Entry {
             let id: PacketID
             let stored: StoredPacket
+            let written: Date?
         }
 
         private func readPackets() throws -> [Entry] {
             let files = (try? FileManager.default.contentsOfDirectory(
-                at: packets, includingPropertiesForKeys: nil)) ?? []
+                at: packets, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
             return files.compactMap { file in
                 guard let bytes = try? Data(contentsOf: file),
                     let stored = try? JSONDecoder().decode(StoredPacket.self, from: bytes),
                     case .string(let text)? = stored.fields[PacketWire.packetID]?.field,
                     let uuid = UUID(uuidString: text)
                 else { return nil }
-                return Entry(id: PacketID(rawValue: uuid), stored: stored)
+                let written = try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+                return Entry(id: PacketID(rawValue: uuid), stored: stored, written: written)
             }
         }
 

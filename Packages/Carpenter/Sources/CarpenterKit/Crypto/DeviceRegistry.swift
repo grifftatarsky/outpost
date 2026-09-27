@@ -14,6 +14,7 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     private var submitted: [DeviceID: DeviceCertificate] = [:]
     private var revocations: Set<DeviceRevocation> = []
+    private var stored: [Data: Date] = [:]
     private var standings: [DeviceID: Standing] = [:]
 
     public init(identity: IdentityPublicKeys) {
@@ -30,8 +31,19 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public var knownRevocations: [DeviceRevocation] { Array(revocations) }
 
-    public mutating func admit(_ certificate: DeviceCertificate) throws {
+    public var storedTimes: [Data: Date] { stored }
+
+    public func storedAt(_ digest: Data) -> Date? { stored[digest] }
+
+    public mutating func settle(_ digest: Data, storedAt: Date) {
+        guard stored[digest] != nil, stored[digest] != storedAt else { return }
+        stored[digest] = storedAt
+        recompute()
+    }
+
+    public mutating func admit(_ certificate: DeviceCertificate, storedAt: Date) throws {
         try certificate.verify(against: identity)
+        note(certificate.digest, storedAt)
 
         if let existing = submitted[certificate.device] {
             guard existing.devicePublicKey == certificate.devicePublicKey else {
@@ -40,18 +52,31 @@ public struct DeviceRegistry: Hashable, Sendable {
             let upgrade =
                 existing.agreementKey == nil && certificate.agreementKey != nil
                 && existing.issuedAt == certificate.issuedAt && existing.approvedBy == certificate.approvedBy
-            guard upgrade else { return }
+            guard upgrade else {
+                recompute()
+                return
+            }
+            if let earlier = stored[existing.digest] { note(certificate.digest, earlier) }
         }
         submitted[certificate.device] = certificate
         recompute()
     }
 
-    public mutating func revoke(_ revocation: DeviceRevocation) throws {
+    mutating func admit(_ certificate: DeviceCertificate) throws {
+        try admit(certificate, storedAt: certificate.issuedAt)
+    }
+
+    public mutating func revoke(_ revocation: DeviceRevocation, storedAt: Date) throws {
         try revocation.verify(against: identity)
+        guard revocation.revokedBy != nil else { throw CryptoError.notAuthorized }
         guard submitted[revocation.device] != nil else { throw CryptoError.unknownDevice }
-        guard !revocations.contains(revocation) else { return }
+        note(revocation.digest, storedAt)
         revocations.insert(revocation)
         recompute()
+    }
+
+    mutating func revoke(_ revocation: DeviceRevocation) throws {
+        try revoke(revocation, storedAt: revocation.revokedAt)
     }
 
     public func standing(of device: DeviceID) -> Standing? {
@@ -87,86 +112,108 @@ public struct DeviceRegistry: Hashable, Sendable {
         return try DeviceKeys.isValidSignature(signature, for: message, publicKey: publicKey)
     }
 
+    private mutating func note(_ digest: Data, _ instant: Date) {
+        if let known = stored[digest], known <= instant { return }
+        stored[digest] = instant
+    }
+
     private static func covers(_ standing: Standing, _ instant: Date) -> Bool {
         guard instant >= standing.addedAt else { return false }
         guard let revokedAt = standing.revokedAt else { return true }
         return instant < revokedAt
     }
 
-    private enum Event {
-        case added(DeviceCertificate)
-        case removed(DeviceRevocation)
+    private struct Authority {
+        let from: Date
+        var until: Date?
 
-        var at: Date {
-            switch self {
-            case .added(let certificate): certificate.issuedAt
-            case .removed(let revocation): revocation.revokedAt
-            }
+        func covers(_ instant: Date) -> Bool {
+            guard instant >= from else { return false }
+            guard let until else { return true }
+            return instant < until
         }
     }
 
+    private struct Removal {
+        let order: Date
+        let revocation: DeviceRevocation
+    }
+
     private mutating func recompute() {
+        var authority: [DeviceID: Authority] = [:]
         var result: [DeviceID: Standing] = [:]
-        var revokedEarly: [DeviceID: (Date, DeviceID?)] = [:]
+        var removedFirst: [DeviceID: Removal] = [:]
 
-        let events = submitted.values.map(Event.added) + revocations.map(Event.removed)
-        let byTime = Dictionary(grouping: events, by: \.at).sorted { $0.key < $1.key }
-
-        for (instant, group) in byTime {
-            var waiting = group.compactMap { event -> DeviceCertificate? in
-                if case .added(let certificate) = event { return certificate }
-                return nil
+        func sortedForReplay<Event>(_ events: [Event], claimed: (Event) -> Date, digest: (Event) -> Data)
+            -> [Event]
+        {
+            events.sorted {
+                let (left, right) = (claimed($0), claimed($1))
+                if left != right { return left < right }
+                return digest($0).lexicographicallyPrecedes(digest($1))
             }
+        }
+
+        func apply(_ removal: Removal, to target: DeviceID) {
+            if var power = authority[target] {
+                if power.until.map({ removal.order < $0 }) ?? true { power.until = removal.order }
+                authority[target] = power
+            }
+            if var standing = result[target] {
+                if standing.revokedAt.map({ removal.revocation.revokedAt < $0 }) ?? true {
+                    standing.revokedAt = removal.revocation.revokedAt
+                    standing.revokedBy = removal.revocation.revokedBy
+                }
+                result[target] = standing
+            }
+        }
+
+        let added = submitted.values.compactMap { certificate in
+            stored[certificate.digest].map { (order: $0, certificate: certificate) }
+        }
+        let removed = revocations.compactMap { revocation in
+            stored[revocation.digest].map { (order: $0, revocation: revocation) }
+        }
+        let instants = Set(added.map(\.order) + removed.map(\.order)).sorted()
+        let addedAt = Dictionary(grouping: added, by: \.order)
+        let removedAt = Dictionary(grouping: removed, by: \.order)
+
+        for instant in instants {
+            var waiting = sortedForReplay(
+                (addedAt[instant] ?? []).map(\.certificate), claimed: \.issuedAt, digest: \.digest)
             var progressed = true
             while progressed {
                 progressed = false
                 for certificate in waiting {
-                    guard let approver = certificate.approvedBy else {
-                        result[certificate.device] = Standing(
-                            addedAt: instant, revokedAt: nil, approvedBy: nil, revokedBy: nil)
-                        waiting.removeAll { $0 == certificate }
-                        progressed = true
-                        continue
+                    if let approver = certificate.approvedBy {
+                        guard authority[approver]?.covers(instant) == true,
+                            let key = submitted[approver]?.devicePublicKey,
+                            certificate.isApproved(byKey: key)
+                        else { continue }
                     }
-                    guard let standing = result[approver], Self.covers(standing, instant),
-                        let key = submitted[approver]?.devicePublicKey,
-                        certificate.isApproved(byKey: key)
-                    else { continue }
+                    authority[certificate.device] = Authority(from: instant, until: nil)
                     result[certificate.device] = Standing(
-                        addedAt: instant, revokedAt: nil, approvedBy: approver, revokedBy: nil)
+                        addedAt: certificate.issuedAt, revokedAt: nil, approvedBy: certificate.approvedBy,
+                        revokedBy: nil)
+                    if let earlier = removedFirst[certificate.device] { apply(earlier, to: certificate.device) }
                     waiting.removeAll { $0 == certificate }
                     progressed = true
                 }
             }
 
-            for event in group {
-                guard case .removed(let revocation) = event else { continue }
-                if let revoker = revocation.revokedBy {
-                    guard let standing = result[revoker], Self.covers(standing, instant),
-                        let key = submitted[revoker]?.devicePublicKey,
-                        revocation.isSigned(byKey: key)
-                    else { continue }
-                }
-                let target = revocation.device
-                if var standing = result[target] {
-                    if standing.revokedAt.map({ instant < $0 }) ?? true {
-                        standing.revokedAt = instant
-                        standing.revokedBy = revocation.revokedBy
-                    }
-                    result[target] = standing
-                } else if revokedEarly[target].map({ instant < $0.0 }) ?? true {
-                    revokedEarly[target] = (instant, revocation.revokedBy)
+            let removals = sortedForReplay(
+                (removedAt[instant] ?? []).map(\.revocation), claimed: \.revokedAt, digest: \.digest)
+            for revocation in removals {
+                guard let revoker = revocation.revokedBy, authority[revoker]?.covers(instant) == true,
+                    let key = submitted[revoker]?.devicePublicKey, revocation.isSigned(byKey: key)
+                else { continue }
+                let removal = Removal(order: instant, revocation: revocation)
+                if authority[revocation.device] != nil {
+                    apply(removal, to: revocation.device)
+                } else if removedFirst[revocation.device].map({ instant < $0.order }) ?? true {
+                    removedFirst[revocation.device] = removal
                 }
             }
-        }
-
-        for (device, early) in revokedEarly {
-            guard var standing = result[device] else { continue }
-            if standing.revokedAt.map({ early.0 < $0 }) ?? true {
-                standing.revokedAt = early.0
-                standing.revokedBy = early.1
-            }
-            result[device] = standing
         }
         standings = result
     }

@@ -28,6 +28,7 @@ public struct SiblingRecord: Hashable, Sendable {
         case catchUp(for: DeviceID)
         case request
         case approval(for: DeviceID)
+        case authority(Data)
     }
 
     public struct Name: Hashable, Sendable {
@@ -46,6 +47,7 @@ public struct SiblingRecord: Hashable, Sendable {
             case .catchUp(let target): "catchup-\(Self.hex(writer.rawValue))-\(Self.hex(target.rawValue))"
             case .request: "request-\(Self.hex(writer.rawValue))"
             case .approval(let target): "approval-\(Self.hex(writer.rawValue))-\(Self.hex(target.rawValue))"
+            case .authority(let digest): "authority-\(Self.hex(writer.rawValue))-\(Self.hex(digest))"
             }
         }
 
@@ -68,6 +70,9 @@ public struct SiblingRecord: Hashable, Sendable {
             case ("approval", 3):
                 guard let target = Self.bytes(parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
                 self.init(writer: writer, kind: .approval(for: target))
+            case ("authority", 3):
+                guard let digest = Self.bytes(parts[2]), digest.count == 32 else { return nil }
+                self.init(writer: writer, kind: .authority(digest))
             default:
                 return nil
             }
@@ -91,10 +96,14 @@ public struct SiblingRecord: Hashable, Sendable {
 
     public let name: Name
     public let sealed: SealedSiblingFeed
+    public let created: Date?
+    public let modified: Date?
 
-    public init(name: Name, sealed: SealedSiblingFeed) {
+    public init(name: Name, sealed: SealedSiblingFeed, created: Date? = nil, modified: Date? = nil) {
         self.name = name
         self.sealed = sealed
+        self.created = created
+        self.modified = modified
     }
 }
 

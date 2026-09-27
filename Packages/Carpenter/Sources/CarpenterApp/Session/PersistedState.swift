@@ -35,6 +35,10 @@ struct PersistedState: Codable, Equatable, Sendable {
     var knownKeys: [IdentityPublicKeys] = []
     var certificates: [DeviceCertificate] = []
     var revocations: [DeviceRevocation] = []
+    var otherRevocations: [DeviceRevocation] = []
+    var authorityStored: [Data: Date] = [:]
+    var authorityIsLegacy = false
+    var authorityPublished: Set<Data> = []
 
     var preferences = MemberPreferences()
 
@@ -110,5 +114,14 @@ struct PersistedState: Codable, Equatable, Sendable {
         siblingMail = try container.decodeIfPresent(SiblingMail.self, forKey: .siblingMail) ?? SiblingMail()
         devicesAddedWithTheRecoveryKey =
             try container.decodeIfPresent(Set<DeviceID>.self, forKey: .devicesAddedWithTheRecoveryKey) ?? []
+        otherRevocations =
+            try container.decodeIfPresent([DeviceRevocation].self, forKey: .otherRevocations) ?? []
+        if let stored = try container.decodeIfPresent([Data: Date].self, forKey: .authorityStored) {
+            authorityStored = stored
+            authorityIsLegacy = try container.decodeIfPresent(Bool.self, forKey: .authorityIsLegacy) ?? false
+        } else {
+            authorityIsLegacy = true
+        }
+        authorityPublished = try container.decodeIfPresent(Set<Data>.self, forKey: .authorityPublished) ?? []
     }
 }

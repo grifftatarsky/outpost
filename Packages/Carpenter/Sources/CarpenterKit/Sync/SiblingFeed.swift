@@ -124,6 +124,10 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
             CanonicalBytes.payload(
                 domain: Domain.siblingFeed,
                 fields: [member.rawValue, device.rawValue, Data("approval".utf8), target.rawValue])
+        case .authority(let digest):
+            CanonicalBytes.payload(
+                domain: Domain.siblingFeed,
+                fields: [member.rawValue, device.rawValue, Data("authority".utf8), digest])
         }
     }
 

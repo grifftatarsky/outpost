@@ -152,7 +152,7 @@ struct AcknowledgementTests {
                 SyncSession.CollectedPackets.Opened(
                     id: PacketID(),
                     delivery: SyncEngine.Delivery(
-                        entries: [entry], certificates: [], revocations: [], grants: []))
+                        entries: [entry], certificates: [], revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
             ])
 
         var replica = Replica()
@@ -181,7 +181,7 @@ struct AcknowledgementTests {
                 SyncSession.CollectedPackets.Opened(
                     id: PacketID(),
                     delivery: SyncEngine.Delivery(
-                        entries: [entry], certificates: [certificate], revocations: [], grants: []))
+                        entries: [entry], certificates: [certificate], revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
             ])
 
         var replica = Replica()
@@ -219,7 +219,7 @@ struct AcknowledgementTests {
                                 for: knownDevice.publicKey, by: known, at: .distantPast),
                             strangerCertificate,
                         ],
-                        revocations: [], grants: []))
+                        revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
             ])
 
         var replica = Replica()
@@ -256,7 +256,7 @@ struct AcknowledgementTests {
                             try DeviceCertificate.issue(
                                 for: device.publicKey, by: known, at: .distantPast)
                         ],
-                        revocations: [], grants: []))
+                        revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
             ])
 
         var replica = Replica()
