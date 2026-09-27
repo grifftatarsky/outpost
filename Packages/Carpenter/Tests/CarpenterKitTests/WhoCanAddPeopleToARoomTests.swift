@@ -66,6 +66,24 @@ struct WhoCanAddPeopleToARoomTests {
             """)
     }
 
+    @Test("A removed member's invitation stays void even when somebody still in the room passes on the confirmation")
+    func aRemovedMembersRequestIsVoidOnItsOwn() throws {
+        let (founder, removed, puppet) = (Identity.generate(), Identity.generate(), Identity.generate())
+        var room = try founded(by: founder, access: .open)
+        _ = try room.invite(removed, by: founder)
+        room.write(founder, .removal, try Payload.removal(of: removed.id))
+
+        let invite = try TestInvite.issue(joining: room.roster.room, joinerKeys: puppet.publicKeys, by: removed, at: start)
+        room.write(removed, .joinRequest, try Payload.joinRequest(invite))
+        room.write(
+            founder, .joinConfirmed,
+            try Payload.joinConfirmed(try JoinConfirmedBody.signed(confirming: invite, by: puppet)))
+
+        #expect(
+            !room.roster.members.contains(puppet.id),
+            "an invitation written by somebody no longer in the room admitted its joiner once a member confirmed it")
+    }
+
     @Test("An invitation is only an invitation when the member who issued it writes it")
     func aRequestIsWrittenByItsInviter() throws {
         let (founder, member, removed, joiner) = (
