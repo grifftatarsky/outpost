@@ -17,6 +17,8 @@ struct CarpenterMain: App {
             if let shot = SiteShot.requested() {
                 SiteShotView(shot)
                     .task { await PermissionAsk.runIfAsked() }
+            } else if let copy = CopyShot.requested() {
+                CopyShotView(copy)
             } else {
                 AppRootView()
             }
