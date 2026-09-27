@@ -17,6 +17,23 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN 89dafc96 [NEEDS HUMAN REVIEW] -->
+
+### Should erasing everything remove your other devices too?
+
+Raised 2026-09-27. *Erase everything* deletes what this account keeps in iCloud and everything on
+the device it runs on. It used to say your other devices lose the identity too, which was true while
+the identity sat in iCloud Keychain. Since the identity moved onto each device that night, they keep
+it and carry on, so the sheet now says to remove them in Devices first.
+
+Making erase reach them means this device signing a removal of each of them before it deletes
+anything, and leaving those small removal records in iCloud until the others have heard and erased
+themselves. The alternative, having a device erase itself when it finds the shared records gone,
+would let anybody signed in to the Apple Account wipe every device by deleting a zone, which is the
+thing you ruled a stolen device must not be able to do. Recommended: the signed removals.
+
+<!-- COPY END 89dafc96 -->
+
 <!-- COPY BEGIN 23557077 [NEEDS HUMAN REVIEW] -->
 
 ### Should the app lock hide notification words, and should it encrypt what is stored?

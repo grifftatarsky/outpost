@@ -103,9 +103,12 @@ inside the app, so that leaving is mine to do.
 
 - **Done.** The last section of You in every build, red, with the nuke mark. Guideline 5.1.1(v).
 - **Done.** A sheet stating what is erased and what is not, then one red button. The facts match the wipe:
-  identity and every room key from this device and iCloud Keychain; every feed, packet and photo in
-  flight this account holds in iCloud; history on this device, photos and clips included; other
-  devices lose the identity too. Nothing from anybody else's device; rooms are not told; no undo.
+  identity and every room key from this device; every feed, packet and photo in flight this account
+  holds in iCloud; history on this device, photos and clips included. Nothing from anybody else's
+  device; rooms are not told; no undo. Since 2026-09-27 the identity is kept on each device rather
+  than in iCloud Keychain, so the member's other devices keep it; the sheet said they lost it until
+  that night, and now says to remove them in Devices first. Whether erasing should remove them itself
+  is an [open question](../open-questions.md).
 - **Done.** The cloud half gates the local half: if iCloud cannot be reached, nothing local is touched,
   because a device that erases itself and leaves the account standing is the dirty account the
   whole ladder exists to survive.

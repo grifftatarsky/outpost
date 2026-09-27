@@ -30,7 +30,7 @@ public struct EraseEverythingView: View {
                         Text("Your history on this device goes with it, photos and clips included.", bundle: .module))
                     fact(
                         "iphone.gen3",
-                        Text("Your other devices lose the identity too, the next time they check. They cannot get it back.", bundle: .module))
+                        Text("Your other devices keep your identity. Remove them in Devices first if they should stop too.", bundle: .module))
                 } header: {
                     Text("What is erased", bundle: .module).sectionHeading()
                 }

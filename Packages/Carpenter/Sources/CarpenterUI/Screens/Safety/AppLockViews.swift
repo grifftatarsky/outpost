@@ -236,10 +236,21 @@ public struct AppLockSetupView: View {
             }
             .groupedRowSurface()
             // COPY END 66758400
+
+            actions
         }
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .background(palette.background)
-        .safeAreaInset(edge: .bottom) {
+        // COPY BEGIN 61f4704a [NEEDS HUMAN REVIEW]
+        .navigationTitle(Text("App Lock", bundle: .module))
+        .toolbarTitleDisplayMode(.inline)
+        // COPY END 61f4704a
+        .onAppear { focus = .code }
+    }
+
+    private var actions: some View {
+        Section {
             VStack(spacing: 10) {
                 // COPY BEGIN 82c694ab [NEEDS HUMAN REVIEW]
                 Button {
@@ -257,14 +268,10 @@ public struct AppLockSetupView: View {
                 }
                 // COPY END 82c694ab
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 20)
+            .padding(.top, 8)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         }
-        // COPY BEGIN 61f4704a [NEEDS HUMAN REVIEW]
-        .navigationTitle(Text("App Lock", bundle: .module))
-        .toolbarTitleDisplayMode(.inline)
-        // COPY END 61f4704a
-        .onAppear { focus = .code }
     }
 
     private func save() {

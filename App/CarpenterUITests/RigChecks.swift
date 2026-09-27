@@ -125,15 +125,20 @@ final class RigChecks: XCTestCase {
         shoot(app, "lock-3-is-it-saved")
         XCTAssertTrue(tapIfThere(app, "It's saved", timeout: 3), "no confirmation")
 
-        let lockButton = app.buttons["Lock the app"].firstMatch
-        XCTAssertTrue(lockButton.waitForExistence(timeout: 10), "the lock was not offered at setup")
+        XCTAssertTrue(
+            app.staticTexts["Lock the app"].firstMatch.waitForExistence(timeout: 10), "the lock was not offered at setup")
         shoot(app, "lock-4-offer")
         let fields = app.secureTextFields
         fields.element(boundBy: 0).tap()
         fields.element(boundBy: 0).typeText("482913")
+        XCTAssertTrue(fields.element(boundBy: 1).isHittable, "the keyboard or the buttons cover the second field")
         fields.element(boundBy: 1).tap()
         fields.element(boundBy: 1).typeText("482913")
         shoot(app, "lock-5-code-typed")
+        let lockButton = app.buttons["Lock the app"].firstMatch
+        XCTAssertTrue(lockButton.waitForExistence(timeout: 3), "no button to finish")
+        for _ in 0..<3 where !lockButton.isHittable { app.swipeUp() }
+        XCTAssertTrue(lockButton.isHittable, "the button to finish can't be reached with the keyboard up")
         lockButton.tap()
         sleep(2)
         settle(app)
