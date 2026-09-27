@@ -34,3 +34,10 @@ public struct RemovedDeviceView: View {
         .background(palette.background)
     }
 }
+
+#if DEBUG
+    #Preview("Removed") {
+        RemovedDeviceView(onRestore: {})
+            .themed(.default)
+    }
+#endif

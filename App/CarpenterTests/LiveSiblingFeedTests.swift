@@ -197,7 +197,12 @@ struct LiveSiblingFeedTests {
         let seenByApprover = Records()
         let seenByNewcomer = Records()
         await approving.onIncoming { record in await seenByApprover.add(record) }
-        await asking.onIncoming { record in await seenByNewcomer.add(record) }
+        await asking.onIncoming { record in
+            await seenByNewcomer.add(record)
+            guard case .approval(let target) = record.name.kind, target == newcomer.id else { return }
+            try? await asking.send(
+                [], deleting: [record.name, SiblingRecord.Name(writer: newcomer.id, kind: .request)])
+        }
         try await asking.start()
         try await approving.start()
 
@@ -244,6 +249,39 @@ struct LiveSiblingFeedTests {
 
         try? await asking.forgetOwnContribution()
         try? await approving.forgetOwnContribution()
+    }
+
+    @Test("A reinstalled device writes over the record an earlier install left, rather than stopping the app")
+    func aRecordTheServerAlreadyHoldsIsWrittenOver() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let mine = device()
+        let first = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
+        let second = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
+
+        let earlier = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        let written = try mail(1, from: mine, carrying: first, for: identity)
+        try await earlier.send([written], deleting: [])
+
+        let reinstalled = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        try await reinstalled.send([try mail(1, from: mine, carrying: second, for: identity)], deleting: [])
+
+        var material: Data?
+        for _ in 0..<30 {
+            if let data = try await record(written.name)?["feed"] as? Data,
+                let opened = try? SealedSiblingFeed(ciphertext: data).open(with: identity, from: mine, as: .mail(1)),
+                opened.epochs.first?.material == second
+            {
+                material = second
+                break
+            }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        #expect(
+            material == second,
+            "a second install's write of a record the first install left never replaced it")
+
+        try? await reinstalled.forgetOwnContribution()
     }
 
     private actor Records {

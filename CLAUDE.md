@@ -282,6 +282,19 @@ Read these before touching sync. Every one cost real time.
   held, no test in 118 suites could see it. Both are fixed: the relay holds encoded `Data` now, and
   every seam's fake was audited against the rule on 2026-09-14. If a fake does not produce the bytes
   the real one produces, it cannot fail the way the real one fails — hold any new one to that.
+- **Code that runs inside a `CKSyncEngine` callback must not call the engine.** `handleEvent` is
+  awaited by the engine, and anything reached from it through an `await` — including the app's
+  handler for an arrived record — runs in the callback's task. If that code calls `sendChanges` or
+  `fetchChanges`, CloudKit stops the app with "BUG IN CLIENT OF CLOUDKIT". A plain `Task { }` does
+  not escape it (it inherits the callback's context, and the first case below was one);
+  `Task.detached` does, which is also what CloudKit's own message says.
+  Two cases were in the build on 2026-09-26. The live suite found the first: a write that clashed
+  with a record already on the server (a relaunched device's approval request, or any reinstall)
+  was retried in a plain `Task`, and the app stopped. The second was found by reading the same day
+  and not measured: a new device deleted its approval records from inside the handler that
+  received them, which would have stopped it at the moment it was approved. Arrived records are
+  now handed to the app from a detached task, and `send` retries a conflicted write itself. The
+  fake cannot fail this way, so the live suite is the only guard.
 - **Nothing is written to CloudKit unsealed, and the app seals it rather than CloudKit.**
   `record[key]` is not encrypted, and `record.encryptedValues[key]` is end-to-end **only when the
   member has Advanced Data Protection on** — otherwise Apple holds the key. Its service key also

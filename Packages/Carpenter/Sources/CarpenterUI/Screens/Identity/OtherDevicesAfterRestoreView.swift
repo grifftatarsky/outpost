@@ -85,3 +85,10 @@ public struct OtherDevicesAfterRestoreView: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Your other devices, after a restore") {
+        OtherDevicesAfterRestoreView(devices: Fixtures.devices, onRevoke: { _ in }, onDone: {})
+            .themed(.default)
+    }
+#endif

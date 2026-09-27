@@ -127,7 +127,7 @@ fresh zone per test.
 | Suite | What it puts on the real wire |
 |---|---|
 | `LiveRoundTests` | a message between two identities; a 24-entry round arriving complete and in order; every packet acknowledged; a hole deleted off the server being named and refilled; a read report moving a mark; an edit and a withdrawal; a room deleted after a removal staying deleted after a relaunch |
-| `LiveSiblingFeedTests` | the raw record fetched back and searched for the epoch key it must not contain; the payload being exactly the ciphertext; a stranger's identity refused; a second device opening it |
+| `LiveSiblingFeedTests` | the raw record fetched back and searched for the epoch key it must not contain; the payload being exactly the ciphertext; a stranger's identity refused; a second device opening it; a new device's request and its approval crossing, with the new device deleting both from inside the handler that received them; a reinstalled device writing over the record its earlier install left |
 | `LiveOutpostTests` | a post with a photo arriving with identical bytes; an edit and a deletion; an Outpost's own photo; a post unseen by its reader and never by its author; a comment crossing back |
 
 What this cannot cover is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md): a second account
@@ -249,6 +249,30 @@ destination, so switch them back when you are done. For the rig, `xcodebuild` an
 the way to install one build on four simulators.
 
 <!-- COPY END ef9139da -->
+
+<!-- COPY BEGIN 84215733 [NEEDS HUMAN REVIEW] -->
+
+## Photographing every screen
+
+`ScreenCatalogueTests` is a UI test that opens the demo app (`--site-shot`), taps every tab, every
+row and every toolbar button it can reach, and saves a screenshot of each screen it lands on. It is
+what the copy review's pictures come from, and what finds a screen the review is missing. It never
+taps anything whose label says erase, delete, subscribe or buy, and it leaves an alert only by a
+button that cancels; when it cannot find one, it closes the app and starts again rather than guess.
+It is off unless asked:
+
+```bash
+TEST_RUNNER_CARPENTER_SCREEN_CATALOGUE=1 xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,name=outpost-27' -only-testing:CarpenterUITests/ScreenCatalogueTests -resultBundlePath /tmp/catalogue.xcresult
+```
+
+```bash
+xcrun xcresulttool export attachments --path /tmp/catalogue.xcresult --output-path /tmp/catalogue
+```
+
+It reaches what a tap reaches in the demo. Alerts that follow a failure, notification banners and
+the system's permission prompts are not there, and neither is anything that needs a second device.
+
+<!-- COPY END 84215733 -->
 
 <!-- COPY BEGIN 44ff8f19 [NEEDS HUMAN REVIEW] -->
 
