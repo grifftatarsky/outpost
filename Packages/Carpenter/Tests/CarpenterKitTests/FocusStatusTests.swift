@@ -137,7 +137,7 @@ struct FocusFilterTests {
     @Test("The room directory round-trips, and room names stay out of preferences and backups")
     func directory() throws {
         let defaults = UserDefaults(suiteName: "focus-\(UUID().uuidString)")!
-        let folder = URL.temporaryDirectory.appending(path: "focus-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let folder = TestScratch.root.appending(path: "focus-\(UUID().uuidString)", directoryHint: .isDirectory)
         let store = FocusFilterStore(defaults: defaults, directory: folder)
         let rooms = [FocusFilterStore.RoomEntry(id: RoomID(), name: "Lanterns"), FocusFilterStore.RoomEntry(id: RoomID(), name: "Kitchen")]
         defaults.set(Data("[\"old\"]".utf8), forKey: "focusFilter.rooms")

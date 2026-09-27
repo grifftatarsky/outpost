@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct WhatTheTabsBadgeTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-badge-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-badge-\(UUID().uuidString)")
     }
 
     private func session(_ clock: TestClock) throws -> AppSession {

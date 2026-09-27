@@ -242,7 +242,7 @@ struct OutpostNotifyTests {
     func survivesARelaunch() async throws {
         let clock = TestClock(now: TestSession.now)
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-bell-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-bell-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let bob = TestSession.make(keychain: keychain, at: directory)

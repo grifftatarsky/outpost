@@ -8,7 +8,7 @@ struct LogStoreTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func scratch() -> URL {
-        URL.temporaryDirectory
+        TestScratch.root
             .appending(path: "carpenter-tests-\(UUID().uuidString)")
             .appending(path: "log.carpenter")
     }
@@ -179,7 +179,7 @@ struct LogStoreTests {
 @Suite("Document storage", .serialized)
 struct DocumentStoreTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory
+        TestScratch.root
             .appending(path: "carpenter-tests-\(UUID().uuidString)")
             .appending(path: "organisation.json")
     }
@@ -273,7 +273,7 @@ struct LongLogStoreTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func written(_ count: Int) async throws -> (store: FileLogStore, url: URL, entries: [Entry]) {
-        let url = URL.temporaryDirectory
+        let url = TestScratch.root
             .appending(path: "carpenter-tests-\(UUID().uuidString)")
             .appending(path: "log.carpenter")
         var alice = Author()

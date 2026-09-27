@@ -119,7 +119,7 @@ struct SpentPositionsTests {
 struct LogRemovalTests {
     @Test("Removing entries keeps every other entry, in order, across a reload")
     func removalKeepsTheRest() async throws {
-        let url = URL.temporaryDirectory.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
+        let url = TestScratch.root.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
         let store = FileLogStore(url: url)
         var author = Author()
         let kept = RoomID()
@@ -148,7 +148,7 @@ struct LogRemovalTests {
 
     @Test("Removing nothing leaves the file alone")
     func removingNothingWritesNothing() async throws {
-        let url = URL.temporaryDirectory.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
+        let url = TestScratch.root.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
         let store = FileLogStore(url: url)
         var author = Author()
         try await store.append([try author.post("kept", at: Date(timeIntervalSince1970: 0))])

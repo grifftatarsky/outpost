@@ -14,7 +14,7 @@ enum TestSession {
     ) -> SessionStorage {
         let root =
             directory
-            ?? URL.temporaryDirectory.appending(path: "carpenter-test-\(UUID().uuidString)")
+            ?? TestScratch.root.appending(path: "carpenter-test-\(UUID().uuidString)")
 
         return SessionStorage(
             keychain: keychain,

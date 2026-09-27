@@ -351,7 +351,7 @@ struct RemembersRemovalsTests {
         let griff = TestSession.make(keychain: keychain)
         griff.syncDevices(through: InMemoryEntrySync(relay: relay))
         let peerKeychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-peer-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-peer-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let peer = TestSession.make(keychain: peerKeychain, at: directory)
         for session in [griff, peer] { await session.load() }

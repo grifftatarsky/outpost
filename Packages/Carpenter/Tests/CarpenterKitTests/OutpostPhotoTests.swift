@@ -35,7 +35,7 @@ struct OutpostPhotoTests {
     func sweepLeavesItAndARelaunchKeepsIt() async throws {
         let keychain = InMemoryKeychainStore()
         let media = MemoryMediaStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-wall-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-wall-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make(keychain: keychain, at: directory, media: media)
@@ -250,7 +250,7 @@ struct GalleryAttachmentTests {
         let mailbox = InMemoryMailbox()
         let keychain = InMemoryKeychainStore()
         let media = MemoryMediaStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-sweep-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-sweep-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let alice = TestSession.make(keychain: keychain, at: directory, media: media)

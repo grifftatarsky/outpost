@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct MessageBellTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-bell-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-bell-\(UUID().uuidString)")
     }
 
     private func session(_ clock: TestClock) throws -> AppSession {

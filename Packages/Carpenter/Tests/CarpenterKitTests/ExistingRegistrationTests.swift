@@ -206,7 +206,7 @@ struct EpochLinkRestoreTests {
     @Test("A joiner can read a room whose host has relaunched since making it")
     func aRelaunchedHostStillHandsOverHistory() async throws {
         let mailbox = InMemoryMailbox()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-links-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-links-\(UUID().uuidString)")
         let keychain = InMemoryKeychainStore()
 
         let host = TestSession.make(keychain: keychain, at: directory)

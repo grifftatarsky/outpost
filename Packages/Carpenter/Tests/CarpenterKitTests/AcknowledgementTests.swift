@@ -65,7 +65,7 @@ struct RoundAcknowledgementTests {
             storage: SessionStorage(
                 keychain: InMemoryKeychainStore(), log: log,
                 documents: FileDocumentStore(
-                    url: URL.temporaryDirectory.appending(path: "carpenter-test-\(UUID().uuidString)")),
+                    url: TestScratch.root.appending(path: "carpenter-test-\(UUID().uuidString)")),
                 media: MemoryMediaStore()),
             clock: TestClock(now: TestSession.now))
         await alice.load()

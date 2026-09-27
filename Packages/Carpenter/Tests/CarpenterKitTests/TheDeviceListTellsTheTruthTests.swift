@@ -54,7 +54,7 @@ struct TheDeviceListTellsTheTruthTests {
     @Test("A relaunch does not rewrite when a device arrived")
     func aRelaunchDoesNotRewriteWhenADeviceArrived() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "devices-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "devices-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let clock = TestClock(now: TestSession.now)

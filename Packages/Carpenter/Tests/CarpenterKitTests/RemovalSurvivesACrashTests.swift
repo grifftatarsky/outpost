@@ -77,7 +77,7 @@ struct RemovalSurvivesACrashTests {
     }
 
     private static func directory() throws -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-crash-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-crash-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }

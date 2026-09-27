@@ -81,7 +81,7 @@ struct NicknameTests {
     @Test("A nickname survives a relaunch")
     func survivesRelaunch() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "nickname-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "nickname-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let other = ParticipantID(rawValue: WideID.of([1, 2, 3, 4, 5, 6]))
 
@@ -101,7 +101,7 @@ struct NicknameTests {
 struct PersonAvatarStoreTests {
     @Test("A photo is filed by the whole identifier and comes back for it alone")
     func roundTrip() throws {
-        let directory = URL.temporaryDirectory.appending(path: "people-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "people-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = PersonAvatarStore(directory: directory)
@@ -125,7 +125,7 @@ struct PersonAvatarStoreTests {
 
     @Test("The photo this member chose and the one somebody shared are two files, and neither touches the other")
     func chosenAndSharedAreApart() throws {
-        let directory = URL.temporaryDirectory.appending(path: "people-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "people-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = PersonAvatarStore(directory: directory)

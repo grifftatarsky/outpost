@@ -94,7 +94,7 @@ struct WaitingToBeLetInTests {
     func thePhraseSurvivesARelaunch() async throws {
         let mailbox = InMemoryMailbox()
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "waiting-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "waiting-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let alice = TestSession.make()

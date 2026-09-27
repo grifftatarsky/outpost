@@ -6,7 +6,7 @@ import Testing
 @Suite("Test profiles")
 struct TestProfilesTests {
     private func scratch() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestScratch.root
             .appending(path: "test-profiles-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory

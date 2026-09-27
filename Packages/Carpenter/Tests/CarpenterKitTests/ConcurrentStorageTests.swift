@@ -6,7 +6,7 @@ import Testing
 @Suite("Concurrent storage", .serialized)
 struct ConcurrentStorageTests {
     private func scratch() -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-concurrent-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-concurrent-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }

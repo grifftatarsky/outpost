@@ -12,7 +12,7 @@ struct FileMailboxOrderTests {
 
     @Test("Packets come back in the order they were written, even after one recipient has taken one")
     func writeOrderSurvivesAnAcknowledgement() async throws {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-order-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-order-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let mailbox = FileMailbox(directory: directory)
         let (bob, carol) = (tag(1), tag(2))

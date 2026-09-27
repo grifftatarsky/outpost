@@ -79,7 +79,7 @@ struct TheFakeIsNoEasierTests {
             storage: SessionStorage(
                 keychain: InMemoryKeychainStore(), log: log,
                 documents: FileDocumentStore(
-                    url: URL.temporaryDirectory.appending(
+                    url: TestScratch.root.appending(
                         path: "carpenter-fake-\(UUID().uuidString)")),
                 media: MemoryMediaStore()),
             clock: TestClock(now: TestSession.now))
@@ -172,7 +172,7 @@ struct TheFakeScreenIsNoEasierTests {
     func aMissingClipIsRefused() async {
         let screen = FakeMediaScreen()
         await #expect(throws: CocoaError.self) {
-            try await screen.isSensitive(videoAt: URL.temporaryDirectory.appending(path: "\(UUID()).mp4"))
+            try await screen.isSensitive(videoAt: TestScratch.root.appending(path: "\(UUID()).mp4"))
         }
     }
 }

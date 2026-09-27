@@ -8,7 +8,7 @@ struct ABannersFaceTests {
     private let person = ParticipantID(rawValue: Data(repeating: 7, count: 32))
 
     private func store() throws -> (PersonAvatarStore, URL) {
-        let directory = URL.temporaryDirectory.appending(path: "faces-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "faces-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return (PersonAvatarStore(directory: directory), directory)
     }

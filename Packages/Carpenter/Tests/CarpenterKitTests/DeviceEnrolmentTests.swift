@@ -200,7 +200,7 @@ struct DeviceEnrolmentTests {
     @Test("History from another device survives a relaunch")
     func historySurvivesARelaunch() async throws {
         let (keychain, relay) = (InMemoryKeychainStore(), InMemoryEntrySync.Relay())
-        let directory = URL.temporaryDirectory.appending(path: "relaunch-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "relaunch-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let first = try await firstDevice(keychain, on: relay)

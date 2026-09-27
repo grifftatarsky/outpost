@@ -184,7 +184,7 @@ struct OutpostAudienceTests {
     @Test("The list is built from the log and survives a relaunch")
     func theListIsInTheLog() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-audience-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-audience-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let alice = TestSession.make(keychain: keychain, at: directory)
@@ -254,7 +254,7 @@ struct OutpostKeyRotationTests {
     @Test("A revocation whose key rotation fails is finished by the next round")
     func anOwedRotationIsRetried() async throws {
         let mailbox = InMemoryMailbox()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-rotation-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-rotation-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let log = RefusingLogStore(url: directory.appending(path: "log.carpenter"))
 

@@ -8,7 +8,7 @@ import Testing
 struct WritesThatCannotLandTests {
     @Test("A join nonce that cannot be written down is reported, not swallowed")
     func aLostNonceWriteIsCounted() async throws {
-        let root = URL.temporaryDirectory.appending(path: "carpenter-test-\(UUID().uuidString)")
+        let root = TestScratch.root.appending(path: "carpenter-test-\(UUID().uuidString)")
         let alice = TestSession.make(at: root)
         await alice.load()
         try await alice.createIdentity(displayName: "Alice")

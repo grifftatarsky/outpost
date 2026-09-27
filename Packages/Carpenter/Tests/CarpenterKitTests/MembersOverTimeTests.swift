@@ -97,7 +97,7 @@ struct MembersOverTimeTests {
         var keychains: [String: InMemoryKeychainStore] = [:]
         var stores: [String: MemoryMediaStore] = [:]
         func scratch(_ name: String) -> URL {
-            let url = URL.temporaryDirectory.appending(path: "carpenter-grow-\(name)-\(UUID().uuidString)")
+            let url = TestScratch.root.appending(path: "carpenter-grow-\(name)-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
             directories[name] = url
             keychains[name] = InMemoryKeychainStore()

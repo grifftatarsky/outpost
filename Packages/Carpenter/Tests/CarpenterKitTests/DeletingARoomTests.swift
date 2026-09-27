@@ -39,7 +39,7 @@ struct DeletingARoomTests {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox(clock: clock)
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-delete-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-delete-\(UUID().uuidString)")
         let media = MemoryMediaStore()
         let alice = TestSession.make(clock: clock)
         let bob = TestSession.make(keychain: keychain, at: directory, media: media, clock: clock)

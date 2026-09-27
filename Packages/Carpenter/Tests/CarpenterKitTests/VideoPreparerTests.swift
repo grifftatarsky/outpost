@@ -67,6 +67,7 @@ struct VideoPreparerTests {
         let original = try await TestVideo.make(seconds: 1)
         defer { try? FileManager.default.removeItem(at: original) }
         let prepared = try await VideoPreparer.prepare(original)
+        defer { prepared.file.map { try? FileManager.default.removeItem(at: $0) } }
         let preview = try #require(prepared.preview)
         #expect(preview.count <= MediaBody.previewByteCap)
         let size = try #require(ImagePreparer.size(of: preview))
@@ -121,7 +122,7 @@ struct VideoPreparerTests {
 
     @Test("Something that is not a clip is refused")
     func garbageIsRefused() async throws {
-        let junk = URL.temporaryDirectory.appending(path: "junk-\(UUID().uuidString).mov")
+        let junk = TestScratch.root.appending(path: "junk-\(UUID().uuidString).mov")
         try Data("not a clip".utf8).write(to: junk)
         defer { try? FileManager.default.removeItem(at: junk) }
         await #expect(throws: VideoPreparer.Failure.unreadable) {

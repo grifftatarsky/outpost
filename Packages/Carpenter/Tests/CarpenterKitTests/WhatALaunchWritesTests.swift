@@ -42,7 +42,7 @@ struct WhatALaunchWritesTests {
     @Test("Opening the app again writes no room key it already kept")
     func aRelaunchWritesNoKeyItKept() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-launch-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-launch-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let first = TestSession.make(keychain: keychain, at: directory)
@@ -98,7 +98,7 @@ private actor CountedDocuments: DocumentStore {
 @MainActor
 struct WhatARoundWritesTests {
     private func counted() -> (AppSession, CountedDocuments, InMemoryKeychainStore) {
-        let root = URL.temporaryDirectory.appending(path: "carpenter-round-\(UUID().uuidString)")
+        let root = TestScratch.root.appending(path: "carpenter-round-\(UUID().uuidString)")
         let documents = CountedDocuments(root.appending(path: "state.json"))
         let keychain = InMemoryKeychainStore()
         let session = AppSession(

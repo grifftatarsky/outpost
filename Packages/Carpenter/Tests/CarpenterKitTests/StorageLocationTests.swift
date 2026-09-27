@@ -5,7 +5,7 @@ import Testing
 @Suite("App Group storage migration")
 struct StorageLocationTests {
     private func temp() -> URL {
-        URL.temporaryDirectory.appending(
+        TestScratch.root.appending(
             path: "storageloc-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
@@ -49,7 +49,7 @@ struct StorageLocationTests {
 struct StoreLeftOutOfBackupsTests {
     @Test("The store's directory is marked for leaving out of backups, and a folder beside it is not")
     func theStoreIsLeftOut() throws {
-        let root = URL.temporaryDirectory.appending(path: "backup-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let root = TestScratch.root.appending(path: "backup-\(UUID().uuidString)", directoryHint: .isDirectory)
         let beside = root.appending(path: "beside", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: beside, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -63,7 +63,7 @@ struct StoreLeftOutOfBackupsTests {
 
     @Test("A directory that was already left out stays left out after it is asked for again")
     func askingAgainKeepsIt() throws {
-        let root = URL.temporaryDirectory.appending(path: "backup-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let root = TestScratch.root.appending(path: "backup-\(UUID().uuidString)", directoryHint: .isDirectory)
         defer { try? FileManager.default.removeItem(at: root) }
         _ = StorageLocation.directory(container: "world", appGroup: nil, root: root)
         var store = root.appending(path: "world", directoryHint: .isDirectory)

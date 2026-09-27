@@ -373,7 +373,7 @@ struct FileMailboxTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-mailbox-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-mailbox-\(UUID().uuidString)")
     }
 
     private func pair() throws -> (Peer, Peer) {

@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct SyncFromTheAppTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-sync-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-sync-\(UUID().uuidString)")
     }
 
     private func session(_ clock: TestClock) throws -> AppSession {

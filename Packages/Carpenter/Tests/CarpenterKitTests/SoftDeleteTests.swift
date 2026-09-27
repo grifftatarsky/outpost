@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct SoftDeleteTests {
     private func scratch() -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-hide-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-hide-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }

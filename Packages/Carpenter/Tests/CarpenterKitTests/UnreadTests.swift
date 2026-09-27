@@ -158,7 +158,7 @@ struct UnreadTests {
 
     @Test("A room read on this device is still read after a relaunch")
     func theMarkSurvivesARelaunch() async throws {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-unread-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-unread-\(UUID().uuidString)")
         let keychain = InMemoryKeychainStore()
         let (alice, bob, room, mailbox) = try await joined(bobAt: directory, bobKeychain: keychain)
 

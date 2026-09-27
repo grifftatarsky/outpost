@@ -375,7 +375,7 @@ struct HistoryRepairTests {
     @Test("A repair outlives a relaunch")
     func repairSurvivesRelaunch() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-repair-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-repair-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let mailbox = InMemoryMailbox()
         let (_, bob, room, _) = try await join(

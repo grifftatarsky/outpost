@@ -9,7 +9,7 @@ enum TestVideo {
         seconds: Int, size: CGSize = CGSize(width: 1280, height: 720), fps: Int32 = 2,
         tagged: Bool = true, noisy: Bool = false, timedLocation: Bool = false
     ) async throws -> URL {
-        let url = URL.temporaryDirectory.appending(path: "test-clip-\(UUID().uuidString).mov")
+        let url = TestScratch.root.appending(path: "test-clip-\(UUID().uuidString).mov")
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         let input = AVAssetWriterInput(
             mediaType: .video,

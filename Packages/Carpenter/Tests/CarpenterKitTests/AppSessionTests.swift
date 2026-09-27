@@ -12,7 +12,7 @@ struct AppSessionTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func storage() -> (SessionStorage, URL) {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-session-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-session-\(UUID().uuidString)")
         return (
             SessionStorage(
                 keychain: InMemoryKeychainStore(),
@@ -456,7 +456,7 @@ struct PersistedStateCompatibilityTests {
 @MainActor
 struct IntegrityReportingTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-integrity-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-integrity-\(UUID().uuidString)")
     }
 
     private func session(at directory: URL, keychain: InMemoryKeychainStore) -> AppSession {
@@ -566,7 +566,7 @@ struct IntegrityReportingTests {
 @MainActor
 struct DeviceListTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-devices-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-devices-\(UUID().uuidString)")
     }
 
     private func session() throws -> AppSession {
@@ -631,7 +631,7 @@ extension DeviceListTests {
 @MainActor
 struct SecondDeviceTests {
     private func storage(_ keychain: InMemoryKeychainStore) -> SessionStorage {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-2nd-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-2nd-\(UUID().uuidString)")
         return SessionStorage(
             keychain: keychain,
             log: FileLogStore(url: directory.appending(path: "log.carpenter")),

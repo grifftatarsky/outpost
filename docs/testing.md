@@ -438,6 +438,12 @@ four things were wrong at once:
 - A tap gesture over a focused field swallowed caret placement.
 - A sheet with a fixed height hid its own button under a growing field.
 
+**Tests write under one folder per run.** `TestScratch.root` is the temporary directory for every
+test file, one folder per test process, and each run deletes the folders of runs that have ended.
+Until 2026-09-27 each full run left about 200 MB that nothing removed; seventy runs in a night filled
+the disk with 15 GB and stopped the build mid-audit. A new test that needs a temporary file takes it
+from `TestScratch.root`, never `URL.temporaryDirectory`.
+
 **A switch that does not move may be the harness.** Injected taps moved SwiftUI switches on
 2026-09-07 and did not on 2026-09-15, when a short drag did. A switch that moves and saves nothing is
 also a real defect this app has had twice, so read the preference before deciding:

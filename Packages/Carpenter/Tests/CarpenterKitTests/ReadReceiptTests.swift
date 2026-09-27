@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct ReadReceiptTests {
     private func scratch() -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-read-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-read-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }

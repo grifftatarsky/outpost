@@ -204,7 +204,7 @@ struct PhraseCommitmentTests {
     @Test("The setting survives a relaunch")
     func theSettingPersists() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "phrase-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "phrase-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let session = TestSession.make(keychain: keychain, at: directory)

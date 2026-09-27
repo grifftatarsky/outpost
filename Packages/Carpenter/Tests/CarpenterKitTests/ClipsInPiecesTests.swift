@@ -8,7 +8,7 @@ import Testing
 @Suite("A clip is sealed and sent in pieces, never whole")
 struct SealingAClipInPiecesTests {
     private func file(bytes: Int, seed: UInt8 = 7) throws -> URL {
-        let url = URL.temporaryDirectory.appending(path: "clip-\(UUID().uuidString).mp4")
+        let url = TestScratch.root.appending(path: "clip-\(UUID().uuidString).mp4")
         var data = Data(count: bytes)
         data.withUnsafeMutableBytes { raw in
             for index in 0..<bytes { raw[index] = UInt8(truncatingIfNeeded: index &* 31 &+ Int(seed)) }
@@ -37,7 +37,7 @@ struct SealingAClipInPiecesTests {
         #expect(reference.parts?.count == 3)
         #expect(pieces.count == 3)
 
-        let out = URL.temporaryDirectory.appending(path: "opened-\(UUID().uuidString).mp4")
+        let out = TestScratch.root.appending(path: "opened-\(UUID().uuidString).mp4")
         let opened = try await SealedAttachment.openParts(reference, into: out) { pieces[$0.id] }
         #expect(opened)
         #expect(try Data(contentsOf: out) == Data(contentsOf: source))
@@ -48,7 +48,7 @@ struct SealingAClipInPiecesTests {
         let source = try file(bytes: SealedAttachment.partPlaintextBytes + 5_000)
         let (reference, pieces) = try await sealed(source)
         let parts = try #require(reference.parts)
-        let out = URL.temporaryDirectory.appending(path: "opened-\(UUID().uuidString).mp4")
+        let out = TestScratch.root.appending(path: "opened-\(UUID().uuidString).mp4")
 
         let swapped = [parts[0].id: pieces[parts[1].id]!, parts[1].id: pieces[parts[0].id]!]
         await #expect(throws: AttachmentError.digestMismatch) {
@@ -76,7 +76,7 @@ struct SealingAClipInPiecesTests {
 
     @Test("A clip over 287 MB is refused before anything is sealed")
     func overTheCapIsRefused() async throws {
-        let url = URL.temporaryDirectory.appending(path: "huge-\(UUID().uuidString).mp4")
+        let url = TestScratch.root.appending(path: "huge-\(UUID().uuidString).mp4")
         FileManager.default.createFile(atPath: url.path, contents: nil)
         let handle = try FileHandle(forWritingTo: url)
         try handle.truncate(atOffset: UInt64(SealedAttachment.maximumVideoBytes + 1))
@@ -116,7 +116,7 @@ struct SendingAClipInPiecesTests {
     @Test("A clip bigger than a piece reaches the other member as the same bytes, and the sender's file is gone")
     func aClipCrossesInPieces() async throws {
         let (alice, bob, mailbox, room) = try await joined()
-        let source = URL.temporaryDirectory.appending(path: "prepared-\(UUID().uuidString).mp4")
+        let source = TestScratch.root.appending(path: "prepared-\(UUID().uuidString).mp4")
         let original = Data((0..<(SealedAttachment.partPlaintextBytes + 70_000)).map { UInt8(truncatingIfNeeded: $0 &* 13) })
         try original.write(to: source)
         let clip = PreparedMedia(
@@ -135,7 +135,7 @@ struct SendingAClipInPiecesTests {
         #expect(media.reference.parts?.count == 2)
         #expect(media.duration == 95)
 
-        let out = URL.temporaryDirectory.appending(path: "played-\(UUID().uuidString).mp4")
+        let out = TestScratch.root.appending(path: "played-\(UUID().uuidString).mp4")
         FileManager.default.createFile(atPath: out.path, contents: nil)
         let alicesID = try #require(alice.enrolment?.identity.id)
         #expect(try await bob.writeClip(for: media, sentBy: alicesID, through: mailbox, to: out))
