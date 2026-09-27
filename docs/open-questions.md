@@ -17,6 +17,21 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN ddabe07b [NEEDS HUMAN REVIEW] -->
+
+### Should an ask for a photo reach every one of the sender's devices?
+
+Raised 2026-09-27. When somebody asks for a photo again, the ask reaches whichever of the sender's
+devices collects it first, and only that device lists it. If the photo was sent from the phone and the
+iPad collected the ask, the iPad can still send it when it has a copy of its own (it keeps any photo it
+has shown), and otherwise says the photo is not on this device. Recommended: pass asks between a
+member's devices the way room keys are passed, so the device that sent the photo always hears.
+
+Also: asks work for photos in conversations and not on Outposts. Recommended: leave Outposts out until
+somebody asks, since a new reader already gets every picture on the wall.
+
+<!-- COPY END ddabe07b -->
+
 <!-- COPY BEGIN 812d73ea [NEEDS HUMAN REVIEW] -->
 
 ### Should the link to your outbox change when someone leaves your life?

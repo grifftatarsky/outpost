@@ -96,6 +96,10 @@ extension AppRootView {
             },
             screen: SystemMediaScreen())
         loader.treatsEveryPhotoAsSensitive = safety.blursEveryPhoto
+        loader.asking = MediaAsking(
+            canAsk: { [self] id, author in session.canAskAgain(for: id, sentBy: author) },
+            isAsked: { [self] id in session.isAskedFor(id) },
+            ask: { [self] id, author in await session.askAgain(for: id, sentBy: author) })
         return loader
     }
 }

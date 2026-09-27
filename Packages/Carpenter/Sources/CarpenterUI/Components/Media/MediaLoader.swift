@@ -37,6 +37,28 @@ public struct LoadedMedia: Equatable, Sendable {
     }
 }
 
+public struct MediaAsking {
+    public let canAsk: @MainActor (AttachmentID, ParticipantID) -> Bool
+    public let isAsked: @MainActor (AttachmentID) -> Bool
+    public let ask: @MainActor (AttachmentID, ParticipantID) async -> Bool
+
+    public init(
+        canAsk: @escaping @MainActor (AttachmentID, ParticipantID) -> Bool,
+        isAsked: @escaping @MainActor (AttachmentID) -> Bool,
+        ask: @escaping @MainActor (AttachmentID, ParticipantID) async -> Bool
+    ) {
+        self.canAsk = canAsk
+        self.isAsked = isAsked
+        self.ask = ask
+    }
+}
+
+public enum MediaAskState: Equatable, Sendable {
+    case unavailable
+    case askable
+    case asked
+}
+
 public enum MediaLoadState: Equatable, Sendable {
     case idle
     case loading
@@ -61,6 +83,11 @@ public final class MediaLoader {
     private var tasks: [AttachmentID: Task<Void, Never>] = [:]
     private var previews: [AttachmentID: DecodedImage] = [:]
     private var revealed: Set<String>
+    private var askedHere: Set<AttachmentID> = []
+    @ObservationIgnored private var askable: [AttachmentID: Bool] = [:]
+    @ObservationIgnored private var seenAsked: Set<AttachmentID> = []
+
+    public var asking: MediaAsking?
 
     public var treatsEveryPhotoAsSensitive = false {
         didSet {
@@ -97,6 +124,36 @@ public final class MediaLoader {
         load(attachment, from: author)
     }
 
+    public func askState(of attachment: MediaAttachment, sentBy author: ParticipantID) -> MediaAskState {
+        guard let asking else { return .unavailable }
+        if askedHere.contains(attachment.id) || asking.isAsked(attachment.id) {
+            seenAsked.insert(attachment.id)
+            return .asked
+        }
+        if let known = askable[attachment.id] { return known ? .askable : .unavailable }
+        let can = asking.canAsk(attachment.id, author)
+        askable[attachment.id] = can
+        return can ? .askable : .unavailable
+    }
+
+    public func ask(for attachment: MediaAttachment, sentBy author: ParticipantID) {
+        guard let asking, !askedHere.contains(attachment.id) else { return }
+        askedHere.insert(attachment.id)
+        Task {
+            if !(await asking.ask(attachment.id, author)) { askedHere.remove(attachment.id) }
+        }
+    }
+
+    public func reconsiderAsked() {
+        guard let asking else { return }
+        askable.removeAll()
+        for id in seenAsked.union(askedHere) where !asking.isAsked(id) {
+            seenAsked.remove(id)
+            askedHere.remove(id)
+            if states[id] == .gone { states[id] = nil }
+        }
+    }
+
     private func load(_ attachment: MediaAttachment, from author: ParticipantID) {
         states[attachment.id] = .loading
         tasks[attachment.id] = Task { [weak self] in
@@ -126,6 +183,8 @@ public final class MediaLoader {
                 return .loaded(
                     LoadedMedia(image: poster, verdict: await verdict(videoAt: url), video: url))
             }
+        } catch AttachmentError.digestMismatch {
+            return .gone
         } catch {
             return .failed(error.localizedDescription)
         }

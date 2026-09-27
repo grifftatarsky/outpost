@@ -163,8 +163,8 @@ extension AppSession {
         let myOtherDevices = ownOtherDevices()
         var cleared = 0
         var putBack = 0
-        for (id, before) in persisted.attachmentsSent where !uploading.contains(id) {
-            var record = before
+        for id in Array(persisted.attachmentsSent.keys) where !uploading.contains(id) {
+            guard var record = persisted.attachmentsSent[id] else { continue }
             var owed: Set<ParticipantID> = []
             for person in record.people {
                 guard let peer = byPerson[person], let registry = replica.registry(for: person) else {
@@ -192,7 +192,7 @@ extension AppSession {
                         continue
                     }
                 }
-                persisted.attachmentsSent[id] = nil
+                if persisted.attachmentsSent[id]?.people == record.people { persisted.attachmentsSent[id] = nil }
                 cleared += 1
                 continue
             }

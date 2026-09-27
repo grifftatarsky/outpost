@@ -185,6 +185,25 @@ extension AppRootView {
                 }
                 return waiting + unchecked
             },
+            photoRequests: { room in
+                PhotoRequestsHelp(
+                    requests: session.photoRequests(in: room),
+                    onSend: { [self] request in
+                        do {
+                            try await session.sendAgain(request.id, through: media)
+                            return nil
+                        } catch PhotoAskError.notHeldHere {
+                            // COPY BEGIN 730ff642 [NEEDS HUMAN REVIEW]
+                            return String(
+                                localized: "This photo is no longer on this device.",
+                                comment: "Somebody asked for a photo again and this device no longer holds it")
+                            // COPY END 730ff642
+                        } catch {
+                            return error.localizedDescription
+                        }
+                    },
+                    onDismiss: { [self] request in await session.dismissPhotoRequest(request.id) })
+            },
             onInvite: { room, joinerCode, lifetime in
                 let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
                 do {

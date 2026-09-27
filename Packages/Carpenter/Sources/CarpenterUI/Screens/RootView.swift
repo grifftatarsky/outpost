@@ -104,6 +104,7 @@ public struct RootView: View {
     @Environment(\.verificationPhrase) var phraseLookup
     let connections: [Connection]
     let pendingJoins: (RoomID) -> [PendingJoin]
+    let photoRequests: (RoomID) -> PhotoRequestsHelp
     let onInvite: (RoomID, String, InvitationLifetime) async -> Invite?
     let onOutstandingInvite: (RoomID) async -> Invite?
     let onDecideJoin: (RoomID, PendingJoin, Bool) async -> Void
@@ -272,6 +273,7 @@ public struct RootView: View {
         onNicknameChange: ((ParticipantID, String?) async -> Void)? = nil,
         onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)? = nil,
         pendingJoins: @escaping (RoomID) -> [PendingJoin] = { _ in [] },
+        photoRequests: @escaping (RoomID) -> PhotoRequestsHelp = { _ in PhotoRequestsHelp() },
         onInvite: @escaping (RoomID, String, InvitationLifetime) async -> Invite? = { _, _, _ in nil },
         onOutstandingInvite: @escaping (RoomID) async -> Invite? = { _ in nil },
         onDecideJoin: @escaping (RoomID, PendingJoin, Bool) async -> Void = { _, _, _ in },
@@ -429,6 +431,7 @@ public struct RootView: View {
         self.roomFollowsDefaultNotifications = roomFollowsDefaultNotifications
         self.onRoomNotificationLevelChange = onRoomNotificationLevelChange
         self.pendingJoins = pendingJoins
+        self.photoRequests = photoRequests
         self.onInvite = onInvite
         self.onOutstandingInvite = onOutstandingInvite
         self.onDecideJoin = onDecideJoin

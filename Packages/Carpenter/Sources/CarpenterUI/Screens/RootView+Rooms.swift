@@ -119,6 +119,7 @@ extension RootView {
                 onDelete: roomDeletion(id) == .allowed ? { deleting = room } : nil
             )
             .environment(\.notGoneHelp, notGoneHelp(for: id))
+            .environment(\.photoRequests, photoRequests(id))
             .environment(\.leavingThisRoom, leaving(id))
             .sheet(item: $greeting) { greeted in
                 JoinPromptView(greeting: greeted) { await onGreetingSeen(greeted.id) }

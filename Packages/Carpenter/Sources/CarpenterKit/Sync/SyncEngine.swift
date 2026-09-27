@@ -26,6 +26,16 @@ public enum SyncError: Error, Hashable, Sendable {
     case packetUnreadable
 }
 
+public struct PhotoAsk: Hashable, Sendable, Codable {
+    public let entry: EntryHash
+    public let attachment: AttachmentID
+
+    public init(entry: EntryHash, attachment: AttachmentID) {
+        self.entry = entry
+        self.attachment = attachment
+    }
+}
+
 public enum SyncEngine {
     public struct Delivery: Sendable {
         public let entries: [Entry]
@@ -37,12 +47,13 @@ public enum SyncEngine {
         public let answers: [RepairAnswer]
         public let notifyWalls: [ParticipantID]?
         public let confirmations: [JoinConfirmedBody]
+        public let asks: [PhotoAsk]
 
         public init(
             entries: [Entry], certificates: [DeviceCertificate], revocations: [DeviceRevocation],
             grants: [EpochGrant], requests: [RepairRequest] = [], answers: [RepairAnswer] = [],
             identities: [IdentityPublicKeys] = [], notifyWalls: [ParticipantID]? = nil,
-            confirmations: [JoinConfirmedBody] = []
+            confirmations: [JoinConfirmedBody] = [], asks: [PhotoAsk] = []
         ) {
             self.entries = entries
             self.identities = identities
@@ -53,6 +64,7 @@ public enum SyncEngine {
             self.answers = answers
             self.notifyWalls = notifyWalls
             self.confirmations = confirmations
+            self.asks = asks
         }
     }
 
@@ -65,12 +77,14 @@ public enum SyncEngine {
         var answers: [RepairAnswer] = []
         var notifyWalls: [ParticipantID]?
         var confirmations: [JoinConfirmedBody] = []
+        var asks: [PhotoAsk] = []
 
         init(
             entries: [Entry] = [], certificates: [DeviceCertificate] = [],
             revocations: [DeviceRevocation] = [], requests: [RepairRequest] = [],
             answers: [RepairAnswer] = [], identities: [IdentityPublicKeys] = [],
-            notifyWalls: [ParticipantID]? = nil, confirmations: [JoinConfirmedBody] = []
+            notifyWalls: [ParticipantID]? = nil, confirmations: [JoinConfirmedBody] = [],
+            asks: [PhotoAsk] = []
         ) {
             self.entries = entries
             self.identities = identities
@@ -80,6 +94,7 @@ public enum SyncEngine {
             self.answers = answers
             self.notifyWalls = notifyWalls
             self.confirmations = confirmations
+            self.asks = asks
         }
 
         init(from decoder: any Decoder) throws {
@@ -96,6 +111,7 @@ public enum SyncEngine {
             notifyWalls = try container.decodeIfPresent([ParticipantID].self, forKey: .notifyWalls)
             confirmations =
                 try container.decodeIfPresent([JoinConfirmedBody].self, forKey: .confirmations) ?? []
+            asks = try container.decodeIfPresent([PhotoAsk].self, forKey: .asks) ?? []
         }
     }
 
@@ -111,7 +127,8 @@ public enum SyncEngine {
         answers: [RepairAnswer] = [],
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
-        confirmations: [JoinConfirmedBody] = []
+        confirmations: [JoinConfirmedBody] = [],
+        asks: [PhotoAsk] = []
     ) throws -> SyncPacket {
         let contentKey = SymmetricKey(size: .bits256)
         let context = wrapContext(id: id)
@@ -119,7 +136,7 @@ public enum SyncEngine {
         let body = Body(
             entries: entries, certificates: certificates, revocations: revocations,
             requests: requests, answers: answers, identities: identities,
-            notifyWalls: notifyWalls, confirmations: confirmations)
+            notifyWalls: notifyWalls, confirmations: confirmations, asks: asks)
         let sealed = try ChaChaPoly.seal(
             Compressed.pack(try JSONEncoder().encode(body)), using: contentKey, authenticating: context)
 
@@ -166,7 +183,7 @@ public enum SyncEngine {
             entries: body.entries, certificates: body.certificates,
             revocations: body.revocations, grants: grants, requests: body.requests,
             answers: body.answers, identities: body.identities, notifyWalls: body.notifyWalls,
-            confirmations: body.confirmations)
+            confirmations: body.confirmations, asks: body.asks)
     }
 
     private static func grantContext(id: PacketID) -> Data {

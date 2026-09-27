@@ -2877,6 +2877,38 @@ written (`CloudKitMailboxTests`) and wait for the rig.
 
 <!-- COPY END 511c4f5b -->
 
+<!-- COPY BEGIN 77261c6e [NEEDS HUMAN REVIEW] -->
+
+### A photo can be asked for again, and the sender decides
+
+**RULED 2026-09-27 by Griff.** Somebody who deletes a photo for space, or whose history check finds
+it missing, "taps a download button on it to request it again. That show 'photo requested, owner will
+be prompted to provide on next contact' and just that flow (a little badge on the chat settings that
+shows when you tap 'backfill request' the user and the photo they're requesting and allows you to
+jump to the context. Clean design here, minimal text."
+
+A photo whose bytes are gone, or whose copy failed its digest, says *No longer available — Tap to ask
+the sender for it again*. Tapping it sends the sender an ask in a packet addressed to them alone,
+naming the message and the photo, and the bubble says *Photo requested*. The sender's device keeps the
+ask only if the message is theirs, holds that photo, and the one asking is in that room now; anything
+else is dropped without a word (`AskingForAPhotoAgainTests`, every guard mutation-checked). The
+conversation's menu then shows *Photo requests* with a count, and the list gives the person, the photo,
+when they asked, a *Send* button and a way back to the message. Nothing goes up until the sender taps
+*Send*, and what goes up is the same sealed copy, so nobody learns anything new: only people holding
+the message can open it. It leaves the outbox the way any photo does, once the one who asked has
+signed for it on every device or nine days have passed.
+
+**Claude's choices inside the ruling, not Griff's:** rooms only, not Outposts, because the ruling is
+about a conversation's settings; the one asking checks again once a minute; the sender keeps at most
+two hundred asks; and an ask is handled by whichever of the sender's devices collects it, because
+asks do not travel between a member's devices yet (a question in
+[open questions](open-questions.md#should-an-ask-for-a-photo-reach-every-one-of-the-senders-devices)).
+
+**Not verified:** the screens have not been seen on a device, and the ask has not crossed a real
+account.
+
+<!-- COPY END 77261c6e -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts

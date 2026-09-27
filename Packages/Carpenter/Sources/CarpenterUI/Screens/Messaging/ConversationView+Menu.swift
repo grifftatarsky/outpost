@@ -6,13 +6,15 @@ import SwiftUI
 // MARK: The room's own menu, and what it says about a repair
 
 extension ConversationView {
-    private var wantsAttention: Bool { pendingJoinCount > 0 || uncheckedCount > 0 }
+    private var wantsAttention: Bool {
+        pendingJoinCount > 0 || uncheckedCount > 0 || !photoRequestsHelp.requests.isEmpty
+    }
 
     var hasRoomActions: Bool {
         onInvite != nil || onShowInvite != nil || onReviewJoins != nil || onWhoYouAreTalkingTo != nil
             || onAskWhoYouAreTalkingTo != nil || onRoomAccess != nil || onRoomNotifications != nil
             || onRoomMembers != nil || onRepair != nil || notGoneHelp.onShowWaiting != nil
-            || onDelete != nil
+            || onDelete != nil || !photoRequestsHelp.requests.isEmpty
     }
 
     var roomMenu: some View {
@@ -55,6 +57,17 @@ extension ConversationView {
                         }
                     } icon: {
                         Image(systemName: "person.crop.circle.badge.questionmark")
+                    }
+                }
+            }
+            if !photoRequestsHelp.requests.isEmpty {
+                Button {
+                    reviewingPhotoRequests = true
+                } label: {
+                    Label {
+                        Text("Photo requests (\(photoRequestsHelp.requests.count))", bundle: .module)
+                    } icon: {
+                        Image(systemName: "photo.badge.arrow.down")
                     }
                 }
             }

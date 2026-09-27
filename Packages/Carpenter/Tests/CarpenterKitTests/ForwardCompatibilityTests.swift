@@ -101,6 +101,14 @@ extension ForwardCompatibilityTests {
                 people: [ParticipantID(rawValue: WideID.of([9]))], collectedBy: [DeviceID(rawValue: WideID.of([7]))],
                 sentAt: stamp.at)
         ]
+        state.photosAsked = [
+            AttachmentID(): AskedPhoto(
+                author: ParticipantID(rawValue: WideID.of([9])), entry: entry, askedAt: stamp.at, sent: true)
+        ]
+        state.photoAsks = [
+            PhotoAskRecord(
+                from: ParticipantID(rawValue: WideID.of([9])), entry: entry, attachment: AttachmentID(), at: stamp.at)
+        ]
         state.holesNoticed = [room: stamp.at]
         state.askedAutomatically = [room: stamp.at]
         state.keyRotationsOwed = [room]

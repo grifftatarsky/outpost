@@ -9,6 +9,7 @@ public struct ConversationView: View {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.iCloudHold) var iCloudHold
     @Environment(\.notGoneHelp) var notGoneHelp
+    @Environment(\.photoRequests) var photoRequestsHelp
 
     @State var draft = ""
     @State var sent = 0
@@ -24,6 +25,8 @@ public struct ConversationView: View {
     @State var sending: [MediaKind] = []
     @State var fittingNow = 0
     @State var staged: [StagedAttachment] = []
+    @State var reviewingPhotoRequests = false
+    @State var focusing: MessageID?
 
     let room: RoomSummary
     let entries: [TranscriptEntry]
@@ -274,6 +277,10 @@ public struct ConversationView: View {
             if hasRoomActions {
                 ToolbarItem(placement: .primaryAction) { roomMenu }
             }
+        }
+        .sheet(isPresented: $reviewingPhotoRequests) {
+            PhotoRequestsView(onShow: { focusing = $0 })
+                .environment(\.photoRequests, photoRequestsHelp)
         }
         .sheet(isPresented: $askingCheck) {
             AskWhoYouAreTalkingToSheet(

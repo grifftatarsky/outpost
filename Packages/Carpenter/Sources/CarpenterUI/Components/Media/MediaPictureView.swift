@@ -40,7 +40,8 @@ public struct MediaPictureView: View {
     private func isActionable(_ state: MediaLoadState) -> Bool {
         switch state {
         case .loaded, .failed: true
-        case .idle, .loading, .gone: false
+        case .gone: askState == .askable
+        case .idle, .loading: false
         }
     }
 
@@ -70,12 +71,16 @@ public struct MediaPictureView: View {
                 }
             case .gone:
                 // COPY BEGIN cdf3adf0 [NEEDS HUMAN REVIEW]
-                notice(
-                    symbol: isVideo ? "video.badge.exclamationmark" : "photo.badge.exclamationmark",
-                    title: Text("No longer available", bundle: .module),
-                    detail: isVideo
-                        ? Text("The sender's iCloud has let this video go.", bundle: .module)
-                        : Text("The sender's iCloud has let this photo go.", bundle: .module))
+                if askState == .unavailable {
+                    notice(
+                        symbol: isVideo ? "video.badge.exclamationmark" : "photo.badge.exclamationmark",
+                        title: Text("No longer available", bundle: .module),
+                        detail: isVideo
+                            ? Text("The sender's iCloud has let this video go.", bundle: .module)
+                            : Text("The sender's iCloud has let this photo go.", bundle: .module))
+                } else {
+                    askNotice
+                }
             case .failed:
                 notice(
                     symbol: "arrow.clockwise",
@@ -84,6 +89,28 @@ public struct MediaPictureView: View {
                 // COPY END cdf3adf0
             }
         }
+    }
+
+    private var askState: MediaAskState {
+        loader?.askState(of: media, sentBy: author) ?? .unavailable
+    }
+
+    @ViewBuilder
+    private var askNotice: some View {
+        // COPY BEGIN 619d6cff [NEEDS HUMAN REVIEW]
+        if askState == .asked {
+            notice(
+                symbol: "clock",
+                title: isVideo
+                    ? Text("Video requested", bundle: .module) : Text("Photo requested", bundle: .module),
+                detail: Text("The sender will be asked when you're next in touch.", bundle: .module))
+        } else {
+            notice(
+                symbol: "arrow.down.circle",
+                title: Text("No longer available", bundle: .module),
+                detail: Text("Tap to ask the sender for it again.", bundle: .module))
+        }
+        // COPY END 619d6cff
     }
 
     @ViewBuilder
@@ -182,12 +209,22 @@ public struct MediaPictureView: View {
             }
         case .failed:
             loader?.retry(media, sentBy: author)
-        case .idle, .loading, .gone:
+        case .gone:
+            if askState == .askable { loader?.ask(for: media, sentBy: author) }
+        case .idle, .loading:
             break
         }
     }
 
     private func label(for state: MediaLoadState) -> Text {
+        if state == .gone, askState != .unavailable {
+            // COPY BEGIN 9de78e5d [NEEDS HUMAN REVIEW]
+            let what = isVideo ? Text("Video", bundle: .module) : Text("Photo", bundle: .module)
+            return askState == .asked
+                ? Text("\(what), requested from the sender", bundle: .module)
+                : Text("\(what), no longer available. Double-tap to ask the sender for it again.", bundle: .module)
+            // COPY END 9de78e5d
+        }
         // COPY BEGIN 0b72c4b7 [NEEDS HUMAN REVIEW]
         let what = isVideo
             ? Text("Video, \(Self.length(media.duration ?? 0))", bundle: .module)

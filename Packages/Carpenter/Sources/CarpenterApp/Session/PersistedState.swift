@@ -12,6 +12,20 @@ struct SentAttachmentRecord: Codable, Equatable, Sendable {
     var sentAt: Date
 }
 
+struct AskedPhoto: Codable, Equatable, Sendable {
+    var author: ParticipantID
+    var entry: EntryHash
+    var askedAt: Date
+    var sent = false
+}
+
+struct PhotoAskRecord: Codable, Equatable, Sendable {
+    var from: ParticipantID
+    var entry: EntryHash
+    var attachment: AttachmentID
+    var at: Date
+}
+
 struct PersistedState: Codable, Equatable, Sendable {
     var organisation = RoomsListOrganisation()
     var knownRooms: [RoomID] = []
@@ -38,6 +52,8 @@ struct PersistedState: Codable, Equatable, Sendable {
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
     var attachmentsSent: [AttachmentID: SentAttachmentRecord] = [:]
+    var photosAsked: [AttachmentID: AskedPhoto] = [:]
+    var photoAsks: [PhotoAskRecord] = []
     var acceptedInvitations: [AcceptedInvitation] = []
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
@@ -105,6 +121,8 @@ struct PersistedState: Codable, Equatable, Sendable {
             try container.decodeIfPresent([AttachmentID].self, forKey: .uploadsLeftForOthers) ?? []
         attachmentsSent =
             try container.decodeIfPresent([AttachmentID: SentAttachmentRecord].self, forKey: .attachmentsSent) ?? [:]
+        photosAsked = try container.decodeIfPresent([AttachmentID: AskedPhoto].self, forKey: .photosAsked) ?? [:]
+        photoAsks = try container.decodeIfPresent([PhotoAskRecord].self, forKey: .photoAsks) ?? []
         holesNoticed = try container.decodeIfPresent([RoomID: Date].self, forKey: .holesNoticed) ?? [:]
         askedAutomatically =
             try container.decodeIfPresent([RoomID: Date].self, forKey: .askedAutomatically) ?? [:]

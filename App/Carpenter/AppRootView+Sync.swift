@@ -120,6 +120,7 @@ extension AppRootView {
         )
 
         if let syncedAt = outcome.syncedAt { lastSync = syncedAt }
+        mediaLoader?.reconsiderAsked()
         mediaBytes = await session.mediaByteCount()
         await collectSharedPhotos()
         await reportFocusNow()

@@ -38,6 +38,7 @@ extension AppSession {
             await settleAttachmentsSent(through: media)
             await settleOutpostMediaOwed(through: media)
             await sweepAttachments(through: media)
+            await settlePhotosAsked(through: session, media: media)
         }
 
         try await recordWhatArrived(report)
@@ -163,6 +164,7 @@ extension AppSession {
                     """)
             }
         }
+        takeAsks(received.photoAsks, from: peer.them)
         for answer in received.repairAnswers {
             if let index = persisted.repairs.firstIndex(where: { $0.id == answer.request }) {
                 persisted.repairs[index].answers[peer.them] = answer

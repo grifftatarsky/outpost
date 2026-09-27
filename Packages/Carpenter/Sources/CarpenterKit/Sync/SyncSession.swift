@@ -95,6 +95,7 @@ public struct SyncReport: Hashable, Sendable {
     public var repairAnswers: [RepairAnswer] = []
     public var notifyWalls: [ParticipantID]?
     public var confirmations: [JoinConfirmedBody] = []
+    public var photoAsks: [PhotoAsk] = []
 
     public init() {}
 
@@ -121,12 +122,13 @@ public struct SyncReport: Hashable, Sendable {
         merged.repairAnswers.append(contentsOf: other.repairAnswers)
         if let theirs = other.notifyWalls { merged.notifyWalls = theirs }
         merged.confirmations.append(contentsOf: other.confirmations)
+        merged.photoAsks.append(contentsOf: other.photoAsks)
         return merged
     }
 
     public var didAnything: Bool {
         packetsWritten > 0 || entriesReceived > 0 || !grantsReceived.isEmpty
-            || !repairRequests.isEmpty || !repairAnswers.isEmpty || !confirmations.isEmpty
+            || !repairRequests.isEmpty || !repairAnswers.isEmpty || !confirmations.isEmpty || !photoAsks.isEmpty
     }
 }
 
@@ -168,12 +170,13 @@ public struct SyncSession: Sendable {
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
         confirming: [JoinConfirmedBody] = [],
+        asking: [PhotoAsk] = [],
         announcing: Bool = false
     ) async throws -> SyncReport {
         var report = SyncReport()
         guard !peers.isEmpty,
             !entries.isEmpty || !granting.isEmpty || !requests.isEmpty || !answers.isEmpty
-                || notifyWalls != nil || !confirming.isEmpty || announcing
+                || notifyWalls != nil || !confirming.isEmpty || !asking.isEmpty || announcing
         else { return report }
 
         let now = instant ?? clock.now
@@ -192,7 +195,8 @@ public struct SyncSession: Sendable {
                 answers: first ? answers : [],
                 identities: first ? identities : [],
                 notifyWalls: first ? notifyWalls : nil,
-                confirmations: first ? confirming : [])
+                confirmations: first ? confirming : [],
+                asks: first ? asking : [])
             do {
                 try await mailbox.put(packet)
             } catch {
@@ -373,6 +377,7 @@ public struct SyncSession: Sendable {
             report.repairAnswers.append(contentsOf: delivery.answers)
             if let wishes = delivery.notifyWalls { report.notifyWalls = wishes }
             report.confirmations.append(contentsOf: delivery.confirmations)
+            report.photoAsks.append(contentsOf: delivery.asks)
 
             for identity in delivery.identities { replica.introduce(identity) }
 

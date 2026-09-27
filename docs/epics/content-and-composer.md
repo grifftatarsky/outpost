@@ -74,6 +74,8 @@ to send each other.
 - **Done.** The bubble is the right shape before a byte arrives, from the pixel size and a forty-pixel
   preview drawn blurred; a fetch that fails says so and retries on a thirty-second backoff; a photo
   the outbox let go of says *No longer available*.
+- **Done, not seen on a device.** A photo that is gone can be asked for again; the sender sees who
+  asked and for which photo in the conversation's menu, and sends it again with one tap.
 - **Done.** Report a hold away; the report carries words and never media. The age rating is 13+.
 - **Done.** On an Outpost: its own ticket below.
 
