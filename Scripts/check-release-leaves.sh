@@ -59,6 +59,8 @@ LEAVES=(
     "Haptics probe"
     "Style test"
     "Start over"
+    "Test Make it fit"
+    "Make it fit failed"
 )
 
 status=0

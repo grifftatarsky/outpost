@@ -2,6 +2,7 @@ import CarpenterApp
 import CarpenterCloudKit
 import CarpenterKeychain
 import CloudKit
+import CryptoKit
 import CarpenterKit
 import CarpenterMedia
 import CarpenterUI
@@ -14,6 +15,22 @@ import SwiftUI
 #endif
 
 // MARK: This device: where it keeps things, and erasing it
+
+#if DEBUG
+    actor FitTiming {
+        private(set) var ids: [AttachmentID] = []
+        private(set) var bytes = 0
+        private(set) var elapsed: Duration = .zero
+
+        var count: Int { ids.count }
+
+        func uploaded(_ id: AttachmentID, bytes: Int, taking time: Duration) {
+            ids.append(id)
+            self.bytes += bytes
+            elapsed += time
+        }
+    }
+#endif
 
 extension AppRootView {
     static var deviceName: String {
@@ -62,6 +79,92 @@ extension AppRootView {
             Diagnostics.sync.error(
                 "debug: could not rotate the mailbox share: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    func fitTest(
+        _ url: URL, progress: @escaping @MainActor @Sendable (FitTestStage) -> Void
+    ) async -> FitTestReport {
+        var report = FitTestReport()
+        let clock = ContinuousClock()
+        func seconds(_ elapsed: Duration) -> TimeInterval {
+            TimeInterval(elapsed.components.seconds) + TimeInterval(elapsed.components.attoseconds) / 1e18
+        }
+        report.originalBytes =
+            (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? 0
+
+        progress(.fitting)
+        let fitStarted = clock.now
+        let prepared: PreparedMedia
+        do {
+            prepared = try await VideoPreparer.prepareToFit(url)
+        } catch {
+            report.failure = "Make it fit failed: \(error)"
+            return report
+        }
+        report.fitSeconds = seconds(clock.now - fitStarted)
+        guard let file = prepared.file else {
+            report.failure = "Make it fit returned no file"
+            return report
+        }
+        defer { try? FileManager.default.removeItem(at: file) }
+        report.fittedBytes = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.intValue ?? 0
+        report.width = prepared.width
+        report.height = prepared.height
+        report.seconds = prepared.duration ?? 0
+
+        let timing = FitTiming()
+        let started = clock.now
+        let reference: AttachmentReference
+        do {
+            reference = try await SealedAttachment.sealParts(of: file) { [cloud] part, ciphertext in
+                let done = await timing.count
+                await MainActor.run { progress(.uploading(done: done)) }
+                let before = ContinuousClock.now
+                try await cloud.upload(OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: []))
+                await timing.uploaded(part.id, bytes: ciphertext.count, taking: ContinuousClock.now - before)
+            }
+        } catch {
+            report.failure = "Sealing or uploading failed: \(error)"
+            for id in await timing.ids { try? await cloud.delete(attachment: id) }
+            return report
+        }
+        let parts = reference.parts ?? []
+        report.pieces = parts.count
+        report.sealedBytes = await timing.bytes
+        let uploading = await timing.elapsed
+        report.uploadSeconds = seconds(uploading)
+        report.sealSeconds = max(0, seconds(clock.now - started) - report.uploadSeconds)
+
+        let fetchStarted = clock.now
+        for (index, part) in parts.enumerated() {
+            progress(.downloading(done: index, of: parts.count))
+            do {
+                if let bytes = try await cloud.download(part.id, hint: []),
+                    Data(SHA256.hash(data: bytes)) == part.digest
+                {
+                    report.piecesMatched += 1
+                }
+            } catch {
+                report.failure = "Fetching piece \(index + 1) failed: \(error)"
+                break
+            }
+        }
+        report.downloadSeconds = seconds(clock.now - fetchStarted)
+
+        progress(.clearing)
+        var cleared = true
+        for part in parts {
+            do { try await cloud.delete(attachment: part.id) } catch { cleared = false }
+        }
+        report.cleared = cleared
+        Diagnostics.sync.notice(
+            """
+            debug: fit test — \(report.originalBytes, privacy: .public) → \(report.fittedBytes, privacy: .public) bytes \
+            in \(report.fitSeconds, privacy: .public)s; \(report.pieces, privacy: .public) piece(s) up in \
+            \(report.uploadSeconds, privacy: .public)s, back in \(report.downloadSeconds, privacy: .public)s, \
+            \(report.piecesMatched, privacy: .public) matched
+            """)
+        return report
     }
 
     #endif

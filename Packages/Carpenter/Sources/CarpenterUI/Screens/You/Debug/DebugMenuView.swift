@@ -47,6 +47,17 @@ struct DebugMenuView: View {
                         icon: "moon",
                         title: Text("Pretend the Focus ended", bundle: .module))
                 }
+                if let fitTest = actions.fitTest {
+                    NavigationLink {
+                        FitTestView(run: fitTest)
+                    } label: {
+                        SettingsRow(
+                            icon: "stopwatch",
+                            title: Text("Test Make it fit", bundle: .module),
+                            detail: Text("Time the fit, the upload and the fetch of one video", bundle: .module)
+                        )
+                    }
+                }
                 NavigationLink {
                     HapticsProbeView()
                 } label: {

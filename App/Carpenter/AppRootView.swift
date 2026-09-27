@@ -124,7 +124,8 @@ struct AppRootView: View {
                 pretendFocus: { silenced in
                     pretendedFocus = silenced ? true : nil
                     await session.reportFocus(silenced: silenced)
-                })
+                },
+                fitTest: { url, progress in await fitTest(url, progress: progress) })
         #else
             nil
         #endif
