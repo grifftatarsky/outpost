@@ -269,8 +269,8 @@ struct SendingPhotoTests {
         let mailbox = InMemoryMailbox(clock: clock)
         let keychain = InMemoryKeychainStore()
         let directory = TestScratch.root.appending(path: "carpenter-sweep-\(UUID().uuidString)")
-        let alice = TestSession.make(keychain: keychain, at: directory)
-        let bob = TestSession.make()
+        let alice = TestSession.make(keychain: keychain, at: directory, clock: clock)
+        let bob = TestSession.make(clock: clock)
         await alice.load()
         await bob.load()
         try await alice.createIdentity(displayName: "Alice")
@@ -294,7 +294,7 @@ struct SendingPhotoTests {
             in: try alice.currentPairs())
         #expect(await mailbox.storedAttachmentCount == 2)
 
-        let relaunched = TestSession.make(keychain: keychain, at: directory)
+        let relaunched = TestSession.make(keychain: keychain, at: directory, clock: clock)
         await relaunched.load()
         try await relaunched.sync(through: mailbox, media: mailbox)
         #expect(
@@ -306,7 +306,7 @@ struct SendingPhotoTests {
             """)
 
         clock.advance(by: MailboxRules.sweepAge + 60)
-        let sweeping = TestSession.make(keychain: keychain, at: directory)
+        let sweeping = TestSession.make(keychain: keychain, at: directory, clock: clock)
         await sweeping.load()
         try await sweeping.sync(through: mailbox, media: mailbox)
 
