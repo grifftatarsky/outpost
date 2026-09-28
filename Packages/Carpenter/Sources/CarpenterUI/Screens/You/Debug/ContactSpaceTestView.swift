@@ -7,7 +7,8 @@ struct ContactSpaceTestView: View {
     let run: @MainActor @Sendable (ContactSpaceStep) async -> [String]
 
     @State private var lines: [String] = []
-    @State private var running = false
+    @State private var running: ContactSpaceStep?
+    @State private var finished: [ContactSpaceStep: Bool] = [:]
 
     var body: some View {
         List {
@@ -36,15 +37,25 @@ struct ContactSpaceTestView: View {
 
     private func step(_ step: ContactSpaceStep, icon: String, title: Text) -> some View {
         Button {
-            running = true
+            running = step
+            lines = []
             Task {
                 lines = await run(step)
-                running = false
+                finished[step] = !(lines.first?.hasPrefix("Failed") ?? true)
+                running = nil
             }
         } label: {
-            SettingsRow(icon: icon, title: title)
+            HStack {
+                SettingsRow(icon: icon, title: title)
+                if running == step {
+                    ProgressView()
+                } else if let ok = finished[step] {
+                    Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(ok ? palette.accentColor : palette.destructive)
+                }
+            }
         }
-        .disabled(running)
+        .disabled(running != nil)
     }
 }
 
