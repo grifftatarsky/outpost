@@ -21,7 +21,7 @@ extension CloudKitMailbox {
     }
 
     func putInOldOutbox(_ record: CKRecord, fields: [String: PacketField], for peer: ParticipantID, in pairs: Pairs) async {
-        guard await index.hasOldOutbox, let hint = pairs.hints[peer],
+        guard await index.hasOldOutbox, pairs.hints[peer] != nil,
             await index.theirsFor(peer, in: pairs).isEmpty
         else { return }
         let copy = CKRecord(recordType: PacketRecord.type, recordID: CKRecord.ID(recordName: record.recordID.recordName, zoneID: oldOutbox))
@@ -46,7 +46,7 @@ extension CloudKitMailbox {
         guard await index.hasOldOutbox else { return }
         try? await refresh()
         for peer in peers {
-            guard let hint = pairs.hints[peer], await !index.theirsFor(peer, in: pairs).isEmpty else { return }
+            guard pairs.hints[peer] != nil, await !index.theirsFor(peer, in: pairs).isEmpty else { return }
         }
         do {
             _ = try await container.privateCloudDatabase.modifyRecordZones(saving: [], deleting: [oldOutbox])

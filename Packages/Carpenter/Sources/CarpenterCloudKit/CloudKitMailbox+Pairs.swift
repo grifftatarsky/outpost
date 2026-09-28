@@ -81,7 +81,7 @@ extension CloudKitMailbox {
     }
 
     public func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool {
-        let hint = try pairs.hint(for: peer)
+        _ = try pairs.hint(for: peer)
         try await refresh()
         return await !index.theirsFor(peer, in: pairs).isEmpty
     }
