@@ -3218,7 +3218,33 @@ animation":
 
 It needs two iPhones with Apple's ultra-wideband chip, so it is proved on TestFlight, not on the rig.
 
-**Being built.**
+**Written 2026-09-28 in a session with no compiler: not built, and not run on any phone.** Under
+Your identity, *Tap phones to swap codes* opens a screen on each phone. The two find each other on
+the local network, each measures how far away the other is, and once exactly one phone has been
+within 15 cm for three readings in a row, both screens ask *Swap codes with this phone?* Each hands
+over its own code when both people have said yes, and the codes that arrive open the same screens a
+code sent any other way opens. When one of them then invites the other, the invite goes back to that
+phone the same way. See the [crypto brief](crypto-brief.md#tapping-two-phones) and
+`TappingPhonesTests`.
+
+**PROPOSED, the details Griff has not seen:**
+
+- **Network framework, not Multipeer Connectivity.** Apple deprecated Multipeer Connectivity in 2026
+  and says to avoid it in new code
+  ([TN3151](https://developer.apple.com/documentation/technotes/tn3151-choosing-the-right-networking-api)).
+  The swap uses `NWListener`, `NWBrowser` and `NWConnection` with peer-to-peer Wi-Fi, the older of
+  the framework's two Swift interfaces, because this was written without a compiler and that one's
+  shapes are known exactly. Moving to `NetworkConnection` is worth doing once it can be built.
+- **Sealed between the two phones.** Each phone makes a fresh key for the swap and seals everything
+  after the first hello under a key the two agree, so nobody else on the network reads a code.
+- **"Touching" is 15 cm or less, three readings in a row.** Not measured on phones; it is a number to
+  tune on TestFlight.
+- **Two phones within reach at once is nobody's turn**, and a phone that has just appeared holds the
+  choice for two seconds until it has been measured.
+- **An ask lasts 30 seconds.** After that the phones have to touch again.
+- **The link stays open three minutes after the swap**, for an invite to come back, then closes.
+- **Only on an iPhone that can measure distance.** Anywhere else the row is not shown and the code is
+  the way.
 
 <!-- COPY END 676b4912 -->
 

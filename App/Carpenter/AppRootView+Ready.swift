@@ -209,6 +209,9 @@ extension AppRootView {
                     let issued = try await session.invite(
                         joinerCode: joinerCode, joining: room, through: mailbox,
                         lasting: lifetime)
+                    #if os(iOS)
+                        handBack(issued, to: joinerCode)
+                    #endif
                     #if DEBUG
                         if rig != nil, let code = try? issued.encoded() {
                             RigCodes.leave(code, as: "\(session.viewer.displayName).invite")

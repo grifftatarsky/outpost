@@ -13,6 +13,7 @@ struct IdentitySettingsView: View {
     let onRename: ((String) async -> String?)?
     let onAvatarChange: ((PickedAvatar?) async -> Void)?
     @Environment(\.ownAvatar) private var ownAvatar
+    @Environment(\.tapToSwap) private var tapToSwap
     @State private var pickedAvatar: PhotosPickerItem?
     @State private var choosingAvatar = false
 
@@ -124,6 +125,23 @@ struct IdentitySettingsView: View {
                 .groupedRowSurface()
             }
             // COPY END b67a4def
+
+            if let tapToSwap, !identityCode.isEmpty {
+                // COPY BEGIN cdd906bc [NEEDS HUMAN REVIEW]
+                Section {
+                    Button(action: tapToSwap) {
+                        SettingsRow(
+                            icon: "iphone.radiowaves.left.and.right",
+                            title: Text("Tap phones to swap codes", bundle: .module))
+                    }
+                } footer: {
+                    Text(
+                        "When you're together, hold your iPhones against each other instead of sending a code. Your codes go straight from one phone to the other, and only after each of you says yes.",
+                        bundle: .module)
+                }
+                .groupedRowSurface()
+                // COPY END cdd906bc
+            }
 
             // COPY BEGIN a018d8bc [NEEDS HUMAN REVIEW]
             Section {

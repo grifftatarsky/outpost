@@ -33,6 +33,18 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID opens the app when you have locked it, instead of typing your code.</string>
 	<!-- COPY END b6501cb1 -->
+	<!-- COPY BEGIN 18088558 [NEEDS HUMAN REVIEW] -->
+	<key>NSNearbyInteractionUsageDescription</key>
+	<string>Measures how close the other phone is, so codes are swapped only with the phone you hold yours against.</string>
+	<!-- COPY END 18088558 -->
+	<!-- COPY BEGIN 40e4a902 [NEEDS HUMAN REVIEW] -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Finds the phone you hold yours against, so the two can swap codes directly without going through iCloud.</string>
+	<!-- COPY END 40e4a902 -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_tapswap._tcp</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

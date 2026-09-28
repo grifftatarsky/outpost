@@ -1072,6 +1072,54 @@ comparison as matching is a note to yourself; it is not sent to anybody.
 
 <!-- COPY END d5b61974 -->
 
+<!-- COPY BEGIN d6713b39 [NEEDS HUMAN REVIEW] -->
+
+## Tapping two phones
+
+**In plain words.** Two people who are together can hold their iPhones against each other instead of
+sending codes. Each phone measures how far the other is with its ultra-wideband chip, and only when
+exactly one phone is touching does either screen ask to swap. Nothing leaves either phone until both
+people say yes, and then it goes straight across, sealed so that nobody nearby can read it. The codes
+that arrive are the same codes, checked the same way, and the characters the two people read still
+decide who they are talking to.
+
+> **Written 2026-09-28 in a session with no compiler.** Not built, and not run on any phone. It needs
+> two iPhones with the ultra-wideband chip, so it is proved on TestFlight.
+
+**What actually happens.** `TapSwap` holds every rule, and `TappingPhonesTests` tries to break them.
+
+- **Finding each other.** Both screens advertise and browse a Bonjour service, `_tapswap._tcp`, with
+  peer-to-peer Wi-Fi on, under a random name made for that screen. Nothing reaches iCloud.
+- **The first hello** carries a Nearby Interaction discovery token, made fresh for that pair, and a
+  fresh X25519 public key. Everything after it is sealed with ChaChaPoly under an HKDF-SHA256 key from
+  the two keys, in its own domain (`carpenter.tap-swap.v1`), numbered so a message played back is
+  refused, and bound to its sender's key so one bounced back is refused too.
+- **Choosing the phone.** A phone counts as touching at 15 cm or less for three readings in a row, the
+  newest under a second old. It is chosen only if no other phone is that close and every phone that
+  arrived in the last two seconds has been measured. Another phone coming that close starts over.
+- **Asking.** The ask lasts 30 seconds. Each phone sends its code only after its own person and the
+  other person have both said yes, and takes a code only from the chosen phone, only after both
+  yeses, at most eight hand-overs and 16 KB each.
+
+**What it does not do.**
+
+- **It is not proof of who is holding the other phone.** Those are the characters, as for any code.
+- **A relay can hear a code, and cannot change one unseen.** A modified app on a phone within Wi-Fi
+  range could pass the two phones' hellos between them, so that it sits in the middle while their real
+  distance is measured. It is caught if both phones also find each other directly, because then two
+  phones read as touching; the few moments before they do are a window. What it can learn is a code,
+  which is made to be handed out; a code it swaps in shows up as characters that do not match.
+- **Ultra-wideband distance can be shortened by an attacker.** A distance reduction attack on Apple's
+  U1 chip took a measurement from 12 m to 0 m in up to 4% of attempts with a USD 65 radio
+  ([Ghost Peak, USENIX Security 2022](https://www.usenix.org/conference/usenixsecurity22/presentation/leu)).
+  Three readings in a row and one touching phone at a time make it harder; the characters are the
+  check that holds.
+
+These two are put to Griff as a question
+([Open questions](open-questions.md#what-can-a-phone-nearby-do-to-a-tap)).
+
+<!-- COPY END d6713b39 -->
+
 <!-- COPY BEGIN 1470b595 [NEEDS HUMAN REVIEW] -->
 
 ## The recovery key is a skeleton key, shown once

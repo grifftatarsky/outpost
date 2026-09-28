@@ -1523,6 +1523,40 @@ accounts.
 
 <!-- COPY END 60408d2a -->
 
+<!-- COPY BEGIN 8c481d4d [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="tapping-two-phones-swaps-codes">
+<summary><b>Tapping two phones swaps codes</b> — Written, not built</summary>
+
+**Story.** As two people standing together, we want to hold our iPhones against each other and have
+each other's codes, so that adding somebody in person needs no message sent through anybody else.
+
+Ruled by Griff on 2026-09-28, "honestly a priority", with three promises; see
+[the decision](../decisions.md#tapping-two-phones-swaps-codes) and the
+[crypto brief](../crypto-brief.md#tapping-two-phones). Written the same day in a session with no
+compiler: **not built, not run on any phone.**
+
+**Acceptance criteria**
+
+- **Written.** Codes go only between the two phones touching, directly over the local network, sealed
+  between them (`TappingPhonesTests`).
+- **Written.** A phone across the room gets no code and slips in none of its own; two phones within
+  reach at once is nobody's turn (`TappingPhonesTests`).
+- **Written.** Nothing is handed over until each person says yes; the ask lapses after 30 seconds.
+- **Written.** The code that arrives opens the same screens a code sent any other way does, and an
+  invite made for it goes back to the same phone.
+- **Written.** The screen draws the two phones closing in as they get closer, taps lightly as they
+  do, firmly when they touch, and with success when the codes have swapped; Reduce Motion drops the
+  movement; the Haptics setting silences the taps.
+- **Written.** Offered only on an iPhone that can measure distance, beside sending the code, which
+  stays the other way.
+- **Owed, on two iPhones with the ultra-wideband chip.** The whole swap on TestFlight, the 15 cm
+  threshold tuned against real readings, a third phone nearby left out, and the invite coming back.
+
+</details>
+
+<!-- COPY END 8c481d4d -->
+
 <!-- COPY BEGIN 47d9a5d0 [NEEDS HUMAN REVIEW] -->
 
 ## Test plan

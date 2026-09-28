@@ -132,13 +132,14 @@ Seven epics, 87 tickets, counted 2026-09-17.
 <!-- COPY BEGIN 7e73965c [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1">
-<summary><b>Who is in a room</b> · 22 tickets — 14 tested · 3 proved above the mailbox · 2 hardware proof owed · 2 operational proof owed · 1 written, not built</summary>
+<summary><b>Who is in a room</b> · 23 tickets — 14 tested · 3 proved above the mailbox · 2 hardware proof owed · 2 operational proof owed · 2 written, not built</summary>
 
 | Ticket | Status | Evidence |
 |---|---|---|
 | Setting up a room | Complete (tested) | Creation sheet, policies, people picker, the invitee's sheet: 2026-09-01 and 02. |
 | Removing somebody | Complete (tested) | Removed member could not read the next epoch: 2026-09-02. Two-member case only. |
 | The room chain | Written, not built | Ruled by Griff 2026-09-28 and written the same day in a session with no compiler: every entry names its device's last entry in the room, a removal or a departure names where each of the person's chains ends, and only those chains count. `TheRoomChainTests`. **Not built, not run**, and every device has to take this build together: an older build refuses chained entries. A removed device is not covered yet ([Open questions](open-questions.md#what-is-left-of-a-removed-persons-reach-into-a-rooms-past)). |
+| Tapping two phones swaps codes | Written, not built | Ruled by Griff 2026-09-28 and written the same day in a session with no compiler: the phones find each other over the local network, measure each other with the ultra-wideband chip, and swap codes, sealed between them, once exactly one phone is touching and both people say yes; an invite goes back the same way. `TappingPhonesTests`. **Not built, not run on any phone**; needs two iPhones with the chip, so it is proved on TestFlight. See [Decisions](decisions.md#tapping-two-phones-swaps-codes). |
 | Leaving properly | Complete (tested) | Beta left, both drew it, alpha rotated the key: 2026-09-02. |
 | Blocking a person | Complete (tested) | Local silent block built 2026-09-04; the key handover built 2026-09-14 against six tests. A blocked person is not a peer, so nothing of theirs is collected or acknowledged and their app stops being told *collected* — which is the signal the convention runs on — they are handed no future room keys, no media and no bell, and they are dropped from the Outpost audience. Nothing said while they were blocked is lost. The epoch turn this was first specified with was dropped on building it: in a group every other member re-grants the key anyway. |
 | Reporting a message | Complete (operational proof owed) | Sheet seen on the rig 2026-09-04 and its copy checked. The addresses exist and receive mail (Griff, 2026-09-17); a send from a phone has not been watched, and the vault a filed report goes into does not exist yet — [Proofs a rig cannot run](proofs-a-rig-cannot-run.md) and [Before TestFlight](pre-testflight.md#operational). |

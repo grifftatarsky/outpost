@@ -17,6 +17,31 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN f0e1c11a [NEEDS HUMAN REVIEW] -->
+
+### What can a phone nearby do to a tap?
+
+Raised 2026-09-28, writing tap-to-swap. The promise is that a phone across the room can't get your code
+or slip in its own. Two things get part of the way past the distance check, and the characters stop
+both.
+
+**A relay.** A modified app within Wi-Fi range can pass the two phones' first messages between them,
+so it sits in the middle while their real distance is measured. It is caught when the two phones also
+find each other directly, since two phones then read as touching; in the moment before they do, it
+could be handed a code. A code is made to be handed out, and one it swaps in shows as characters that
+do not match.
+
+**A shortened distance.** A USD 65 radio made two U1 chips 12 m apart measure 0 m in up to 4% of
+tries ([Ghost Peak](https://www.usenix.org/conference/usenixsecurity22/presentation/leu)). Three
+readings in a row and one touching phone at a time make it harder, not impossible.
+
+Recommended: accept both, since the worst either does is learn a code that is meant to be shared, and
+say in the app that the characters are still the check. The alternative, a short number shown on both
+screens to compare during the tap, adds a step to every tap to close a window the characters already
+close.
+
+<!-- COPY END f0e1c11a -->
+
 <!-- COPY BEGIN a41e8a48 [NEEDS HUMAN REVIEW] -->
 
 ### How should Outpost's own lock seal what this phone keeps?

@@ -54,6 +54,13 @@ struct AppRootView: View {
 
     @State var problem: ActionProblem?
 
+    #if os(iOS)
+        @State var tapSwapper: TapSwapper?
+    #endif
+    @State var tappingPhones = false
+    @State var tapArrivals: [String] = []
+    @State var tappedCodes: Set<String> = []
+
     static let pairIndex = PairIndex()
 
     let cloud = CloudKitMailbox(container: .default(), index: AppRootView.pairIndex)
@@ -475,6 +482,7 @@ struct AppRootView: View {
         .task { await forgetOldSiriDonations() }
         .environment(\.appLock, appLock)
         .environment(\.deviceSecurity, deviceSecurity)
+        .environment(\.tapToSwap, tapToSwap)
         .overlay {
             if !appLock.loaded {
                 Rectangle().fill(.background).ignoresSafeArea()
@@ -516,14 +524,26 @@ struct AppRootView: View {
             )
             .themed(.default)
         }
-        .sheet(item: $arrivingCode) { code in
+        #if os(iOS)
+            .sheet(isPresented: $tappingPhones, onDismiss: { finishTapping() }) {
+                if let tapSwapper {
+                    TapToSwapView(phase: tapSwapper.phase, trouble: tapSwapper.trouble) { tapSwapper.accept() }
+                        .themed(.default)
+                }
+            }
+        #endif
+        .sheet(item: $arrivingCode, onDismiss: { openWhatArrived() }) { code in
             AddSomeoneView(
                 rooms: { session.rooms.filter { !$0.isDirect } },
                 code: code.value,
                 onAdd: { room, joinerCode in
                     do {
-                        return try await session.invite(
+                        let issued = try await session.invite(
                             joinerCode: joinerCode, joining: room, through: mailbox)
+                        #if os(iOS)
+                            handBack(issued, to: joinerCode)
+                        #endif
+                        return issued
                     } catch {
                         Diagnostics.identity.error(
                             "invite failed: \(String(describing: error), privacy: .public)")
