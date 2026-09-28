@@ -3199,8 +3199,8 @@ refuses it, so a room where some members run an older build stops showing those 
 others write. Every device has to take this build together. **What it does not close:** a removed
 *device* (the member removes one of their own) still goes by its global cutoff, and an entry from
 before chains can still take a number from below where the chain begins. The first is to be closed,
-on Griff's word to fix the gap; the second waits on him
-([Open questions](open-questions.md#what-is-left-of-a-removed-persons-reach-into-a-rooms-past)).
+on Griff's word to fix the gap. The second goes with every other form an older build wrote, because
+none has shipped ([Open questions](open-questions.md#raised-and-answered-2026-09-28)).
 **Nor does the member list follow the chain.** It still reads a removed person's entries in the order
 their dates give, so their modified app could remove the person who removed them, or bring in a second
 identity of theirs. Found by reading on 2026-09-28, not yet shown by a test
@@ -3239,7 +3239,8 @@ Confirm button, the two people say the number aloud, each confirms, and only the
 **Not built.** The number only stops a relay if each phone commits to its key before it sees the
 other's. Otherwise a relay that has seen both keys can try keys of its own until the two numbers
 match; a commitment leaves it one guess per tap, which is why ZRTP commits
-([RFC 6189](https://www.rfc-editor.org/rfc/rfc6189)).
+([RFC 6189](https://www.rfc-editor.org/rfc/rfc6189)). **RULED the same day:** "send the hash and only
+reveal then ... those are fine statistics to work with." Six digits: one guess in a million.
 
 **PROPOSED, the details Griff has not seen:**
 

@@ -21,8 +21,9 @@ Settled decisions live in [Decisions](decisions.md).
 
 ### Does a removal decide who is in a room, or only what the room shows?
 
-Raised 2026-09-28, found by reading `RoomRoster` and `CausalOrder` while answering Griff. No test has
-run it yet.
+Raised 2026-09-28, found by reading `RoomRoster` and `CausalOrder` while answering Griff. Griff:
+"Fix this." The two attacks below are written as tests in `TheRoomChainTests` and should fail until
+the fix; they have not been run yet.
 
 The room chain decides which of a removed person's entries the room shows. The member list does not
 use it. It reads every entry in one order, and for two entries neither of which had seen the other,
@@ -85,31 +86,6 @@ Recommended: offer it as Griff describes, on those terms.
 
 <!-- COPY END a41e8a48 -->
 
-<!-- COPY BEGIN d041ce54 [NEEDS HUMAN REVIEW] -->
-
-### What is left of a removed person's reach into a room's past?
-
-Raised 2026-09-28, writing the room chain Griff ruled for. A removed device is answered (below); one gap
-is left.
-
-**Numbers from before chains.** An entry written before this build carries no link. Those count up to
-the entry the chain begins at, which closes everything after it, but a removed person could still sign
-an old-style entry under a number below that point that the room never held.
-
-This was recommended for accepting, as a fake old message at worst. It can't be: once the member list
-follows the chain (above), such an entry would count for who is in the room too, and a removed person
-could use one to remove the person who removed them and stay. Recommended: close it, one of two ways.
-
-- **Each device lists its own earlier entries once.** The first time it runs this build, a device
-  writes one entry in each room naming the entries it wrote there before chains. An unlinked entry
-  not on its list never counts once its author is gone. It keeps all history and gives a remover no
-  new power; it costs one entry per room per device, once.
-- **Refuse unlinked entries.** Simplest, and it removes the old rule from the code, but every room's
-  history from before 2026-09-28 is lost. Only right if nobody but Griff's own devices and the rig
-  holds any.
-
-<!-- COPY END d041ce54 -->
-
 <!-- COPY BEGIN ddabe07b [NEEDS HUMAN REVIEW] -->
 
 ### Should an ask for a photo reach every one of the sender's devices?
@@ -145,13 +121,22 @@ person who made it up could read what you, and then the room, said next. `WhoCan
 shows it. Now a device refuses a key from somebody the room shows as removed or gone, never replaces a
 key it already has, and takes a key to somebody's Outpost only from that person.
 
+What was found on 2026-09-28, reading `AppSession.adopt` and `EpochChain`: the only check on who
+sends a key is that the room does not show them as gone. Somebody who was never in the room passes
+it, so a member's device takes a newer key from anybody it has swapped codes with who knows the room,
+such as somebody invited and never let in, writes under it, and passes it to the whole room. And a
+newer key is taken with or without a link back to the key the device holds. `WhoCanSendYouAKeyTests`
+has the test; it should fail until the fix, and has not been run yet. Proposed: a newer key is taken
+only when its links lead back to the key this device already holds; a device that holds none takes
+its first key only from whoever vouched for it (below).
+
 What is still open:
 
 - **A device that can't read the room yet can't check who sent a key.** That is a device joining the
   room, or one restored from the recovery key. The member list is locked with the room key, so until
   the device has a key it can't see who is in the room. That is right: Griff ruled on 2026-09-26 that
   a device that hasn't been admitted doesn't see who is in the room. So it needs a different rule.
-  Proposed: a joining device takes its first key for a room only from the member who invited it. It
+  Ruled 2026-09-28: a joining device takes its first key for a room only from the member who invited it. It
   knows who that is from the invitation, so it needs no member list. Whether the inviter always sends that
   first key, in every admission setting, needs checking before this is built. After that it can read the room and check everybody else the
   normal way. A restored device has no inviter, so it still takes its first key from anybody.
@@ -207,6 +192,15 @@ Griff's answers in the session before, read against the questions raised writing
    (big fan of the flash/thunder ww2 method, so key saying is nice)." Both phones show one number, the
    two people say it aloud, each confirms, and only then do the codes cross. Owed.
    [Decisions](decisions.md#tapping-two-phones-swaps-codes).
+
+7. **How the tap's number is made** — "send the hash and only reveal then ... those are fine
+   statistics to work with." Each phone sends a hash of its key, reveals the key only once the other's
+   hash has arrived, and six digits leave a relay one guess in a million per tap. Owed.
+8. **Numbers from before chains** — there are none to keep: "There are no old builds. This app is not
+   deployed nor even in testflight," and "nobody has any history from before today." So every entry in a
+   room has to carry its link, and the weaker forms older builds wrote (an entry with no link, a removal
+   that names no heads, a device removal with no cutoff) stop being accepted. Owed.
+9. **A joining device's first key** — "100% a joiner should only take the key from the inviter." Owed.
 
 <!-- COPY END ecfca29f -->
 

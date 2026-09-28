@@ -61,6 +61,45 @@ struct WhoCanSendYouAKeyTests {
             """)
     }
 
+    private func befriended(with alice: AppSession, through mailbox: InMemoryMailbox) async throws -> AppSession {
+        let carol = TestSession.make()
+        await carol.load()
+        try await carol.createIdentity(displayName: "Carol")
+        let kitchen = try await alice.createRoom(named: "Kitchen")
+        let invite = try await alice.invite(
+            joinerCode: await carol.joinerCode(through: mailbox), joining: kitchen, through: mailbox)
+        try await carol.redeem(inviteCode: try invite.encoded())
+        try await alice.sync(through: mailbox)
+        try await carol.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
+        for _ in 0..<2 {
+            try await alice.sync(through: mailbox)
+            try await carol.sync(through: mailbox)
+        }
+        return carol
+    }
+
+    @Test("A key sent by somebody who was never in the room is refused")
+    func anOutsidersKeyIsRefused() async throws {
+        let (alice, _, mailbox, room) = try await joined()
+        let carol = try await befriended(with: alice, through: mailbox)
+        let aliceID = try #require(alice.enrolment?.identity.id)
+        let carolID = try #require(carol.enrolment?.identity.id)
+        try #require(!carol.deviceRecipients(of: aliceID).isEmpty, "precondition: Carol can seal a key to Alice's phone")
+        #expect(!alice.roster(of: room).members.contains(carolID), "precondition: Carol was never in this room")
+        let highest = try #require(alice.chains[room]?.highestKnownEpoch)
+
+        let (grant, from) = try newKey(sentBy: carol, to: alice, in: room, at: highest.next)
+        try await alice.adopt(grant, from: from, storedAt: .distantFuture)
+
+        #expect(
+            alice.chains[room]?.highestKnownEpoch == highest,
+            """
+            Somebody who was never in the room sent a newer key for it and it was taken. This member writes \
+            under the newest key it holds and passes it on to everybody in the room, so the sender would \
+            read what the room says next.
+            """)
+    }
+
     @Test("A key sent by somebody still in the room is accepted")
     func aMembersKeyIsTaken() async throws {
         let (alice, bob, _, room) = try await joined()

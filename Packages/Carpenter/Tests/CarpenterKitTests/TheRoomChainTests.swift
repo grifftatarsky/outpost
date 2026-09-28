@@ -232,6 +232,62 @@ struct TheRoomChainTests {
         #expect(gone.contains(slipped.hash), "an entry under another room's number counted after they left")
         #expect(gone.isDisjoint(with: [one.hash, three.hash]))
     }
+
+    // MARK: Who is in the room
+
+    private func members(_ entries: [Entry], chain: EpochChain, room: RoomID) -> Set<ParticipantID> {
+        let projected = Projection(
+            viewer: Identity.generate().id, rendered: LogRenderer.render(entries, using: chain),
+            chains: RoomChains(entries))
+        return projected.roster(of: room, opening: { rendered in
+            entries.first { $0.hash == rendered.id }?.opened(using: chain)
+        }).members
+    }
+
+    @Test("Somebody removed cannot remove the person who removed them by dating it earlier")
+    func aRemovalCannotBeAnsweredFromOutside() throws {
+        var (alice, sam, room, entries) = try room()
+        let said = try sam.append(try Payload.post("before"), at: start + 10, room: room, chained: true)
+        let removal = try alice.append(
+            try Payload.removal(of: sam.identity.id, heads: [said.hash]), clock: seeing(sam.feedKey, seq: said.seq),
+            at: start + 20, room: room, chained: true)
+        let answer = try sam.append(
+            try Payload.removal(of: alice.identity.id, heads: [entries[2].hash]), at: start + 19, room: room,
+            chained: true)
+        entries += [said, removal, answer]
+
+        #expect(
+            !members(entries, chain: alice.chain, room: room).contains(sam.identity.id),
+            """
+            After Alice removed Sam, Sam wrote a removal of Alice dated a second before hers and claiming \
+            not to have seen it. It was read first, so Alice's removal no longer counted and Sam stayed in.
+            """)
+    }
+
+    @Test("Somebody removed cannot bring in a second identity by dating the invitation earlier")
+    func aRemovedPersonCannotInviteFromOutside() throws {
+        var (alice, sam, room, entries) = try room()
+        let puppet = Identity.generate()
+        let said = try sam.append(try Payload.post("before"), at: start + 10, room: room, chained: true)
+        let removal = try alice.append(
+            try Payload.removal(of: sam.identity.id, heads: [said.hash]), clock: seeing(sam.feedKey, seq: said.seq),
+            at: start + 20, room: room, chained: true)
+        let invite = try TestInvite.issue(
+            joining: room, joinerKeys: puppet.publicKeys, by: sam.identity, at: start)
+        let asked = try sam.append(try Payload.joinRequest(invite), at: start + 18, room: room, chained: true)
+        let confirmed = try sam.append(
+            try Payload.joinConfirmed(try JoinConfirmedBody.signed(confirming: invite, by: puppet)),
+            at: start + 19, room: room, chained: true)
+        entries += [said, removal, asked, confirmed]
+
+        #expect(
+            !members(entries, chain: alice.chain, room: room).contains(puppet.id),
+            """
+            After Alice removed Sam, Sam wrote an invitation of a second identity and its confirmation, \
+            dated before the removal. Both counted as written while Sam was in, so the second identity \
+            stayed in the room.
+            """)
+    }
 }
 
 @MainActor
