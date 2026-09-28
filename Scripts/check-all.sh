@@ -8,30 +8,18 @@
 # files this branch changed; it is printed at the end and copied to the clipboard, so it can be
 # pasted straight back into the session that asked for the run.
 #
-# Usage: Scripts/check-all.sh [simulator-name]    (default: outpost-alpha)
+# Usage: Scripts/check-all.sh [simulator-name]   run everything (default simulator: outpost-alpha)
+#        Scripts/check-all.sh --digest           read the last run's logs again, without rebuilding
 
 set -uo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root" || exit 1
 
-simulator="${1:-outpost-alpha}"
 logs="${TMPDIR:-/tmp}/carpenter-check"
 digest="$logs/digest.txt"
-rm -rf "$logs"
-mkdir -p "$logs"
-
 base="$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || true)"
-changed="$( [ -n "$base" ] && git diff --name-only "$base" HEAD -- '*.swift' )"
-
-{
-    printf 'branch %s at %s\n' "$(git rev-parse --abbrev-ref HEAD)" "$(git rev-parse --short HEAD)"
-    xcodebuild -version 2>/dev/null | head -1
-    [ -n "$(git status --porcelain)" ] && printf 'the working tree has uncommitted changes\n'
-} >"$digest"
-
-summary=()
-failed=0
+changed="$([ -n "$base" ] && git diff --name-only "$base" HEAD -- '*.swift')"
 
 faults() {
     python3 - "$1" "$2" "$changed" <<'PY'
@@ -40,7 +28,8 @@ import sys
 
 log, outcome = sys.argv[1], sys.argv[2]
 changed = [path for path in sys.argv[3].splitlines() if path]
-lines = open(log, errors="replace").read().splitlines()
+escape = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+lines = [escape.sub("", line) for line in open(log, errors="replace").read().splitlines()]
 
 header = re.compile(r"^(/\S+?):\d+:\d+: (error|warning): ")
 continues = re.compile(r"^(\s|\d|\||\[#|:)")
@@ -93,30 +82,67 @@ if len(out) > 200:
 PY
 }
 
+outcomes() {
+    if [ -f "$logs/outcomes" ]; then
+        cat "$logs/outcomes"
+    elif [ -f "$digest" ]; then
+        sed -n '/^=== summary ===$/,$p' "$digest" | awk '$1 == "passed" || $1 == "FAILED" { print $1, $2 }'
+    fi
+}
+
+header() {
+    if [ -f "$logs/header" ]; then
+        cat "$logs/header"
+    elif [ -f "$digest" ]; then
+        sed -n '1,/^$/p' "$digest" | grep -v '^$'
+    fi
+}
+
+summary() {
+    if [ -f "$logs/summary" ]; then
+        cat "$logs/summary"
+    elif [ -f "$digest" ]; then
+        sed -n '/^=== summary ===$/,$p' "$digest" | tail -n +2
+    fi
+}
+
+write_digest() {
+    local listed outcome name found
+    listed="$(outcomes)"
+    {
+        header
+        while read -r outcome name; do
+            [ -f "$logs/$name.log" ] || continue
+            if [ "$outcome" = FAILED ]; then
+                printf '\n=== %s ===\n' "$name"
+                faults "$logs/$name.log" failed
+            else
+                found="$(faults "$logs/$name.log" passed)"
+                [ -n "$found" ] &&
+                    printf '\n=== %s passed, with warnings in files this branch changed ===\n%s\n' "$name" "$found"
+            fi
+        done <<<"$listed"
+        printf '\n=== summary ===\n'
+        summary
+    } >"$digest.new"
+    mv "$digest.new" "$digest"
+}
+
 run() {
     local name="$1"
     shift
     printf '%-18s' "$name"
-    local started=$SECONDS
-    if "$@" >"$logs/$name.log" 2>&1; then
-        printf 'passed   %4ss\n' $((SECONDS - started))
-        summary+=("passed   $name")
-        local warnings
-        warnings="$(faults "$logs/$name.log" passed)"
-        [ -n "$warnings" ] && printf '\n=== %s passed, with warnings in files this branch changed ===\n%s\n' \
-            "$name" "$warnings" >>"$digest"
-        return 0
-    fi
-    printf 'FAILED   %4ss   %s\n' $((SECONDS - started)) "$logs/$name.log"
-    summary+=("FAILED   $name")
-    failed=1
-    { printf '\n=== %s ===\n' "$name"; faults "$logs/$name.log" failed; } >>"$digest"
-    return 1
+    local started=$SECONDS outcome=passed
+    "$@" >"$logs/$name.log" 2>&1 || outcome=FAILED
+    printf '%-8s %4ss\n' "$outcome" $((SECONDS - started))
+    printf '%s %s\n' "$outcome" "$name" >>"$logs/outcomes"
+    printf '%-8s %s\n' "$outcome" "$name" >>"$logs/summary"
+    [ "$outcome" = passed ]
 }
 
 skip() {
     printf '%-18sskipped  (%s)\n' "$1" "$2"
-    summary+=("skipped  $1 ($2)")
+    printf '%-8s %s (%s)\n' skipped "$1" "$2" >>"$logs/summary"
 }
 
 package_suite() { (cd Packages/Carpenter && swift test); }
@@ -126,26 +152,38 @@ build_for() {
 }
 app_suite() {
     xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter \
-        -destination "platform=iOS Simulator,name=$simulator" -only-testing:CarpenterTests -quiet
+        -destination "platform=iOS Simulator,name=$1" -only-testing:CarpenterTests -quiet
 }
 
-run package-suite package_suite
-run lint ./Scripts/lint-branding.sh
-run copy-markers python3 Scripts/copy-review.py check
-run build-macos build_for "platform=macOS"
-if run build-ios build_for "generic/platform=iOS Simulator"; then
-    run app-suite app_suite
-    run release-leaves ./Scripts/check-release-leaves.sh
+if [ "${1:-}" = "--digest" ]; then
+    if [ ! -d "$logs" ]; then
+        printf 'There is no earlier run in %s.\n' "$logs"
+        exit 1
+    fi
 else
-    skip app-suite "the iOS build failed"
-    skip release-leaves "the iOS build failed"
+    simulator="${1:-outpost-alpha}"
+    rm -rf "$logs"
+    mkdir -p "$logs"
+    {
+        printf 'branch %s at %s\n' "$(git rev-parse --abbrev-ref HEAD)" "$(git rev-parse --short HEAD)"
+        xcodebuild -version 2>/dev/null | head -1
+        [ -n "$(git status --porcelain)" ] && printf 'the working tree has uncommitted changes\n'
+    } >"$logs/header"
+
+    run package-suite package_suite
+    run lint ./Scripts/lint-branding.sh
+    run copy-markers python3 Scripts/copy-review.py check
+    run build-macos build_for "platform=macOS"
+    if run build-ios build_for "generic/platform=iOS Simulator"; then
+        run app-suite app_suite "$simulator"
+        run release-leaves ./Scripts/check-release-leaves.sh
+    else
+        skip app-suite "the iOS build failed"
+        skip release-leaves "the iOS build failed"
+    fi
 fi
 
-{
-    printf '\n=== summary ===\n'
-    printf '%s\n' "${summary[@]}"
-} >>"$digest"
-
+write_digest
 printf '\n'
 cat "$digest"
 printf '\nFull logs: %s\n' "$logs"
@@ -153,4 +191,4 @@ if command -v pbcopy >/dev/null; then
     pbcopy <"$digest"
     printf 'The digest is on the clipboard.\n'
 fi
-exit $failed
+case "$(summary)" in *FAILED*) exit 1 ;; esac

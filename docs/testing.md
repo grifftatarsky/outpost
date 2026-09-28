@@ -58,7 +58,8 @@ the lint, the copy markers, a build for macOS and for the iOS Simulator, the app
 for words a Release build should not carry. Every step runs even when an earlier one fails, so one
 run finds every kind of fault. It ends with a digest of the errors, the failed tests and the warnings
 in files the branch changed, and copies that digest to the clipboard, which is what a session
-without a compiler needs pasted back.
+without a compiler needs pasted back. `Scripts/check-all.sh --digest` reads the last run's logs
+again without rebuilding anything.
 
 <!-- COPY END d9819eff -->
 
