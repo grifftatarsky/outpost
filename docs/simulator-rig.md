@@ -23,7 +23,9 @@ them without taking over the Mac.
 
 Four simulators on iOS 26.5, run from Xcode 27, where `DeviceHub.app` replaces `Simulator.app`.
 **Address them by `id=<UDID>`, never by `name=`**: a duplicate name once made `xcodebuild` boot a
-shut-down twin instead of the running device.
+shut-down twin instead of the running device, and on Xcode 27 a name also means the newest iOS, so
+`name=outpost-alpha` finds no device at all (measured 2026-09-28). `Scripts/check-all.sh` looks the
+UDID up by name through `.github/scripts/pick-simulator.py`.
 
 | Name | UDID | Apple Account | Member | Points |
 |---|---|---|---|---|

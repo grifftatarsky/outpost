@@ -13,9 +13,8 @@
 # Usage: Scripts/check-release-leaves.sh [simulator-udid]
 set -uo pipefail
 
-UDID="${1:-}"
-DEST="platform=iOS Simulator,name=outpost-alpha"
-if [ -n "$UDID" ]; then DEST="platform=iOS Simulator,id=$UDID"; fi
+UDID="${1:-$(xcrun simctl list devices available --json | python3 .github/scripts/pick-simulator.py outpost-alpha)}"
+DEST="platform=iOS Simulator,id=$UDID"
 
 DERIVED="${DERIVED_DATA:-/tmp/carpenter-release-check}"
 

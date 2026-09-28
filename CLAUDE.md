@@ -148,14 +148,18 @@ cd Packages/Carpenter && swift test
 ```
 
 ```bash
-xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,name=outpost-alpha' build
+xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=5D9E446D-DE6D-474A-ABEE-0F4096E775B5' build
 ```
 
 ```bash
-xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,name=outpost-alpha' -only-testing:CarpenterTests
+xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=5D9E446D-DE6D-474A-ABEE-0F4096E775B5' -only-testing:CarpenterTests
 ```
 
 `SKIP_SYMBOL_CHECK=1` skips the lint's slowest rule while iterating. CI runs all of it.
+
+The simulator is `outpost-alpha`, named by its UDID: on Xcode 27 `name=` means the newest iOS and the
+rig runs 26.5. `Scripts/check-all.sh` runs every check above and the Release leak check, and ends in a
+digest of what failed, which is what a session without a compiler asks Griff to paste back.
 
 ## The rig, which is not optional
 

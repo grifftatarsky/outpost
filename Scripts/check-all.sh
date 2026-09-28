@@ -152,7 +152,13 @@ build_for() {
 }
 app_suite() {
     xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter \
-        -destination "platform=iOS Simulator,name=$1" -only-testing:CarpenterTests -quiet
+        -destination "platform=iOS Simulator,id=$1" -only-testing:CarpenterTests -quiet
+}
+release_leaves() {
+    ./Scripts/check-release-leaves.sh "$1" && return 0
+    local status=$?
+    cat /tmp/release-check-build.log 2>/dev/null
+    return $status
 }
 
 if [ "${1:-}" = "--digest" ]; then
@@ -174,12 +180,16 @@ else
     run lint ./Scripts/lint-branding.sh
     run copy-markers python3 Scripts/copy-review.py check
     run build-macos build_for "platform=macOS"
-    if run build-ios build_for "generic/platform=iOS Simulator"; then
-        run app-suite app_suite "$simulator"
-        run release-leaves ./Scripts/check-release-leaves.sh
-    else
+    udid="$(xcrun simctl list devices available --json 2>/dev/null | python3 .github/scripts/pick-simulator.py "$simulator")"
+    if ! run build-ios build_for "generic/platform=iOS Simulator"; then
         skip app-suite "the iOS build failed"
         skip release-leaves "the iOS build failed"
+    elif [ -z "$udid" ]; then
+        skip app-suite "no simulator named $simulator"
+        skip release-leaves "no simulator named $simulator"
+    else
+        run app-suite app_suite "$udid"
+        run release-leaves release_leaves "$udid"
     fi
 fi
 
