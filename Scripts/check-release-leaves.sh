@@ -61,6 +61,8 @@ LEAVES=(
     "Start over"
     "Test Make it fit"
     "Make it fit failed"
+    "Test a contact's space"
+    "pair-notify-anything"
 )
 
 status=0

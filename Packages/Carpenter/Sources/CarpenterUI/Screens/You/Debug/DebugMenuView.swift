@@ -58,6 +58,17 @@ struct DebugMenuView: View {
                         )
                     }
                 }
+                if let contactSpaceTest = actions.contactSpaceTest {
+                    NavigationLink {
+                        ContactSpaceTestView(run: contactSpaceTest)
+                    } label: {
+                        SettingsRow(
+                            icon: "bell.badge",
+                            title: Text("Test a contact's space", bundle: .module),
+                            detail: Text("Which changes in a contact's space notify this phone", bundle: .module)
+                        )
+                    }
+                }
                 NavigationLink {
                     HapticsProbeView()
                 } label: {

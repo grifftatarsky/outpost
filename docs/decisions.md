@@ -2958,7 +2958,7 @@ receipts for what was collected from them, and link hand-offs. Nobody writes any
 iCloud. Photos are stored once in a read-only space and each mailbox points to them. The shared
 outbox, the address lists on each packet and the outbox-link question all go away.
 
-Promises, not yet confirmed: only the two people can read the space they share, and nobody else can
+Promises, confirmed by Griff 2026-09-27 ("The philosophy is sound"): only the two people can read the space they share, and nobody else can
 learn it exists; nothing anyone writes can change or delete mail to anyone else; closing a person's
 space ends their access to all of yours and touches nobody else's; and only the sender's phone
 decides what was collected, from receipts only the recipient's device can sign.

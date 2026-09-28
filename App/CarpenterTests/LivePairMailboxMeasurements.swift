@@ -65,6 +65,14 @@ enum PairRig {
         return "role \(participant.role.rawValue): name[\(name.isEmpty ? "empty" : "\(name.count) chars")] email[\(email == "no email" ? email : "present")] phone[\(phone == "no phone" ? phone : "present")] record[\(record)] account[\(who.hasiCloudAccount)]"
     }
 
+    static let notifyZone = CKRecordZone.ID(zoneName: "PairNotify")
+
+    static func notifyRecord(_ type: String, _ name: String) -> CKRecord {
+        let record = CKRecord(recordType: type, recordID: CKRecord.ID(recordName: name, zoneID: notifyZone))
+        record["body"] = Data([1]) as NSData
+        return record
+    }
+
     static func sharedZone(_ index: Int) async throws -> CKRecordZone.ID {
         let (zones, _, _) = try await sharedChanges(since: nil)
         guard let zone = zones.first(where: { $0.zoneName == "PairMeasure-\(index)" }) else { throw CKError(.zoneNotFound) }
@@ -377,6 +385,61 @@ struct LivePairMailboxMeasurements {
         _ = try await PairRig.container.accept(metadata)
         let again = try await PairRig.container.shareMetadata(for: url)
         PairRig.note("after joining, beta sees everyone: \(again.share.participants.map(PairRig.identity))")
+    }
+
+    @Test(.enabled(if: PairRig.step == "beta-notify-make"))
+    func betaMakesTheTestSpace() async throws {
+        let db = PairRig.container.privateCloudDatabase
+        _ = try await db.modifyRecordZones(saving: [CKRecordZone(zoneID: PairRig.notifyZone)], deleting: [])
+        let share = CKShare(recordZoneID: PairRig.notifyZone)
+        share.publicPermission = .readOnly
+        let message = PairRig.notifyRecord("PairNotifyMessage", "seed-message")
+        let receipt = PairRig.notifyRecord("PairNotifyReceipt", "seed-receipt")
+        let saved = try await db.modifyRecords(saving: [share, message, receipt], deleting: [])
+        let url = try #require((try saved.saveResults[share.recordID]?.get() as? CKShare)?.url)
+        let link = CKRecord(recordType: "PairNotifyLink", recordID: CKRecord.ID(recordName: "pair-notify-test"))
+        link["url"] = url.absoluteString as NSString
+        _ = try await PairRig.container.publicCloudDatabase.modifyRecords(saving: [link], deleting: [], savePolicy: .allKeys)
+        PairRig.note("test space made and its link published")
+    }
+
+    @Test(.enabled(if: PairRig.step == "beta-notify-send"))
+    func betaChangesTheTestSpace() async throws {
+        let db = PairRig.container.privateCloudDatabase
+        let steps: [(String, () async throws -> Void)] = [
+            ("1 added a message record", {
+                _ = try await db.modifyRecords(saving: [PairRig.notifyRecord("PairNotifyMessage", UUID().uuidString)], deleting: [])
+            }),
+            ("2 added a receipt record", {
+                _ = try await db.modifyRecords(saving: [PairRig.notifyRecord("PairNotifyReceipt", UUID().uuidString)], deleting: [])
+            }),
+            ("3 changed a message record", {
+                let record = try await db.record(for: CKRecord.ID(recordName: "seed-message", zoneID: PairRig.notifyZone))
+                record["body"] = Data([7]) as NSData
+                _ = try await db.modifyRecords(saving: [record], deleting: [])
+            }),
+            ("4 deleted a message record", {
+                _ = try await db.modifyRecords(saving: [], deleting: [CKRecord.ID(recordName: "seed-message", zoneID: PairRig.notifyZone)])
+            }),
+            ("5 deleted a receipt record", {
+                _ = try await db.modifyRecords(saving: [], deleting: [CKRecord.ID(recordName: "seed-receipt", zoneID: PairRig.notifyZone)])
+            }),
+        ]
+        let format = DateFormatter()
+        format.dateFormat = "HH:mm:ss"
+        for (index, (label, work)) in steps.enumerated() {
+            if index > 0 { try await Task.sleep(for: .seconds(120)) }
+            try await work()
+            PairRig.note("\(format.string(from: Date()))  \(label)")
+        }
+    }
+
+    @Test(.enabled(if: PairRig.step == "beta-notify-clean"))
+    func betaRemovesTheTestSpace() async throws {
+        _ = try await PairRig.container.privateCloudDatabase.modifyRecordZones(saving: [], deleting: [PairRig.notifyZone])
+        _ = try await PairRig.container.publicCloudDatabase.modifyRecords(
+            saving: [], deleting: [CKRecord.ID(recordName: "pair-notify-test")])
+        PairRig.note("test space and its public link removed")
     }
 
     @Test(.enabled(if: PairRig.step == "alpha-clean"))
