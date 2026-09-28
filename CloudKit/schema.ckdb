@@ -9,6 +9,7 @@ DEFINE SCHEMA
         "___recordID"   REFERENCE,
         attachmentID    STRING,
         blob            ASSET,
+        label           BYTES,
         outstanding     LIST<BYTES>,
         receiptTags     LIST<BYTES>,
         receiptValues   LIST<BYTES>,

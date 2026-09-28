@@ -39,9 +39,10 @@ Every type and field is read off the line that writes it. Nothing here is a gues
 | | `outstanding`, `wrapTags`, `wrapValues`, `grantTags`, `grantValues` | LIST\<BYTES\> | same |
 | `MessageBell` | `ring` | INT64 | `CloudKitMailbox+Bell.swift` |
 | `SiblingFeed` | `feed` | BYTES | `CloudKitEntrySync.payloadKey` |
-| `Attachment` | `attachmentID` | STRING | `AttachmentWire.fields(of:)` |
-| | `blob` | ASSET | written as a `CKAsset` in `CloudKitRecords.swift` |
+| `Attachment` | `label` | BYTES | `AttachmentWire.fields(of:)`: which photo a copy is, sealed for the pair |
+| | `blob` | ASSET | written as a `CKAsset` in `CloudKitMailbox+Attachments.swift` |
 | | `outstanding` | LIST\<BYTES\> | `AttachmentWire` |
+| | `attachmentID` | STRING | no longer written (since 2026-09-28); it named the photo in the clear |
 | `OutboxShareOffer` | `sealed` | BYTES | `CloudKitMailbox+ReverseChannel.swift` |
 | | `digest` | STRING | same |
 

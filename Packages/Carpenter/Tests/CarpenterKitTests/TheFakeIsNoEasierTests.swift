@@ -48,32 +48,32 @@ struct TheFakeIsNoEasierTests {
             "a packet at the app's own budget was refused, so the budget is above the ceiling")
     }
 
-    @Test("An upload is not sweepable until it has settled")
-    func anUploadIsNotSweepableUntilSettled() async throws {
+    @Test("A copy says when it was first stored, as iCloud's creation date does, and a rewrite does not move it")
+    func aCopyKeepsWhenItWasFirstStored() async throws {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox(clock: clock)
         let pair = try await linked(mailbox)
         let tag = pair.toBob.outgoingTag(window: 1)
-        let id = AttachmentID()
+        let copies = try OutgoingAttachment(
+            id: AttachmentID(), ciphertext: Data(count: 16), recipients: [pair.toBob.them: tag]
+        ).copies(between: { _ in pair.toBob.secret })
 
-        try await mailbox.upload(
-            OutgoingAttachment(id: id, ciphertext: Data(count: 16), recipients: [pair.toBob.them: tag]), in: pair.alice)
-
-        #expect(
-            try await mailbox.pendingAttachments(in: pair.alice)[id]?.recipients == [tag],
-            "a fresh upload did not report who it is for")
-        #expect(
-            try await mailbox.sweepableAttachments(in: pair.alice)[id] == nil,
-            """
-            A fresh upload was already sweepable. The two questions are different: who still owes \
-            this, and what is old enough to be an orphan. Answering both with one method is what \
-            let a new reader wipe the outstanding list of a photo posted minutes earlier.
-            """)
+        try await mailbox.upload(copies, in: pair.alice)
+        let first = try #require(await mailbox.storedCopies(in: pair.alice).first)
+        #expect(first.recipients == [tag], "a fresh upload did not report who it is for")
 
         clock.advance(by: MailboxRules.sweepAge + 1)
+        try await mailbox.upload(copies, in: pair.alice)
+        let again = try #require(await mailbox.storedCopies(in: pair.alice).first)
         #expect(
-            try await mailbox.sweepableAttachments(in: pair.alice)[id] != nil,
-            "an upload older than the sweep age never became sweepable")
+            again.storedAt == first.storedAt,
+            """
+            Writing a copy again moved when it was first stored. iCloud keeps a record's creation \
+            date through a rewrite, and the sweep waits on that date so it cannot race an upload \
+            whose entry has not arrived yet; answering "how old" with the last write is what let a \
+            new reader wipe the outstanding list of a photo posted minutes earlier.
+            """)
+        #expect(again.modifiedAt > first.modifiedAt)
     }
 
     @MainActor
@@ -139,18 +139,20 @@ struct TheFakeIsNoEasierTests {
         let sealed = Data((0..<64).map { _ in UInt8.random(in: .min ... .max) })
         let link = try await mailbox.space(
             for: pair.toBob.them, naming: LocalPairStore.account(of: pair.toBob.them), in: pair.alice)
+        let copies = try OutgoingAttachment(
+            id: id, ciphertext: sealed, recipients: [pair.toBob.them: pair.toBob.outgoingTag(window: 1)]
+        ).copies(between: { _ in pair.toBob.secret })
+        let copy = try #require(copies.copies[pair.toBob.them])
 
-        try await mailbox.upload(
-            OutgoingAttachment(id: id, ciphertext: sealed, recipients: [pair.toBob.them: pair.toBob.outgoingTag(window: 1)]),
-            in: pair.alice)
+        try await mailbox.upload(copies, in: pair.alice)
 
-        #expect(try await mailbox.download(id, from: pair.toBob.me, in: pair.bob) == sealed)
+        #expect(await mailbox.download(copy.name, of: id, from: pair.toBob.me, in: pair.bob) == copy.sealed)
         #expect(
             await mailbox.join(PairLink(account: await mailbox.account(in: pair.alice), url: link), of: pair.toBob.me, in: stranger)
                 == .notYetNamed,
             "somebody holding the link but not named on it got in")
         #expect(
-            try await mailbox.download(id, from: pair.toBob.me, in: stranger) == nil,
+            await mailbox.download(copy.name, of: id, from: pair.toBob.me, in: stranger) == nil,
             "a photo reached somebody its space was not shared with")
     }
 

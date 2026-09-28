@@ -58,22 +58,24 @@ worth attacking.
 |---|---|---|
 | `Curve25519.Signing` (Ed25519) | `Identity`, `DeviceKeys` | every signature in the system |
 | `Curve25519.KeyAgreement` (X25519) | `Identity.sharedSecret` | the one secret each pair of people share |
-| `ChaChaPoly` (RFC 8439 AEAD) | six files | every piece of ciphertext in the system |
+| `ChaChaPoly` (RFC 8439 AEAD) | `Pairwise`, `DeviceSeal`, `EpochChain`, `SealedPayload`, `SealedAttachment`, `Deathmark`, `SyncEngine`, `SiblingFeed` | every piece of ciphertext in the system |
 | `HKDF<SHA256>` | `EpochChain`, `Pairwise`, `SealedSiblingFeed` | turning one secret into several unrelated keys |
-| `HMAC<SHA256>` | `Pairwise` | the rotating addresses and the bell names |
+| `HMAC<SHA256>` | `Pairwise`, `PhotoCopy` | the rotating addresses, which space is whose, and the names of photo copies |
 | `SHA256` | `Identity`, `Entry`, `SealedAttachment`, `ShortAuthenticationString` | identifiers, content hashes, fingerprints |
 | `SymmetricKey(size: .bits256)` | `EpochSecret.random`, `SealedAttachment.seal`, `SyncEngine.pack` | all random key material |
 
-There is **no hand-rolled cipher, curve, hash, MAC or KDF, and no custom padding, compression or
-encoding of plaintext before sealing**. There is also no injectable random-number seam in the
+There is **no hand-rolled cipher, curve, hash, MAC or KDF, and no custom padding or encoding of
+plaintext before sealing**. Packets and the records a member's devices write for each other are
+compressed with Apple's LZFSE before they are sealed ([ruled 2026-09-27](decisions.md#what-goes-to-icloud-is-compressed-before-it-is-sealed));
+this sentence said otherwise until 2026-09-28. In a packet, the words people wrote were already
+sealed before compression, so what compresses is structure. There is also no injectable random-number seam in the
 shipping path: `RandomSource` exists as a protocol but nothing in `Sources` outside its own file and
 the test fakes refers to it, so every byte of key material comes from CryptoKit's own generator and
 there is no place to substitute a weak one.
 
-The twelve files that are *ours* are `CanonicalBytes`, `Identity`, `IdentityStore`,
-`DeviceCertificate`, `DeviceRegistry`, `Pairwise`, `EpochChain`, `EpochGrant`, `SealedPayload`,
-`SealedAttachment`, `RecoveryKey` and `ShortAuthenticationString`, plus the way `Entry`, `SyncEngine`
-and `SiblingFeed` use them.
+The files that are *ours* are every file in `CarpenterKit/Crypto`, plus the way `Entry`, `SyncEngine`
+and `SiblingFeed` use them. (This used to name twelve files; by 2026-09-28 there were eighteen, so it
+names the folder instead.)
 
 **One thing done right that is usually done wrong.** The signing key and the key-agreement key are
 **two independent seeds**, not one seed used for both. Reusing a single Curve25519 private key as
@@ -264,16 +266,16 @@ sides derive the same value without either being "first". The raw ECDH output is
 directly — it goes through HKDF with a domain-separated salt, which is correct and is the step most
 often skipped.
 
-From that one 32-byte secret, five unrelated things are derived, each under its own domain string so
-that none of them can be used to attack another:
+From that one 32-byte secret, these are derived, each under its own domain string so that none of
+them can be used to attack another (checked against `Pairwise.swift` and `PhotoCopy.swift`,
+2026-09-28):
 
 | Derived thing | Construction | Purpose |
 |---|---|---|
 | `recipientTag(window:for:)` | `HMAC-SHA256(key, "…recipient-tag.v1" ‖ window ‖ recipient)` | the rotating address a packet is left under |
-| `bellName(for:)` | `HMAC-SHA256(key, "…message-bell.v1" ‖ recipient)`, first 16 bytes hex | the push subscription name |
-| `shareOfferName(for:)` | `HMAC-SHA256(key, "…share-offer.v1" ‖ recipient)`, first 16 bytes hex | the rendezvous record name |
-| `shareOfferDigest(of:)` | `HMAC-SHA256(key, "…share-offer-digest.v1" ‖ url)`, first 16 bytes hex | detecting a substituted share URL |
-| `wrap` / `unwrap` | `ChaChaPoly` with the key directly, caller-supplied associated data | epoch grants, packet keys |
+| `pairHint` | `HMAC-SHA256(key, "…pair-space.v1")` | which of your spaces is for which person |
+| `PhotoCopyName(of:between:)` | `HMAC-SHA256(key, "…photo-copy-name.v1" ‖ photo)`, first 16 bytes hex | the name of that person's copy of a photo, and of their receipt for it |
+| `wrap` / `unwrap` | `ChaChaPoly` with the key directly, caller-supplied associated data | epoch grants, packet keys, receipts, room-entry links, photo copies and their labels |
 
 **The hidden address changes when a device is removed** (since 2026-09-27). Every device you approve
 holds your `agreementSeed`, and a device you later remove keeps it, so the secret above can be worked
@@ -674,10 +676,10 @@ sealed body, and the grant tags and values. **What that leaks, stated plainly:**
   every share list.
 - Roughly how much was said (the ciphertext's size), when it was written, and when the reader
   collected it, because the reader's receipt appears in the reader's own space for the sender.
-- That one photo went to several people. Each recipient's copy carries the same sealed bytes and the
-  same photo number. Griff ruled on 2026-09-28 that each copy is sealed apart
-  ([Decisions](decisions.md#a-photo-is-copied-for-each-person-it-goes-to-and-each-copy-is-sealed-apart)),
-  not built yet.
+- That one photo probably went to several people: the copies are written in one operation, at the
+  same moment, and are the same size. Since 2026-09-28 they share nothing else: each copy is sealed
+  again for its pair and named from the pair's secret, and no field names the photo
+  ([Photos and clips](#photos-and-clips)). Written in a session without a compiler; not yet built.
 - The pair's `hint`, a keyed hash of the pair's secret, which is the same in the two people's spaces
   for each other. Apple can already match those two spaces from their share lists, so it adds
   nothing.
@@ -732,6 +734,24 @@ guard matches(ciphertext, reference) else { throw AttachmentError.digestMismatch
 ```
 
 Size caps are enforced before sealing: 12 MB for an image, 287 MB for a video, which is sealed in 16 MB pieces.
+
+**Each person's copy is sealed apart** (since 2026-09-28, [ruled by Griff](decisions.md#a-photo-is-copied-for-each-person-it-goes-to-and-each-copy-is-sealed-apart)).
+The sealed photo is copied into the sender's space for each person it is for, and each copy is
+sealed again under the pair's original secret (`PhotoCopy.seal`: `ChaChaPoly`, with the photo's
+number bound in under `carpenter.photo-copy.v1`). The copy's record is named from the same secret
+(`PhotoCopyName`), and the only other field that says which photo it is, the label, is the photo's
+number sealed under that secret with the copy's name bound in (`carpenter.photo-copy-label.v1`), so a
+label moved onto another copy does not open. The reader's receipt for the copy is named after the
+copy, not the photo. So two people's copies of one photo share no bytes and no name, and nothing
+written to iCloud carries the photo's number (`PhotoCopiesAreSealedApartTests`). The pair's original
+secret is used, not the address secret that changes when a device is removed, because the copy
+needs only to be unlinkable, not secret: the photo's own key travels inside the room.
+
+Opening checks the digest first: bytes that already match it are taken as they are, which is how a
+photo from the old shared outbox is still read; anything else must open under the pair's secret and
+then match (`PhotoCopy.open`). **What this does not hide:** the copies are the same size and are
+written at the same moment, so whoever can see several spaces can still guess that one photo went to
+several people. Written in a session without a compiler; not yet built or run.
 
 Separately, `CarpenterMedia.ImagePreparer.redrawn` draws every image into a fresh context before
 encoding, because ImageIO carries a source's Exif block — lens, original time, location — into a

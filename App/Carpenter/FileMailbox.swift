@@ -78,30 +78,28 @@
 
         func withdraw(_ id: PacketID, in pairs: Pairs) throws { try change { $0.withdraw(id, as: self.account(in: pairs)) } }
 
-        func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) throws {
-            try change(writing: true) { try $0.upload(attachment, in: pairs, as: self.account(in: pairs), at: Date()) }
+        func upload(_ copies: PhotoCopies, in pairs: Pairs) throws {
+            try change(writing: true) { try $0.upload(copies, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
-        func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) throws -> Data? {
-            try change { $0.download(id, from: sender, in: pairs, as: self.account(in: pairs)) }
+        func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs) throws
+            -> Data?
+        {
+            try change { $0.download(copy, from: sender, in: pairs, as: self.account(in: pairs)) }
         }
 
         func acknowledge(
-            attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+            copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
         ) throws {
-            try change { try $0.acknowledge(attachment: id, from: sender, with: receipt, in: pairs, as: self.account(in: pairs), at: Date()) }
+            try change { try $0.acknowledge(copy: copy, from: sender, with: receipt, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
-        func pendingAttachments(in pairs: Pairs) throws -> [AttachmentID: SentAttachment] {
-            try change { $0.pendingAttachments(in: pairs, as: self.account(in: pairs)) }
+        func storedCopies(in pairs: Pairs) throws -> [StoredPhotoCopy] {
+            try change { $0.storedCopies(in: pairs, as: self.account(in: pairs)) }
         }
 
-        func sweepableAttachments(in pairs: Pairs) throws -> [AttachmentID: Date] {
-            try change { $0.sweepableAttachments(as: self.account(in: pairs), at: Date()) }
-        }
-
-        func delete(attachment id: AttachmentID, in pairs: Pairs) throws {
-            try change { $0.delete(attachment: id, as: self.account(in: pairs)) }
+        func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) throws {
+            try change { $0.delete(copies: copies, as: self.account(in: pairs)) }
         }
     }
 

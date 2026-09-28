@@ -157,16 +157,18 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
         store.allRecords.filter { UUID(uuidString: $0.name) != nil }
     }
 
-    private var photoRecords: [(url: URL, name: String, record: LocalPairStore.Record)] {
-        store.allRecords.filter { $0.name.hasPrefix(LocalPairStore.photoPrefix) }
+    private var photoOf: [PhotoCopyName: AttachmentID] = [:]
+
+    private func copies(of photo: AttachmentID) -> [PhotoCopyName] {
+        photoOf.filter { $0.value == photo }.map(\.key)
     }
 
     public var storedPacketCount: Int { packetRecords.count }
     public var storedAttachmentIDs: Set<AttachmentID> {
-        Set(photoRecords.compactMap { UUID(uuidString: String($0.name.dropFirst(LocalPairStore.photoPrefix.count))) }
-            .map(AttachmentID.init(rawValue:)))
+        Set(store.everyStoredCopy.compactMap { photoOf[$0.name] })
     }
     public var storedAttachmentCount: Int { storedAttachmentIDs.count }
+    public var storedCopyCount: Int { store.everyStoredCopy.count }
 
     public var serverWrites: Int {
         writeCount + acknowledgeCount + withdrawCount + rings.count + uploadCount
@@ -175,7 +177,23 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
 
     public var everySentPacket: [PacketID: SentPacket] { store.everySentPacket }
 
-    public var everyPendingAttachment: [AttachmentID: SentAttachment] { store.everyPendingAttachment }
+    public var everyStoredCopy: [StoredPhotoCopy] { store.everyStoredCopy }
+
+    public var storedRecords: [(name: String, fields: [String: PacketField])] {
+        store.allRecords.map { (name: $0.name, fields: $0.record.fields) }
+    }
+
+    public var everyPendingAttachment: [AttachmentID: SentAttachment] {
+        var found: [AttachmentID: SentAttachment] = [:]
+        for copy in store.everyStoredCopy {
+            guard let photo = photoOf[copy.name] else { continue }
+            let before = found[photo]
+            found[photo] = SentAttachment(
+                recipients: copy.recipients.union(before?.recipients ?? []),
+                receipts: (before?.receipts ?? []) + (copy.receipt.map { [$0] } ?? []))
+        }
+        return found
+    }
 
     public func spaceCount(of participant: ParticipantID) -> Int {
         store.spaces.values.filter { $0.owner == participant }.count
@@ -259,45 +277,44 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
 
     // MARK: Photos
 
-    public func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) throws {
+    public func upload(_ copies: PhotoCopies, in pairs: Pairs) throws {
         uploadCount += 1
         if let failure = pendingFailure {
             pendingFailure = nil
             throw failure
         }
         if let failure = uploadFailures.removeValue(forKey: uploadCount) { throw failure }
-        try store.upload(attachment, in: pairs, as: seat(pairs), at: clock.now)
+        try store.upload(copies, in: pairs, as: seat(pairs), at: clock.now)
+        for copy in copies.copies.values { photoOf[copy.name] = copies.photo }
     }
 
-    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) -> Data? {
+    public func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs)
+        -> Data?
+    {
         downloadCount += 1
-        return store.download(id, from: sender, in: pairs, as: seat(pairs))
+        return store.download(copy, from: sender, in: pairs, as: seat(pairs))
     }
 
     public func acknowledge(
-        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
     ) throws {
         attachmentAcknowledgeCount += 1
-        try store.acknowledge(attachment: id, from: sender, with: receipt, in: pairs, as: seat(pairs), at: clock.now)
+        try store.acknowledge(copy: copy, from: sender, with: receipt, in: pairs, as: seat(pairs), at: clock.now)
     }
 
-    public func pendingAttachments(in pairs: Pairs) -> [AttachmentID: SentAttachment] {
-        store.pendingAttachments(in: pairs, as: seat(pairs))
+    public func storedCopies(in pairs: Pairs) -> [StoredPhotoCopy] {
+        store.storedCopies(in: pairs, as: seat(pairs))
     }
 
-    public func sweepableAttachments(in pairs: Pairs) -> [AttachmentID: Date] {
-        store.sweepableAttachments(as: seat(pairs), at: clock.now)
-    }
-
-    public func delete(attachment id: AttachmentID, in pairs: Pairs) {
+    public func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) {
         attachmentDeleteCount += 1
-        store.delete(attachment: id, as: seat(pairs))
+        store.delete(copies: copies, as: seat(pairs))
     }
 
     // MARK: What a test can reach in and do
 
     public func tamper(attachment id: AttachmentID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
-        store.change(LocalPairStore.photoPrefix + id.rawValue.uuidString, change, at: clock.now)
+        for copy in copies(of: id) { store.change(copy.recordName, change, at: clock.now) }
     }
 
     public func tamper(packet id: PacketID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
@@ -310,7 +327,7 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
 
     public func forget(attachment id: AttachmentID) {
         for account in Set(store.spaces.values.map(\.account)) {
-            store.remove(LocalPairStore.photoPrefix + id.rawValue.uuidString, fromEverySpaceIn: account)
+            for copy in copies(of: id) { store.remove(copy.recordName, fromEverySpaceIn: account) }
         }
     }
 
@@ -424,16 +441,15 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
     { throw Refused() }
     public func sentPackets(in pairs: Pairs) async throws -> [PacketID: SentPacket] { throw Refused() }
     public func withdraw(_ id: PacketID, in pairs: Pairs) async throws { throw Refused() }
-    public func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) async throws { throw Refused() }
-    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) async throws -> Data? {
-        throw Refused()
-    }
+    public func upload(_ copies: PhotoCopies, in pairs: Pairs) async throws { throw Refused() }
+    public func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs)
+        async throws -> Data?
+    { throw Refused() }
     public func acknowledge(
-        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
     ) async throws { throw Refused() }
-    public func pendingAttachments(in pairs: Pairs) async throws -> [AttachmentID: SentAttachment] { throw Refused() }
-    public func sweepableAttachments(in pairs: Pairs) async throws -> [AttachmentID: Date] { throw Refused() }
-    public func delete(attachment id: AttachmentID, in pairs: Pairs) async throws { throw Refused() }
+    public func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy] { throw Refused() }
+    public func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) async throws { throw Refused() }
 }
 
 public actor FakeMediaScreen: MediaScreen {

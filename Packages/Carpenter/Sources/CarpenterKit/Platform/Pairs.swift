@@ -71,20 +71,9 @@ public enum PairWire {
         "receipt-" + packet.rawValue.uuidString
     }
 
-    public static func receiptName(for attachment: AttachmentID) -> String {
-        "photo-receipt-" + attachment.rawValue.uuidString
-    }
-
     public static func packet(fromReceiptName name: String) -> PacketID? {
         guard name.hasPrefix("receipt-"), let uuid = UUID(uuidString: String(name.dropFirst("receipt-".count)))
         else { return nil }
         return PacketID(rawValue: uuid)
-    }
-
-    public static func attachment(fromReceiptName name: String) -> AttachmentID? {
-        guard name.hasPrefix("photo-receipt-"),
-            let uuid = UUID(uuidString: String(name.dropFirst("photo-receipt-".count)))
-        else { return nil }
-        return AttachmentID(rawValue: uuid)
     }
 }

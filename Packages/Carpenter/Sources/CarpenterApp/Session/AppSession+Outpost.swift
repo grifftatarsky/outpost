@@ -22,9 +22,8 @@ extension AppSession {
         let recipients = addressed(to: peers())
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
-        try await mailbox.upload(
-            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
-            in: try currentPairs())
+        try await uploadCopies(
+            of: OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
         Diagnostics.sync.notice(
             "outpost avatar: uploaded \(ciphertext.count, privacy: .public) bytes for \(recipients.count, privacy: .public) peer(s)")
 
@@ -51,7 +50,7 @@ extension AppSession {
         guard previous.id != projection.outpostPhotoReference(of: me)?.id,
             previous.id != projection.photoReference(of: me)?.id
         else { return }
-        do { try await mailbox.delete(attachment: previous.id, in: try currentPairs()) } catch {
+        do { try await deleteEveryCopy(of: [previous.id], through: mailbox) } catch {
             Diagnostics.sync.error(
                 "outpost avatar: could not delete the previous picture (\(String(describing: error), privacy: .public))")
         }
@@ -98,13 +97,16 @@ extension AppSession {
         _ reference: AttachmentReference, from person: ParticipantID, through mailbox: any MediaMailbox
     ) async throws -> Data? {
         let name = Diagnostics.fingerprint(reference.id.rawValue.uuidString)
-        guard let bytes = try await mailbox.download(reference.id, from: person, in: try currentPairs()) else {
+        guard let downloaded = try await downloadCopy(of: reference.id, from: person, through: mailbox) else {
             Diagnostics.sync.notice("avatar: no outbox holds \(name, privacy: .public)")
             return nil
         }
-        guard SealedAttachment.matches(bytes, reference) else {
+        let bytes: Data
+        do {
+            bytes = try openCopy(downloaded, of: reference.id, matching: reference.digest, from: person)
+        } catch {
             Diagnostics.sync.error("avatar: \(name, privacy: .public) does not match its pointer; not kept")
-            throw AttachmentError.digestMismatch
+            throw error
         }
         return try SealedAttachment.open(bytes, with: reference)
     }
@@ -382,7 +384,7 @@ extension AppSession {
         let owed = persisted.outpostMediaOwed
         let wall = outpostRoom(for: enrolment.identity.id)
         let tags = addressed(to: peers().filter { owed.contains($0.them) })
-        guard !tags.isEmpty, let pairs = pairs() else { return }
+        guard !tags.isEmpty else { return }
 
         let open = entryOpener()
         var offered = 0
@@ -398,8 +400,8 @@ extension AppSession {
                     continue
                 }
                 do {
-                    try await mailbox.upload(
-                        OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: tags), in: pairs)
+                    try await uploadCopies(
+                        of: OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: tags), through: mailbox)
                     noteAttachmentsSent([id], to: Set(owed))
                     offered += 1
                 } catch {
@@ -535,9 +537,9 @@ extension AppSession {
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
         do {
-            try await mailbox.upload(
-                OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
-                in: try currentPairs())
+            try await uploadCopies(
+                of: OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
+                through: mailbox)
         } catch {
             do { try await storage.media.remove(reference.id) } catch {
                 Diagnostics.sync.error(
@@ -588,8 +590,8 @@ extension AppSession {
         try await storage.media.store(ciphertext, for: part.id)
         uploading.insert(part.id)
         sent.ids.append(part.id)
-        try await mailbox.upload(
-            OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: recipients), in: try currentPairs())
+        try await uploadCopies(
+            of: OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
     }
 
     public func outpost() -> [OutpostPost] {

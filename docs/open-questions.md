@@ -17,6 +17,23 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN db4bc4f1 [NEEDS HUMAN REVIEW] -->
+
+### Should copies of one photo differ in size and time?
+
+Raised 2026-09-28, while sealing each person's copy of a photo apart. Two people's copies now share no
+bytes and no name, and nothing in iCloud names the photo. Two things still line up: every copy is the
+same size, and all of them are written in one operation at the same moment. So whoever can see several
+people's spaces, which is Apple, can still guess that one photo went to those people. It is a guess
+from size and time now, where before it was proof.
+
+Padding each copy to a different size would not hide it alone, because the moment gives it away, and
+writing copies at different times would hold the photo back from everybody but the first person.
+Recommended: leave it. A round's packets have always shown the same about messages: each person's
+packet carries the same entries, sealed apart, written in the same round.
+
+<!-- COPY END db4bc4f1 -->
+
 <!-- COPY BEGIN ddabe07b [NEEDS HUMAN REVIEW] -->
 
 ### Should an ask for a photo reach every one of the sender's devices?

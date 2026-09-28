@@ -186,8 +186,6 @@ public struct LocalPairStore: Codable, Sendable {
 }
 
 extension LocalPairStore {
-    public static let photoPrefix = "photo-"
-
     public mutating func put(
         _ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs, as account: String, at now: Date
     ) throws {
@@ -266,72 +264,48 @@ extension LocalPairStore {
         packetOrder.removeAll { $0 == id }
     }
 
-    // MARK: Photos, one copy in each recipient's space
+    // MARK: Photos, one copy in each recipient's space, sealed for that pair
 
-    public mutating func upload(_ attachment: OutgoingAttachment, in pairs: Pairs, as account: String, at now: Date) throws {
-        for (peer, tag) in attachment.recipients {
-            try write(
-                Self.photoPrefix + attachment.id.rawValue.uuidString, AttachmentWire.fields(of: attachment, for: tag),
-                to: peer, in: pairs, as: account, at: now)
+    public mutating func upload(_ copies: PhotoCopies, in pairs: Pairs, as account: String, at now: Date) throws {
+        for (peer, copy) in copies.copies {
+            try write(copy.name.recordName, AttachmentWire.fields(of: copy), to: peer, in: pairs, as: account, at: now)
         }
     }
 
-    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs, as account: String) -> Data? {
+    public func download(_ copy: PhotoCopyName, from sender: ParticipantID, in pairs: Pairs, as account: String) -> Data? {
         records(inSpaceOf: sender, forMe: pairs, as: account)
-            .first { $0.name == Self.photoPrefix + id.rawValue.uuidString }
-            .flatMap { AttachmentWire.attachment(from: $0.record.fields)?.ciphertext }
+            .first { $0.name == copy.recordName }
+            .flatMap { AttachmentWire.sealedCopy(from: $0.record.fields) }
     }
 
     public mutating func acknowledge(
-        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs,
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs,
         as account: String, at now: Date
     ) throws {
-        try write(
-            PairWire.receiptName(for: id), PacketWire.receiptFields(receipt), to: sender, in: pairs, as: account, at: now)
+        try write(copy.receiptName, PacketWire.receiptFields(receipt), to: sender, in: pairs, as: account, at: now)
     }
 
-    public func pendingAttachments(in pairs: Pairs, as account: String) -> [AttachmentID: SentAttachment] {
-        var recipients: [AttachmentID: Set<RecipientTag>] = [:]
-        var receipts: [AttachmentID: [SealedReceipt]] = [:]
+    public func storedCopies(in pairs: Pairs, as account: String) -> [StoredPhotoCopy] {
+        var found: [StoredPhotoCopy] = []
         for (peer, space) in ownSpaces(in: pairs, as: account) {
             let answers = Dictionary(
                 records(inSpaceOf: peer, forMe: pairs, as: account).map { ($0.name, $0.record) },
-                uniquingKeysWith: { a, _ in a })
-            for name in space.order where name.hasPrefix(Self.photoPrefix) {
-                guard let uuid = UUID(uuidString: String(name.dropFirst(Self.photoPrefix.count))),
-                    let record = space.records[name]
-                else { continue }
-                let id = AttachmentID(rawValue: uuid)
-                recipients[id, default: []].formUnion(AttachmentWire.recipients(in: record.fields))
-                if let answer = answers[PairWire.receiptName(for: id)], answer.modifiedAt >= record.modifiedAt,
-                    let receipt = PacketWire.receipt(from: answer.fields)
-                {
-                    receipts[id, default: []].append(receipt)
+                uniquingKeysWith: { first, _ in first })
+            for recordName in space.order {
+                guard let name = PhotoCopyName(recordName: recordName), let record = space.records[recordName] else {
+                    continue
                 }
-            }
-        }
-        return recipients.reduce(into: [:]) { found, entry in
-            found[entry.key] = SentAttachment(recipients: entry.value, receipts: receipts[entry.key] ?? [])
-        }
-    }
-
-    public func sweepableAttachments(as account: String, at now: Date) -> [AttachmentID: Date] {
-        let settled = now.addingTimeInterval(-MailboxRules.sweepAge)
-        var found: [AttachmentID: Date] = [:]
-        for space in spaces.values where space.account == account {
-            for name in space.order where name.hasPrefix(Self.photoPrefix) {
-                guard let uuid = UUID(uuidString: String(name.dropFirst(Self.photoPrefix.count))),
-                    let record = space.records[name], record.storedAt < settled
-                else { continue }
-                let id = AttachmentID(rawValue: uuid)
-                found[id] = max(found[id] ?? .distantPast, record.modifiedAt)
+                found.append(
+                    AttachmentWire.stored(
+                        name, fields: record.fields, to: peer, storedAt: record.storedAt, modifiedAt: record.modifiedAt,
+                        answeredBy: answers[name.receiptName].map { (fields: $0.fields, modifiedAt: $0.modifiedAt) }))
             }
         }
         return found
     }
 
-    public mutating func delete(attachment id: AttachmentID, as account: String) {
-        remove(Self.photoPrefix + id.rawValue.uuidString, fromEverySpaceIn: account)
+    public mutating func delete(copies: Set<PhotoCopyName>, as account: String) {
+        for copy in copies { remove(copy.recordName, fromEverySpaceIn: account) }
     }
 }
 
@@ -359,26 +333,21 @@ extension LocalPairStore {
         return sent
     }
 
-    public var everyPendingAttachment: [AttachmentID: SentAttachment] {
-        var recipients: [AttachmentID: Set<RecipientTag>] = [:]
-        var receipts: [AttachmentID: [SealedReceipt]] = [:]
+    public var everyStoredCopy: [StoredPhotoCopy] {
+        var found: [StoredPhotoCopy] = []
         for space in spaces.values {
             let other = counterpart(of: space)
-            for name in space.order where name.hasPrefix(Self.photoPrefix) {
-                guard let uuid = UUID(uuidString: String(name.dropFirst(Self.photoPrefix.count))),
-                    let record = space.records[name]
-                else { continue }
-                let id = AttachmentID(rawValue: uuid)
-                recipients[id, default: []].formUnion(AttachmentWire.recipients(in: record.fields))
-                if let answer = other?.records[PairWire.receiptName(for: id)], answer.modifiedAt >= record.modifiedAt,
-                    let receipt = PacketWire.receipt(from: answer.fields)
-                {
-                    receipts[id, default: []].append(receipt)
+            for recordName in space.order {
+                guard let name = PhotoCopyName(recordName: recordName), let record = space.records[recordName] else {
+                    continue
                 }
+                found.append(
+                    AttachmentWire.stored(
+                        name, fields: record.fields, to: other?.owner ?? space.owner, storedAt: record.storedAt,
+                        modifiedAt: record.modifiedAt,
+                        answeredBy: other?.records[name.receiptName].map { (fields: $0.fields, modifiedAt: $0.modifiedAt) }))
             }
         }
-        return recipients.reduce(into: [:]) { found, entry in
-            found[entry.key] = SentAttachment(recipients: entry.value, receipts: receipts[entry.key] ?? [])
-        }
+        return found
     }
 }

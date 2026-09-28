@@ -151,8 +151,8 @@ extension AppSession {
         for (id, bytes) in sealed {
             uploading.insert(id)
             defer { uploading.remove(id) }
-            try await mailbox.upload(
-                OutgoingAttachment(id: id, ciphertext: bytes, recipients: [ask.from: tag]), in: try currentPairs())
+            try await uploadCopies(
+                of: OutgoingAttachment(id: id, ciphertext: bytes, recipients: [ask.from: tag]), through: mailbox)
         }
         noteAttachmentsSent(ids, to: [ask.from])
         persisted.photoAsks.removeAll { $0.from == ask.from && $0.attachment == ask.attachment }

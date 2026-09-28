@@ -10,6 +10,48 @@ public struct OutgoingAttachment: Hashable, Sendable {
         self.ciphertext = ciphertext
         self.recipients = recipients
     }
+
+    public func copies(between secret: (ParticipantID) -> PairwiseSecret?) throws -> PhotoCopies {
+        var copies: [ParticipantID: PhotoCopy] = [:]
+        for (person, tag) in recipients {
+            guard let pair = secret(person) else { continue }
+            copies[person] = try PhotoCopy.seal(ciphertext, of: id, for: tag, between: pair)
+        }
+        return PhotoCopies(photo: id, copies: copies)
+    }
+}
+
+public struct PhotoCopies: Hashable, Sendable {
+    public let photo: AttachmentID
+    public let copies: [ParticipantID: PhotoCopy]
+
+    public init(photo: AttachmentID, copies: [ParticipantID: PhotoCopy]) {
+        self.photo = photo
+        self.copies = copies
+    }
+}
+
+public struct StoredPhotoCopy: Hashable, Sendable {
+    public let name: PhotoCopyName
+    public let to: ParticipantID
+    public let label: Data?
+    public let recipients: Set<RecipientTag>
+    public let receipt: SealedReceipt?
+    public let storedAt: Date
+    public let modifiedAt: Date
+
+    public init(
+        name: PhotoCopyName, to: ParticipantID, label: Data?, recipients: Set<RecipientTag>, receipt: SealedReceipt?,
+        storedAt: Date, modifiedAt: Date
+    ) {
+        self.name = name
+        self.to = to
+        self.label = label
+        self.recipients = recipients
+        self.receipt = receipt
+        self.storedAt = storedAt
+        self.modifiedAt = modifiedAt
+    }
 }
 
 public struct SentAttachment: Hashable, Sendable {
@@ -23,31 +65,29 @@ public struct SentAttachment: Hashable, Sendable {
 }
 
 public protocol MediaMailbox: Sendable {
-    func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) async throws
+    func upload(_ copies: PhotoCopies, in pairs: Pairs) async throws
 
-    func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) async throws -> Data?
+    func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs)
+        async throws -> Data?
 
-    func acknowledge(
-        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
-    ) async throws
+    func acknowledge(copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs)
+        async throws
 
-    func pendingAttachments(in pairs: Pairs) async throws -> [AttachmentID: SentAttachment]
+    func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy]
 
-    func sweepableAttachments(in pairs: Pairs) async throws -> [AttachmentID: Date]
-
-    func delete(attachment id: AttachmentID, in pairs: Pairs) async throws
+    func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) async throws
 }
 
 public enum AttachmentWire {
-    public static let attachmentID = "attachmentID"
+    public static let label = "label"
     public static let outstanding = PacketWire.outstanding
     public static let blob = "blob"
 
-    public static func fields(of attachment: OutgoingAttachment, for tag: RecipientTag) -> [String: PacketField] {
+    public static func fields(of copy: PhotoCopy) -> [String: PacketField] {
         [
-            attachmentID: .string(attachment.id.rawValue.uuidString),
-            outstanding: .dataList([tag.rawValue]),
-            blob: .data(attachment.ciphertext),
+            label: .data(copy.label),
+            outstanding: .dataList([copy.tag.rawValue]),
+            blob: .data(copy.sealed),
         ]
     }
 
@@ -55,13 +95,21 @@ public enum AttachmentWire {
         if case .dataList(let tags)? = fields[outstanding] { Set(tags.map(RecipientTag.init(rawValue:))) } else { [] }
     }
 
-    public static func attachment(from fields: [String: PacketField]) -> (
-        id: AttachmentID, ciphertext: Data
-    )? {
-        guard case .string(let name)? = fields[attachmentID],
-            let uuid = UUID(uuidString: name),
-            case .data(let bytes)? = fields[blob]
-        else { return nil }
-        return (AttachmentID(rawValue: uuid), bytes)
+    public static func sealedLabel(from fields: [String: PacketField]) -> Data? {
+        if case .data(let bytes)? = fields[label] { bytes } else { nil }
+    }
+
+    public static func sealedCopy(from fields: [String: PacketField]) -> Data? {
+        if case .data(let bytes)? = fields[blob] { bytes } else { nil }
+    }
+
+    public static func stored(
+        _ name: PhotoCopyName, fields: [String: PacketField], to peer: ParticipantID, storedAt: Date, modifiedAt: Date,
+        answeredBy answer: (fields: [String: PacketField], modifiedAt: Date)?
+    ) -> StoredPhotoCopy {
+        StoredPhotoCopy(
+            name: name, to: peer, label: sealedLabel(from: fields), recipients: recipients(in: fields),
+            receipt: answer.flatMap { $0.modifiedAt >= modifiedAt ? PacketWire.receipt(from: $0.fields) : nil },
+            storedAt: storedAt, modifiedAt: modifiedAt)
     }
 }

@@ -270,6 +270,9 @@ access to all of yours and touches nobody else's; only the sender decides what w
 - **Done.** A link counts only from a device that still counts, and a contact is read only from
   accounts such links name (added 2026-09-28 after a review of the build).
 - **Done.** Blocking somebody closes the space kept for them; unblocking makes a new one.
+- **Written, not built** (2026-09-28, no compiler in that session). Each person's copy of a photo is
+  sealed apart for their pair and named from its secret, and nothing in iCloud names the photo
+  (`PhotoCopiesAreSealedApartTests`; ruled by Griff the same day).
 - **Owed.** The same over iCloud, on two accounts (`LivePairTests`).
 
 **Testing**

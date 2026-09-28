@@ -66,14 +66,14 @@ struct SealedAttachmentTests {
         #expect(throws: AttachmentError.tooLarge) { try SealedAttachment.seal(hugeClip, kind: .video) }
     }
 
-    @Test("The wire mapping carries everything an attachment record needs")
-    func wireRoundTrip() {
+    @Test("The wire mapping carries everything a copy's record needs")
+    func wireRoundTrip() throws {
         let tag = RecipientTag(rawValue: Data([1]))
-        let outgoing = OutgoingAttachment(id: AttachmentID(), ciphertext: bytes, recipients: [Identity.generate().id: tag])
-        let fields = AttachmentWire.fields(of: outgoing, for: tag)
-        let back = AttachmentWire.attachment(from: fields)
-        #expect(back?.id == outgoing.id)
-        #expect(back?.ciphertext == bytes)
+        let pair = try PairwiseSecret.derive(mine: Identity.generate(), theirs: Identity.generate().publicKeys)
+        let copy = try PhotoCopy.seal(bytes, of: AttachmentID(), for: tag, between: pair)
+        let fields = AttachmentWire.fields(of: copy)
+        #expect(AttachmentWire.sealedCopy(from: fields) == copy.sealed)
+        #expect(AttachmentWire.sealedLabel(from: fields) == copy.label)
         #expect(AttachmentWire.recipients(in: fields) == [tag], "a copy named somebody other than the one it is for")
     }
 }
@@ -287,9 +287,10 @@ struct SendingPhotoTests {
         let named = try #require(alice.messages(in: room).last?.media?.id)
         let orphan = AttachmentID()
         try await mailbox.upload(
-            OutgoingAttachment(
+            try OutgoingAttachment(
                 id: orphan, ciphertext: Data([1, 2, 3]),
-                recipients: [try #require(bob.enrolment?.identity.id): RecipientTag(rawValue: Data([9]))]),
+                recipients: [try #require(bob.enrolment?.identity.id): RecipientTag(rawValue: Data([9]))]
+            ).copies(between: { alice.legacySecret(with: $0) }),
             in: try alice.currentPairs())
         #expect(await mailbox.storedAttachmentCount == 2)
 

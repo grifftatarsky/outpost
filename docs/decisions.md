@@ -3079,7 +3079,14 @@ it too, so no two copies share bytes or a name and Apple cannot match one photo 
 it costs:** a photo sent to a room of eight is stored seven times in your iCloud until each copy is
 collected, or for nine days at most, and each recipient's copy takes one more seal.
 
-**Not built yet.**
+**Written 2026-09-28, not yet built or run**, in a session with no Swift compiler. Each copy is sealed
+under the pair's original secret and named from it; the only field that says which photo a copy is,
+the label, is sealed too, and the reader's receipt is named after the copy rather than the photo.
+The sender now puts back exactly the copies that left early, one person at a time, where it used to
+wait until every copy was gone. See the [crypto brief](crypto-brief.md#photos-and-clips) and
+`PhotoCopiesAreSealedApartTests`. Still visible to whoever sees several spaces: the copies are the
+same size and are written at the same moment
+([Open questions](open-questions.md#should-copies-of-one-photo-differ-in-size-and-time)).
 
 <!-- COPY END acacb9e8 -->
 

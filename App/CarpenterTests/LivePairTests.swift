@@ -101,8 +101,9 @@ struct LivePairTests {
         let photo = try #require(alice.messages(in: room).last?.media?.id)
         try LivePair.leave(photo.rawValue.uuidString, as: "alice-photo")
         _ = try await LivePair.waitFor("bob-has-photo")
+        let copy = try #require(alice.photoCopyName(of: photo, for: bobID))
         try await LivePair.until("the photo's copy to be cleared once Bob had it", alice, through: cloud) {
-            try await cloud.pendingAttachments(in: pairs)[photo] == nil
+            try await cloud.storedCopies(in: pairs).allSatisfy { $0.name != copy }
         }
 
         _ = try await LivePair.waitFor("bob-checked")

@@ -63,7 +63,7 @@ extension CloudKitMailbox {
     }
 
     public func withdraw(_ id: PacketID, in pairs: Pairs) async throws {
-        try await remove(id.recordName)
+        try await remove([id.recordName])
         await withdrawFromOldOutbox(id)
     }
 
@@ -78,12 +78,13 @@ extension CloudKitMailbox {
         await index.wrote(name, PairIndex.Cached(type: PairWire.receiptType, fields: fields, at: Date()), in: zone)
     }
 
-    func remove(_ name: String) async throws {
-        let zones = await index.mine.filter { $0.value.records[name] != nil }.map(\.key)
-        guard !zones.isEmpty else { return }
-        let ids = zones.map { CKRecord.ID(recordName: name, zoneID: $0) }
+    func remove(_ names: Set<String>) async throws {
+        let ids = await index.mine.flatMap { zone, found in
+            names.filter { found.records[$0] != nil }.map { CKRecord.ID(recordName: $0, zoneID: zone) }
+        }
+        guard !ids.isEmpty else { return }
         _ = try await container.privateCloudDatabase.modifyRecords(saving: [], deleting: ids)
-        for zone in zones { await index.removed(name, from: zone) }
+        for id in ids { await index.removed(id.recordName, from: id.zoneID) }
     }
 
     private func packets(
@@ -114,9 +115,7 @@ extension CloudKitMailbox {
         let stale = mine.records.filter { name, cached in
             guard cached.type == PairWire.receiptType, cached.created < settled else { return false }
             if let packet = PairWire.packet(fromReceiptName: name) { return !held.contains(packet.recordName) }
-            if let photo = PairWire.attachment(fromReceiptName: name) {
-                return !held.contains(Self.photoRecordName(photo))
-            }
+            if let copy = PhotoCopyName(receiptName: name) { return !held.contains(copy.recordName) }
             return false
         }.map(\.key)
         guard !stale.isEmpty else { return }

@@ -26,11 +26,6 @@ enum AttachmentRecord {
 
 extension AttachmentID {
     var recordName: String { rawValue.uuidString }
-
-    init?(recordName: String) {
-        guard let uuid = UUID(uuidString: recordName) else { return nil }
-        self.init(rawValue: uuid)
-    }
 }
 
 extension PacketID {

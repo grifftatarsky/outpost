@@ -126,9 +126,10 @@ struct NobodyButTheSenderClearsAPhotoTests {
             PacketID(rawValue: sent.rawValue), under: tag, as: bob.identity.id, by: bob.device, to: peer.secret)
         let forTheOtherPhoto = try AttachmentReceipt.seal(
             other, under: tag, as: bob.identity.id, by: bob.device, to: peer.secret)
+        let copy = try #require(pair.bob.photoCopyName(of: sent, for: pair.aliceID))
         for receipt in [junk, forAPacket, forTheOtherPhoto] {
             try await pair.mailbox.acknowledge(
-                attachment: sent, from: try #require(pair.alice.enrolment?.identity.id), with: receipt,
+                copy: copy, from: try #require(pair.alice.enrolment?.identity.id), with: receipt,
                 in: try pair.bob.currentPairs())
         }
 

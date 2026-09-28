@@ -131,18 +131,19 @@ struct CloudKitMailboxTests {
         let other = Identity.generate()
         let toOther = Peer(secret: try PairwiseSecret.derive(mine: t.me, theirs: other.publicKeys), them: other.id, me: t.me.id)
         let pairs = Pairs.of(t.toThem, toOther)
-        let id = AttachmentID()
-        try await t.mailbox.upload(
-            OutgoingAttachment(
-                id: id, ciphertext: LiveCloudKit.bytes(3 * MailboxRules.recordByteCeiling),
-                recipients: [t.them.id: t.toThem.outgoingTag(window: 1), other.id: toOther.outgoingTag(window: 1)]),
-            in: pairs)
-        let pending = try #require(try await t.mailbox.pendingAttachments(in: pairs)[id])
-        #expect(pending.recipients == [t.toThem.outgoingTag(window: 1), toOther.outgoingTag(window: 1)])
-        #expect(pending.receipts.isEmpty)
+        let secrets = [t.them.id: t.toThem.secret, other.id: toOther.secret]
+        let copies = try OutgoingAttachment(
+            id: AttachmentID(), ciphertext: LiveCloudKit.bytes(3 * MailboxRules.recordByteCeiling),
+            recipients: [t.them.id: t.toThem.outgoingTag(window: 1), other.id: toOther.outgoingTag(window: 1)]
+        ).copies(between: { secrets[$0] })
+        try await t.mailbox.upload(copies, in: pairs)
+        let stored = try await t.mailbox.storedCopies(in: pairs)
+        #expect(Set(stored.map(\.name)) == Set(copies.copies.values.map(\.name)), "a copy is missing, or named twice")
+        #expect(Set(stored.flatMap(\.recipients)) == [t.toThem.outgoingTag(window: 1), toOther.outgoingTag(window: 1)])
+        #expect(stored.allSatisfy { $0.receipt == nil })
 
-        try await t.mailbox.delete(attachment: id, in: pairs)
-        #expect(try await t.mailbox.pendingAttachments(in: pairs)[id] == nil, "a deleted photo left a copy behind")
+        try await t.mailbox.delete(copies: Set(stored.map(\.name)), in: pairs)
+        #expect(try await t.mailbox.storedCopies(in: pairs).isEmpty, "a deleted photo left a copy behind")
     }
 
     @Test("Erasing every space leaves none of them, and none of their links")

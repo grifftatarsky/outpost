@@ -1,5 +1,4 @@
 import CarpenterKit
-import CryptoKit
 import Foundation
 
 // MARK: Photos and clips, on the way out and on the way back
@@ -64,23 +63,26 @@ extension AppSession {
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
         let name = Diagnostics.fingerprint(id.rawValue.uuidString)
-        let bytes: Data?
+        let downloaded: Data?
         do {
-            bytes = try await mailbox.download(id, from: author, in: try currentPairs())
+            downloaded = try await downloadCopy(of: id, from: author, through: mailbox)
         } catch {
             attachmentRetryAfter[id] = clock.now.addingTimeInterval(Self.attachmentRetryInterval)
             Diagnostics.sync.error(
                 "media: could not fetch \(name, privacy: .public) (\(String(describing: error), privacy: .public))")
             throw error
         }
-        guard let bytes else {
+        guard let downloaded else {
             Diagnostics.sync.notice("media: no outbox holds \(name, privacy: .public) any more")
             return nil
         }
-        guard Data(SHA256.hash(data: bytes)) == digest else {
+        let bytes: Data
+        do {
+            bytes = try openCopy(downloaded, of: id, matching: digest, from: author)
+        } catch {
             Diagnostics.sync.error(
                 "media: \(name, privacy: .public) downloaded but does not match the entry's digest; not kept")
-            throw AttachmentError.digestMismatch
+            throw error
         }
         try await storage.media.store(bytes, for: id)
         Diagnostics.sync.notice(
@@ -114,7 +116,8 @@ extension AppSession {
         through mailbox: any MediaMailbox
     ) async {
         do {
-            try await mailbox.acknowledge(attachment: id, from: sender, with: receipt, in: try currentPairs())
+            guard let copy = photoCopyName(of: id, for: sender) else { throw MailboxError.unknownPeer }
+            try await mailbox.acknowledge(copy: copy, from: sender, with: receipt, in: try currentPairs())
             attachmentAcknowledgementsOwed[id] = nil
         } catch {
             attachmentAcknowledgementsOwed[id] = OwedPhotoReceipt(receipt: receipt, sender: sender)
@@ -143,9 +146,9 @@ extension AppSession {
 
     func settleAttachmentsSent(through mailbox: any MediaMailbox) async {
         guard enrolment != nil, !persisted.attachmentsSent.isEmpty else { return }
-        let stored: [AttachmentID: SentAttachment]
+        let stored: [AttachmentID: [StoredPhotoCopy]]
         do {
-            stored = try await mailbox.pendingAttachments(in: try currentPairs())
+            stored = copiesByPhoto(try await mailbox.storedCopies(in: try currentPairs())).named
         } catch {
             Diagnostics.sync.error(
                 "media: could not read the outbox to see who has collected what (\(String(describing: error), privacy: .public))")
@@ -156,6 +159,7 @@ extension AppSession {
         var putBack = 0
         for id in Array(persisted.attachmentsSent.keys) where !uploading.contains(id) {
             guard var record = persisted.attachmentsSent[id] else { continue }
+            let copies = stored[id] ?? []
             var owed: Set<ParticipantID> = []
             for person in record.people {
                 guard byPerson[person] != nil, let registry = replica.registry(for: person) else {
@@ -163,7 +167,7 @@ extension AppSession {
                     continue
                 }
                 let ways = secrets(with: person)
-                for receipt in stored[id]?.receipts ?? [] {
+                for receipt in copies.filter({ $0.to == person }).compactMap(\.receipt) {
                     for secret in ways {
                         guard let signed = AttachmentReceipt.open(
                             receipt, for: id, from: person, with: secret, by: registry)
@@ -179,8 +183,8 @@ extension AppSession {
             let everybody = owed.isEmpty
             let expired = clock.now.timeIntervalSince(record.sentAt) > Self.attachmentKeptFor
             if everybody || expired {
-                if stored[id] != nil {
-                    do { try await mailbox.delete(attachment: id, in: try currentPairs()) } catch {
+                if !copies.isEmpty {
+                    do { try await mailbox.delete(copies: Set(copies.map(\.name)), in: try currentPairs()) } catch {
                         Diagnostics.sync.error(
                             "media: could not clear a collected attachment (\(String(describing: error), privacy: .public))")
                         continue
@@ -190,7 +194,9 @@ extension AppSession {
                 cleared += 1
                 continue
             }
-            guard stored[id] == nil else { continue }
+            let recipients = addressed(
+                to: owed.filter { person in !copies.contains { $0.to == person } }.compactMap { byPerson[$0] })
+            guard !recipients.isEmpty else { continue }
             let ciphertext: Data
             do {
                 guard let held = try await storage.media.sealed(for: id) else {
@@ -204,10 +210,9 @@ extension AppSession {
                     "media: could not read the kept copy of an attachment (\(String(describing: error), privacy: .public))")
                 continue
             }
-            let recipients = addressed(to: owed.compactMap { byPerson[$0] })
             do {
-                try await mailbox.upload(
-                    OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: recipients), in: try currentPairs())
+                try await uploadCopies(
+                    of: OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
                 putBack += 1
             } catch {
                 Diagnostics.sync.error(
@@ -258,44 +263,45 @@ extension AppSession {
     func sweepAttachments(through mailbox: any MediaMailbox) async {
         guard !sweptAttachments, enrolment != nil else { return }
         sweptAttachments = true
-        let waiting: [AttachmentID: Date]
+        let stored: (named: [AttachmentID: [StoredPhotoCopy]], unreadable: [StoredPhotoCopy])
         do {
-            waiting = try await mailbox.sweepableAttachments(in: try currentPairs())
+            stored = copiesByPhoto(try await mailbox.storedCopies(in: try currentPairs()))
         } catch {
             sweptAttachments = false
             Diagnostics.sync.error(
                 "media: could not read the outbox to sweep it (\(String(describing: error), privacy: .public))")
             return
         }
-        var referenced = attachmentsThisMemberSent()
-        if !persisted.uploadsLeftForOthers.isEmpty,
-            let pairs = pairs(), let stored = try? await mailbox.pendingAttachments(in: pairs)
-        {
-            persisted.uploadsLeftForOthers.removeAll { stored[$0] == nil && waiting[$0] == nil }
-        }
-        referenced.formUnion(persisted.uploadsLeftForOthers)
+        persisted.uploadsLeftForOthers.removeAll { stored.named[$0] == nil }
+        let referenced = attachmentsThisMemberSent().union(persisted.uploadsLeftForOthers)
         let kept = Set([ownPhotoReference?.id, ownOutpostPhotoReference?.id].compactMap { $0 })
+        let settled = clock.now.addingTimeInterval(-MailboxRules.sweepAge)
         let abandoned = clock.now.addingTimeInterval(-2 * Self.attachmentKeptFor)
-        for (id, written) in waiting
-        where written < abandoned && referenced.contains(id) && !kept.contains(id)
-            && persisted.attachmentsSent[id] == nil && !uploading.contains(id)
-        {
-            do {
-                try await mailbox.delete(attachment: id, in: try currentPairs())
-                Diagnostics.sync.notice("media: cleared an attachment no device of this member is looking after")
-            } catch {
-                Diagnostics.sync.error(
-                    "media: could not clear an abandoned attachment (\(String(describing: error), privacy: .public))")
+
+        var unnamed = stored.unreadable.filter { $0.storedAt < settled }.map(\.name)
+        var unwatched: [PhotoCopyName] = []
+        for (id, copies) in stored.named where !uploading.contains(id) {
+            let waiting = copies.filter { $0.storedAt < settled }
+            guard let written = waiting.map(\.modifiedAt).max() else { continue }
+            if !referenced.contains(id) {
+                unnamed += waiting.map(\.name)
+            } else if written < abandoned, !kept.contains(id), persisted.attachmentsSent[id] == nil {
+                unwatched += waiting.map(\.name)
             }
         }
-        for id in waiting.keys where !referenced.contains(id) && !uploading.contains(id) {
-            do {
-                try await mailbox.delete(attachment: id, in: try currentPairs())
-                Diagnostics.sync.notice("media: swept an upload no entry names")
-            } catch {
-                Diagnostics.sync.error(
-                    "media: could not sweep an orphaned upload (\(String(describing: error), privacy: .public))")
-            }
+        await deleteCopies(unwatched, through: mailbox, because: "no device of this member is looking after them")
+        await deleteCopies(unnamed, through: mailbox, because: "no entry names them")
+    }
+
+    private func deleteCopies(_ copies: [PhotoCopyName], through mailbox: any MediaMailbox, because reason: String) async {
+        guard !copies.isEmpty else { return }
+        do {
+            try await mailbox.delete(copies: Set(copies), in: try currentPairs())
+            Diagnostics.sync.notice(
+                "media: cleared \(copies.count, privacy: .public) upload(s) \(reason, privacy: .public)")
+        } catch {
+            Diagnostics.sync.error(
+                "media: could not clear uploads \(reason, privacy: .public) (\(String(describing: error), privacy: .public))")
         }
     }
 
@@ -319,5 +325,57 @@ extension AppSession {
             }
         }
         return ids
+    }
+
+    // MARK: One copy for each person, sealed for that pair
+
+    func photoCopyName(of photo: AttachmentID, for person: ParticipantID) -> PhotoCopyName? {
+        legacySecret(with: person).map { PhotoCopyName(of: photo, between: $0) }
+    }
+
+    func uploadCopies(of attachment: OutgoingAttachment, through mailbox: any MediaMailbox) async throws {
+        let copies = try attachment.copies(between: { legacySecret(with: $0) })
+        try await mailbox.upload(copies, in: try currentPairs())
+    }
+
+    func downloadCopy(of photo: AttachmentID, from sender: ParticipantID, through mailbox: any MediaMailbox)
+        async throws -> Data?
+    {
+        guard let copy = photoCopyName(of: photo, for: sender) else { throw MailboxError.unknownPeer }
+        return try await mailbox.download(copy, of: photo, from: sender, in: try currentPairs())
+    }
+
+    func openCopy(_ downloaded: Data, of photo: AttachmentID, matching digest: Data, from sender: ParticipantID) throws
+        -> Data
+    {
+        guard let pair = legacySecret(with: sender) else { throw AttachmentError.digestMismatch }
+        return try PhotoCopy.open(downloaded, of: photo, matching: digest, between: pair)
+    }
+
+    func deleteEveryCopy(of photos: [AttachmentID], through mailbox: any MediaMailbox) async throws {
+        let me = enrolment?.identity.id
+        let pairs = replica.knownParticipants.filter { $0 != me }.compactMap { legacySecret(with: $0) }
+        let copies = Set(photos.flatMap { photo in pairs.map { PhotoCopyName(of: photo, between: $0) } })
+        guard !copies.isEmpty else { return }
+        try await mailbox.delete(copies: copies, in: try currentPairs())
+    }
+
+    func copiesByPhoto(_ copies: [StoredPhotoCopy]) -> (
+        named: [AttachmentID: [StoredPhotoCopy]], unreadable: [StoredPhotoCopy]
+    ) {
+        var pairs: [ParticipantID: PairwiseSecret] = [:]
+        var named: [AttachmentID: [StoredPhotoCopy]] = [:]
+        var unreadable: [StoredPhotoCopy] = []
+        for copy in copies {
+            if pairs[copy.to] == nil { pairs[copy.to] = legacySecret(with: copy.to) }
+            guard let pair = pairs[copy.to], let label = copy.label,
+                let photo = PhotoCopy.photo(labelled: label, named: copy.name, between: pair)
+            else {
+                unreadable.append(copy)
+                continue
+            }
+            named[photo, default: []].append(copy)
+        }
+        return (named, unreadable)
     }
 }

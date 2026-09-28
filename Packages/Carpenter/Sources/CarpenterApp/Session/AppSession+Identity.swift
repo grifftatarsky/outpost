@@ -427,16 +427,15 @@ extension AppSession {
         let recipients = addressed(to: peers())
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
-        try await mailbox.upload(
-            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
-            in: try currentPairs())
+        try await uploadCopies(
+            of: OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
         Diagnostics.sync.notice(
             "avatar: uploaded \(ciphertext.count, privacy: .public) bytes for \(recipients.count, privacy: .public) peer(s)")
 
         try await announcePhotoEverywhere(reference)
 
         if let previous, previous.id != reference.id {
-            do { try await mailbox.delete(attachment: previous.id, in: try currentPairs()) } catch {
+            do { try await deleteEveryCopy(of: [previous.id], through: mailbox) } catch {
                 Diagnostics.sync.error(
                     "avatar: could not delete the previous photo (\(String(describing: error), privacy: .public))")
             }
@@ -451,7 +450,7 @@ extension AppSession {
         }
         await announceOrReport("taking your photo down") { try await announcePhotoEverywhere(nil) }
         do {
-            try await mailbox.delete(attachment: current.id, in: try currentPairs())
+            try await deleteEveryCopy(of: [current.id], through: mailbox)
             Diagnostics.sync.notice("avatar: taken down")
         } catch {
             Diagnostics.sync.error(

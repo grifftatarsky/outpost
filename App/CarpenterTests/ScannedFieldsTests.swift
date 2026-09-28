@@ -35,12 +35,11 @@ struct ScannedFieldsTests {
     }
 
     @Test("An attachment's routing fields are named, and its blob deliberately is not")
-    func everyAttachmentRoutingFieldIsScanned() {
+    func everyAttachmentRoutingFieldIsScanned() throws {
         let tag = Self.tag()
+        let pair = try PairwiseSecret.derive(mine: Identity.generate(), theirs: Identity.generate().publicKeys)
         let written = AttachmentWire.fields(
-            of: OutgoingAttachment(
-                id: AttachmentID(), ciphertext: Data(count: 1_024), recipients: [Identity.generate().id: tag]),
-            for: tag)
+            of: try PhotoCopy.seal(Data(count: 1_024), of: AttachmentID(), for: tag, between: pair))
 
         let asked = Set(CloudKitMailbox.scannedFields)
         for field in written.keys where field != AttachmentWire.blob {
