@@ -132,10 +132,13 @@ struct TheFakeIsNoEasierTests {
         let mailbox = InMemoryMailbox()
         let pair = try await linked(mailbox)
         let (_, asStranger) = try peers(Identity.generate(), Identity.generate())
-        let stranger = Pairs(me: asStranger.me, hints: [pair.toBob.me: pair.toBob.secret.pairHint])
+        let stranger = Pairs(
+            me: asStranger.me, hints: [pair.toBob.me: pair.toBob.secret.pairHint],
+            accounts: [pair.toBob.me: [LocalPairStore.account(of: pair.toBob.me)]])
         let id = AttachmentID()
         let sealed = Data((0..<64).map { _ in UInt8.random(in: .min ... .max) })
-        let link = try await mailbox.space(for: pair.toBob.them, naming: nil, in: pair.alice)
+        let link = try await mailbox.space(
+            for: pair.toBob.them, naming: LocalPairStore.account(of: pair.toBob.them), in: pair.alice)
 
         try await mailbox.upload(
             OutgoingAttachment(id: id, ciphertext: sealed, recipients: [pair.toBob.them: pair.toBob.outgoingTag(window: 1)]),

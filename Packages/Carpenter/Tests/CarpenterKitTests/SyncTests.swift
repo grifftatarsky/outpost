@@ -427,7 +427,7 @@ struct FileMailboxTests {
         let mailbox = FileMailbox(directory: scratch())
         let (fromA, forB) = try await link(toB, asB, through: mailbox)
         let (_, forC) = try await link(toC, asC, through: mailbox)
-        let senders = Pairs(me: a.id, hints: fromA.hints.merging(Pairs.of(toC).hints) { first, _ in first })
+        let senders = fromA.merging(Pairs.of(toC))
 
         let said = try alice.post("both of you", at: start)
         let forBob = try SyncEngine.pack([said], for: [toB], window: 7)

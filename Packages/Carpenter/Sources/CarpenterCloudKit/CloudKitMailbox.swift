@@ -170,6 +170,8 @@ public actor PairIndex {
     private(set) var privateToken: CKServerChangeToken?
     private(set) var sharedToken: CKServerChangeToken?
     private(set) var links: [CKRecordZone.ID: URL] = [:]
+    private var readers: [CKRecordZone.ID: String] = [:]
+    private var making: [PairHint: Task<CKRecordZone.ID, any Error>] = [:]
     private(set) var account: String?
     private(set) var hasOldOutbox = false
     private var refreshedAt: Date?
@@ -194,11 +196,11 @@ public actor PairIndex {
         theirs changedTheirs: [CKRecordZone.ID: Zone], legacy changedLegacy: [CKRecordZone.ID: Zone],
         sharedGone: [CKRecordZone.ID], sharedToken: CKServerChangeToken
     ) {
-        for zone in mineGone {
-            mine[zone] = nil
-            links[zone] = nil
+        for zone in mineGone { dropMine(zone) }
+        for (zone, found) in changedMine {
+            mine[zone] = found
+            readers[zone] = nil
         }
-        for (zone, found) in changedMine { mine[zone] = found }
         for zone in sharedGone {
             theirs[zone] = nil
             legacy[zone] = nil
@@ -217,22 +219,36 @@ public actor PairIndex {
     }
 
     func forget(mine zones: [CKRecordZone.ID]) {
-        for zone in zones {
-            mine[zone] = nil
-            links[zone] = nil
-        }
+        for zone in zones { dropMine(zone) }
+    }
+
+    func zone(for hint: PairHint, making make: @escaping @Sendable () async throws -> CKRecordZone.ID) async throws
+        -> CKRecordZone.ID
+    {
+        if let known = mineFor(hint) { return known }
+        if let pending = making[hint] { return try await pending.value }
+        let task = Task { try await make() }
+        making[hint] = task
+        defer { making[hint] = nil }
+        return try await task.value
     }
 
     func mineFor(_ hint: PairHint) -> CKRecordZone.ID? {
         mine.filter { $0.value.hint == hint }.map(\.key).min { $0.zoneName < $1.zoneName }
     }
 
-    func theirZone(for hint: PairHint) -> Zone? { theirsFor(hint).flatMap { theirs[$0] } }
+    func theirZone(for peer: ParticipantID, in pairs: Pairs) -> Zone? {
+        let zones = theirsFor(peer, in: pairs).compactMap { theirs[$0] }
+        guard !zones.isEmpty else { return nil }
+        return Zone(hint: pairs.hints[peer], records: zones.reduce(into: [:]) { $0.merge($1.records) { first, _ in first } })
+    }
 
     func myZone(for hint: PairHint) -> Zone? { mineFor(hint).flatMap { mine[$0] } }
 
-    func theirsFor(_ hint: PairHint) -> CKRecordZone.ID? {
-        theirs.filter { $0.value.hint == hint }.map(\.key).min { $0.zoneName < $1.zoneName }
+    func theirsFor(_ peer: ParticipantID, in pairs: Pairs) -> [CKRecordZone.ID] {
+        guard let hint = pairs.hints[peer] else { return [] }
+        return theirs.filter { $0.value.hint == hint && pairs.reads(peer, from: $0.key.ownerName) }.map(\.key)
+            .sorted { $0.zoneName < $1.zoneName }
     }
 
     func adopt(_ zone: CKRecordZone.ID, hint: PairHint?, link: URL?) {
@@ -243,6 +259,13 @@ public actor PairIndex {
     }
 
     func remember(_ link: URL, for zone: CKRecordZone.ID) { links[zone] = link }
+
+    func remember(reader: String, of zone: CKRecordZone.ID) { readers[zone] = reader }
+
+    func known(_ zone: CKRecordZone.ID, naming reader: String?) -> URL? {
+        guard reader == nil || readers[zone] == reader else { return nil }
+        return links[zone]
+    }
 
     func zone(linkedBy url: URL) -> CKRecordZone.ID? { links.first { $0.value == url }?.key }
 
@@ -259,5 +282,6 @@ public actor PairIndex {
     func dropMine(_ zone: CKRecordZone.ID) {
         mine[zone] = nil
         links[zone] = nil
+        readers[zone] = nil
     }
 }

@@ -12,19 +12,15 @@ extension CloudKitMailbox {
         return found
     }
 
-    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL {
-        let hint = try pairs.hint(for: peer)
-        try await refresh()
-        let zone: CKRecordZone.ID
-        if let known = await index.mineFor(hint) {
-            zone = known
-        } else {
-            zone = try await makeZone(hint: hint)
-        }
+    public func space(for peer: ParticipantID, naming reader: String?, in pairs: Pairs) async throws -> URL {
+        let zone = try await zone(for: peer, in: pairs)
+        if let url = await index.known(zone, naming: reader) { return url }
         let share = try await share(of: zone)
-        if let account { try await name(account, in: share) }
         guard let url = share.url else { throw MailboxError.unavailable }
         await index.remember(url, for: zone)
+        guard let reader else { return url }
+        try await name(reader, in: share)
+        await index.remember(reader: reader, of: zone)
         return url
     }
 
@@ -35,24 +31,34 @@ extension CloudKitMailbox {
         return url
     }
 
-    public func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws
+    public func claim(_ url: URL, for peer: ParticipantID, naming reader: String?, in pairs: Pairs) async throws
         -> URL
     {
         let hint = try pairs.hint(for: peer)
         try await refresh()
-        let code = await index.zone(linkedBy: url)
+        let code = await codeZone(linkedBy: url)
         if let existing = await index.mineFor(hint), existing != code {
             if let code {
                 _ = try? await container.privateCloudDatabase.modifyRecordZones(saving: [], deleting: [code])
                 await index.dropMine(code)
             }
-            return try await space(for: peer, naming: account, in: pairs)
+            return try await space(for: peer, naming: reader, in: pairs)
         }
-        guard let code else { return try await space(for: peer, naming: account, in: pairs) }
+        guard let code else { return try await space(for: peer, naming: reader, in: pairs) }
         try await writeHint(hint, in: code)
-        let share = try await share(of: code)
-        if let account { try await name(account, in: share) }
+        await index.remember(url, for: code)
+        guard let reader else { return url }
+        try await name(reader, in: try await share(of: code))
+        await index.remember(reader: reader, of: code)
         return url
+    }
+
+    private func codeZone(linkedBy url: URL) async -> CKRecordZone.ID? {
+        if let known = await index.zone(linkedBy: url) { return known }
+        guard let metadata = try? await container.shareMetadata(for: url), metadata.participantRole == .owner,
+            metadata.share.recordID.zoneID.zoneName.hasPrefix(Self.pairZonePrefix)
+        else { return nil }
+        return metadata.share.recordID.zoneID
     }
 
     public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome {
@@ -74,6 +80,12 @@ extension CloudKitMailbox {
         return .joined
     }
 
+    public func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool {
+        let hint = try pairs.hint(for: peer)
+        try await refresh()
+        return await !index.theirsFor(peer, in: pairs).isEmpty
+    }
+
     public func close(_ peer: ParticipantID, in pairs: Pairs) async throws {
         let hint = try pairs.hint(for: peer)
         try await refresh()
@@ -85,8 +97,7 @@ extension CloudKitMailbox {
     func zone(for peer: ParticipantID, in pairs: Pairs) async throws -> CKRecordZone.ID {
         let hint = try pairs.hint(for: peer)
         try await refresh()
-        if let known = await index.mineFor(hint) { return known }
-        return try await makeZone(hint: hint)
+        return try await index.zone(for: hint) { try await makeZone(hint: hint) }
     }
 
     private func makeZone(hint: PairHint?) async throws -> CKRecordZone.ID {
@@ -128,11 +139,15 @@ extension CloudKitMailbox {
         }
     }
 
-    private func name(_ account: String, in share: CKShare) async throws {
+    private func name(_ reader: String, in share: CKShare) async throws {
         let others = share.participants.filter { $0.role != .owner }
-        if others.count == 1, others[0].userIdentity.userRecordID?.recordName == account { return }
+        if others.count == 1, others[0].userIdentity.userRecordID?.recordName == reader,
+            others[0].permission == .readOnly, share.publicPermission == .none
+        {
+            return
+        }
         for participant in others { share.removeParticipant(participant) }
-        let participant = try await participant(for: account)
+        let participant = try await participant(for: reader)
         participant.permission = .readOnly
         share.addParticipant(participant)
         share.publicPermission = .none

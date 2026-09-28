@@ -27,14 +27,21 @@ public enum JoinOutcome: Hashable, Sendable {
 public struct Pairs: Hashable, Sendable {
     public let me: ParticipantID
     public let hints: [ParticipantID: PairHint]
+    public let accounts: [ParticipantID: Set<String>]
 
-    public init(me: ParticipantID, hints: [ParticipantID: PairHint]) {
+    public init(me: ParticipantID, hints: [ParticipantID: PairHint], accounts: [ParticipantID: Set<String>] = [:]) {
         self.me = me
         self.hints = hints
+        self.accounts = accounts
     }
 
     public func peer(for hint: PairHint) -> ParticipantID? {
         hints.first { $0.value == hint }?.key
+    }
+
+    public func reads(_ peer: ParticipantID, from account: String) -> Bool {
+        guard let owners = accounts[peer], !owners.isEmpty else { return true }
+        return owners.contains(account)
     }
 
     public func hint(for peer: ParticipantID) throws -> PairHint {
@@ -51,6 +58,10 @@ public enum PairWire {
     public static let ringRecord = "ring"
     public static let ringType = "PairRing"
     public static let ring = "ring"
+
+    public static func ringValue() -> String {
+        (0..<16).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
+    }
 
     public static let receiptType = "PairReceipt"
     public static let receiptTag = "tag"

@@ -187,23 +187,39 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
 
     // MARK: Pairing
 
-    public func account(in pairs: Pairs) -> String { LocalPairStore.account(of: pairs.me) }
+    public func account(in pairs: Pairs) -> String { seat(pairs) }
 
-    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
-        try store.space(for: peer, naming: account, in: pairs)
+    private var signedInAs: String?
+
+    private func seat(_ pairs: Pairs) -> String { signedInAs ?? LocalPairStore.account(of: pairs.me) }
+
+    public nonisolated func signedIn(as account: String) -> SignedInMailbox { SignedInMailbox(base: self, account: account) }
+
+    func acting<T: Sendable>(as account: String, _ body: @Sendable (isolated InMemoryMailbox) throws -> T) rethrows -> T {
+        signedInAs = account
+        defer { signedInAs = nil }
+        return try body(self)
     }
 
-    public func spaceForACode(in pairs: Pairs) -> URL { store.spaceForACode(in: pairs) }
+    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+        try store.space(for: peer, naming: account, in: pairs, as: seat(pairs))
+    }
+
+    public func spaceForACode(in pairs: Pairs) -> URL { store.spaceForACode(in: pairs, as: seat(pairs)) }
 
     public func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
-        try store.claim(url, for: peer, naming: account, in: pairs)
+        try store.claim(url, for: peer, naming: account, in: pairs, as: seat(pairs))
     }
 
     public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) -> JoinOutcome {
-        store.join(link, of: peer, in: pairs)
+        store.join(link, of: peer, in: pairs, as: seat(pairs))
     }
 
-    public func close(_ peer: ParticipantID, in pairs: Pairs) { store.close(peer, in: pairs) }
+    public func reads(_ peer: ParticipantID, in pairs: Pairs) -> Bool {
+        store.reads(peer, in: pairs, as: seat(pairs))
+    }
+
+    public func close(_ peer: ParticipantID, in pairs: Pairs) { store.close(peer, in: pairs, as: seat(pairs)) }
 
     // MARK: Packets
 
@@ -214,31 +230,31 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
             throw failure
         }
         if let failure = packetFailures.removeValue(forKey: writeCount) { throw failure }
-        try store.put(packet, to: peer, in: pairs, at: clock.now)
+        try store.put(packet, to: peer, in: pairs, as: seat(pairs), at: clock.now)
     }
 
     public func ring(_ peer: ParticipantID, in pairs: Pairs) throws {
-        try store.ring(peer, in: pairs, at: clock.now)
+        try store.ring(peer, in: pairs, as: seat(pairs), at: clock.now)
         rings.append(Ring(from: pairs.me, to: peer))
     }
 
     public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) -> [SyncPacket] {
         fetchCount += 1
-        return store.fetch(from: peer, for: tags, in: pairs)
+        return store.fetch(from: peer, for: tags, in: pairs, as: seat(pairs))
     }
 
     public func acknowledge(
         _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
     ) throws {
         acknowledgeCount += 1
-        try store.acknowledge(id, from: peer, with: receipt, in: pairs, at: clock.now)
+        try store.acknowledge(id, from: peer, with: receipt, in: pairs, as: seat(pairs), at: clock.now)
     }
 
-    public func sentPackets(in pairs: Pairs) -> [PacketID: SentPacket] { store.sentPackets(in: pairs) }
+    public func sentPackets(in pairs: Pairs) -> [PacketID: SentPacket] { store.sentPackets(in: pairs, as: seat(pairs)) }
 
     public func withdraw(_ id: PacketID, in pairs: Pairs) {
         withdrawCount += 1
-        store.withdraw(id, in: pairs)
+        store.withdraw(id, as: seat(pairs))
     }
 
     // MARK: Photos
@@ -250,32 +266,32 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
             throw failure
         }
         if let failure = uploadFailures.removeValue(forKey: uploadCount) { throw failure }
-        try store.upload(attachment, in: pairs, at: clock.now)
+        try store.upload(attachment, in: pairs, as: seat(pairs), at: clock.now)
     }
 
     public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) -> Data? {
         downloadCount += 1
-        return store.download(id, from: sender, in: pairs)
+        return store.download(id, from: sender, in: pairs, as: seat(pairs))
     }
 
     public func acknowledge(
         attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
     ) throws {
         attachmentAcknowledgeCount += 1
-        try store.acknowledge(attachment: id, from: sender, with: receipt, in: pairs, at: clock.now)
+        try store.acknowledge(attachment: id, from: sender, with: receipt, in: pairs, as: seat(pairs), at: clock.now)
     }
 
     public func pendingAttachments(in pairs: Pairs) -> [AttachmentID: SentAttachment] {
-        store.pendingAttachments(in: pairs)
+        store.pendingAttachments(in: pairs, as: seat(pairs))
     }
 
     public func sweepableAttachments(in pairs: Pairs) -> [AttachmentID: Date] {
-        store.sweepableAttachments(in: pairs, at: clock.now)
+        store.sweepableAttachments(as: seat(pairs), at: clock.now)
     }
 
     public func delete(attachment id: AttachmentID, in pairs: Pairs) {
         attachmentDeleteCount += 1
-        store.delete(attachment: id, in: pairs)
+        store.delete(attachment: id, as: seat(pairs))
     }
 
     // MARK: What a test can reach in and do
@@ -293,8 +309,8 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     public func delete(packet id: PacketID) { store.forgetPacket(id) }
 
     public func forget(attachment id: AttachmentID) {
-        for owner in Set(store.spaces.values.map(\.owner)) {
-            store.remove(LocalPairStore.photoPrefix + id.rawValue.uuidString, fromEverySpaceOf: owner)
+        for account in Set(store.spaces.values.map(\.account)) {
+            store.remove(LocalPairStore.photoPrefix + id.rawValue.uuidString, fromEverySpaceIn: account)
         }
     }
 
@@ -320,7 +336,7 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     }
 
     public func pendingRecipients(in pairs: Pairs) -> Set<RecipientTag> {
-        store.sentPackets(in: pairs).values.reduce(into: Set<RecipientTag>()) { tags, sent in
+        store.sentPackets(in: pairs, as: seat(pairs)).values.reduce(into: Set<RecipientTag>()) { tags, sent in
             tags.formUnion(sent.recipients.subtracting(sent.receipts.map(\.tag)))
         }
     }
@@ -396,6 +412,7 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
     public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome {
         throw Refused()
     }
+    public func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool { throw Refused() }
     public func close(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
     public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
     public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }

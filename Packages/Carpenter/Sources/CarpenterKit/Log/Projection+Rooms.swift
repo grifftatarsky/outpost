@@ -70,11 +70,11 @@ extension Projection {
 }
 
 extension Projection {
-    public func pairLinks(in room: RoomID, to recipient: ParticipantID) -> [(author: ParticipantID, id: EntryHash, body: PairLinkBody)] {
+    public func pairLinks(in room: RoomID, to recipient: ParticipantID) -> [(entry: RenderedEntry, body: PairLinkBody)] {
         entries(in: room).compactMap { entry in
             guard entry.type == .pairLink, entry.author != recipient, let body = entry.pairLink, body.recipient == recipient
             else { return nil }
-            return (entry.author, entry.id, body)
+            return (entry, body)
         }
     }
 }

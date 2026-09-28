@@ -99,7 +99,7 @@ final class RigChecks: XCTestCase {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    func testFifthOnboards() throws {
+    func onboard(as name: String) {
         let app = launch()
         sleep(3)
         _ = tapIfThere(app, "Skip")
@@ -110,14 +110,18 @@ final class RigChecks: XCTestCase {
                 field.tap()
                 sleep(1)
             }
-            field.typeText("Fifth")
+            field.typeText(name)
             sleep(1)
             XCTAssertTrue(tapIfThere(app, "Create my identity", timeout: 3), "could not create the identity")
         }
         sleep(3)
         settle(app)
         sleep(2)
-        shoot(app, "fifth-home")
+        shoot(app, "\(name.lowercased())-home")
+    }
+
+    func testFifthOnboards() throws {
+        onboard(as: ProcessInfo.processInfo.environment["RIG_NAME"] ?? "Fifth")
     }
 
     func testANewMemberSavesTheKeyAndLocksTheApp() throws {
@@ -245,20 +249,7 @@ final class RigChecks: XCTestCase {
     }
 
     func testTrigOnboards() throws {
-        let app = launch()
-        sleep(3)
-        _ = tapIfThere(app, "Skip")
-        sleep(1)
-        let field = app.textFields.firstMatch
-        if field.waitForExistence(timeout: 5) {
-            field.tap()
-            field.typeText("Trig")
-            _ = tapIfThere(app, "Create my identity")
-        }
-        sleep(3)
-        settle(app)
-        sleep(2)
-        shoot(app, "trig-home")
+        onboard(as: "Trig")
     }
 
     func testShareCode() throws {
@@ -484,9 +475,19 @@ final class RigChecks: XCTestCase {
         let app = launch()
         sleep(3)
         openChecks(app)
-        send(app, "hello from Quad")
+        send(app, ProcessInfo.processInfo.environment["RIG_SAY"] ?? "hello from Quad")
         sleep(8)
         shoot(app, "q-said")
+    }
+
+    func testSees() throws {
+        let expected = try XCTUnwrap(ProcessInfo.processInfo.environment["RIG_EXPECT"], "set RIG_EXPECT to the words to wait for")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        let message = app.staticTexts[expected].firstMatch
+        XCTAssertTrue(message.waitForExistence(timeout: 120), "\(expected) never arrived")
+        shoot(app, "seen")
     }
 
     func testTrigBlockSheet() throws {

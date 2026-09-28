@@ -9,6 +9,7 @@ public struct LocalPairStore: Codable, Sendable {
 
     public struct Space: Codable, Sendable {
         public let owner: ParticipantID
+        public let account: String
         public let url: URL
         public var hint: PairHint?
         public var named: String?
@@ -35,68 +36,83 @@ public struct LocalPairStore: Codable, Sendable {
 
     // MARK: Spaces
 
-    func mine(for peer: ParticipantID, in pairs: Pairs) -> URL? {
+    func mine(for peer: ParticipantID, in pairs: Pairs, as account: String) -> URL? {
         guard let hint = pairs.hints[peer] else { return nil }
-        return spaces.values.first { $0.owner == pairs.me && $0.hint == hint }?.url
+        return spaces.values.filter { $0.account == account && $0.hint == hint }.map(\.url)
+            .min { $0.absoluteString < $1.absoluteString }
     }
 
-    func theirs(_ peer: ParticipantID, in pairs: Pairs) -> Space? {
-        guard let hint = pairs.hints[peer] else { return nil }
-        let me = Self.account(of: pairs.me)
-        return spaces.values.first {
-            $0.owner == peer && $0.hint == hint && $0.named == me && $0.joined.contains(me)
-        }
+    func theirs(_ peer: ParticipantID, in pairs: Pairs, as account: String) -> [Space] {
+        guard let hint = pairs.hints[peer] else { return [] }
+        return spaces.values.filter {
+            pairs.reads(peer, from: $0.account) && $0.account != account && $0.hint == hint && $0.named == account
+                && $0.joined.contains(account)
+        }.sorted { $0.url.absoluteString < $1.url.absoluteString }
     }
 
-    private mutating func newSpace(for owner: ParticipantID, hint: PairHint?, named: String?) -> URL {
+    private mutating func newSpace(for owner: ParticipantID, as account: String, hint: PairHint?) -> URL {
         made += 1
         let url = URL(string: "https://icloud.invalid/share/\(UUID().uuidString)")!
-        spaces[url] = Space(owner: owner, url: url, hint: hint, named: named)
+        spaces[url] = Space(owner: owner, account: account, url: url, hint: hint)
         return url
     }
 
-    public mutating func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+    private mutating func ensureSpace(for peer: ParticipantID, in pairs: Pairs, as account: String) throws -> URL {
         let hint = try pairs.hint(for: peer)
-        if let url = mine(for: peer, in: pairs) {
-            if let account { spaces[url]?.named = account }
-            return url
-        }
-        return newSpace(for: pairs.me, hint: hint, named: account)
+        return mine(for: peer, in: pairs, as: account) ?? newSpace(for: pairs.me, as: account, hint: hint)
     }
 
-    public mutating func spaceForACode(in pairs: Pairs) -> URL {
-        newSpace(for: pairs.me, hint: nil, named: nil)
+    public mutating func space(
+        for peer: ParticipantID, naming reader: String?, in pairs: Pairs, as account: String
+    ) throws -> URL {
+        let url = try ensureSpace(for: peer, in: pairs, as: account)
+        name(reader, in: url)
+        return url
     }
 
-    public mutating func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+    private mutating func name(_ reader: String?, in url: URL) {
+        guard let reader, spaces[url]?.named != reader else { return }
+        spaces[url]?.named = reader
+        spaces[url]?.joined = []
+    }
+
+    public mutating func spaceForACode(in pairs: Pairs, as account: String) -> URL {
+        newSpace(for: pairs.me, as: account, hint: nil)
+    }
+
+    public mutating func claim(
+        _ url: URL, for peer: ParticipantID, naming reader: String?, in pairs: Pairs, as account: String
+    ) throws -> URL {
         let hint = try pairs.hint(for: peer)
-        if let existing = mine(for: peer, in: pairs), existing != url {
-            if spaces[url]?.owner == pairs.me, spaces[url]?.hint == nil { spaces[url] = nil }
-            if let account { spaces[existing]?.named = account }
+        if let existing = mine(for: peer, in: pairs, as: account), existing != url {
+            if spaces[url]?.account == account, spaces[url]?.hint == nil { spaces[url] = nil }
+            name(reader, in: existing)
             return existing
         }
-        guard var space = spaces[url], space.owner == pairs.me else {
-            return try self.space(for: peer, naming: account, in: pairs)
+        guard spaces[url]?.account == account else {
+            return try space(for: peer, naming: reader, in: pairs, as: account)
         }
-        space.hint = hint
-        if let account { space.named = account }
-        spaces[url] = space
+        spaces[url]?.hint = hint
+        name(reader, in: url)
         return url
     }
 
-    public mutating func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) -> JoinOutcome {
-        guard var space = spaces[link.url], space.owner == peer, Self.account(of: peer) == link.account else {
+    public mutating func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs, as account: String) -> JoinOutcome {
+        guard var space = spaces[link.url], space.account == link.account, space.account != account else {
             return .gone
         }
-        let me = Self.account(of: pairs.me)
-        guard space.named == me else { return .notYetNamed }
-        space.joined.insert(me)
+        guard space.named == account else { return .notYetNamed }
+        space.joined.insert(account)
         spaces[link.url] = space
         return .joined
     }
 
-    public mutating func close(_ peer: ParticipantID, in pairs: Pairs) {
-        guard let url = mine(for: peer, in: pairs) else { return }
+    public func reads(_ peer: ParticipantID, in pairs: Pairs, as account: String) -> Bool {
+        !theirs(peer, in: pairs, as: account).isEmpty
+    }
+
+    public mutating func close(_ peer: ParticipantID, in pairs: Pairs, as account: String) {
+        guard let url = mine(for: peer, in: pairs, as: account) else { return }
         for name in spaces[url]?.order ?? [] {
             if let id = UUID(uuidString: name) { packetOrder.removeAll { $0.rawValue == id } }
         }
@@ -106,9 +122,10 @@ public struct LocalPairStore: Codable, Sendable {
     // MARK: Records in one's own space
 
     public mutating func write(
-        _ name: String, _ fields: [String: PacketField], to peer: ParticipantID, in pairs: Pairs, at now: Date
+        _ name: String, _ fields: [String: PacketField], to peer: ParticipantID, in pairs: Pairs, as account: String,
+        at now: Date
     ) throws {
-        let url = try space(for: peer, naming: nil, in: pairs)
+        let url = try ensureSpace(for: peer, in: pairs, as: account)
         let instant = stamp(now)
         let storedAt = spaces[url]?.records[name]?.storedAt ?? instant
         if spaces[url]?.records[name] == nil { spaces[url]?.order.append(name) }
@@ -116,9 +133,9 @@ public struct LocalPairStore: Codable, Sendable {
     }
 
     @discardableResult
-    public mutating func remove(_ name: String, fromEverySpaceOf me: ParticipantID) -> Int {
+    public mutating func remove(_ name: String, fromEverySpaceIn account: String) -> Int {
         var removed = 0
-        for url in spaces.keys where spaces[url]?.owner == me && spaces[url]?.records[name] != nil {
+        for url in spaces.keys where spaces[url]?.account == account && spaces[url]?.records[name] != nil {
             spaces[url]?.records[name] = nil
             spaces[url]?.order.removeAll { $0 == name }
             removed += 1
@@ -146,14 +163,17 @@ public struct LocalPairStore: Codable, Sendable {
 
     // MARK: Reading
 
-    public func records(inSpaceOf peer: ParticipantID, forMe pairs: Pairs) -> [(name: String, record: Record)] {
-        guard let space = theirs(peer, in: pairs) else { return [] }
-        return space.order.compactMap { name in space.records[name].map { (name, $0) } }
+    public func records(
+        inSpaceOf peer: ParticipantID, forMe pairs: Pairs, as account: String
+    ) -> [(name: String, record: Record)] {
+        theirs(peer, in: pairs, as: account).flatMap { space in
+            space.order.compactMap { name in space.records[name].map { (name, $0) } }
+        }
     }
 
-    public func ownSpaces(of me: ParticipantID, in pairs: Pairs) -> [(peer: ParticipantID, space: Space)] {
+    public func ownSpaces(in pairs: Pairs, as account: String) -> [(peer: ParticipantID, space: Space)] {
         spaces.values.compactMap { space in
-            guard space.owner == me, let hint = space.hint, let peer = pairs.peer(for: hint) else { return nil }
+            guard space.account == account, let hint = space.hint, let peer = pairs.peer(for: hint) else { return nil }
             return (peer, space)
         }
     }
@@ -168,26 +188,28 @@ public struct LocalPairStore: Codable, Sendable {
 extension LocalPairStore {
     public static let photoPrefix = "photo-"
 
-    public mutating func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs, at now: Date) throws {
+    public mutating func put(
+        _ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs, as account: String, at now: Date
+    ) throws {
         let fields = PacketWire.fields(of: packet)
         let weight = MailboxRules.weigh(fields)
         guard weight <= MailboxRules.recordByteCeiling else {
             throw MailboxError.recordTooLarge(bytes: weight, ceiling: MailboxRules.recordByteCeiling)
         }
-        try write(packet.id.rawValue.uuidString, fields, to: peer, in: pairs, at: now)
+        try write(packet.id.rawValue.uuidString, fields, to: peer, in: pairs, as: account, at: now)
         notePacket(packet.id)
     }
 
-    public mutating func ring(_ peer: ParticipantID, in pairs: Pairs, at now: Date) throws {
-        try write(
-            PairWire.ringRecord, [PairWire.ring: .string(String(now.timeIntervalSince1970))], to: peer, in: pairs,
-            at: now)
+    public mutating func ring(_ peer: ParticipantID, in pairs: Pairs, as account: String, at now: Date) throws {
+        try write(PairWire.ringRecord, [PairWire.ring: .string(PairWire.ringValue())], to: peer, in: pairs, as: account, at: now)
     }
 
-    public mutating func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) -> [SyncPacket] {
-        let found = records(inSpaceOf: peer, forMe: pairs)
+    public mutating func fetch(
+        from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs, as account: String
+    ) -> [SyncPacket] {
+        let found = records(inSpaceOf: peer, forMe: pairs, as: account)
         let held = Set(found.map(\.name))
-        if theirs(peer, in: pairs) != nil, let url = mine(for: peer, in: pairs) {
+        if reads(peer, in: pairs, as: account), let url = mine(for: peer, in: pairs, as: account) {
             for name in spaces[url]?.order ?? [] {
                 guard let packet = PairWire.packet(fromReceiptName: name), !held.contains(packet.rawValue.uuidString)
                 else { continue }
@@ -195,7 +217,7 @@ extension LocalPairStore {
                 spaces[url]?.order.removeAll { $0 == name }
             }
         }
-        let mine = mine(for: peer, in: pairs).flatMap { spaces[$0] }
+        let mine = mine(for: peer, in: pairs, as: account).flatMap { spaces[$0] }
         return found.compactMap { name, record in
             guard let uuid = UUID(uuidString: name), var packet = PacketWire.packet(from: record.fields),
                 !packet.recipients.isDisjoint(with: tags)
@@ -212,16 +234,19 @@ extension LocalPairStore {
     }
 
     public mutating func acknowledge(
-        _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs, at now: Date
+        _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs, as account: String,
+        at now: Date
     ) throws {
-        try write(PairWire.receiptName(for: id), PacketWire.receiptFields(receipt), to: peer, in: pairs, at: now)
+        try write(
+            PairWire.receiptName(for: id), PacketWire.receiptFields(receipt), to: peer, in: pairs, as: account, at: now)
     }
 
-    public func sentPackets(in pairs: Pairs) -> [PacketID: SentPacket] {
+    public func sentPackets(in pairs: Pairs, as account: String) -> [PacketID: SentPacket] {
         var sent: [PacketID: SentPacket] = [:]
-        for (peer, space) in ownSpaces(of: pairs.me, in: pairs) {
+        for (peer, space) in ownSpaces(in: pairs, as: account) {
             let answers = Dictionary(
-                records(inSpaceOf: peer, forMe: pairs).map { ($0.name, $0.record) }, uniquingKeysWith: { a, _ in a })
+                records(inSpaceOf: peer, forMe: pairs, as: account).map { ($0.name, $0.record) },
+                uniquingKeysWith: { a, _ in a })
             for name in space.order {
                 guard let uuid = UUID(uuidString: name), let record = space.records[name],
                     let packet = PacketWire.packet(from: record.fields)
@@ -236,40 +261,42 @@ extension LocalPairStore {
         return sent
     }
 
-    public mutating func withdraw(_ id: PacketID, in pairs: Pairs) {
-        remove(id.rawValue.uuidString, fromEverySpaceOf: pairs.me)
+    public mutating func withdraw(_ id: PacketID, as account: String) {
+        remove(id.rawValue.uuidString, fromEverySpaceIn: account)
         packetOrder.removeAll { $0 == id }
     }
 
     // MARK: Photos, one copy in each recipient's space
 
-    public mutating func upload(_ attachment: OutgoingAttachment, in pairs: Pairs, at now: Date) throws {
+    public mutating func upload(_ attachment: OutgoingAttachment, in pairs: Pairs, as account: String, at now: Date) throws {
         for (peer, tag) in attachment.recipients {
             try write(
                 Self.photoPrefix + attachment.id.rawValue.uuidString, AttachmentWire.fields(of: attachment, for: tag),
-                to: peer, in: pairs, at: now)
+                to: peer, in: pairs, as: account, at: now)
         }
     }
 
-    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) -> Data? {
-        records(inSpaceOf: sender, forMe: pairs)
+    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs, as account: String) -> Data? {
+        records(inSpaceOf: sender, forMe: pairs, as: account)
             .first { $0.name == Self.photoPrefix + id.rawValue.uuidString }
             .flatMap { AttachmentWire.attachment(from: $0.record.fields)?.ciphertext }
     }
 
     public mutating func acknowledge(
         attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs,
-        at now: Date
+        as account: String, at now: Date
     ) throws {
-        try write(PairWire.receiptName(for: id), PacketWire.receiptFields(receipt), to: sender, in: pairs, at: now)
+        try write(
+            PairWire.receiptName(for: id), PacketWire.receiptFields(receipt), to: sender, in: pairs, as: account, at: now)
     }
 
-    public func pendingAttachments(in pairs: Pairs) -> [AttachmentID: SentAttachment] {
+    public func pendingAttachments(in pairs: Pairs, as account: String) -> [AttachmentID: SentAttachment] {
         var recipients: [AttachmentID: Set<RecipientTag>] = [:]
         var receipts: [AttachmentID: [SealedReceipt]] = [:]
-        for (peer, space) in ownSpaces(of: pairs.me, in: pairs) {
+        for (peer, space) in ownSpaces(in: pairs, as: account) {
             let answers = Dictionary(
-                records(inSpaceOf: peer, forMe: pairs).map { ($0.name, $0.record) }, uniquingKeysWith: { a, _ in a })
+                records(inSpaceOf: peer, forMe: pairs, as: account).map { ($0.name, $0.record) },
+                uniquingKeysWith: { a, _ in a })
             for name in space.order where name.hasPrefix(Self.photoPrefix) {
                 guard let uuid = UUID(uuidString: String(name.dropFirst(Self.photoPrefix.count))),
                     let record = space.records[name]
@@ -288,10 +315,10 @@ extension LocalPairStore {
         }
     }
 
-    public func sweepableAttachments(in pairs: Pairs, at now: Date) -> [AttachmentID: Date] {
+    public func sweepableAttachments(as account: String, at now: Date) -> [AttachmentID: Date] {
         let settled = now.addingTimeInterval(-MailboxRules.sweepAge)
         var found: [AttachmentID: Date] = [:]
-        for space in spaces.values where space.owner == pairs.me {
+        for space in spaces.values where space.account == account {
             for name in space.order where name.hasPrefix(Self.photoPrefix) {
                 guard let uuid = UUID(uuidString: String(name.dropFirst(Self.photoPrefix.count))),
                     let record = space.records[name], record.storedAt < settled
@@ -303,15 +330,15 @@ extension LocalPairStore {
         return found
     }
 
-    public mutating func delete(attachment id: AttachmentID, in pairs: Pairs) {
-        remove(Self.photoPrefix + id.rawValue.uuidString, fromEverySpaceOf: pairs.me)
+    public mutating func delete(attachment id: AttachmentID, as account: String) {
+        remove(Self.photoPrefix + id.rawValue.uuidString, fromEverySpaceIn: account)
     }
 }
 
 extension LocalPairStore {
     private func counterpart(of space: Space) -> Space? {
         guard let hint = space.hint else { return nil }
-        return spaces.values.first { $0.hint == hint && $0.owner != space.owner }
+        return spaces.values.first { $0.hint == hint && $0.account != space.account }
     }
 
     public var everySentPacket: [PacketID: SentPacket] {

@@ -87,6 +87,10 @@ public actor BudgetedMailbox: Mailbox {
         try await underlying.join(link, of: peer, in: pairs)
     }
 
+    public func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool {
+        try await underlying.reads(peer, in: pairs)
+    }
+
     public func close(_ peer: ParticipantID, in pairs: Pairs) async throws {
         try await underlying.close(peer, in: pairs)
     }

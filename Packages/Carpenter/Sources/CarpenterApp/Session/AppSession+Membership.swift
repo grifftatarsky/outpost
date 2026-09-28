@@ -201,7 +201,7 @@ extension AppSession {
         if !persisted.knownKeys.contains(code.keys) { persisted.knownKeys.append(code.keys) }
         take(theirs, from: code.participantID)
         let pairs = try currentPairs()
-        let url = try await mailbox.space(for: code.participantID, naming: theirs.account, in: pairs)
+        let url = try await mailbox.space(for: code.participantID, naming: link(for: code.participantID)?.account, in: pairs)
         let mine = PairLink(account: try await mailbox.account(in: pairs), url: url)
         try await saveState()
         return try SignedPairLink.sign(mine, by: enrolment.identity)
@@ -210,7 +210,7 @@ extension AppSession {
     public func standingOffer(to joiner: ParticipantID, through mailbox: any Mailbox) async -> SignedPairLink? {
         guard let enrolment, let pairs = pairs(), pairs.hints[joiner] != nil else { return nil }
         do {
-            let url = try await mailbox.space(for: joiner, naming: persisted.pairBook[joiner]?.theirs?.account, in: pairs)
+            let url = try await mailbox.space(for: joiner, naming: link(for: joiner)?.account, in: pairs)
             return try SignedPairLink.sign(PairLink(account: try await mailbox.account(in: pairs), url: url), by: enrolment.identity)
         } catch {
             Diagnostics.sync.error(

@@ -3,7 +3,16 @@ import Foundation
 
 extension Pairs {
     public static func of(_ peers: Peer...) -> Pairs {
-        Pairs(me: peers[0].me, hints: Dictionary(peers.map { ($0.them, $0.secret.pairHint) }, uniquingKeysWith: { a, _ in a }))
+        Pairs(
+            me: peers[0].me,
+            hints: Dictionary(peers.map { ($0.them, $0.secret.pairHint) }, uniquingKeysWith: { a, _ in a }),
+            accounts: Dictionary(peers.map { ($0.them, [LocalPairStore.account(of: $0.them)]) }, uniquingKeysWith: { a, _ in a }))
+    }
+
+    public func merging(_ other: Pairs) -> Pairs {
+        Pairs(
+            me: me, hints: hints.merging(other.hints) { first, _ in first },
+            accounts: accounts.merging(other.accounts) { $0.union($1) })
     }
 }
 

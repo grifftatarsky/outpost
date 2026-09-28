@@ -246,6 +246,8 @@ public protocol Mailbox: Sendable {
 
     func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome
 
+    func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool
+
     func close(_ peer: ParticipantID, in pairs: Pairs) async throws
 
     func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws

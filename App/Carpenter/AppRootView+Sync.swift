@@ -18,11 +18,6 @@ import SwiftUI
 extension AppRootView {
     static let foregroundSyncSeconds = 20
     func startDeviceSync() {
-        #if DEBUG
-            if rig != nil, session.state == .ready {
-                RigCodes.leave(session.identityCode(), as: "\(session.viewer.displayName).identity")
-            }
-        #endif
         guard !UITestMode.isOn, testSession == nil else { return }
         guard case .start(let device) = DeviceSyncDecision.make(
             device: session.thisDeviceID, startedFor: startedSyncFor)
@@ -70,6 +65,11 @@ extension AppRootView {
                 if let cloud = mailbox as? CloudKitMailbox, let pairs = session.pairs() {
                     await cloud.retireOldOutbox(whenEveryoneHasMovedAmong: session.peersLastRound, in: pairs)
                 }
+                #if DEBUG
+                    if rig != nil, !session.codeForSharing.isEmpty {
+                        RigCodes.leave(session.codeForSharing, as: "\(session.viewer.displayName).identity")
+                    }
+                #endif
             },
         )
 

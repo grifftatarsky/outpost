@@ -36,65 +36,72 @@
         func account(in pairs: Pairs) -> String { LocalPairStore.account(of: pairs.me) }
 
         func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
-            try change { try $0.space(for: peer, naming: account, in: pairs) }
+            try change { try $0.space(for: peer, naming: account, in: pairs, as: self.account(in: pairs)) }
         }
 
-        func spaceForACode(in pairs: Pairs) throws -> URL { try change { $0.spaceForACode(in: pairs) } }
+        func spaceForACode(in pairs: Pairs) throws -> URL { try change { $0.spaceForACode(in: pairs, as: self.account(in: pairs)) } }
 
         func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
-            try change { try $0.claim(url, for: peer, naming: account, in: pairs) }
+            try change { try $0.claim(url, for: peer, naming: account, in: pairs, as: self.account(in: pairs)) }
         }
 
         func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) throws -> JoinOutcome {
-            try change { $0.join(link, of: peer, in: pairs) }
+            try change { $0.join(link, of: peer, in: pairs, as: self.account(in: pairs)) }
         }
 
-        func close(_ peer: ParticipantID, in pairs: Pairs) throws { try change { $0.close(peer, in: pairs) } }
+
+        func reads(_ peer: ParticipantID, in pairs: Pairs) throws -> Bool {
+
+            try change { $0.reads(peer, in: pairs, as: self.account(in: pairs)) }
+
+        }
+
+        func close(_ peer: ParticipantID, in pairs: Pairs) throws { try change { $0.close(peer, in: pairs, as: self.account(in: pairs)) } }
 
         func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) throws {
-            try change(writing: true) { try $0.put(packet, to: peer, in: pairs, at: Date()) }
+            try change(writing: true) { try $0.put(packet, to: peer, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
         func ring(_ peer: ParticipantID, in pairs: Pairs) throws {
-            try change { try $0.ring(peer, in: pairs, at: Date()) }
+            try change { try $0.ring(peer, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
         func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) throws -> [SyncPacket] {
-            try change { $0.fetch(from: peer, for: tags, in: pairs) }
+            try change { $0.fetch(from: peer, for: tags, in: pairs, as: self.account(in: pairs)) }
         }
 
         func acknowledge(_ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs) throws {
-            try change { try $0.acknowledge(id, from: peer, with: receipt, in: pairs, at: Date()) }
+            try change { try $0.acknowledge(id, from: peer, with: receipt, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
-        func sentPackets(in pairs: Pairs) throws -> [PacketID: SentPacket] { try change { $0.sentPackets(in: pairs) } }
+        func sentPackets(in pairs: Pairs) throws -> [PacketID: SentPacket] { try change { $0.sentPackets(in: pairs, as: self.account(in: pairs)) } }
 
-        func withdraw(_ id: PacketID, in pairs: Pairs) throws { try change { $0.withdraw(id, in: pairs) } }
+        func withdraw(_ id: PacketID, in pairs: Pairs) throws { try change { $0.withdraw(id, as: self.account(in: pairs)) } }
 
         func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) throws {
-            try change(writing: true) { try $0.upload(attachment, in: pairs, at: Date()) }
+            try change(writing: true) { try $0.upload(attachment, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
         func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) throws -> Data? {
-            try change { $0.download(id, from: sender, in: pairs) }
+            try change { $0.download(id, from: sender, in: pairs, as: self.account(in: pairs)) }
         }
 
         func acknowledge(
             attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
         ) throws {
-            try change { try $0.acknowledge(attachment: id, from: sender, with: receipt, in: pairs, at: Date()) }
+            try change { try $0.acknowledge(attachment: id, from: sender, with: receipt, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
         func pendingAttachments(in pairs: Pairs) throws -> [AttachmentID: SentAttachment] {
-            try change { $0.pendingAttachments(in: pairs) }
+            try change { $0.pendingAttachments(in: pairs, as: self.account(in: pairs)) }
         }
 
         func sweepableAttachments(in pairs: Pairs) throws -> [AttachmentID: Date] {
-            try change { $0.sweepableAttachments(in: pairs, at: Date()) }
+            try change { $0.sweepableAttachments(as: self.account(in: pairs), at: Date()) }
         }
 
         func delete(attachment id: AttachmentID, in pairs: Pairs) throws {
-            try change { $0.delete(attachment: id, in: pairs) }
+            try change { $0.delete(attachment: id, as: self.account(in: pairs)) }
         }
     }
 

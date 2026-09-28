@@ -114,9 +114,12 @@ extension ForwardCompatibilityTests {
                 from: ParticipantID(rawValue: WideID.of([9])), entry: entry, attachment: AttachmentID(), at: stamp.at)
         ]
         let link = PairLink(account: "_them", url: URL(string: "https://icloud.invalid/share/a")!)
-        state.pairBook = [
-            ParticipantID(rawValue: WideID.of([9])): PairBookEntry(theirs: link, joined: true, announced: link.url)
-        ]
+        var paired = PairBookEntry(theirs: link)
+        paired.joinedSpace = link.url
+        paired.announced = link.url
+        paired.gone = [URL(string: "https://icloud.invalid/share/gone")!]
+        paired.shut = true
+        state.pairBook = [ParticipantID(rawValue: WideID.of([9])): paired]
         state.codeLink = try SignedPairLink.sign(link, by: Identity.generate())
         state.codeClaims = [CodeClaim(url: link.url, peer: ParticipantID(rawValue: WideID.of([9])))]
         state.holesNoticed = [room: stamp.at]
@@ -219,6 +222,16 @@ extension ForwardCompatibilityTests {
         #expect(
             decoded.acceptedInvitations.map(\.attestation) == [attestation],
             "an invitation confirmed on the build before the rename was dropped on upgrade")
+    }
+
+    @Test("A contact's link written by the build before links were weighed still opens, and is joined again")
+    func aPairBookEntryFromTheBuildBeforeStillOpens() throws {
+        let json = Data(#"{"theirs":{"account":"_them","url":"https://icloud.invalid/share/a"},"joined":true,"announced":"https://icloud.invalid/share/b"}"#.utf8)
+        let entry = try JSONDecoder().decode(PairBookEntry.self, from: json)
+        #expect(entry.theirs?.account == "_them")
+        #expect(entry.announced?.absoluteString == "https://icloud.invalid/share/b")
+        #expect(entry.joinedSpace == nil)
+        #expect(entry.gone.isEmpty)
     }
 
     @Test("A key rotation owed under the old field name is still owed after the upgrade")

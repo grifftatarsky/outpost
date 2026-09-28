@@ -44,7 +44,7 @@ extension CloudKitMailbox {
         let hint = try pairs.hint(for: sender)
         try await refresh()
         var places: [(CKRecordZone.ID, String)] = []
-        if let zone = await index.theirsFor(hint) { places.append((zone, Self.photoRecordName(id))) }
+        for zone in await index.theirsFor(sender, in: pairs) { places.append((zone, Self.photoRecordName(id))) }
         for zone in await index.legacy.keys { places.append((zone, id.recordName)) }
         for (zone, name) in places {
             do {
@@ -70,9 +70,9 @@ extension CloudKitMailbox {
         try await refresh()
         var recipients: [AttachmentID: Set<RecipientTag>] = [:]
         var receipts: [AttachmentID: [SealedReceipt]] = [:]
-        for hint in pairs.hints.values {
+        for (peer, hint) in pairs.hints {
             guard let zone = await index.mineFor(hint), let mine = await index.mine[zone] else { continue }
-            let answers = await index.theirZone(for: hint)?.records ?? [:]
+            let answers = await index.theirZone(for: peer, in: pairs)?.records ?? [:]
             for (name, cached) in mine.records where cached.type == AttachmentRecord.type {
                 guard name.hasPrefix(LocalPairStore.photoPrefix),
                     let id = AttachmentID(recordName: String(name.dropFirst(LocalPairStore.photoPrefix.count)))

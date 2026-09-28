@@ -53,6 +53,10 @@ public actor HookedMailbox: Mailbox {
         await inner.join(link, of: peer, in: pairs)
     }
 
+    public func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool {
+        await inner.reads(peer, in: pairs)
+    }
+
     public func close(_ peer: ParticipantID, in pairs: Pairs) async throws { await inner.close(peer, in: pairs) }
 
     public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws { try await inner.ring(peer, in: pairs) }

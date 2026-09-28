@@ -22,7 +22,7 @@ extension CloudKitMailbox {
     public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws {
         let zone = try await zone(for: peer, in: pairs)
         let record = CKRecord(recordType: PairWire.ringType, recordID: CKRecord.ID(recordName: PairWire.ringRecord, zoneID: zone))
-        record[PairWire.ring] = String(Date().timeIntervalSince1970)
+        record[PairWire.ring] = PairWire.ringValue()
         try await save([record], in: container.privateCloudDatabase)
     }
 
@@ -31,7 +31,7 @@ extension CloudKitMailbox {
     {
         let hint = try pairs.hint(for: peer)
         try await refresh()
-        let theirs = await index.theirZone(for: hint)
+        let theirs = await index.theirZone(for: peer, in: pairs)
         let mine = await index.myZone(for: hint)
         var found = packets(in: theirs, for: tags, from: peer, answeredIn: mine)
         found += await oldOutboxPackets(for: tags, from: peer)
@@ -50,7 +50,7 @@ extension CloudKitMailbox {
         var sent: [PacketID: SentPacket] = [:]
         for (peer, hint) in pairs.hints {
             guard let zone = await index.mineFor(hint), let mine = await index.mine[zone] else { continue }
-            let answers = await index.theirZone(for: hint)?.records ?? [:]
+            let answers = await index.theirZone(for: peer, in: pairs)?.records ?? [:]
             for (name, cached) in mine.records where cached.type == PacketRecord.type {
                 guard let id = PacketID(recordName: name), let packet = PacketWire.packet(from: cached.fields) else { continue }
                 let receipt = answers[PairWire.receiptName(for: id)].flatMap { PacketWire.receipt(from: $0.fields) }

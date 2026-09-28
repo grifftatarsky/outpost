@@ -70,7 +70,7 @@ struct InMemoryMailboxTests {
         var three = Three(toBob: toBob, asBob: asBob, asCarol: asCarol)
         (three.alice, three.bob) = try await link(toBob, asBob, through: three.mailbox)
         let (withCarol, carol) = try await link(toCarol, asCarol, through: three.mailbox)
-        three.alice = Pairs(me: alice.id, hints: three.alice.hints.merging(withCarol.hints) { first, _ in first })
+        three.alice = three.alice.merging(withCarol)
         three.carol = carol
         return three
     }

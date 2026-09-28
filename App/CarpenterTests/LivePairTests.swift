@@ -6,11 +6,15 @@ import CloudKit
 import Foundation
 import Testing
 
-@MainActor
-enum LivePair {
+enum LivePairRun {
     static let role = ProcessInfo.processInfo.environment["CARPENTER_LIVE_PAIR_ROLE"] ?? ""
     static let run = ProcessInfo.processInfo.environment["CARPENTER_LIVE_PAIR_RUN"] ?? "none"
-    static var folder: URL { URL(filePath: "/tmp/outpost-rig-exchange/live-pair/\(run)") }
+}
+
+@MainActor
+enum LivePair {
+    static var role: String { LivePairRun.role }
+    static var folder: URL { URL(filePath: "/tmp/outpost-rig-exchange/live-pair/\(LivePairRun.run)") }
 
     static func leave(_ value: String, as name: String) throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -58,11 +62,11 @@ enum LivePair {
 
 @Suite(
     "Two people on two iCloud accounts, each writing only into spaces of their own",
-    .enabled(if: LiveCloudKit.isAsked && !LivePair.role.isEmpty),
+    .enabled(if: LiveCloudKit.isAsked && !LivePairRun.role.isEmpty),
     .serialized)
 @MainActor
 struct LivePairTests {
-    @Test(.enabled(if: LivePair.role == "alice"))
+    @Test(.enabled(if: LivePairRun.role == "alice"))
     func alice() async throws {
         let cloud = try await LiveCloudKit.mailbox()
         let alice = LivePair.session()
@@ -108,7 +112,7 @@ struct LivePairTests {
         try? await cloud.eraseEverySpace()
     }
 
-    @Test(.enabled(if: LivePair.role == "bob"))
+    @Test(.enabled(if: LivePairRun.role == "bob"))
     func bob() async throws {
         let cloud = try await LiveCloudKit.mailbox()
         let bob = LivePair.session()
@@ -157,14 +161,10 @@ struct LivePairTests {
         _ = try await LivePair.waitFor("alice-closed")
         let pairs = try #require(bob.pairs())
         try await LivePair.until("Alice's closed space to be gone", bob, through: cloud, minutes: 3) {
-            let left = try await shared.allRecordZones().map(\.zoneID)
-            let readable = await withTaskGroup(of: Bool.self) { group in
-                for zone in left where zone.zoneName.hasPrefix("Pair-") {
-                    group.addTask { (try? await shared.recordZone(for: zone)) != nil }
-                }
-                return await group.reduce(false) { $0 || $1 }
+            for zone in try await shared.allRecordZones().map(\.zoneID) where zone.zoneName.hasPrefix("Pair-") {
+                if (try? await shared.recordZone(for: zone)) != nil { return false }
             }
-            return !readable
+            return true
         }
         #expect(
             try await cloud.fetch(from: aliceID, for: SyncSession.recentTags(for: bob.peers()[0], at: Date()), in: pairs)

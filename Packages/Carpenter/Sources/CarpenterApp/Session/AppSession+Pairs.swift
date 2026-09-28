@@ -3,8 +3,25 @@ import Foundation
 
 struct PairBookEntry: Codable, Equatable, Sendable {
     var theirs: PairLink?
-    var joined = false
+    var joinedSpace: URL?
     var announced: URL?
+    var gone: Set<URL> = []
+    var shut = false
+
+    init(theirs: PairLink? = nil) {
+        self.theirs = theirs
+    }
+
+    private enum CodingKeys: String, CodingKey { case theirs, joinedSpace, announced, gone, shut }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        theirs = try container.decodeIfPresent(PairLink.self, forKey: .theirs)
+        joinedSpace = try container.decodeIfPresent(URL.self, forKey: .joinedSpace)
+        announced = try container.decodeIfPresent(URL.self, forKey: .announced)
+        gone = try container.decodeIfPresent(Set<URL>.self, forKey: .gone) ?? []
+        shut = try container.decodeIfPresent(Bool.self, forKey: .shut) ?? false
+    }
 }
 
 struct OwedPhotoReceipt: Sendable {
@@ -23,42 +40,71 @@ extension AppSession {
     public func pairs() -> Pairs? {
         guard let me = enrolment?.identity.id else { return nil }
         var hints: [ParticipantID: PairHint] = [:]
+        var accounts: [ParticipantID: Set<String>] = [:]
         for person in replica.knownParticipants where person != me {
-            if let secret = legacySecret(with: person) { hints[person] = secret.pairHint }
+            guard let secret = legacySecret(with: person) else { continue }
+            hints[person] = secret.pairHint
+            accounts[person] = readable(from: person)
         }
-        return Pairs(me: me, hints: hints)
+        return Pairs(me: me, hints: hints, accounts: accounts)
     }
 
     public func pairUp(through mailbox: any Mailbox) async {
+        if let pairingUp { return await pairingUp.value }
+        let task = Task { await pairUpOnce(through: mailbox) }
+        pairingUp = task
+        await task.value
+        pairingUp = nil
+    }
+
+    private func pairUpOnce(through mailbox: any Mailbox) async {
         guard let pairs = pairs(), let enrolment else { return }
-        takePairLinks()
         await makeACodeLink(through: mailbox, in: pairs, identity: enrolment.identity)
         await settleCodeClaims(through: mailbox, in: pairs)
 
+        let blocked = persisted.preferences.blockedPeople
+        for peer in blocked where persisted.pairBook[peer]?.shut != true && pairs.hints[peer] != nil {
+            do {
+                try await mailbox.close(peer, in: pairs)
+                persisted.pairBook[peer, default: PairBookEntry()].shut = true
+                persisted.pairBook[peer]?.announced = nil
+            } catch {
+                Diagnostics.sync.error(
+                    "pairs: could not close the space of somebody blocked: \(String(describing: error), privacy: .public)")
+            }
+        }
+        for peer in persisted.pairBook.keys where persisted.pairBook[peer]?.shut == true && !blocked.contains(peer) {
+            persisted.pairBook[peer]?.shut = false
+        }
+
         let account = try? await mailbox.account(in: pairs)
-        for peer in Set(peers().map(\.them)).union(persisted.pairBook.keys) where pairs.hints[peer] != nil {
-            var entry = persisted.pairBook[peer] ?? PairBookEntry()
+        let everyone = Set(peers().map(\.them)).union(persisted.pairBook.keys).subtracting(blocked)
+        for peer in everyone where pairs.hints[peer] != nil {
+            let theirs = link(for: peer)
             let url: URL
             do {
-                url = try await mailbox.space(for: peer, naming: entry.theirs?.account, in: pairs)
+                url = try await mailbox.space(for: peer, naming: theirs?.account, in: pairs)
             } catch {
                 Diagnostics.sync.error(
                     "pairs: could not make a space for somebody: \(String(describing: error), privacy: .public)")
                 continue
             }
-            if let theirs = entry.theirs, !entry.joined {
-                switch try? await mailbox.join(theirs, of: peer, in: pairs) {
-                case .joined?: entry.joined = true
-                case .gone?: entry.theirs = nil
-                case .notYetNamed?, nil: break
-                }
+            if let theirs, (try? await mailbox.reads(peer, in: pairs)) != true {
+                await join(theirs, of: peer, through: mailbox, in: pairs)
             }
-            if entry.announced != url, let account,
+            if persisted.pairBook[peer]?.announced != url, let account,
                 await announce(PairLink(account: account, url: url), to: peer)
             {
-                entry.announced = url
+                persisted.pairBook[peer, default: PairBookEntry()].announced = url
             }
-            if persisted.pairBook[peer] != entry { persisted.pairBook[peer] = entry }
+        }
+    }
+
+    private func join(_ link: PairLink, of peer: ParticipantID, through mailbox: any Mailbox, in pairs: Pairs) async {
+        switch try? await mailbox.join(link, of: peer, in: pairs) {
+        case .joined?: persisted.pairBook[peer, default: PairBookEntry()].joinedSpace = link.url
+        case .gone?: persisted.pairBook[peer, default: PairBookEntry()].gone.insert(link.url)
+        case .notYetNamed?, nil: break
         }
     }
 
@@ -73,31 +119,57 @@ extension AppSession {
     }
 
     public var pairsJoined: Set<ParticipantID> {
-        Set(persisted.pairBook.filter(\.value.joined).keys)
+        Set(persisted.pairBook.compactMap { peer, entry in
+            entry.joinedSpace != nil && entry.joinedSpace == link(for: peer)?.url ? peer : nil
+        })
     }
 
-    func takePairLinks() {
-        guard let me = enrolment?.identity.id else { return }
+    func link(for peer: ParticipantID) -> PairLink? {
+        let gone = persisted.pairBook[peer]?.gone ?? []
+        if let heard = linksHeard()[peer]?.first(where: { !gone.contains($0.url) }) { return heard }
+        guard let introduced = persisted.pairBook[peer]?.theirs, !gone.contains(introduced.url) else { return nil }
+        return introduced
+    }
+
+    func readable(from peer: ParticipantID) -> Set<String> {
+        let gone = persisted.pairBook[peer]?.gone ?? []
+        var links = linksHeard()[peer] ?? []
+        if let introduced = persisted.pairBook[peer]?.theirs { links.append(introduced) }
+        return Set(links.filter { !gone.contains($0.url) }.map(\.account))
+    }
+
+    func linksHeard() -> [ParticipantID: [PairLink]] {
+        _ = projectionGeneration
+        if let cachedLinksHeard { return cachedLinksHeard }
+        let built = heardLinks()
+        cachedLinksHeard = built
+        return built
+    }
+
+    private func heardLinks() -> [ParticipantID: [PairLink]] {
+        guard let me = enrolment?.identity.id else { return [:] }
         let projected = projection
-        var latest: [ParticipantID: PairLinkBody] = [:]
+        var heard: [ParticipantID: [(entry: RenderedEntry, body: PairLinkBody)]] = [:]
         for room in persisted.knownRooms {
             let out = outOfRoom(in: room, of: projected)
-            for link in projected.pairLinks(in: room, to: me) where !out.contains(link.id) {
-                latest[link.author] = link.body
+            for link in projected.pairLinks(in: room, to: me) where !out.contains(link.entry.id) {
+                let author = link.entry.author
+                guard replica.registry(for: author)?.activeDevices.contains(link.entry.feedKey.device) == true
+                else { continue }
+                heard[author, default: []].append(link)
             }
         }
-        for (author, body) in latest {
-            guard let secret = legacySecret(with: author), let link = body.open(from: author, with: secret) else { continue }
-            take(link, from: author)
+        return heard.reduce(into: [:]) { found, pair in
+            guard let secret = legacySecret(with: pair.key) else { return }
+            found[pair.key] = pair.value
+                .sorted { ($0.entry.wallTime, $0.entry.seq) > ($1.entry.wallTime, $1.entry.seq) }
+                .compactMap { $0.body.open(from: pair.key, with: secret) }
         }
     }
 
     func take(_ link: PairLink, from peer: ParticipantID) {
-        var entry = persisted.pairBook[peer] ?? PairBookEntry()
-        guard entry.theirs != link else { return }
-        entry.theirs = link
-        entry.joined = false
-        persisted.pairBook[peer] = entry
+        guard self.link(for: peer) == nil else { return }
+        persisted.pairBook[peer, default: PairBookEntry()].theirs = link
     }
 
     private func announce(_ link: PairLink, to peer: ParticipantID) async -> Bool {
@@ -139,8 +211,8 @@ extension AppSession {
 
     private func settleCodeClaims(through mailbox: any Mailbox, in pairs: Pairs) async {
         for claim in persisted.codeClaims where pairs.hints[claim.peer] != nil {
-            let account = persisted.pairBook[claim.peer]?.theirs?.account
-            guard (try? await mailbox.claim(claim.url, for: claim.peer, naming: account, in: pairs)) != nil else { continue }
+            let reader = link(for: claim.peer)?.account
+            guard (try? await mailbox.claim(claim.url, for: claim.peer, naming: reader, in: pairs)) != nil else { continue }
             persisted.codeClaims.removeAll { $0 == claim }
         }
     }
