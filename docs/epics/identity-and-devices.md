@@ -485,19 +485,20 @@ sealed on an iPhone. **Not yet tried with the phone locked.**
 
 **Acceptance criteria**
 
-- **Written.** With it on, every file the app keeps is written `.complete` and every key
+- **Built.** With it on, every file the app keeps is written `.complete` and every key
   `WhenUnlockedThisDeviceOnly`, and turning it on or off changes what is already kept
   (`SealedWhileLockedTests`, `SystemKeychainTests`, `FileProtectionTests`).
-- **Written.** While the phone is locked nothing is fetched, loaded or signed for, and a message sent
+- **Built.** While the phone is locked nothing is fetched, loaded or signed for, and a message sent
   then arrives when it is unlocked (`SealedWhileLockedTests`).
-- **Written.** A phone that starts while locked waits, and never offers to start over.
-- **Written.** The notification extension, which can open nothing then, shows only "New message" and
+- **Built.** A phone that starts while locked waits, and never offers to start over.
+- **Built.** The notification extension, which can open nothing then, shows only "New message" and
   leaves the number on the icon alone.
-- **Written.** Reading a key never changes how it is protected, so the extension cannot undo the choice.
-- **Written.** A switch on its own page under This device, which cannot be turned on without a
+- **Built.** Reading a key never changes how it is protected, so the extension cannot undo the choice.
+- **Built.** A switch on its own page under This device, which cannot be turned on without a
   passcode.
-- **Not built.** Outpost's own lock as the seal
-  ([Open questions](../open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)).
+- **Not built, ruled.** Outpost's own lock as the seal, with a PIN, a note on each option and a link to
+  an article; collecting what arrives while locked, so nothing is lost; and sealing the app's
+  preferences ([Decisions](../decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
 - **Owed, on a real iPhone.** With it on: lock the phone, send it a message from the other account, see
   a banner that says only "New message", unlock it and see the message arrive. `FileProtectionTests`
   passed on an iPhone on 2026-09-28; a simulator does not keep a file's protection class, so the suite

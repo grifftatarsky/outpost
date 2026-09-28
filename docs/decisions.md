@@ -3075,9 +3075,11 @@ updates the room's share.
 
 **What was chosen.** A copy in each recipient's space, as the per-pair mailbox already builds it,
 sealed a second time under a key derived from that pair's secret and stored under a name derived from
-it too, so no two copies share bytes or a name and Apple cannot match one photo across spaces. **What
-it costs:** a photo sent to a room of eight is stored seven times in your iCloud until each copy is
-collected, or for nine days at most, and each recipient's copy takes one more seal.
+it too, so no two copies share bytes or a name. **What it costs:** a photo sent to a room of eight is
+stored seven times in your iCloud until each copy is collected, or for nine days at most, and each
+recipient's copy takes one more seal. The copies are still the same size and written at the same
+moment, so Apple can still guess that one photo went to several people. That cost was named when Griff
+chose this ("Apple can tell one photo went to several people"), and it stands.
 
 **Built 2026-09-28, and the package suite passes on Griff's Mac; not yet run on the rig.** Each copy is sealed
 under the pair's original secret and named from it; the only field that says which photo a copy is,
@@ -3085,8 +3087,7 @@ the label, is sealed too, and the reader's receipt is named after the copy rathe
 The sender now puts back exactly the copies that left early, one person at a time, where it used to
 wait until every copy was gone. See the [crypto brief](crypto-brief.md#photos-and-clips) and
 `PhotoCopiesAreSealedApartTests`. Still visible to whoever sees several spaces: the copies are the
-same size and are written at the same moment
-([Open questions](open-questions.md#should-copies-of-one-photo-differ-in-size-and-time)).
+same size and are written at the same moment, which is the cost accepted above.
 
 <!-- COPY END acacb9e8 -->
 
@@ -3197,7 +3198,8 @@ names nothing and still goes by its clock.
 refuses it, so a room where some members run an older build stops showing those members what the
 others write. Every device has to take this build together. **What it does not close:** a removed
 *device* (the member removes one of their own) still goes by its global cutoff, and an entry from
-before chains can still take a number from below where the chain begins
+before chains can still take a number from below where the chain begins. The first is to be closed,
+on Griff's word to fix the gap; the second waits on him
 ([Open questions](open-questions.md#what-is-left-of-a-removed-persons-reach-into-a-rooms-past)).
 
 <!-- COPY END d920b620 -->
@@ -3327,6 +3329,18 @@ unless the member turns it on.
 3. Forgetting the code loses only this phone's copy. The recovery key and the member's other devices
    bring them back, and nothing is erased for anybody else.
 
+**RULED 2026-09-28 by Griff, on the choices:** "this should be optional (both phone and app). We'll call
+it Advanced On Device Security. Because it disables classic notifications, so we want users to opt in.
+We'll offer pin, still, but we'll give a little short context on each option—and link out to an
+Outpostmessaging.com page with a blog article about passwords, pins, and how faceID has been breached
+by cops and is not considered effective and you shouldn't have it on when going through an airport
+anymore (sigh)."
+
+**Not yet met by the build.** Promise 2: while the phone is locked the app collects nothing, so a
+message that waits longer than nine days is taken back before the phone collects it, and returns only
+through history repair. Promise 1 for the app's preferences, which are not sealed. And Outpost's own
+lock, with the PIN, the note on each option and the link, is not built.
+
 **What promise 1 needs**, raised when it was confirmed: a code of 4 to 6 digits has at most a million
 values, so a key made from the code alone could be tried against a copied file, every value, off the
 phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
@@ -3352,9 +3366,10 @@ iOS for its strongest file and keychain protection rather than making a key of i
 - **Reading a key no longer changes how it is protected.** A read used to move a key to the ordinary
   protection, and the extension reads the same keys, so every push would have undone the choice.
 
-**Not built:** Outpost's own lock as the seal
-([Open questions](open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)). The
-settings page offers only what is built.
+**Not built:** Outpost's own lock as the seal, with the PIN, the note on each option and the link
+ruled above; whether it opens with Face ID is
+[an open question](open-questions.md#should-outposts-own-lock-open-with-face-id). The settings page
+offers only what is built.
 
 <!-- COPY END fd2829c5 -->
 

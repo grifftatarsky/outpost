@@ -21,9 +21,10 @@ Settled decisions live in [Decisions](decisions.md).
 
 ### What can a phone nearby do to a tap?
 
-Raised 2026-09-28, writing tap-to-swap. The promise is that a phone across the room can't get your code
-or slip in its own. Two things get part of the way past the distance check, and the characters stop
-both.
+Raised 2026-09-28, writing tap-to-swap. The promise Griff confirmed is that a phone across the room
+can't get your code or slip in its own, and that the characters you both read still decide. Two things
+get part of the way past the distance check. The characters stop a code slipped in; they do not stop a
+relay learning one, so accepting that needs Griff's yes.
 
 **A relay.** A modified app within Wi-Fi range can pass the two phones' first messages between them,
 so it sits in the middle while their real distance is measured. It is caught when the two phones also
@@ -44,100 +45,34 @@ close.
 
 <!-- COPY BEGIN a41e8a48 [NEEDS HUMAN REVIEW] -->
 
-### How should Outpost's own lock seal what this phone keeps?
+### Should Outpost's own lock open with Face ID?
 
-Raised 2026-09-28. Advanced On Device Security was ruled with two choices, the phone's lock or
-Outpost's own. The phone's lock is written; the settings page offers only it. Outpost's own lock needs
-three answers first.
+Raised 2026-09-28. Griff ruled both locks, and a PIN, each with a short note and a link to an article
+on Face ID, PINs and passwords ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
+One thing is left. Face ID would need a second copy of the key behind Face ID, which the code's counted
+tries do not guard, and erasing after wrong codes would erase the only copy. His own words on Face ID
+("breached by cops ... not considered effective") point the same way.
 
-**The key.** Everything the app keeps would be sealed under one key, and that key kept in the keychain
-behind the app's code, with `kSecAccessControlApplicationPassword` ("an application-provided password
-for data encryption key generation",
-[Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/applicationpassword)).
-Promise 1 needs a copied item to be tryable only on the phone. Apple's documentation does not say
-whether the key made from that password is bound to the hardware, so it has to be measured on a
-device before it is promised. Recommended: measure first, and build it only if it holds.
-
-**What arrives while the app is locked.** With the app locked, nothing it keeps can be opened, so it
-would fetch nothing, the way it fetches nothing while the phone is locked: an iPhone in use all day
-with the app locked would collect nothing all day, and every banner would say only "New message".
-Recommended: accept that, and say it on the settings page.
-
-**Face ID and the erasing.** Face ID would need a second copy of the key behind Face ID, which the
-code's counted tries do not guard, and erasing after wrong codes would erase the only copy. Recommended:
-no Face ID for this choice, and erasing works as it does now.
+Recommended: no Face ID for Outpost's own lock, and erasing works as it does now.
 
 <!-- COPY END a41e8a48 -->
-
-<!-- COPY BEGIN 3e2cf1ce [NEEDS HUMAN REVIEW] -->
-
-### What reaches a phone that stays locked longer than a packet waits?
-
-Raised 2026-09-28, writing Advanced On Device Security. With it on, a locked phone collects nothing.
-A sender takes a packet back after nine days whoever has collected it, so a phone left locked longer
-than that is like one that was off that long. What was sent in the first days comes back through
-history repair when a later message shows the gap; if nothing was sent after it, it comes back only
-when the member asks that room to check. Photos the sender's iCloud has let go do not come back
-([Decisions](decisions.md#only-the-sender-clears-a-photo-and-keeps-its-own-copy)).
-
-Recommended: when the app opens after more than nine days without a round, start a check in every
-room without being asked. It helps a phone that was off as much as one that was locked. Until you
-decide, the settings page does not say that nothing is lost.
-
-<!-- COPY END 3e2cf1ce -->
-
-<!-- COPY BEGIN 6a0c5f97 [NEEDS HUMAN REVIEW] -->
-
-### Should the app's preferences be sealed too?
-
-Raised 2026-09-28, writing Advanced On Device Security. With it on, the history, names, photos and
-keys open only while the phone is unlocked. The app's preferences do not: the theme, favourite emoji,
-which rooms a Focus lets through and which photos you chose to show (each by a random identifier),
-and the device-sync engine's bookkeeping. None of them is a message, a name, a photo or a key.
-
-Recommended: leave them. iOS keeps an app's preferences in a file of its own, so sealing them means
-moving every one into the app's sealed state, which touches every screen that keeps one, to protect
-settings and random identifiers rather than anything anybody said.
-
-<!-- COPY END 6a0c5f97 -->
 
 <!-- COPY BEGIN d041ce54 [NEEDS HUMAN REVIEW] -->
 
 ### What is left of a removed person's reach into a room's past?
 
-Raised 2026-09-28, writing the room chain Griff ruled for. Two gaps are outside it.
-
-**A removed device.** When a member removes one of their own devices, the removal is not a room entry:
-it is the member's own record, with the last number that device wrote anywhere. The room chain can only
-stop that device in a room if something names its last entry *in that room*. Two ways: list those
-entries in the device removal, which tells every contact how many rooms that device wrote in; or have
-the member's remaining device write a short entry in each room naming it, sealed like any other entry,
-which costs one entry per room. Recommended: the entry per room, because it tells nobody anything new.
+Raised 2026-09-28, writing the room chain Griff ruled for. A removed device is answered (below); one gap
+is left.
 
 **Numbers from before chains.** An entry written before this build carries no link. Those count up to
 the entry the chain begins at, which closes everything after it, but a removed person could still sign
 an old-style entry under a number below that point that the room never held. Recommended: accept it. It
 cannot grow, because every new entry is chained, and it covers only numbers from before a device's first
-chained entry in that room.
+chained entry in that room. Griff asked for the gap closed with no new edge cases, so this needs his
+yes. The way to close it without giving a remover any power: each device, the first time it chains in a
+room, lists its own earlier entries there, which costs one entry per room per device, once.
 
 <!-- COPY END d041ce54 -->
-
-<!-- COPY BEGIN db4bc4f1 [NEEDS HUMAN REVIEW] -->
-
-### Should copies of one photo differ in size and time?
-
-Raised 2026-09-28, while sealing each person's copy of a photo apart. Two people's copies now share no
-bytes and no name, and nothing in iCloud names the photo. Two things still line up: every copy is the
-same size, and all of them are written in one operation at the same moment. So whoever can see several
-people's spaces, which is Apple, can still guess that one photo went to those people. It is a guess
-from size and time now, where before it was proof.
-
-Padding each copy to a different size would not hide it alone, because the moment gives it away, and
-writing copies at different times would hold the photo back from everybody but the first person.
-Recommended: leave it. A round's packets have always shown the same about messages: each person's
-packet carries the same entries, sealed apart, written in the same round.
-
-<!-- COPY END db4bc4f1 -->
 
 <!-- COPY BEGIN ddabe07b [NEEDS HUMAN REVIEW] -->
 
@@ -210,6 +145,29 @@ See [Decisions](decisions.md#a-deletion-leaves-a-line-in-the-transcript-not-a-no
 applies when consensus deletion is built, which is [after TestFlight](after-testflight.md).
 
 <!-- COPY END ba7e3be3 -->
+
+<!-- COPY BEGIN ecfca29f [NEEDS HUMAN REVIEW] -->
+
+### Raised and answered 2026-09-28
+
+Griff's answers in the session before, read against the questions raised writing them:
+
+1. **A phone locked longer than a packet waits** — nothing is lost: promise 2 of Advanced On Device
+   Security. So a locked phone has to collect what arrives, keep it sealed, and add it at unlock. The
+   build collects nothing while locked; this is owed.
+2. **The app's preferences** — sealed too: promise 1 covers what Outpost keeps on the phone. Owed.
+3. **Copies of one photo lining up in size and time** — accepted. It was named as the cost when Griff
+   chose a copy per person ("Apple can tell one photo went to several people").
+   [Decisions](decisions.md#a-photo-is-copied-for-each-person-it-goes-to-and-each-copy-is-sealed-apart).
+4. **A removed device's reach into a room** — closed, on "Fix the removed people gap ... Make sure you're
+   not introducing edge case vulnerabilities": the member's remaining device writes an entry in each room
+   naming the removed device's last entry there, which tells nobody anything new. Owed.
+5. **Outpost's own lock** — both locks, and a PIN, each with a short note and a link to an article on
+   outpostmessaging.com. What arrives while the app is locked is kept sealed (promise 2). Whether the key
+   made from the code is tied to the phone's hardware is measured on a phone before the PIN's note is
+   written. Owed; the article is too.
+
+<!-- COPY END ecfca29f -->
 
 <!-- COPY BEGIN b2a90f66 [NEEDS HUMAN REVIEW] -->
 

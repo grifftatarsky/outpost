@@ -224,8 +224,8 @@ filled is refused, and one that reached a device before the removal did is taken
 removal arrives (`ARemovedDeviceStopsAtTheCutoffTests`). An entry under a number that only another
 room used cannot be checked yet. The room chain Griff ruled for on 2026-09-28
 ([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)) closes it for a
-person removed from a room, not yet for a removed device
-([an open question](open-questions.md#what-is-left-of-a-removed-persons-reach-into-a-rooms-past)).
+person removed from a room, not yet for a removed device, which Griff has asked to be closed
+([Open questions](open-questions.md#raised-and-answered-2026-09-28)).
 
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
@@ -1299,18 +1299,17 @@ iOS already ties to the passcode and to the phone's own hardware key.
   ([Apple](https://developer.apple.com/documentation/uikit/encrypting-your-app-s-files)). The switch
   cannot be turned on while the iPhone has none.
 - **Nothing against somebody who knows the passcode.** Outpost's own lock as the seal is the choice
-  that would; it is not built
-  ([Open questions](open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)).
+  that would. It is ruled and not built yet ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
 - **Not everything the app keeps.** Its preferences (theme, favourite emoji, which rooms a Focus lets
   through and which photos you chose to show, each by a random identifier) and the device-sync
   engine's bookkeeping stay readable once the phone has been unlocked after it starts. None of them is
-  a message, a name, a photo or a key
-  ([Open questions](open-questions.md#should-the-apps-preferences-be-sealed-too)).
+  a message, a name, a photo or a key, but promise 1 covers them, so they are to be sealed too; not
+  built yet.
 
 **What it costs.** Nothing arrives in the background while the phone is locked, and every banner in
 that time says only "New message". A phone left locked for longer than a packet waits is like one that
-was off that long
-([Open questions](open-questions.md#what-reaches-a-phone-that-stays-locked-longer-than-a-packet-waits)).
+was off that long, and promise 2 says nothing is lost, so collecting what arrives while locked, sealed,
+is owed ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
 
 <!-- COPY END eb2e47b3 -->
 
