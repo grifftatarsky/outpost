@@ -466,7 +466,7 @@ correct rather than only add to.
 - **Done.** Re-admission starts a membership; it never restores one.
 - **Done.** Entries from a removed member are refused on the receiving side and not drawn; a removed device
   cannot produce entries for the room.
-- **Written, not built** (2026-09-28, no compiler in that session). Every entry names its device's last
+- **Built, rig proof owed** (2026-09-28; the package suite passes). Every entry names its device's last
   entry in the room, a removal or a departure names where each of the person's chains ends, and only
   those chains count, so nothing can be slipped in under a number the room never held
   (`TheRoomChainTests`; ruled by Griff the same day). Needs every device on this build together.
@@ -1526,15 +1526,15 @@ accounts.
 <!-- COPY BEGIN 8c481d4d [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="tapping-two-phones-swaps-codes">
-<summary><b>Tapping two phones swaps codes</b> — Written, not built</summary>
+<summary><b>Tapping two phones swaps codes</b> — Complete (hardware proof owed)</summary>
 
 **Story.** As two people standing together, we want to hold our iPhones against each other and have
 each other's codes, so that adding somebody in person needs no message sent through anybody else.
 
 Ruled by Griff on 2026-09-28, "honestly a priority", with three promises; see
 [the decision](../decisions.md#tapping-two-phones-swaps-codes) and the
-[crypto brief](../crypto-brief.md#tapping-two-phones). Written the same day in a session with no
-compiler: **not built, not run on any phone.**
+[crypto brief](../crypto-brief.md#tapping-two-phones). Built the same day, and the package suite
+passes on Griff's Mac: **not run on any phone.**
 
 **Acceptance criteria**
 

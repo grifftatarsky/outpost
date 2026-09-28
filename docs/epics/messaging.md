@@ -270,10 +270,10 @@ access to all of yours and touches nobody else's; only the sender decides what w
 - **Done.** A link counts only from a device that still counts, and a contact is read only from
   accounts such links name (added 2026-09-28 after a review of the build).
 - **Done.** Blocking somebody closes the space kept for them; unblocking makes a new one.
-- **Written, not built** (2026-09-28, no compiler in that session). Each person's copy of a photo is
+- **Built, proof on two accounts owed** (2026-09-28; the package suite passes). Each person's copy of a photo is
   sealed apart for their pair and named from its secret, and nothing in iCloud names the photo
   (`PhotoCopiesAreSealedApartTests`; ruled by Griff the same day).
-- **Written, not built** (2026-09-28). The space kept for somebody closes nine days after you last
+- **Built, rig proof owed** (2026-09-28; the package suite passes). The space kept for somebody closes nine days after you last
   share anything with them, and sharing again opens a new one (`ASpaceClosesWhenNothingIsSharedTests`;
   ruled by Griff the same day, always on).
 - **Owed.** The same over iCloud, on two accounts (`LivePairTests`).

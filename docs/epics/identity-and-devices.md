@@ -471,7 +471,7 @@ settings patterns instead, and have not been compared with the board.
 <!-- COPY BEGIN cbb86a09 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="advanced-on-device-security">
-<summary><b>Advanced On Device Security</b> — Written, not built</summary>
+<summary><b>Advanced On Device Security</b> — Incomplete</summary>
 
 **Story.** As a member, I want what the app keeps on my phone sealed whenever the phone is locked, so
 that somebody who takes it and copies its storage reads nothing, even though the app then fetches
@@ -479,8 +479,8 @@ nothing until I unlock it.
 
 Ruled by Griff on 2026-09-28, with three promises confirmed; see
 [the decision](../decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)
-and the [crypto brief](../crypto-brief.md#advanced-on-device-security). Written the same day in a
-session with no compiler: **not built, not run.**
+and the [crypto brief](../crypto-brief.md#advanced-on-device-security). Built the same day: the
+package suite passes on Griff's Mac and the keychain half passes on the simulator. **Not run on a phone.**
 
 **Acceptance criteria**
 
@@ -499,7 +499,8 @@ session with no compiler: **not built, not run.**
   ([Open questions](../open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)).
 - **Owed, on a real iPhone.** With it on: lock the phone, send it a message from the other account, see
   a banner that says only "New message", unlock it and see the message arrive. `FileProtectionTests` on
-  the device as well as the simulator, since a simulator has no passcode to seal anything with.
+  the phone: a simulator does not keep a file's protection class, so the suite skips it there
+  (measured 2026-09-28).
 
 </details>
 

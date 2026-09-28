@@ -485,8 +485,8 @@ is no way to put words in somebody's mouth.
 Ed25519 key. Since 2026-09-28 an entry in a room also signs a **room link**, appended last and only when
 present (`"room-link" ‖ hash of this device's last entry in the room`, empty for its first), so an older
 entry signs exactly the bytes it always did. A removal or a departure names the last entry of each of
-the person's devices, and only the chains those reach count (`RoomChains`, `TheRoomChainTests`). Written
-in a session without a compiler; not yet built. Two things about this are worth stating precisely because they are the questions a
+the person's devices, and only the chains those reach count (`RoomChains`, `TheRoomChainTests`). Built
+2026-09-28, and the package suite passes; not yet run on the rig. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
 
 - **It signs the ciphertext, not the plaintext** — encrypt-then-sign. On its own that would leave a
@@ -685,7 +685,7 @@ sealed body, and the grant tags and values. **What that leaks, stated plainly:**
 - That one photo probably went to several people: the copies are written in one operation, at the
   same moment, and are the same size. Since 2026-09-28 they share nothing else: each copy is sealed
   again for its pair and named from the pair's secret, and no field names the photo
-  ([Photos and clips](#photos-and-clips)). Written in a session without a compiler; not yet built.
+  ([Photos and clips](#photos-and-clips)). Built 2026-09-28; not yet run on two accounts.
 - The pair's `hint`, a keyed hash of the pair's secret, which is the same in the two people's spaces
   for each other. Apple can already match those two spaces from their share lists, so it adds
   nothing.
@@ -757,7 +757,7 @@ Opening checks the digest first: bytes that already match it are taken as they a
 photo from the old shared outbox is still read; anything else must open under the pair's secret and
 then match (`PhotoCopy.open`). **What this does not hide:** the copies are the same size and are
 written at the same moment, so whoever can see several spaces can still guess that one photo went to
-several people. Written in a session without a compiler; not yet built or run.
+several people. Built 2026-09-28, and the package suite passes; not yet run on two accounts.
 
 Separately, `CarpenterMedia.ImagePreparer.redrawn` draws every image into a fresh context before
 encoding, because ImageIO carries a source's Exif block — lens, original time, location — into a
@@ -1083,7 +1083,7 @@ people say yes, and then it goes straight across, sealed so that nobody nearby c
 that arrive are the same codes, checked the same way, and the characters the two people read still
 decide who they are talking to.
 
-> **Written 2026-09-28 in a session with no compiler.** Not built, and not run on any phone. It needs
+> **Built 2026-09-28, and the package suite passes on Griff's Mac.** Not run on any phone. It needs
 > two iPhones with the ultra-wideband chip, so it is proved on TestFlight.
 
 **What actually happens.** `TapSwap` holds every rule, and `TappingPhonesTests` tries to break them.
@@ -1257,8 +1257,10 @@ passcode, and the passcode can only be tried on that iPhone. While it is locked 
 nothing: messages wait, sealed, in the sender's iCloud and arrive when you unlock it, and a
 notification says only that something arrived.
 
-> **Written 2026-09-28 in a session with no compiler.** Not built, and not run on a phone. The package
-> tests model a locked phone with a fake keychain; nothing here has been measured on hardware.
+> **Built 2026-09-28, and the package suite passes on Griff's Mac.** Not run on a phone. The package
+> tests model a locked phone with a fake keychain, and the keychain half passes on the simulator. A
+> simulator does not keep a file's protection class (measured 2026-09-28), so nothing about files has
+> been measured on hardware.
 
 **What actually happens.** No new cryptography: the app asks iOS for its strongest protection, which
 iOS already ties to the passcode and to the phone's own hardware key.

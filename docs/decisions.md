@@ -3079,7 +3079,7 @@ it too, so no two copies share bytes or a name and Apple cannot match one photo 
 it costs:** a photo sent to a room of eight is stored seven times in your iCloud until each copy is
 collected, or for nine days at most, and each recipient's copy takes one more seal.
 
-**Written 2026-09-28, not yet built or run**, in a session with no Swift compiler. Each copy is sealed
+**Built 2026-09-28, and the package suite passes on Griff's Mac; not yet run on the rig.** Each copy is sealed
 under the pair's original secret and named from it; the only field that says which photo a copy is,
 the label, is sealed too, and the reader's receipt is named after the copy rather than the photo.
 The sender now puts back exactly the copies that left early, one person at a time, where it used to
@@ -3127,7 +3127,7 @@ comes from their identity keys and never changes, so nothing is exchanged again,
 one zone. If you share a room or a solo with them again, a new space and link go out automatically,
 the way they do for any new room.
 
-**Written 2026-09-28, not yet built or run**, in a session with no Swift compiler. "Sharing" is being
+**Built 2026-09-28, and the package suite passes on Griff's Mac; not yet run on the rig.** "Sharing" is being
 in a named room with them (as a member or with a request open), either of you seeing the other's
 Outpost, or an invitation from them still open; somebody removed or gone from a room is not sharing,
 but is still written to until the nine days are up, which is what carries the notice. Each device
@@ -3183,7 +3183,7 @@ names the last one it saw, and only that chain counts. It changes the log's form
 older entries require: the new field is signed only when present, so every existing entry keeps its
 bytes.
 
-**Written 2026-09-28, not yet built or run**, in a session with no Swift compiler. Every entry the app
+**Built 2026-09-28, and the package suite passes on Griff's Mac; not yet run on the rig.** Every entry the app
 writes in a room now carries a signed room link: the hash of this device's last entry in that room, or
 an empty link for its first (`Entry.roomLink`, appended after everything else under the label
 `room-link`, so an entry without one signs the bytes it always did; `TheRoomChainTests` pins both by
@@ -3218,7 +3218,7 @@ animation":
 
 It needs two iPhones with Apple's ultra-wideband chip, so it is proved on TestFlight, not on the rig.
 
-**Written 2026-09-28 in a session with no compiler: not built, and not run on any phone.** Under
+**Built 2026-09-28, and the package suite passes on Griff's Mac; not run on any phone.** Under
 Your identity, *Tap phones to swap codes* opens a screen on each phone. The two find each other on
 the local network, each measures how far away the other is, and once exactly one phone has been
 within 15 cm for three readings in a row, both screens ask *Swap codes with this phone?* Each hands
@@ -3332,8 +3332,8 @@ values, so a key made from the code alone could be tried against a copied file, 
 phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
 the phone itself.
 
-**Written 2026-09-28 for the phone's lock, in a session with no compiler: not built, not run on a
-phone.** iOS already ties its own keys to the passcode and the phone's hardware, so this choice asks
+**Built 2026-09-28 for the phone's lock: the package suite passes on Griff's Mac, and the keychain half
+passes on the simulator. Not run on a phone.** iOS already ties its own keys to the passcode and the phone's hardware, so this choice asks
 iOS for its strongest file and keychain protection rather than making a key of its own. See the
 [crypto brief](crypto-brief.md#advanced-on-device-security) and `SealedWhileLockedTests`.
 
