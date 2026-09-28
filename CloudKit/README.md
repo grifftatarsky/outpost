@@ -37,14 +37,23 @@ Every type and field is read off the line that writes it. Nothing here is a gues
 | `SyncPacket` | `packetID` | STRING | `PacketWire.fields(of:)` |
 | | `ciphertext` | BYTES | same |
 | | `outstanding`, `wrapTags`, `wrapValues`, `grantTags`, `grantValues` | LIST\<BYTES\> | same |
-| `MessageBell` | `ring` | INT64 | `CloudKitMailbox+Bell.swift` |
+| `MessageBell` | `ring` | INT64 | no longer written; the per-pair mailbox rings with `PairRing` |
 | `SiblingFeed` | `feed` | BYTES | `CloudKitEntrySync.payloadKey` |
 | `Attachment` | `label` | BYTES | `AttachmentWire.fields(of:)`: which photo a copy is, sealed for the pair |
 | | `blob` | ASSET | written as a `CKAsset` in `CloudKitMailbox+Attachments.swift` |
 | | `outstanding` | LIST\<BYTES\> | `AttachmentWire` |
 | | `attachmentID` | STRING | no longer written (since 2026-09-28); it named the photo in the clear |
-| `OutboxShareOffer` | `sealed` | BYTES | `CloudKitMailbox+ReverseChannel.swift` |
+| `OutboxShareOffer` | `sealed` | BYTES | no longer written; the per-pair mailbox replaced the rendezvous |
 | | `digest` | STRING | same |
+| `PairInfo` | `hint` | BYTES | `CloudKitMailbox+Pairs.swift`, one per space |
+| `PairRing` | `ring` | STRING | `CloudKitMailbox+Packets.swift`, rewritten to ring |
+| `PairReceipt` | `tag`, `sealed` | BYTES | `PacketWire.receiptFields` |
+
+The three `Pair` types were written from 2026-09-27 and missing here until 2026-09-28. The app also
+writes one record of each watched type into a zone named `Schema` before it subscribes
+(`seedRecordTypes`), and until 2026-09-28 it put a `ring` field on all four. Production refuses a field
+its schema lacks, so the seed now writes each type's own field, and a TestFlight build needs these
+types deployed before it can subscribe at all.
 
 **No queryable indexes on anything.** The app reads zone change feeds and never runs a `CKQuery` —
 deliberately, because the query index is eventually consistent and that cost a week once. A field
@@ -60,7 +69,8 @@ ownership and the share rather than a role.
 
 ## Changing it
 
-The record types are `PushChannel.recordType` plus `Attachment` and `OutboxShareOffer`. If you add a
+The record types are `PushChannel.recordType` plus `Attachment`, `Deathmark`, the three `Pair` types and
+`OutboxShareOffer`. If you add a
 field, add it here in the same commit — and remember that **a production schema is additive**. A
 field deployed to production cannot be removed, ever, so the review is the only gate there is.
 

@@ -50,11 +50,18 @@ extension CloudKitMailbox {
         let schema = CKRecordZone.ID(zoneName: "Schema")
         let database = container.privateCloudDatabase
         _ = try await database.modifyRecordZones(saving: [CKRecordZone(zoneID: schema)], deleting: [])
-        let seeds = [PacketRecord.type, PairWire.ringType, PairWire.receiptType, PairWire.infoType].map { type in
-            let record = CKRecord(recordType: type, recordID: CKRecord.ID(recordName: "seed-\(type)", zoneID: schema))
-            record[PairWire.ring] = "0"
-            return record
+        func seed(_ type: String) -> CKRecord {
+            CKRecord(recordType: type, recordID: CKRecord.ID(recordName: "seed-\(type)", zoneID: schema))
         }
+        let packet = seed(PacketRecord.type)
+        packet[PacketWire.packetID] = "seed"
+        let ring = seed(PairWire.ringType)
+        ring[PairWire.ring] = "0"
+        let receipt = seed(PairWire.receiptType)
+        receipt[PairWire.receiptTag] = Data()
+        let info = seed(PairWire.infoType)
+        info[PairWire.hint] = Data()
+        let seeds = [packet, ring, receipt, info]
         _ = try await database.modifyRecords(saving: seeds, deleting: [], savePolicy: .allKeys)
         _ = try? await database.modifyRecords(saving: [], deleting: seeds.map(\.recordID))
     }
