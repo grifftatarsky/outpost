@@ -8,6 +8,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         public fileprivate(set) var revokedBy: DeviceID?
         public let recovered: Bool
         public fileprivate(set) var removedByRecovery: Bool = false
+        public fileprivate(set) var cutoff: UInt64?
     }
 
     public let identity: IdentityPublicKeys
@@ -105,8 +106,12 @@ public struct DeviceRegistry: Hashable, Sendable {
         windows[device]?.covers(instant) ?? false
     }
 
-    public func isAuthorized(_ device: DeviceID, at instant: Date) -> Bool {
-        standings[device].map { Self.covers($0, instant) } ?? false
+    public func isAuthorized(_ device: DeviceID, at instant: Date, seq: UInt64? = nil) -> Bool {
+        guard let standing = standings[device] else { return false }
+        if standing.revokedAt != nil, let cutoff = standing.cutoff, let seq {
+            return instant >= standing.addedAt && seq <= cutoff
+        }
+        return Self.covers(standing, instant)
     }
 
     private mutating func note(_ digest: Data, _ instant: Date) {
@@ -188,6 +193,9 @@ public struct DeviceRegistry: Hashable, Sendable {
                 if standing.revokedAt.map({ removal.revocation.revokedAt < $0 }) ?? true {
                     standing.revokedAt = removal.revocation.revokedAt
                     standing.revokedBy = removal.revocation.revokedBy
+                }
+                if let cutoff = removal.revocation.cutoff {
+                    standing.cutoff = min(standing.cutoff ?? cutoff, cutoff)
                 }
                 result[target] = standing
             }

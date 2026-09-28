@@ -153,7 +153,7 @@ public struct Replica: Sendable {
     ) throws -> IntegrationResult {
         if feeds[entry.feedKey]?[entry.seq]?[entry.hash] != nil { return .alreadyPresent }
         guard let registry = registries[entry.author] else { throw LogError.unknownParticipant }
-        guard registry.isAuthorized(entry.device, at: entry.wallTime),
+        guard registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq),
             let deviceKey = registry.signingKey(for: entry.device)
         else {
             throw LogError.unauthorizedDevice
@@ -294,7 +294,7 @@ public struct Replica: Sendable {
     public func refusesForever(_ entry: Entry) -> Bool {
         guard let registry = registries[entry.author] else { return false }
         guard registry.standing(of: entry.device) != nil else { return false }
-        return !registry.isAuthorized(entry.device, at: entry.wallTime)
+        return !registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq)
     }
 
     private func validateLink(of entry: Entry) throws {

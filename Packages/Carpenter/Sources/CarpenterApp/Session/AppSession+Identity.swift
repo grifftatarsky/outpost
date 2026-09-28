@@ -556,7 +556,8 @@ extension AppSession {
 
         for device in wanted {
             let revocation = try DeviceRevocation.issue(
-                for: device, by: enrolment.identity, at: clock.now, from: enrolment.device)
+                for: device, by: enrolment.identity, at: clock.now, from: enrolment.device,
+                cutoff: replica.highestSequence(in: FeedKey(author: enrolment.identity.id, device: device)) ?? 0)
             try replica.revoke(revocation, storedAt: authorityNow())
         }
         recordAuthority()

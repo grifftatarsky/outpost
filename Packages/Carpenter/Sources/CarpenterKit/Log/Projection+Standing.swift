@@ -36,7 +36,7 @@ extension Projection {
 
     static func isAfter(_ entry: RenderedEntry, _ leaving: RenderedEntry) -> Bool {
         if leaving.seq > 0, entry.clock[leaving.feedKey] >= leaving.seq { return true }
-        if entry.seq > 0, leaving.clock[entry.feedKey] >= entry.seq { return false }
+        if entry.seq > 0 { return leaving.clock[entry.feedKey] < entry.seq }
         if entry.wallTime != leaving.wallTime { return entry.wallTime > leaving.wallTime }
         return leaving.id.rawValue.lexicographicallyPrecedes(entry.id.rawValue)
     }

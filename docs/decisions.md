@@ -3007,6 +3007,27 @@ space.
 
 <!-- COPY END cd3e5ba0 -->
 
+<!-- COPY BEGIN d920b620 [NEEDS HUMAN REVIEW] -->
+
+### A removed person's words stop where the removal saw them
+
+**RULED 2026-09-28 by Griff.** Once someone is removed from a room, nothing they write afterwards
+appears for anyone, whatever date they put on it and whatever key they still hold; the same for a
+device a member removes. The line is what the remover's device had received when it removed them.
+Anything written after it, or not received by then, is dropped the same way on every device.
+"If they've been removed before that message was seen, it's not a message that needs to be seen."
+
+**How.** A removal entry already carries a vector clock: the highest position of every feed its
+device held. An entry by the removed person counts in that room only if the removal's clock covers
+it; the fallback that compared the dates both sides wrote is gone. A device removal now carries the
+same line as a signed `cutoff` (the highest position of that device's feed the removing device held),
+appended to the signed bytes only when present so older removals keep their bytes. A removed device's
+entry counts only up to its cutoff; a removal made before cutoffs existed still goes by its date.
+`ARemovedPersonStopsAtTheRemovalTests` and `ARemovedDeviceStopsAtTheCutoffTests` fail with the old
+checks put back.
+
+<!-- COPY END d920b620 -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts

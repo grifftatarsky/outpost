@@ -147,6 +147,7 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
     public var signature: Data
     public var revokedBy: DeviceID?
     public var revokerSignature: Data?
+    public var cutoff: UInt64?
 
     public init(
         participant: ParticipantID,
@@ -154,7 +155,8 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
         revokedAt: Date,
         signature: Data,
         revokedBy: DeviceID? = nil,
-        revokerSignature: Data? = nil
+        revokerSignature: Data? = nil,
+        cutoff: UInt64? = nil
     ) {
         self.participant = participant
         self.device = device
@@ -162,18 +164,20 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
         self.signature = signature
         self.revokedBy = revokedBy
         self.revokerSignature = revokerSignature
+        self.cutoff = cutoff
     }
 
     public static func issue(
         for device: DeviceID, by identity: Identity, at revokedAt: Date,
-        from revoker: DeviceKeys? = nil
+        from revoker: DeviceKeys? = nil, cutoff: UInt64? = nil
     ) throws -> DeviceRevocation {
         var revocation = DeviceRevocation(
             participant: identity.id,
             device: device,
             revokedAt: revokedAt,
             signature: Data(),
-            revokedBy: revoker?.id
+            revokedBy: revoker?.id,
+            cutoff: cutoff
         )
         revocation.signature = try identity.sign(revocation.signingPayload)
         if let revoker {
@@ -189,6 +193,7 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
             CanonicalBytes.timestamp(revokedAt),
         ]
         if let revokedBy { fields += [Data("revoked-by".utf8), revokedBy.rawValue] }
+        if let cutoff { fields += [Data("cutoff".utf8), CanonicalBytes.sequence(cutoff)] }
         return CanonicalBytes.payload(domain: Domain.deviceRevocation, fields: fields)
     }
 
