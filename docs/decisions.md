@@ -399,7 +399,7 @@ forwarded — and its bytes are not in it. The entry names an attachment: an ide
 content key, a SHA-256 of the ciphertext, a pixel size and a forty-pixel preview. The bytes are
 sealed under that key and uploaded as a `CKAsset` on their own record in the sender's outbox,
 addressed to the room's rewrap targets by the same rotating tags a packet uses, signed for the same
-way, and **cleared by the sender** once every device of everybody it was for has signed, or after nine
+way, and **cleared by the sender** once one device of everybody it was for has signed, or after nine
 days — see [Only the sender clears a photo](#only-the-sender-clears-a-photo-and-keeps-its-own-copy).
 
 **What this buys.** The packet stays under CloudKit's megabyte; a photo is opened by exactly the
@@ -2854,18 +2854,18 @@ the others' addresses from it, before the others had it, and it was gone for the
 Now a photo is cleared the way a packet is taken back. A reader's device signs for what it collects
 with a receipt only the sender can open (`AttachmentReceipt`, its own signing domain, so a receipt
 for a packet never counts for a photo). The sender's device keeps its own record of who each photo
-was for, and on every round clears it only when **every active device** of every one of those people
-has signed, or nine days have passed. A photo that leaves the outbox any other way is put back from
+was for, and on every round clears it once **one device** of each of those people has signed, or
+nine days have passed. A photo that leaves the outbox any other way is put back from
 the copy the sender kept. The list of addresses on the record is only a hint now: the real mailbox
 never used it to keep anybody out, and emptying it changes nothing (`NobodyButTheSenderClearsAPhotoTests`).
 
 The sender keeps its sealed copy of every photo and clip after the outbox copy is cleared.
 
-**Claude's choices inside the ruling, not Griff's:** nine days, the same time a packet waits; every
-device of a person rather than the first one, because a member's devices share one inbox and the
-first to collect is not everybody; and a sender who has another device of their own leaves every
-photo the full nine days, because that device reads its member's photos from the same outbox and does
-not sign for them (`APhotoAndTwoDevicesTests`).
+**RULED 2026-09-27 by Griff, on the devices question:** "Change the photo clear to just one device has
+retrieved - I would prefer the user themselves syncs the photo on their devices, rather than hold a
+pic in icloud until someone's fourth basement ipad retrieves it." Nine days is Claude's, the same
+time a packet waits, and Griff said it is fine (`APhotoAndTwoDevicesTests`). A member's other devices
+getting the photo from the device that has it is not built yet.
 
 **What someone with the outbox link can still do:** delay. A photo they delete is back on the
 sender's next round. A photo whose bytes they replace fails its digest on the reader's side and is

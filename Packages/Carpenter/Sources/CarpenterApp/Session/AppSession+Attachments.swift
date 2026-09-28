@@ -143,11 +143,6 @@ extension AppSession {
         }
     }
 
-    private func ownOtherDevices() -> Set<DeviceID> {
-        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return [] }
-        return registry.activeDevices.subtracting([enrolment.device.id])
-    }
-
     func settleAttachmentsSent(through mailbox: any MediaMailbox) async {
         guard enrolment != nil, !persisted.attachmentsSent.isEmpty else { return }
         let stored: [AttachmentID: SentAttachment]
@@ -160,7 +155,6 @@ extension AppSession {
         }
         let byPerson = Dictionary(peers().map { ($0.them, $0) }, uniquingKeysWith: { first, _ in first })
         let window = SyncSession.window(at: clock.now)
-        let myOtherDevices = ownOtherDevices()
         var cleared = 0
         var putBack = 0
         for id in Array(persisted.attachmentsSent.keys) where !uploading.contains(id) {
@@ -181,11 +175,11 @@ extension AppSession {
                         break
                     }
                 }
-                if !registry.activeDevices.isSubset(of: record.collectedBy) { owed.insert(person) }
+                if registry.deviceIDs.isDisjoint(with: record.collectedBy) { owed.insert(person) }
             }
             persisted.attachmentsSent[id] = record
 
-            let everybody = owed.isEmpty && myOtherDevices.isEmpty
+            let everybody = owed.isEmpty
             let expired = clock.now.timeIntervalSince(record.sentAt) > Self.attachmentKeptFor
             if everybody || expired {
                 if stored[id] != nil {

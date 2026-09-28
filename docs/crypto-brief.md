@@ -693,8 +693,8 @@ could make a photo vanish before the others had it. Now a reader signs for a pho
 `AttachmentReceipt`: the same shape as a packet receipt, signed by the reader's device and sealed to the
 sender under the pairwise secret, but under its own domain (`carpenter.attachment-receipt.v1`), so a
 signature over a packet with the same number never counts for a photo. The sender keeps its own
-record of who each photo was for, clears it only once every active device of each of them has
-signed or nine days have passed, and puts back from its own copy a photo that left early
+record of who each photo was for, clears it once one device of each of them has signed or nine
+days have passed, and puts back from its own copy a photo that left early
 (`NobodyButTheSenderClearsAPhotoTests`).
 
 It does not leak any participant identifier, any room identifier, any device identifier, or any
