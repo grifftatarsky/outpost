@@ -503,7 +503,7 @@ extension AppSession {
         guard roster.members.contains(person) else { throw MembershipError.notAMember }
 
         try await oweKeyRotation(in: room)
-        try await append(try Payload.removal(of: person), to: room)
+        try await append(try Payload.removal(of: person, heads: lastEntries(of: person, in: room)), to: room)
         try await rotateOwedKey(in: room)
     }
 
@@ -514,7 +514,15 @@ extension AppSession {
             throw MembershipError.notAMember
         }
 
-        try await append(try Payload.departure(), to: room)
+        try await append(try Payload.departure(heads: lastEntries(of: enrolment.identity.id, in: room)), to: room)
+    }
+
+    func lastEntries(of person: ParticipantID, in room: RoomID) -> [EntryHash] {
+        var last: [FeedKey: EntryLink] = [:]
+        for entry in replica.allEntries where entry.author == person && entry.room == room {
+            if (last[entry.feedKey]?.seq ?? 0) < entry.seq { last[entry.feedKey] = entry.link }
+        }
+        return last.values.map(\.hash).sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
     }
 
     public func standing(in room: RoomID) -> RoomStanding {

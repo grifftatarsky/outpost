@@ -3181,7 +3181,24 @@ newest ones; and an honest remover who never received some old history would hid
 room chain adds no power: each entry names its author's previous entry in the same room, the removal
 names the last one it saw, and only that chain counts. It changes the log's format, the careful way
 older entries require: the new field is signed only when present, so every existing entry keeps its
-bytes. **Not built yet.**
+bytes.
+
+**Written 2026-09-28, not yet built or run**, in a session with no Swift compiler. Every entry the app
+writes in a room now carries a signed room link: the hash of this device's last entry in that room, or
+an empty link for its first (`Entry.roomLink`, appended after everything else under the label
+`room-link`, so an entry without one signs the bytes it always did; `TheRoomChainTests` pins both by
+hand). A removal names the last entry of each of the removed person's devices that the remover holds
+in the room, and somebody who leaves names their own; an entry of theirs counts only if the chain from
+a named entry reaches it, passing through reactions and edits. Entries from before chains count up to
+the entry where the chain begins, and not past it. A removal or departure written by an older build
+names nothing and still goes by its clock.
+
+**What this needs from a release:** a build without this cannot check a chained entry's signature and
+refuses it, so a room where some members run an older build stops showing those members what the
+others write. Every device has to take this build together. **What it does not close:** a removed
+*device* (the member removes one of their own) still goes by its global cutoff, and an entry from
+before chains can still take a number from below where the chain begins
+([Open questions](open-questions.md#what-is-left-of-a-removed-persons-reach-into-a-rooms-past)).
 
 <!-- COPY END d920b620 -->
 

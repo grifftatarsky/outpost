@@ -92,14 +92,20 @@ public struct SoloCheckBody: Hashable, Sendable, Codable {
 
 public struct RemovalBody: Hashable, Sendable, Codable {
     public let removed: ParticipantID
+    public let heads: [EntryHash]?
 
-    public init(removed: ParticipantID) {
+    public init(removed: ParticipantID, heads: [EntryHash]? = nil) {
         self.removed = removed
+        self.heads = heads
     }
 }
 
 public struct DepartureBody: Hashable, Sendable, Codable {
-    public init() {}
+    public let heads: [EntryHash]?
+
+    public init(heads: [EntryHash]? = nil) {
+        self.heads = heads
+    }
 }
 
 public struct AdmissionBody: Hashable, Sendable, Codable {

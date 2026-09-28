@@ -10,16 +10,18 @@ public struct Projection: Sendable {
     let namedRooms: Set<RoomID>
     let outpostAuthorOrder: [ParticipantID]
     let forked: [FeedKey: Set<UInt64>]
+    let chains: RoomChains
     public let members: [ParticipantID: Member]
     public let supporterBadges: Set<ParticipantID>
 
     public init(
-        viewer: ParticipantID, rendered: [RenderedEntry], revealsNames: Bool = true,
-        viewerName: String? = nil, nicknames: [ParticipantID: String] = [:],
+        viewer: ParticipantID, rendered: [RenderedEntry], chains: RoomChains = RoomChains(),
+        revealsNames: Bool = true, viewerName: String? = nil, nicknames: [ParticipantID: String] = [:],
         met: Set<ParticipantID>? = nil, anonPersona: AnonPersona = .default
     ) {
         self.viewer = viewer
         self.rendered = rendered
+        self.chains = chains
         var roomPositions: [RoomID: [Int]] = [:]
         var positionByID: [EntryHash: Int] = [:]
         var profiles: [RoomID: RenderedEntry] = [:]

@@ -9,6 +9,7 @@ struct Author {
     let certificate: DeviceCertificate
     let chain: EpochChain
     private(set) var head: Entry?
+    private(set) var roomHeads: [RoomID: EntryHash] = [:]
 
     init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil) {
         identity = Identity.generate()
@@ -22,13 +23,15 @@ struct Author {
 
     mutating func append(
         _ payload: Payload, clock: VectorClock = VectorClock(), at wallTime: Date,
-        room: RoomID? = nil
+        room: RoomID? = nil, chained: Bool = false
     ) throws -> Entry {
         let entry = try Entry.append(
             to: head, author: identity.id, device: device,
             clock: clock.merging(head?.clock ?? VectorClock()),
-            wallTime: wallTime, room: room, payload: payload, at: .initial, sealedWith: chain)
+            wallTime: wallTime, room: room, payload: payload, at: .initial, sealedWith: chain,
+            roomLink: chained ? room.map { RoomLink(previous: roomHeads[$0]) } : nil)
         head = entry
+        if let room { roomHeads[room] = entry.hash }
         return entry
     }
 

@@ -67,13 +67,13 @@ extension Payload {
     }
     // COPY END 8750ff7f
 
-    public static func removal(of member: ParticipantID) throws -> Payload {
+    public static func removal(of member: ParticipantID, heads: [EntryHash]? = nil) throws -> Payload {
         Payload(
-            type: .removal, body: try encode(RemovalBody(removed: member)), fallbackText: nil)
+            type: .removal, body: try encode(RemovalBody(removed: member, heads: heads)), fallbackText: nil)
     }
 
-    public static func departure() throws -> Payload {
-        Payload(type: .departure, body: try encode(DepartureBody()), fallbackText: nil)
+    public static func departure(heads: [EntryHash]? = nil) throws -> Payload {
+        Payload(type: .departure, body: try encode(DepartureBody(heads: heads)), fallbackText: nil)
     }
 
     public static func admission(

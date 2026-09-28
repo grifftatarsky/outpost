@@ -50,18 +50,38 @@ extension Projection {
     public func outOfRoom(in room: RoomID, opening: (RenderedEntry) -> Payload?) -> Set<EntryHash> {
         let windows = absenceWindows(in: room, opening: opening)
         guard !windows.isEmpty else { return [] }
+        let lines = windows.mapValues { theirs in
+            theirs.map { window in heads(named: window.opened, opening: opening).map { chains.line(through: $0) } }
+        }
 
         var out: Set<EntryHash> = []
         for entry in entries(in: room) {
-            guard let theirs = windows[entry.author] else { continue }
-            let isOut = theirs.contains { window in
+            guard let theirs = windows[entry.author], let drawn = lines[entry.author] else { continue }
+            let isOut = zip(theirs, drawn).contains { window, line in
                 entry.id != window.opened.id
-                    && (Self.isAfter(entry, window.opened) || forked[entry.feedKey]?.contains(entry.seq) == true)
+                    && !counts(entry, before: window.opened, on: line)
                     && !Self.isAfterReadmission(entry, window.readmitted)
             }
             if isOut { out.insert(entry.id) }
         }
         return out
+    }
+
+    private func counts(_ entry: RenderedEntry, before absence: RenderedEntry, on line: RoomChains.Line?) -> Bool {
+        let inTime = !Self.isAfter(entry, absence) && forked[entry.feedKey]?.contains(entry.seq) != true
+        guard let line else { return inTime }
+        if line.onChain.contains(entry.id) { return true }
+        guard !chains.isChained(entry.id), let upTo = line.unchainedUpTo[entry.feedKey] else { return false }
+        return entry.seq <= upTo && inTime
+    }
+
+    private func heads(named absence: RenderedEntry, opening: (RenderedEntry) -> Payload?) -> [EntryHash]? {
+        guard let payload = opening(absence) else { return nil }
+        switch payload.type {
+        case .removal: return (try? payload.decode(RemovalBody.self))?.heads
+        case .departure: return (try? payload.decode(DepartureBody.self))?.heads
+        default: return nil
+        }
     }
 
     public func summaries() -> [RoomSummary] {

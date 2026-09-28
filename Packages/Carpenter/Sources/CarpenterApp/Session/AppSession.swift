@@ -150,6 +150,7 @@ public final class AppSession {
     var entriesNotWrittenDown: [Entry] = []
 
     var head: EntryLink?
+    var roomHeads: [RoomID: EntryLink] = [:]
     var accountRegistry: (any AccountRegistry)?
 
     var issuedGrants: Set<String> = []
@@ -264,6 +265,7 @@ public final class AppSession {
         var built = Projection(
             viewer: enrolment?.identity.id ?? ParticipantID(rawValue: Data()),
             rendered: LogRenderer.render(replica.allEntries, reading: renderStepReader()),
+            chains: RoomChains(replica.allEntries),
             revealsNames: persisted.preferences.isShowingOthersNames,
             viewerName: persisted.preferences.displayName?.value,
             nicknames: persisted.preferences.currentNicknames,
@@ -361,12 +363,14 @@ public final class AppSession {
             payload: payload,
             at: chain.highestKnownEpoch ?? .initial,
             sealedWith: chain,
-            alsoFor: extra
+            alsoFor: extra,
+            roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
         )
         guard SyncSession.fitsAPacket(entry) else { throw AppSessionError.tooBigToSend }
 
         if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
         head = entry.link
+        if let room { roomHeads[room] = entry.link }
         try await storage.log.append([entry])
         refresh()
     }
@@ -374,6 +378,7 @@ public final class AppSession {
     func restoreLog(identity: Identity) async throws {
         replica = Replica()
         replica.introduce(identity.publicKeys)
+        roomHeads = [:]
 
         for keys in persisted.knownKeys { replica.introduce(keys) }
         for certificate in persisted.certificates {
@@ -416,6 +421,7 @@ public final class AppSession {
             }
             if entry.feedKey == ownFeed {
                 head = entry.link
+                if let room = entry.room { noteOwn(entry.link, in: room) }
             }
             if let room = entry.room, replica.closedRooms.contains(room) {
                 stillOnDisk.append(entry)
@@ -425,6 +431,9 @@ public final class AppSession {
             spentTop.seq > head?.seq ?? 0
         {
             head = spentTop
+        }
+        for spent in replica.spentEntries where spent.feed == ownFeed {
+            if let room = spent.room { noteOwn(spent.link, in: room) }
         }
         persisted.spentEntries = replica.spentEntries
 
@@ -441,6 +450,10 @@ public final class AppSession {
 
         integrity.forks = replica.forks
         refresh()
+    }
+
+    private func noteOwn(_ link: EntryLink, in room: RoomID) {
+        if (roomHeads[room]?.seq ?? 0) < link.seq { roomHeads[room] = link }
     }
 
     func refresh() {

@@ -222,8 +222,10 @@ feed that the removing device held, by number and hash (`cutoff` and `head`, sig
 present). Nothing past it counts, whatever date it carries. A second entry under a number already
 filled is refused, and one that reached a device before the removal did is taken back when the
 removal arrives (`ARemovedDeviceStopsAtTheCutoffTests`). An entry under a number that only another
-room used cannot be checked yet; Griff ruled on 2026-09-28 for the room chain that closes it
-([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)), not built yet.
+room used cannot be checked yet. The room chain Griff ruled for on 2026-09-28
+([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)) closes it for a
+person removed from a room, not yet for a removed device
+([an open question](open-questions.md#what-is-left-of-a-removed-persons-reach-into-a-rooms-past)).
 
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
@@ -480,7 +482,11 @@ is no way to put words in somebody's mouth.
 
 **What actually happens.** `Entry.signingPayload` is canonical bytes over
 `(author, device, seq, previous?, clock, wallTime, room?, payload)`, signed with the **device's**
-Ed25519 key. Two things about this are worth stating precisely because they are the questions a
+Ed25519 key. Since 2026-09-28 an entry in a room also signs a **room link**, appended last and only when
+present (`"room-link" ‖ hash of this device's last entry in the room`, empty for its first), so an older
+entry signs exactly the bytes it always did. A removal or a departure names the last entry of each of
+the person's devices, and only the chains those reach count (`RoomChains`, `TheRoomChainTests`). Written
+in a session without a compiler; not yet built. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
 
 - **It signs the ciphertext, not the plaintext** — encrypt-then-sign. On its own that would leave a

@@ -19,6 +19,16 @@ public struct EntryLink: Hashable, Sendable, Codable {
     }
 }
 
+public struct RoomLink: Hashable, Sendable, Codable {
+    public let previous: EntryHash?
+
+    public init(previous: EntryHash?) {
+        self.previous = previous
+    }
+
+    var canonicalFields: [Data] { [Data("room-link".utf8), previous?.rawValue ?? Data()] }
+}
+
 public struct Entry: Hashable, Sendable, Codable {
     public let author: ParticipantID
     public let device: DeviceID
@@ -31,6 +41,7 @@ public struct Entry: Hashable, Sendable, Codable {
     public let room: RoomID?
 
     public let payload: SealedPayload
+    public let roomLink: RoomLink?
     public let signature: Data
     public let hash: EntryHash
 
@@ -45,28 +56,20 @@ public struct Entry: Hashable, Sendable, Codable {
     var signingPayload: Data {
         Self.signingPayload(
             author: author, device: device, seq: seq, previous: previous, clock: clock,
-            wallTime: wallTime, room: room, payload: payload)
+            wallTime: wallTime, room: room, payload: payload, roomLink: roomLink)
     }
 
     private static func signingPayload(
         author: ParticipantID, device: DeviceID, seq: UInt64, previous: EntryHash?,
-        clock: VectorClock, wallTime: Date, room: RoomID?, payload: SealedPayload
+        clock: VectorClock, wallTime: Date, room: RoomID?, payload: SealedPayload, roomLink: RoomLink?
     ) -> Data {
-        CanonicalBytes.payload(
-            domain: Domain.entry,
-            fields: [
-                author.rawValue,
-                device.rawValue,
-                CanonicalBytes.sequence(seq),
-            ]
-                + CanonicalBytes.optional(previous?.rawValue)
-                + [
-                    clock.canonicalBytes,
-                    CanonicalBytes.timestamp(wallTime),
-                ]
-                + CanonicalBytes.optional(room?.canonicalBytes)
-                + [payload.canonicalBytes]
-        )
+        var fields = [author.rawValue, device.rawValue, CanonicalBytes.sequence(seq)]
+        fields += CanonicalBytes.optional(previous?.rawValue)
+        fields += [clock.canonicalBytes, CanonicalBytes.timestamp(wallTime)]
+        fields += CanonicalBytes.optional(room?.canonicalBytes)
+        fields.append(payload.canonicalBytes)
+        if let roomLink { fields += roomLink.canonicalFields }
+        return CanonicalBytes.payload(domain: Domain.entry, fields: fields)
     }
 
     public static let firstSequence: UInt64 = 1
@@ -80,11 +83,12 @@ public struct Entry: Hashable, Sendable, Codable {
         clock: VectorClock,
         wallTime: Date,
         room: RoomID?,
-        payload: SealedPayload
+        payload: SealedPayload,
+        roomLink: RoomLink? = nil
     ) throws -> Entry {
         try append(
             after: previous?.link, author: author, device: device, clock: clock,
-            wallTime: wallTime, room: room, payload: payload)
+            wallTime: wallTime, room: room, payload: payload, roomLink: roomLink)
     }
 
     public static func append(
@@ -94,7 +98,8 @@ public struct Entry: Hashable, Sendable, Codable {
         clock: VectorClock,
         wallTime: Date,
         room: RoomID?,
-        payload: SealedPayload
+        payload: SealedPayload,
+        roomLink: RoomLink? = nil
     ) throws -> Entry {
         let seq = (previous?.seq).map { $0 + 1 } ?? firstSequence
 
@@ -110,7 +115,8 @@ public struct Entry: Hashable, Sendable, Codable {
             wallTime: wallTime,
             room: room,
             payload: payload,
-            signature: Data()
+            signature: Data(),
+            roomLink: roomLink
         )
         entry = Entry(entry, signature: try device.sign(entry.signingPayload))
         return entry
@@ -126,12 +132,13 @@ public struct Entry: Hashable, Sendable, Codable {
         payload: Payload,
         at epoch: EpochNumber,
         sealedWith chain: EpochChain,
-        alsoFor extra: PairwiseSecret? = nil
+        alsoFor extra: PairwiseSecret? = nil,
+        roomLink: RoomLink? = nil
     ) throws -> Entry {
         try append(
             after: previous?.link, author: author, device: device, clock: clock,
             wallTime: wallTime, room: room, payload: payload, at: epoch, sealedWith: chain,
-            alsoFor: extra)
+            alsoFor: extra, roomLink: roomLink)
     }
 
     public static func append(
@@ -144,14 +151,16 @@ public struct Entry: Hashable, Sendable, Codable {
         payload: Payload,
         at epoch: EpochNumber,
         sealedWith chain: EpochChain,
-        alsoFor extra: PairwiseSecret? = nil
+        alsoFor extra: PairwiseSecret? = nil,
+        roomLink: RoomLink? = nil
     ) throws -> Entry {
         try append(
             after: previous, author: author, device: device, clock: clock, wallTime: wallTime,
             room: room,
             payload: try payload.sealed(
                 at: epoch, using: chain, by: FeedKey(author: author, device: device.id),
-                alsoFor: extra))
+                alsoFor: extra),
+            roomLink: roomLink)
     }
 
     public func opened(using chain: EpochChain) -> Payload? {
@@ -174,6 +183,7 @@ public struct Entry: Hashable, Sendable, Codable {
         wallTime = entry.wallTime
         room = entry.room
         payload = entry.payload
+        roomLink = entry.roomLink
         self.signature = signature
         hash = Self.hash(signing: entry.signingPayload, signature: signature)
     }
@@ -187,7 +197,8 @@ public struct Entry: Hashable, Sendable, Codable {
         wallTime: Date,
         room: RoomID?,
         payload: SealedPayload,
-        signature: Data
+        signature: Data,
+        roomLink: RoomLink? = nil
     ) {
         self.author = author
         self.device = device
@@ -197,16 +208,17 @@ public struct Entry: Hashable, Sendable, Codable {
         self.wallTime = wallTime
         self.room = room
         self.payload = payload
+        self.roomLink = roomLink
         self.signature = signature
         hash = Self.hash(
             signing: Self.signingPayload(
                 author: author, device: device, seq: seq, previous: previous, clock: clock,
-                wallTime: wallTime, room: room, payload: payload),
+                wallTime: wallTime, room: room, payload: payload, roomLink: roomLink),
             signature: signature)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case author, device, seq, previous, clock, wallTime, room, payload, signature
+        case author, device, seq, previous, clock, wallTime, room, payload, roomLink, signature
     }
 
     public init(from decoder: any Decoder) throws {
@@ -220,7 +232,8 @@ public struct Entry: Hashable, Sendable, Codable {
             wallTime: try values.decode(Date.self, forKey: .wallTime),
             room: try values.decodeIfPresent(RoomID.self, forKey: .room),
             payload: try values.decode(SealedPayload.self, forKey: .payload),
-            signature: try values.decode(Data.self, forKey: .signature))
+            signature: try values.decode(Data.self, forKey: .signature),
+            roomLink: try values.decodeIfPresent(RoomLink.self, forKey: .roomLink))
     }
 
     public static func == (left: Entry, right: Entry) -> Bool {

@@ -466,6 +466,10 @@ correct rather than only add to.
 - **Done.** Re-admission starts a membership; it never restores one.
 - **Done.** Entries from a removed member are refused on the receiving side and not drawn; a removed device
   cannot produce entries for the room.
+- **Written, not built** (2026-09-28, no compiler in that session). Every entry names its device's last
+  entry in the room, a removal or a departure names where each of the person's chains ends, and only
+  those chains count, so nothing can be slipped in under a number the room never held
+  (`TheRoomChainTests`; ruled by Griff the same day). Needs every device on this build together.
 
 **Testing**
 

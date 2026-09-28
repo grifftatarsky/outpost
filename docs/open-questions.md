@@ -17,6 +17,27 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN d041ce54 [NEEDS HUMAN REVIEW] -->
+
+### What is left of a removed person's reach into a room's past?
+
+Raised 2026-09-28, writing the room chain Griff ruled for. Two gaps are outside it.
+
+**A removed device.** When a member removes one of their own devices, the removal is not a room entry:
+it is the member's own record, with the last number that device wrote anywhere. The room chain can only
+stop that device in a room if something names its last entry *in that room*. Two ways: list those
+entries in the device removal, which tells every contact how many rooms that device wrote in; or have
+the member's remaining device write a short entry in each room naming it, sealed like any other entry,
+which costs one entry per room. Recommended: the entry per room, because it tells nobody anything new.
+
+**Numbers from before chains.** An entry written before this build carries no link. Those count up to
+the entry the chain begins at, which closes everything after it, but a removed person could still sign
+an old-style entry under a number below that point that the room never held. Recommended: accept it. It
+cannot grow, because every new entry is chained, and it covers only numbers from before a device's first
+chained entry in that room.
+
+<!-- COPY END d041ce54 -->
+
 <!-- COPY BEGIN db4bc4f1 [NEEDS HUMAN REVIEW] -->
 
 ### Should copies of one photo differ in size and time?
