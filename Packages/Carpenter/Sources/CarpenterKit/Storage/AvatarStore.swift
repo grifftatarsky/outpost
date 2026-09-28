@@ -33,7 +33,7 @@ public struct PersonAvatarStore: Sendable {
     }
 
     static func name(for person: ParticipantID) -> String {
-        person.rawValue.map { String(format: "%02x", $0) }.joined()
+        person.rawValue.lowercaseHex
     }
 
     static func person(named name: String) -> ParticipantID? {

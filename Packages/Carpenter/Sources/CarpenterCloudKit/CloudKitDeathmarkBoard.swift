@@ -47,7 +47,7 @@ public actor CloudKitDeathmarkBoard: DeathmarkBoard {
     }
 
     public func checkOff(_ device: DeviceID, sealed: Data) async throws {
-        let name = Self.checkOffPrefix + device.rawValue.map { String(format: "%02x", $0) }.joined()
+        let name = Self.checkOffPrefix + device.rawValue.lowercaseHex
         let record = CKRecord(recordType: Self.recordType, recordID: CKRecord.ID(recordName: name, zoneID: zoneID))
         record[Self.sealedField] = sealed
         do {

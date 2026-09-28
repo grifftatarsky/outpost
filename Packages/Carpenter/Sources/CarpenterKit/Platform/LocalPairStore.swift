@@ -26,7 +26,7 @@ public struct LocalPairStore: Codable, Sendable {
     public init() {}
 
     public static func account(of participant: ParticipantID) -> String {
-        "_" + participant.rawValue.prefix(16).map { String(format: "%02x", $0) }.joined()
+        "_" + participant.rawValue.prefix(16).lowercaseHex
     }
 
     public mutating func stamp(_ now: Date) -> Date {

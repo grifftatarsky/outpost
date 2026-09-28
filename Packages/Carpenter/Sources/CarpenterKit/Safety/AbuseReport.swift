@@ -38,7 +38,7 @@ public struct AbuseReport: Hashable, Sendable {
     public var senderFingerprint: String { DenyList.fingerprint(of: sender) }
 
     public var messageID: String {
-        entry.rawValue.map { String(format: "%02x", $0) }.joined()
+        entry.rawValue.lowercaseHex
     }
 
 

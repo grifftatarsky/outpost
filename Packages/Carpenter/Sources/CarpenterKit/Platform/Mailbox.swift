@@ -115,13 +115,13 @@ public struct PacketReceipt: Hashable, Sendable, Codable {
     ) -> Data {
         CanonicalBytes.payload(
             domain: domain,
-            fields: [withUnsafeBytes(of: packet.rawValue.uuid) { Data($0) }, participant.rawValue, device.rawValue])
+            fields: [CanonicalBytes.uuid(packet.rawValue), participant.rawValue, device.rawValue])
     }
 
     static func context(_ packet: PacketID, tag: RecipientTag, domain: String = Domain.packetReceipt) -> Data {
         CanonicalBytes.payload(
             domain: domain,
-            fields: [withUnsafeBytes(of: packet.rawValue.uuid) { Data($0) }, tag.rawValue])
+            fields: [CanonicalBytes.uuid(packet.rawValue), tag.rawValue])
     }
 
     public static func seal(

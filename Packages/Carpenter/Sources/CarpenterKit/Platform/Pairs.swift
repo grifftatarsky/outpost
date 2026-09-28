@@ -60,7 +60,7 @@ public enum PairWire {
     public static let ring = "ring"
 
     public static func ringValue() -> String {
-        (0..<16).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
+        Data((0..<16).map { _ in UInt8.random(in: .min ... .max) }).lowercaseHex
     }
 
     public static let receiptType = "PairReceipt"

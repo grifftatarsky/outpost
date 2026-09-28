@@ -237,7 +237,5 @@ public struct Entry: Hashable, Sendable, Codable {
 }
 
 extension RoomID {
-    var canonicalBytes: Data {
-        withUnsafeBytes(of: rawValue.uuid) { Data($0) }
-    }
+    var canonicalBytes: Data { CanonicalBytes.uuid(rawValue) }
 }

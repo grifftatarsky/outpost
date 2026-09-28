@@ -27,6 +27,10 @@ public enum CanonicalBytes {
         bigEndian(value)
     }
 
+    public static func uuid(_ value: UUID) -> Data {
+        withUnsafeBytes(of: value.uuid) { Data($0) }
+    }
+
     public static func optional(_ value: Data?) -> [Data] {
         guard let value else { return [Data([0])] }
         return [Data([1]), value]

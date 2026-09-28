@@ -44,18 +44,18 @@ public struct SiblingRecord: Hashable, Sendable {
 
         public var recordName: String {
             switch kind {
-            case .state: "feed-\(Self.hex(writer.rawValue))"
-            case .mail(let number): "mail-\(Self.hex(writer.rawValue))-\(number)"
-            case .catchUp(let target): "catchup-\(Self.hex(writer.rawValue))-\(Self.hex(target.rawValue))"
-            case .request: "request-\(Self.hex(writer.rawValue))"
-            case .approval(let target): "approval-\(Self.hex(writer.rawValue))-\(Self.hex(target.rawValue))"
-            case .authority(let digest): "authority-\(Self.hex(writer.rawValue))-\(Self.hex(digest))"
+            case .state: "feed-\(writer.rawValue.lowercaseHex)"
+            case .mail(let number): "mail-\(writer.rawValue.lowercaseHex)-\(number)"
+            case .catchUp(let target): "catchup-\(writer.rawValue.lowercaseHex)-\(target.rawValue.lowercaseHex)"
+            case .request: "request-\(writer.rawValue.lowercaseHex)"
+            case .approval(let target): "approval-\(writer.rawValue.lowercaseHex)-\(target.rawValue.lowercaseHex)"
+            case .authority(let digest): "authority-\(writer.rawValue.lowercaseHex)-\(digest.lowercaseHex)"
             }
         }
 
         public init?(recordName: String) {
             let parts = recordName.split(separator: "-", omittingEmptySubsequences: false).map(String.init)
-            guard parts.count >= 2, let writer = Self.bytes(parts[1]).map(DeviceID.init(rawValue:)) else {
+            guard parts.count >= 2, let writer = Data(lowercaseHex: parts[1]).map(DeviceID.init(rawValue:)) else {
                 return nil
             }
             switch (parts[0], parts.count) {
@@ -65,34 +65,19 @@ public struct SiblingRecord: Hashable, Sendable {
                 guard let number = Int(parts[2]), number > 0 else { return nil }
                 self.init(writer: writer, kind: .mail(number))
             case ("catchup", 3):
-                guard let target = Self.bytes(parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
+                guard let target = Data(lowercaseHex: parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
                 self.init(writer: writer, kind: .catchUp(for: target))
             case ("request", 2):
                 self.init(writer: writer, kind: .request)
             case ("approval", 3):
-                guard let target = Self.bytes(parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
+                guard let target = Data(lowercaseHex: parts[2]).map(DeviceID.init(rawValue:)) else { return nil }
                 self.init(writer: writer, kind: .approval(for: target))
             case ("authority", 3):
-                guard let digest = Self.bytes(parts[2]), digest.count == 32 else { return nil }
+                guard let digest = Data(lowercaseHex: parts[2]), digest.count == 32 else { return nil }
                 self.init(writer: writer, kind: .authority(digest))
             default:
                 return nil
             }
-        }
-
-        private static func hex(_ data: Data) -> String {
-            data.map { String(format: "%02x", $0) }.joined()
-        }
-
-        private static func bytes(_ digits: String) -> Data? {
-            let characters = Array(digits)
-            guard !characters.isEmpty, characters.count % 2 == 0 else { return nil }
-            var bytes = Data()
-            for pair in stride(from: 0, to: characters.count, by: 2) {
-                guard let byte = UInt8(String(characters[pair...pair + 1]), radix: 16) else { return nil }
-                bytes.append(byte)
-            }
-            return bytes
         }
     }
 

@@ -95,7 +95,7 @@ public enum SealedAttachment {
     static func context(id: AttachmentID) -> Data {
         CanonicalBytes.payload(
             domain: Domain.attachment,
-            fields: [withUnsafeBytes(of: id.rawValue.uuid) { Data($0) }])
+            fields: [CanonicalBytes.uuid(id.rawValue)])
     }
 }
 
@@ -170,8 +170,8 @@ extension SealedAttachment {
         CanonicalBytes.payload(
             domain: Domain.attachment,
             fields: [
-                withUnsafeBytes(of: id.rawValue.uuid) { Data($0) },
-                withUnsafeBytes(of: part.rawValue.uuid) { Data($0) },
+                CanonicalBytes.uuid(id.rawValue),
+                CanonicalBytes.uuid(part.rawValue),
                 Data("part \(index) of \(count)".utf8),
             ])
     }

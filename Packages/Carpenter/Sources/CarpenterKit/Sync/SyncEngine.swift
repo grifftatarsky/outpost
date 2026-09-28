@@ -194,13 +194,13 @@ public enum SyncEngine {
 
     private static func grantContext(id: PacketID) -> Data {
         CanonicalBytes.payload(
-            domain: Domain.grantEnvelope, fields: [withUnsafeBytes(of: id.rawValue.uuid) { Data($0) }])
+            domain: Domain.grantEnvelope, fields: [CanonicalBytes.uuid(id.rawValue)])
     }
 
     private static func wrapContext(id: PacketID) -> Data {
         CanonicalBytes.payload(
             domain: Domain.syncPacket,
-            fields: [withUnsafeBytes(of: id.rawValue.uuid) { Data($0) }]
+            fields: [CanonicalBytes.uuid(id.rawValue)]
         )
     }
 }
