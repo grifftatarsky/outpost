@@ -411,3 +411,12 @@ on 2026-09-26 and none remain, but nothing stops one coming back.
 
 <!-- COPY END 16d05a2e -->
 
+
+<!-- COPY BEGIN 12295e6f [NEEDS HUMAN REVIEW] -->
+
+**`WhatIsUnsentTests` failed once under a full run, 2026-09-28.** It holds a per-call time under 50
+microseconds; the full suite failed on it once and passed on the next run, and three runs of the suite
+alone passed. A timing bound measured while 1,700 other tests run in parallel is a guess about the
+machine's load.
+
+<!-- COPY END 12295e6f -->

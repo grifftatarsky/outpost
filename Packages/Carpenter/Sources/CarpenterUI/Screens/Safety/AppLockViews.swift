@@ -35,6 +35,13 @@ public struct AppLockScreen: View {
                 AppLockProblem.erasing.sentence
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
+            } else if controller.isLocked, let lock = controller.lock, lock.code == .digits {
+                notice
+                DigitPad(
+                    length: lock.length, busy: controller.checking,
+                    biometricName: controller.offersBiometrics ? controller.biometricName : nil,
+                    onBiometrics: { Task { await controller.unlockWithBiometrics() } },
+                    onSubmit: { entered in Task { await controller.unlock(with: entered) } })
             } else if controller.isLocked, controller.lock != nil {
                 SecureField(
                     text: $code,
@@ -55,17 +62,7 @@ public struct AppLockScreen: View {
                 .focused($typing)
                 .onSubmit(submit)
 
-                if let problem = controller.problem {
-                    problem.sentence
-                        .font(CarpenterFont.footnote)
-                        .foregroundStyle(palette.destructive)
-                        .multilineTextAlignment(.center)
-                } else if controller.biometricsChanged, let name = controller.biometricName {
-                    Text("\(name) changed on this phone, so enter your code.", bundle: .module)
-                        .font(CarpenterFont.footnote)
-                        .foregroundStyle(palette.secondaryText)
-                        .multilineTextAlignment(.center)
-                }
+                notice
 
                 Button(action: submit) {
                     Text("Unlock", bundle: .module).primaryAction()
@@ -83,7 +80,6 @@ public struct AppLockScreen: View {
                     .quietActionButton()
                 }
             }
-            // COPY END 5be5d303
             forgotten
             Spacer()
         }
@@ -103,6 +99,21 @@ public struct AppLockScreen: View {
             }
             if controller.isLocked { typing = true }
         }
+    }
+
+    @ViewBuilder private var notice: some View {
+        if let problem = controller.problem {
+            problem.sentence
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.destructive)
+                .multilineTextAlignment(.center)
+        } else if controller.biometricsChanged, let name = controller.biometricName {
+            Text("\(name) changed on this phone, so enter your code.", bundle: .module)
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .multilineTextAlignment(.center)
+        }
+        // COPY END 5be5d303
     }
 
     @ViewBuilder private var recoveryKeyButton: some View {

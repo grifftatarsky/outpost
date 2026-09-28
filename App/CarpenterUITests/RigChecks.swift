@@ -189,18 +189,13 @@ final class RigChecks: XCTestCase {
             app.buttons["You"].firstMatch.exists,
             "the app under the lock could still be reached, by VoiceOver or anything that reads the screen's elements")
         shoot(app, "lock-6-locked")
-        let code = app.secureTextFields.firstMatch
-        code.tap()
-        code.typeText("000000")
-        XCTAssertTrue(tapIfThere(app, "Unlock"), "no unlock button")
+        for digit in "000000" { app.buttons[String(digit)].firstMatch.tap() }
         XCTAssertTrue(
             app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "That's not it")).firstMatch
                 .waitForExistence(timeout: 10),
             "a wrong code did not say so")
         shoot(app, "lock-7-wrong-code")
-        code.tap()
-        code.typeText("482913")
-        XCTAssertTrue(tapIfThere(app, "Unlock"), "no unlock button")
+        for digit in "482913" { app.buttons[String(digit)].firstMatch.tap() }
         XCTAssertTrue(app.buttons["You"].firstMatch.waitForExistence(timeout: 10), "the right code did not open the app")
         shoot(app, "lock-8-open")
 

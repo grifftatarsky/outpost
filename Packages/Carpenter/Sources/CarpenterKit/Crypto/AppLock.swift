@@ -40,6 +40,7 @@ public struct AppLock: Hashable, Sendable, Codable {
     public var biometricState: Data?
     public var delay: TimeInterval
     public var eraseAfter: Int?
+    public var length: Int?
     var salt: Data
     var verifier: Data
     var rounds: Int
@@ -62,7 +63,8 @@ public struct AppLock: Hashable, Sendable, Codable {
         guard isAcceptable(code, as: kind) else { throw AppLockError.notAcceptable }
         let salt = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
         return AppLock(
-            code: kind, usesBiometrics: usesBiometrics, biometricState: biometricState, delay: delay, salt: salt,
+            code: kind, usesBiometrics: usesBiometrics, biometricState: biometricState, delay: delay,
+            length: kind == .digits ? code.count : nil, salt: salt,
             verifier: derive(code, salt: salt, rounds: rounds), rounds: rounds)
     }
 

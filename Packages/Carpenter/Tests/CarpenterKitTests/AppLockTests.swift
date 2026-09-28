@@ -20,6 +20,20 @@ struct AppLockTests {
         try AppLock.make(code, as: kind, usesBiometrics: biometrics, biometricState: biometrics ? Data([1]) : nil, rounds: 1_000)
     }
 
+    @Test("A digit code remembers how many digits it has, so the keypad knows when to try it")
+    func aDigitCodeKnowsItsLength() throws {
+        #expect(try lock("4829").length == 4)
+        #expect(try lock("482913").length == 6)
+        #expect(try lock("correct horse", as: .passphrase).length == nil)
+
+        var older = try JSONSerialization.jsonObject(with: JSONEncoder().encode(try lock())) as! [String: Any]
+        older.removeValue(forKey: "length")
+        let decoded = try JSONDecoder().decode(AppLock.self, from: JSONSerialization.data(withJSONObject: older))
+        #expect(decoded.length == nil, "a lock saved before the length was kept should still open, with no length")
+        var opened = decoded
+        #expect(opened.unlock(with: "482913", at: at(100)) == .unlocked)
+    }
+
     @Test("The right code opens it; a wrong one does not, and says how many tries are left")
     func theRightCodeOpens() throws {
         var lock = try lock()
