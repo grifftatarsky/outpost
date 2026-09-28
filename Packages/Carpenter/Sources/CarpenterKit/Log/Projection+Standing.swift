@@ -56,7 +56,7 @@ extension Projection {
             guard let theirs = windows[entry.author] else { continue }
             let isOut = theirs.contains { window in
                 entry.id != window.opened.id
-                    && Self.isAfter(entry, window.opened)
+                    && (Self.isAfter(entry, window.opened) || forked[entry.feedKey]?.contains(entry.seq) == true)
                     && !Self.isAfterReadmission(entry, window.readmitted)
             }
             if isOut { out.insert(entry.id) }

@@ -100,6 +100,7 @@ public struct Replica: Sendable {
         guard registry != registries[revocation.participant] else { return }
         registries[revocation.participant] = registry
         revision = UUID()
+        enforceStanding(of: revocation.participant)
     }
 
     mutating func revoke(_ revocation: DeviceRevocation) throws {
@@ -112,6 +113,7 @@ public struct Replica: Sendable {
         guard registry != registries[event.participant] else { return }
         registries[event.participant] = registry
         revision = UUID()
+        enforceStanding(of: event.participant)
     }
 
     public var storedTimes: [Data: Date] {
@@ -153,7 +155,7 @@ public struct Replica: Sendable {
     ) throws -> IntegrationResult {
         if feeds[entry.feedKey]?[entry.seq]?[entry.hash] != nil { return .alreadyPresent }
         guard let registry = registries[entry.author] else { throw LogError.unknownParticipant }
-        guard registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq),
+        guard registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash),
             let deviceKey = registry.signingKey(for: entry.device)
         else {
             throw LogError.unauthorizedDevice
@@ -166,7 +168,11 @@ public struct Replica: Sendable {
         let existingAtSeq = feeds[entry.feedKey]?[entry.seq] ?? [:]
         if existingAtSeq[entry.hash] != nil { return .alreadyPresent }
 
-        try validateLink(of: entry)
+        let standing = registry.standing(of: entry.device)
+        let removed = standing?.revokedAt != nil
+        let anchored = removed && isAnchored(entry, to: standing)
+        if removed, !existingAtSeq.isEmpty, !anchored { throw LogError.unauthorizedDevice }
+        try validateLink(of: entry, anchored: anchored)
 
         if let room = entry.room, closedRooms.contains(room) {
             if existingAtSeq.isEmpty { spend(SpentEntry(entry)) }
@@ -179,6 +185,11 @@ public struct Replica: Sendable {
         for (feed, seq) in entry.clock.positions { claimed.observe(feed, seq: seq) }
         if existingAtSeq.isEmpty { occupy(entry.seq, in: entry.feedKey) }
 
+        if removed {
+            enforceStanding(of: entry.author)
+            guard feeds[entry.feedKey]?[entry.seq]?[entry.hash] != nil else { throw LogError.unauthorizedDevice }
+            return .accepted
+        }
         guard !existingAtSeq.isEmpty else { return .accepted }
 
         let fork = Fork(
@@ -217,6 +228,14 @@ public struct Replica: Sendable {
                 ? $0.seq < $1.seq
                 : $0.feed.canonicalBytes.lexicographicallyPrecedes($1.feed.canonicalBytes)
         }
+    }
+
+    public func link(atTopOf feed: FeedKey) -> EntryLink? {
+        guard let top = highest[feed] else { return nil }
+        if let held = feeds[feed]?[top]?.keys.min(by: { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }) {
+            return EntryLink(seq: top, hash: held)
+        }
+        return spent[feed]?[top]?.link
     }
 
     public func spentLink(atTopOf feed: FeedKey) -> EntryLink? {
@@ -294,10 +313,70 @@ public struct Replica: Sendable {
     public func refusesForever(_ entry: Entry) -> Bool {
         guard let registry = registries[entry.author] else { return false }
         guard registry.standing(of: entry.device) != nil else { return false }
-        return !registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq)
+        return !registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash)
     }
 
-    private func validateLink(of entry: Entry) throws {
+    // MARK: What a removed device wrote
+
+    private func isAnchored(_ entry: Entry, to standing: DeviceRegistry.Standing?) -> Bool {
+        guard let cutoff = standing?.cutoff, let head = standing?.head, entry.seq <= cutoff else { return false }
+        var current = entry
+        while current.seq < cutoff {
+            guard let next = feeds[entry.feedKey]?[current.seq + 1]?.values.first(where: { $0.previous == current.hash })
+            else { return false }
+            current = next
+        }
+        return current.hash == head
+    }
+
+    private mutating func enforceStanding(of participant: ParticipantID) {
+        guard let registry = registries[participant] else { return }
+        for feed in Array(feeds.keys) where feed.author == participant {
+            guard let standing = registry.standing(of: feed.device), standing.revokedAt != nil,
+                let bySeq = feeds[feed]
+            else { continue }
+            var refused = bySeq.values.flatMap(\.values).filter {
+                !registry.isAuthorized($0.device, at: $0.wallTime, seq: $0.seq, hash: $0.hash)
+            }
+            if let cutoff = standing.cutoff, let head = standing.head {
+                refused += offTheChain(in: feed, from: cutoff, head: head)
+            }
+            evict(refused, from: feed)
+        }
+    }
+
+    private func offTheChain(in feed: FeedKey, from cutoff: UInt64, head: EntryHash) -> [Entry] {
+        var off: [Entry] = []
+        var expected = head
+        var seq = cutoff
+        while let atSeq = feeds[feed]?[seq], !atSeq.isEmpty {
+            guard let kept = atSeq[expected] else {
+                off += atSeq.values
+                break
+            }
+            off += atSeq.values.filter { $0.hash != expected }
+            guard seq > Entry.firstSequence, let previous = kept.previous else { break }
+            expected = previous
+            seq -= 1
+        }
+        return off
+    }
+
+    private mutating func evict(_ entries: [Entry], from feed: FeedKey) {
+        guard !entries.isEmpty else { return }
+        revision = UUID()
+        let gone = Set(entries.map(\.hash))
+        for entry in entries {
+            feeds[feed]?[entry.seq]?[entry.hash] = nil
+            if feeds[feed]?[entry.seq]?.isEmpty == true { feeds[feed]?[entry.seq] = nil }
+        }
+        if feeds[feed]?.isEmpty == true { feeds[feed] = nil }
+        allEntries.removeAll { gone.contains($0.hash) }
+        forks.removeAll { fork in (feeds[fork.feed]?[fork.seq]?.count ?? 0) < 2 }
+        reindex(feed)
+    }
+
+    private func validateLink(of entry: Entry, anchored: Bool = false) throws {
         guard entry.seq > Entry.firstSequence else {
             guard entry.seq == Entry.firstSequence else { throw LogError.brokenLink }
             guard entry.previous == nil else { throw LogError.brokenLink }
@@ -306,7 +385,7 @@ public struct Replica: Sendable {
         guard entry.previous != nil else { throw LogError.brokenLink }
 
         let predecessors = feeds[entry.feedKey]?[entry.seq - 1] ?? [:]
-        guard !predecessors.isEmpty else { return }
+        guard !predecessors.isEmpty, !anchored else { return }
         guard let claimed = entry.previous, predecessors[claimed] != nil else {
             throw LogError.brokenLink
         }
@@ -372,7 +451,8 @@ public struct Replica: Sendable {
         var found: [FeedGap] = []
         for key in keys.sorted(by: { $0.canonicalBytes.lexicographicallyPrecedes($1.canonicalBytes) }) {
             let run = contiguous[key] ?? 0
-            let top = Swift.max(highest[key] ?? 0, claimed[key])
+            var top = Swift.max(highest[key] ?? 0, claimed[key])
+            if let cutoff = registries[key.author]?.standing(of: key.device)?.cutoff { top = Swift.min(top, cutoff) }
             guard top > run else { continue }
             let held = FeedGap.spans(of: (scattered[key] ?? []).sorted())
             let missing = [SequenceSpan(run + 1, top)].subtracting(held)

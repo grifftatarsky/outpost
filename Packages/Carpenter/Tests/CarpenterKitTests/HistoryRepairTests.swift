@@ -766,8 +766,8 @@ struct FinalRefusalThroughTheSessionTests {
         }
     }
 
-    @Test("An entry a revoked device signed is counted apart, and never asked for again")
-    func aFinalRefusalIsRecordedAndSaidApart() async throws {
+    @Test("An entry a revoked device signed past its cutoff is taken back everywhere, and never counted missing")
+    func anEntryPastTheCutoffIsTakenBack() async throws {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox()
         let keychain = InMemoryKeychainStore()
@@ -855,25 +855,20 @@ struct FinalRefusalThroughTheSessionTests {
         #expect(
             !bob.messages(in: room).map(\.body).contains("after the pad was revoked"),
             "precondition: the refused entry did not reach Bob by an ordinary route")
-        #expect(bob.missingHistory(in: room).total == 1, "precondition: Bob can tell one is missing")
-
-        await bob.startRepair(in: room)
-        try await bob.sync(through: mailbox)
-        try await carol.sync(through: mailbox)
-        try await bob.sync(through: mailbox)
-
-        let status = try #require(bob.repairStatus(of: room))
-        #expect(status.unverifiable == 1, "the refusal was not recorded, or not counted apart")
-        #expect(
-            status.sentButNotArrived == 0,
-            "an entry that will never be accepted was drawn as one still on its way")
         #expect(
             bob.missingHistory(in: room).isEmpty,
-            "the room still reports missing something no credential will ever make readable")
+            "the room reports missing something the removal ruled out, which no credential will ever make readable")
 
-        await bob.dismissRepair(in: room)
-        let again = await bob.startRepair(in: room)
-        #expect(again?.stillMissing == 0, "a fresh repair asked for it all over again")
+        for _ in 0..<3 {
+            try await phone.sync(through: mailbox)
+            try await carol.sync(through: mailbox)
+        }
+        #expect(
+            !carol.messages(in: room).map(\.body).contains("after the pad was revoked"),
+            "Carol kept an entry the removal ruled out because it reached her before the removal did")
+
+        let repair = await bob.startRepair(in: room)
+        #expect((repair?.stillMissing ?? 0) == 0, "a repair asked for an entry the removal ruled out")
     }
 }
 

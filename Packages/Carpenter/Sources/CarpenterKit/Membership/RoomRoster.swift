@@ -370,6 +370,13 @@ public struct RoomRoster: Hashable, Sendable {
         }
         spend(requests[removed])
         requests[removed] = nil
+        endInvitations(madeBy: removed)
+    }
+
+    private mutating func endInvitations(madeBy inviter: ParticipantID) {
+        for attestation in requests.values where attestation.inviter == inviter && !established.contains(attestation.joiner) {
+            spend(attestation)
+        }
     }
 
     private mutating func spend(_ attestation: MembershipAttestation?) {

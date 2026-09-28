@@ -9,6 +9,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         public let recovered: Bool
         public fileprivate(set) var removedByRecovery: Bool = false
         public fileprivate(set) var cutoff: UInt64?
+        public fileprivate(set) var head: EntryHash?
     }
 
     public let identity: IdentityPublicKeys
@@ -106,9 +107,10 @@ public struct DeviceRegistry: Hashable, Sendable {
         windows[device]?.covers(instant) ?? false
     }
 
-    public func isAuthorized(_ device: DeviceID, at instant: Date, seq: UInt64? = nil) -> Bool {
+    public func isAuthorized(_ device: DeviceID, at instant: Date, seq: UInt64? = nil, hash: EntryHash? = nil) -> Bool {
         guard let standing = standings[device] else { return false }
         if standing.revokedAt != nil, let cutoff = standing.cutoff, let seq {
+            if seq == cutoff, let head = standing.head, let hash, hash != head { return false }
             return instant >= standing.addedAt && seq <= cutoff
         }
         return Self.covers(standing, instant)
@@ -194,8 +196,9 @@ public struct DeviceRegistry: Hashable, Sendable {
                     standing.revokedAt = removal.revocation.revokedAt
                     standing.revokedBy = removal.revocation.revokedBy
                 }
-                if let cutoff = removal.revocation.cutoff {
-                    standing.cutoff = min(standing.cutoff ?? cutoff, cutoff)
+                if let cutoff = removal.revocation.cutoff, cutoff < standing.cutoff ?? .max {
+                    standing.cutoff = cutoff
+                    standing.head = removal.revocation.head
                 }
                 result[target] = standing
             }

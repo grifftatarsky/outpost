@@ -148,6 +148,7 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
     public var revokedBy: DeviceID?
     public var revokerSignature: Data?
     public var cutoff: UInt64?
+    public var head: EntryHash?
 
     public init(
         participant: ParticipantID,
@@ -156,7 +157,8 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
         signature: Data,
         revokedBy: DeviceID? = nil,
         revokerSignature: Data? = nil,
-        cutoff: UInt64? = nil
+        cutoff: UInt64? = nil,
+        head: EntryHash? = nil
     ) {
         self.participant = participant
         self.device = device
@@ -165,11 +167,12 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
         self.revokedBy = revokedBy
         self.revokerSignature = revokerSignature
         self.cutoff = cutoff
+        self.head = head
     }
 
     public static func issue(
         for device: DeviceID, by identity: Identity, at revokedAt: Date,
-        from revoker: DeviceKeys? = nil, cutoff: UInt64? = nil
+        from revoker: DeviceKeys? = nil, cutoff: UInt64? = nil, head: EntryHash? = nil
     ) throws -> DeviceRevocation {
         var revocation = DeviceRevocation(
             participant: identity.id,
@@ -177,7 +180,8 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
             revokedAt: revokedAt,
             signature: Data(),
             revokedBy: revoker?.id,
-            cutoff: cutoff
+            cutoff: cutoff,
+            head: head
         )
         revocation.signature = try identity.sign(revocation.signingPayload)
         if let revoker {
@@ -194,6 +198,7 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
         ]
         if let revokedBy { fields += [Data("revoked-by".utf8), revokedBy.rawValue] }
         if let cutoff { fields += [Data("cutoff".utf8), CanonicalBytes.sequence(cutoff)] }
+        if let head { fields += [Data("head".utf8), head.rawValue] }
         return CanonicalBytes.payload(domain: Domain.deviceRevocation, fields: fields)
     }
 
