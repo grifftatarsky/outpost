@@ -2940,6 +2940,40 @@ rig: remove a device on alpha, and check beta takes the new address and messages
 
 <!-- COPY END 61aea84c -->
 
+<!-- COPY BEGIN cd3e5ba0 [NEEDS HUMAN REVIEW] -->
+
+### Each pair of people gets its own mailbox
+
+**RULED 2026-09-27 by Griff.** "B is the way", after weighing a private inbox per contact (A) against a
+mailbox per pair of people (B): "it sounds more secure" and it "simplifies a loooooot of things".
+
+Today each member has one outbox shared with everybody they talk to, with a link that can read and
+write it, because contacts write their receipts, their rings and their own links into it. Inside one
+shared iCloud space a link gives the same access to everything in it, so any contact can change or
+delete anything in your outbox.
+
+The plan: for each contact, each person keeps one space in their own iCloud, shared with only that
+contact, who can read it and not write it. It holds everything sent to that contact: messages, the
+receipts for what was collected from them, and link hand-offs. Nobody writes anywhere but their own
+iCloud. Photos are stored once in a read-only space and each mailbox points to them. The shared
+outbox, the address lists on each packet and the outbox-link question all go away.
+
+Promises, not yet confirmed: only the two people can read the space they share, and nobody else can
+learn it exists; nothing anyone writes can change or delete mail to anyone else; closing a person's
+space ends their access to all of yours and touches nobody else's; and only the sender's phone
+decides what was collected, from receipts only the recipient's device can sign.
+
+**To measure on the rig before designing around it:** how many spaces and links one account can hold,
+and how long a sync across a few hundred takes; whether a link can be limited to exactly one person;
+and what iCloud sends when a contact writes to their space for you. Nothing is written into your own
+iCloud in this plan, so notifications have to come from watching contacts' spaces, where every change
+wakes the phone, a receipt as much as a message. Showing only real messages needs Apple's permission
+to drop a notification quietly; the fallback is a tiny space per contact that can do nothing but ring.
+
+**Not built.**
+
+<!-- COPY END cd3e5ba0 -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts
