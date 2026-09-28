@@ -166,7 +166,7 @@ struct RescindingAnInvitationTests {
 
         roster.apply(
             rendered(inviter.id, .removal, hash: 5, at: 5),
-            body: try Payload.removal(of: other.id))
+            body: try Payload.removal(of: other.id, heads: []))
         roster.apply(
             rendered(other.id, .invitationRescinded, hash: 6, at: 10),
             body: try Payload.invitationRescinded(of: attestation))

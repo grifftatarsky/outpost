@@ -1,87 +1,123 @@
 import Foundation
 
 extension Projection {
-    // MARK: Standing — what an absent member's entries count for
+    // MARK: Standing — who is in a room, and what counts from those who are not
 
-    struct AbsenceWindow {
-        let opened: RenderedEntry
-        var readmitted: RenderedEntry?
+    struct Standing {
+        var roster: RoomRoster
+        var out: Set<EntryHash> = []
     }
 
-    func absenceWindows(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?
-    ) -> [ParticipantID: [AbsenceWindow]] {
-        var roster = RoomRoster(room: room)
-        var windows: [ParticipantID: [AbsenceWindow]] = [:]
+    private struct Claim {
+        let entry: RenderedEntry
+        let subject: ParticipantID
+        let line: Set<EntryHash>
 
-        for entry in entries(in: room) {
-            guard let payload = opening(entry) else { continue }
-            let before = roster.absent
-            roster.apply(entry, body: payload)
-            let after = roster.absent
+        func cuts(_ other: RenderedEntry) -> Bool {
+            other.author == subject && other.id != entry.id && !line.contains(other.id)
+        }
+    }
 
-            for person in after.subtracting(before) {
-                windows[person, default: []].append(AbsenceWindow(opened: entry, readmitted: nil))
-            }
-            for person in before.subtracting(after) {
-                guard var theirs = windows[person], var open = theirs.last, open.readmitted == nil
-                else { continue }
-                open.readmitted = entry
-                theirs[theirs.count - 1] = open
-                windows[person] = theirs
+    private struct Walk {
+        var standing: Standing
+        var took: Set<Int> = []
+        var voidedBy: [Int: Set<Int>] = [:]
+    }
+
+    func standing(in room: RoomID, opening: (RenderedEntry) -> Payload?) -> Standing {
+        var payloads: [EntryHash: Payload] = [:]
+        for entry in entries(in: room) where RoomRoster.rosterShaping.contains(entry.type) {
+            payloads[entry.id] = opening(entry)
+        }
+        let claims: [Claim] = entries(in: room).compactMap { claim($0, payloads[$0.id]) }
+
+        var cutting = Set(claims.indices)
+        var contested: Set<Int> = []
+        while true {
+            let walked = walk(room, claims: claims, cutting: cutting, contested: contested, payloads: payloads)
+            let voided = Set(walked.voidedBy.keys).intersection(cutting)
+            let idle = cutting.subtracting(walked.took).subtracting(voided)
+            let defeated = voided.filter { !(walked.voidedBy[$0] ?? []).isSubset(of: voided) }
+            if !idle.isEmpty {
+                cutting.subtract(idle)
+            } else if !defeated.isEmpty {
+                cutting.subtract(defeated)
+            } else if !voided.isEmpty {
+                contested.formUnion(voided)
+            } else {
+                return walked.standing
             }
         }
-        return windows
     }
 
-    static func isAfter(_ entry: RenderedEntry, _ leaving: RenderedEntry) -> Bool {
-        if leaving.seq > 0, entry.clock[leaving.feedKey] >= leaving.seq { return true }
-        if entry.seq > 0 { return leaving.clock[entry.feedKey] < entry.seq }
-        if entry.wallTime != leaving.wallTime { return entry.wallTime > leaving.wallTime }
-        return leaving.id.rawValue.lexicographicallyPrecedes(entry.id.rawValue)
+    private func claim(_ entry: RenderedEntry, _ payload: Payload?) -> Claim? {
+        switch payload?.type {
+        case .removal?:
+            guard let body = try? payload?.decode(RemovalBody.self) else { return nil }
+            return Claim(entry: entry, subject: body.removed, line: chains.line(through: body.heads))
+        case .departure?:
+            guard let body = try? payload?.decode(DepartureBody.self) else { return nil }
+            return Claim(entry: entry, subject: entry.author, line: chains.line(through: body.heads))
+        default:
+            return nil
+        }
     }
 
-    static func isAfterReadmission(_ entry: RenderedEntry, _ readmitted: RenderedEntry?) -> Bool {
-        guard let readmitted, readmitted.seq > 0, entry.seq > 0 else { return false }
+    private func walk(
+        _ room: RoomID, claims: [Claim], cutting: Set<Int>, contested: Set<Int>, payloads: [EntryHash: Payload]
+    ) -> Walk {
+        var walked = Walk(standing: Standing(roster: RoomRoster(room: room)))
+        var readmitted: [Int: RenderedEntry] = [:]
+        let claimAt = Dictionary(uniqueKeysWithValues: claims.indices.map { (claims[$0].entry.id, $0) })
+
+        for entry in entries(in: room) {
+            let own = claimAt[entry.id]
+            let payload = payloads[entry.id]
+            let cutters = cutting.filter { index in
+                claims[index].cuts(entry)
+                    && !(readmitted[index].map { Self.isAfterReadmission(entry, $0) } ?? false)
+            }
+            let binding = Self.withholds(entry, payload) ? cutters.subtracting(contested) : cutters
+            if !binding.isEmpty {
+                walked.standing.out.insert(entry.id)
+                if let own { walked.voidedBy[own] = binding }
+                continue
+            }
+            guard let payload else { continue }
+            let vouched = own.map { contested.contains($0) } ?? false
+            let absent = walked.standing.roster.absent
+            walked.standing.roster.apply(entry, body: payload, vouched: vouched)
+            let now = walked.standing.roster.absent
+            if let own, now.contains(claims[own].subject), !absent.contains(claims[own].subject) {
+                walked.took.insert(own)
+            }
+            for index in walked.took where readmitted[index] == nil {
+                let subject = claims[index].subject
+                if absent.contains(subject), !now.contains(subject) { readmitted[index] = entry }
+            }
+        }
+        return walked
+    }
+
+    private static func withholds(_ entry: RenderedEntry, _ payload: Payload?) -> Bool {
+        switch entry.type {
+        case .removal, .departure, .invitationRescinded:
+            return true
+        case .admission:
+            return (try? payload?.decode(AdmissionBody.self))?.admitted == false
+        default:
+            return false
+        }
+    }
+
+    static func isAfterReadmission(_ entry: RenderedEntry, _ readmitted: RenderedEntry) -> Bool {
+        guard readmitted.seq > 0, entry.seq > 0 else { return false }
         return entry.clock[readmitted.feedKey] >= readmitted.seq
             && readmitted.clock[entry.feedKey] < entry.seq
     }
 
     public func outOfRoom(in room: RoomID, opening: (RenderedEntry) -> Payload?) -> Set<EntryHash> {
-        let windows = absenceWindows(in: room, opening: opening)
-        guard !windows.isEmpty else { return [] }
-        let lines = windows.mapValues { theirs in
-            theirs.map { window in heads(named: window.opened, opening: opening).map { chains.line(through: $0) } }
-        }
-
-        var out: Set<EntryHash> = []
-        for entry in entries(in: room) {
-            guard let theirs = windows[entry.author], let drawn = lines[entry.author] else { continue }
-            let isOut = zip(theirs, drawn).contains { window, line in
-                entry.id != window.opened.id
-                    && !counts(entry, before: window.opened, on: line)
-                    && !Self.isAfterReadmission(entry, window.readmitted)
-            }
-            if isOut { out.insert(entry.id) }
-        }
-        return out
-    }
-
-    private func counts(_ entry: RenderedEntry, before absence: RenderedEntry, on line: RoomChains.Line?) -> Bool {
-        let inTime = !Self.isAfter(entry, absence) && forked[entry.feedKey]?.contains(entry.seq) != true
-        guard let line else { return inTime }
-        if line.onChain.contains(entry.id) { return true }
-        guard !chains.isChained(entry.id), let upTo = line.unchainedUpTo[entry.feedKey] else { return false }
-        return entry.seq <= upTo && inTime
-    }
-
-    private func heads(named absence: RenderedEntry, opening: (RenderedEntry) -> Payload?) -> [EntryHash]? {
-        guard let payload = opening(absence) else { return nil }
-        switch payload.type {
-        case .removal: return (try? payload.decode(RemovalBody.self))?.heads
-        case .departure: return (try? payload.decode(DepartureBody.self))?.heads
-        default: return nil
-        }
+        standing(in: room, opening: opening).out
     }
 
     public func summaries() -> [RoomSummary] {

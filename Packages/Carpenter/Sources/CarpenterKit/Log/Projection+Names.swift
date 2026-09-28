@@ -52,12 +52,9 @@ extension Projection {
 
     public func rosters(opening: (RenderedEntry) -> Payload?) -> [RoomID: RoomRoster] {
         var rosters: [RoomID: RoomRoster] = [:]
-        for entry in rendered {
-            guard let room = entry.room, RoomRoster.rosterShaping.contains(entry.type) else {
-                continue
-            }
-            guard let payload = opening(entry) else { continue }
-            rosters[room, default: RoomRoster(room: room)].apply(entry, body: payload)
+        for (room, positions) in roomPositions
+        where positions.contains(where: { RoomRoster.rosterShaping.contains(rendered[$0].type) }) {
+            rosters[room] = standing(in: room, opening: opening).roster
         }
         return rosters
     }

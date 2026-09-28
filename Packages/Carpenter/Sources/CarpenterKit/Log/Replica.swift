@@ -162,6 +162,7 @@ public struct Replica: Sendable {
         }
         guard try checked.vouches(for: entry, signedWith: deviceKey) || entry.hasValidSignature(from: deviceKey)
         else { throw LogError.badSignature }
+        guard entry.room == nil || entry.roomLink != nil else { throw LogError.brokenLink }
 
         if spent[entry.feedKey]?[entry.seq] != nil { return .alreadyPresent }
 

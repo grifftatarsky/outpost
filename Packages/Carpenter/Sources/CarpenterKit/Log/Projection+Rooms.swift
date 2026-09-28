@@ -29,11 +29,7 @@ extension Projection {
     }
 
     public func roster(of room: RoomID, opening: (RenderedEntry) -> Payload?) -> RoomRoster {
-        var roster = RoomRoster(room: room)
-        for entry in entries(in: room) where RoomRoster.rosterShaping.contains(entry.type) {
-            if let payload = opening(entry) { roster.apply(entry, body: payload) }
-        }
-        return roster
+        standing(in: room, opening: opening).roster
     }
 
     public func soloCheck(in room: RoomID, opening: (RenderedEntry) -> Payload?) -> SoloCheck {

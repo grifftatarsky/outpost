@@ -54,7 +54,7 @@ struct WhoCanAddPeopleToARoomTests {
         var room = try founded(by: founder, access: .open)
         _ = try room.invite(removed, by: founder)
         #expect(room.roster.members.contains(removed.id), "precondition: they were in")
-        room.write(founder, .removal, try Payload.removal(of: removed.id))
+        room.write(founder, .removal, try Payload.removal(of: removed.id, heads: []))
 
         _ = try room.invite(puppet, by: removed)
 
@@ -71,7 +71,7 @@ struct WhoCanAddPeopleToARoomTests {
         let (founder, removed, puppet) = (Identity.generate(), Identity.generate(), Identity.generate())
         var room = try founded(by: founder, access: .open)
         _ = try room.invite(removed, by: founder)
-        room.write(founder, .removal, try Payload.removal(of: removed.id))
+        room.write(founder, .removal, try Payload.removal(of: removed.id, heads: []))
 
         let invite = try TestInvite.issue(joining: room.roster.room, joinerKeys: puppet.publicKeys, by: removed, at: start)
         room.write(removed, .joinRequest, try Payload.joinRequest(invite))
@@ -92,7 +92,7 @@ struct WhoCanAddPeopleToARoomTests {
         var room = try founded(by: founder, access: .open)
         _ = try room.invite(member, by: founder)
         _ = try room.invite(removed, by: founder)
-        room.write(founder, .removal, try Payload.removal(of: removed.id))
+        room.write(founder, .removal, try Payload.removal(of: removed.id, heads: []))
 
         let invite = try TestInvite.issue(
             joining: self.room, joinerKeys: joiner.publicKeys, by: removed, at: start)
@@ -113,7 +113,7 @@ struct WhoCanAddPeopleToARoomTests {
         let invite = try TestInvite.issue(
             joining: self.room, joinerKeys: puppet.publicKeys, by: removed, at: start)
         room.write(removed, .joinRequest, try Payload.joinRequest(invite))
-        room.write(founder, .removal, try Payload.removal(of: removed.id))
+        room.write(founder, .removal, try Payload.removal(of: removed.id, heads: []))
 
         room.write(
             removed, .joinConfirmed,
@@ -171,7 +171,7 @@ struct WhoCanAddPeopleToARoomTests {
 
         let invite = try room.invite(joiner, by: founder)
         try room.vote(removed, on: invite, admit: false)
-        room.write(founder, .removal, try Payload.removal(of: removed.id))
+        room.write(founder, .removal, try Payload.removal(of: removed.id, heads: []))
         try room.vote(founder, on: invite, admit: true)
         try room.vote(member, on: invite, admit: true)
 

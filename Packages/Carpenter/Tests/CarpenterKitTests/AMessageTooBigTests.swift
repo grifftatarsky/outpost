@@ -48,7 +48,7 @@ struct AMessageTooBigTests {
             after: alice.head, author: enrolment.identity.id, device: enrolment.device,
             clock: alice.replica.frontier, wallTime: TestSession.now, room: room,
             payload: try Payload.post(String(repeating: "a", count: 900_000)),
-            at: chain.highestKnownEpoch ?? .initial, sealedWith: chain)
+            at: chain.highestKnownEpoch ?? .initial, sealedWith: chain, roomLink: RoomLink(previous: nil))
         try alice.replica.integrate(oversized)
         alice.head = oversized.link
 

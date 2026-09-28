@@ -47,7 +47,7 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         let current = roster(entries, alice.chain, in: room)
         #expect(!current.members.contains(sam2.identity.id), "they are still counted as a member")
@@ -62,7 +62,7 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         #expect(!roster(entries, alice.chain, in: room).mayWrite(sam2.identity.id))
     }
@@ -72,7 +72,7 @@ struct LeavingTests {
         let (alice, _, room, entries) = try room()
         var stranger = Author(chain: alice.chain)
         let theirs = try stranger.append(
-            try Payload.departure(), at: start.addingTimeInterval(10), room: room)
+            try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room)
 
         let current = roster(entries + [theirs], alice.chain, in: room)
         #expect(current.departures.isEmpty, "a room announced a stranger leaving it")
@@ -83,9 +83,9 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(20), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(20), room: room))
 
         let current = roster(entries, alice.chain, in: room)
         #expect(current.departures.count == 1)
@@ -97,7 +97,7 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         let again = try TestInvite.issue(
             joining: room, joinerKeys: sam2.identity.publicKeys, by: alice.identity,
@@ -129,7 +129,7 @@ struct LeavingTests {
         var sam2 = sam
         let spent = try #require(roster(entries, alice.chain, in: room).requests[sam2.identity.id])
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         entries.append(
             try alice.append(
@@ -163,7 +163,7 @@ struct LeavingTests {
         let before = try sam2.append(
             try Payload.post("before I left"), at: start.addingTimeInterval(10), room: room)
         let departure = try sam2.append(
-            try Payload.departure(), at: start.addingTimeInterval(20), room: room)
+            try Payload.departure(heads: [before.hash]), at: start.addingTimeInterval(20), room: room)
         let after = try sam2.append(
             try Payload.post("after I left"), clock: seeing(alice.feedKey, seq: 1),
             at: start.addingTimeInterval(30), room: room)
@@ -171,7 +171,8 @@ struct LeavingTests {
 
         let chain = alice.chain
         let projected = Projection(
-            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain),
+            chains: RoomChains(entries))
         let out = projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -188,7 +189,7 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         let chain = alice.chain
         let projected = Projection(
@@ -219,7 +220,7 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         #expect(roster(entries, alice.chain, in: room).keyRotator == alice.identity.id)
     }
@@ -229,7 +230,7 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         let sam2 = sam
         entries.append(
-            try alice.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try alice.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         let current = roster(entries, alice.chain, in: room)
         #expect(current.keyRotator == sam2.identity.id, "the room left its key to nobody")
@@ -241,9 +242,9 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
         entries.append(
-            try alice.append(try Payload.departure(), at: start.addingTimeInterval(20), room: room))
+            try alice.append(try Payload.departure(heads: []), at: start.addingTimeInterval(20), room: room))
 
         #expect(roster(entries, alice.chain, in: room).keyRotator == nil)
     }

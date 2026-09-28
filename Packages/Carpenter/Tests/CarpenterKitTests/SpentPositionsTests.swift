@@ -73,7 +73,7 @@ struct SpentPositionsTests {
         let next = try Entry.append(
             after: top, author: author.identity.id, device: author.device,
             clock: replica.frontier, wallTime: start.addingTimeInterval(10), room: RoomID(),
-            payload: try Payload.post("after"), at: .initial, sealedWith: author.chain)
+            payload: try Payload.post("after"), at: .initial, sealedWith: author.chain, roomLink: RoomLink(previous: nil))
         #expect(next.seq == 7)
         #expect(try replica.integrate(next) == .accepted)
         #expect(replica.forks.isEmpty)

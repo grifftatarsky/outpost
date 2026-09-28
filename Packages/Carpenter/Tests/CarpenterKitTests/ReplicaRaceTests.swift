@@ -124,7 +124,7 @@ struct AcknowledgementTests {
         let entry = try Entry.append(
             to: nil, author: stranger.id, device: device, clock: VectorClock(),
             wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
-            at: .initial, sealedWith: chain.chain)
+            at: .initial, sealedWith: chain.chain, roomLink: RoomLink(previous: nil))
 
         let packet = SyncSession.CollectedPackets(
             tags: [RecipientTag(rawValue: Data([1]))],
@@ -153,7 +153,7 @@ struct AcknowledgementTests {
         let entry = try Entry.append(
             to: nil, author: author.id, device: device, clock: VectorClock(),
             wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
-            at: .initial, sealedWith: chain.chain)
+            at: .initial, sealedWith: chain.chain, roomLink: RoomLink(previous: nil))
 
         let packet = SyncSession.CollectedPackets(
             tags: [RecipientTag(rawValue: Data([1]))],
@@ -181,7 +181,7 @@ struct AcknowledgementTests {
         let entry = try Entry.append(
             to: nil, author: known.id, device: knownDevice, clock: VectorClock(),
             wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
-            at: .initial, sealedWith: chain.chain)
+            at: .initial, sealedWith: chain.chain, roomLink: RoomLink(previous: nil))
 
         let stranger = Identity.generate()
         let strangerCertificate = try DeviceCertificate.recovered(
@@ -223,7 +223,7 @@ struct AcknowledgementTests {
         let entry = try Entry.append(
             to: nil, author: known.id, device: device, clock: VectorClock(),
             wallTime: TestSession.now, room: chain.chain.room, payload: try Payload.post("hello"),
-            at: .initial, sealedWith: chain.chain)
+            at: .initial, sealedWith: chain.chain, roomLink: RoomLink(previous: nil))
 
         let packet = SyncSession.CollectedPackets(
             tags: [RecipientTag(rawValue: Data([1]))],

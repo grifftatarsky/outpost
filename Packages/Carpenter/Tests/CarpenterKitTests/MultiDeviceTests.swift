@@ -32,14 +32,14 @@ struct MultiDeviceTests {
         let fromPhone = try Entry.append(
             to: nil, author: identity.id, device: phone, clock: VectorClock(),
             wallTime: start.addingTimeInterval(120), room: room,
-            payload: try seal("posted from the phone"))
+            payload: try seal("posted from the phone"), roomLink: RoomLink(previous: nil))
 
         var seen = VectorClock()
         seen.observe(fromPhone.feedKey, seq: fromPhone.seq)
         let fromMac = try Entry.append(
             to: nil, author: identity.id, device: mac, clock: seen,
             wallTime: start.addingTimeInterval(180), room: room,
-            payload: try seal("and from the Mac"))
+            payload: try seal("and from the Mac"), roomLink: RoomLink(previous: nil))
 
         #expect(try hastur.integrate(fromPhone) == .accepted)
         #expect(try hastur.integrate(fromMac) == .accepted)
@@ -90,7 +90,7 @@ struct MultiDeviceTests {
         let beforeLoss = try Entry.append(
             to: nil, author: identity.id, device: lost, clock: VectorClock(),
             wallTime: start.addingTimeInterval(60), room: room,
-            payload: try seal("said before the phone was lost"))
+            payload: try seal("said before the phone was lost"), roomLink: RoomLink(previous: nil))
         try replica.integrate(beforeLoss)
 
         let revokedAt = start.addingTimeInterval(3_600)
@@ -99,13 +99,13 @@ struct MultiDeviceTests {
         let afterLoss = try Entry.append(
             to: beforeLoss, author: identity.id, device: lost, clock: beforeLoss.clock,
             wallTime: revokedAt.addingTimeInterval(60), room: room,
-            payload: try seal("posted by a thief"))
+            payload: try seal("posted by a thief"), roomLink: RoomLink(previous: nil))
         #expect(throws: LogError.unauthorizedDevice) { try replica.integrate(afterLoss) }
 
         let carryOn = try Entry.append(
             to: nil, author: identity.id, device: kept, clock: VectorClock(),
             wallTime: revokedAt.addingTimeInterval(120), room: room,
-            payload: try seal("replacement phone"))
+            payload: try seal("replacement phone"), roomLink: RoomLink(previous: nil))
         #expect(try replica.integrate(carryOn) == .accepted)
 
         let rendered = LogRenderer.render(replica.entries(in: room), using: chain)

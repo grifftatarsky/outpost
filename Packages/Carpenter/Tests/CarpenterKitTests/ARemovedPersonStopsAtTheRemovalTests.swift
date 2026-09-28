@@ -33,7 +33,8 @@ struct ARemovedPersonStopsAtTheRemovalTests {
     }
 
     private func out(_ entries: [Entry], viewer: ParticipantID, chain: EpochChain, room: RoomID) -> Set<EntryHash> {
-        let projected = Projection(viewer: viewer, rendered: LogRenderer.render(entries, using: chain))
+        let projected = Projection(
+            viewer: viewer, rendered: LogRenderer.render(entries, using: chain), chains: RoomChains(entries))
         return projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -43,7 +44,7 @@ struct ARemovedPersonStopsAtTheRemovalTests {
     func aConcurrentBackdatedEntryIsOut() throws {
         var (alice, sam, room, entries) = try room()
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id), at: start.addingTimeInterval(100), room: room)
+            try Payload.removal(of: sam.identity.id, heads: []), at: start.addingTimeInterval(100), room: room)
         entries.append(removal)
         let backdated = try sam.append(
             try Payload.post("I was never removed"), at: start.addingTimeInterval(-3600), room: room)
@@ -60,7 +61,8 @@ struct ARemovedPersonStopsAtTheRemovalTests {
         let before = try sam.append(try Payload.post("said in time"), at: start.addingTimeInterval(10), room: room)
         entries.append(before)
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id), clock: seeing(sam.feedKey, seq: before.seq),
+            try Payload.removal(of: sam.identity.id, heads: [before.hash]),
+            clock: seeing(sam.feedKey, seq: before.seq),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
 
@@ -74,7 +76,7 @@ struct ARemovedPersonStopsAtTheRemovalTests {
         let inTransit = try sam.append(
             try Payload.post("still travelling"), at: start.addingTimeInterval(15), room: room)
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id), clock: seeing(sam.feedKey, seq: seen.seq),
+            try Payload.removal(of: sam.identity.id, heads: [seen.hash]), clock: seeing(sam.feedKey, seq: seen.seq),
             at: start.addingTimeInterval(20), room: room)
         entries += [seen, removal, inTransit]
 
@@ -88,7 +90,7 @@ struct ARemovedPersonStopsAtTheRemovalTests {
         var (alice, sam, room, entries) = try room()
         let seen = try sam.append(try Payload.post("arrived"), at: start.addingTimeInterval(10), room: room)
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id), clock: seeing(sam.feedKey, seq: seen.seq),
+            try Payload.removal(of: sam.identity.id, heads: [seen.hash]), clock: seeing(sam.feedKey, seq: seen.seq),
             at: start.addingTimeInterval(20), room: room)
         let late = try sam.append(try Payload.post("late"), at: start.addingTimeInterval(-50), room: room)
         entries += [seen, removal, late]
@@ -109,7 +111,7 @@ struct ARemovedPersonStopsAtTheRemovalTests {
         let forged = try forger.append(
             try Payload.post("slipped in under an old number"), at: start.addingTimeInterval(10), room: room)
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id), clock: seeing(sam.feedKey, seq: seen.seq),
+            try Payload.removal(of: sam.identity.id, heads: [seen.hash]), clock: seeing(sam.feedKey, seq: seen.seq),
             at: start.addingTimeInterval(20), room: room)
         entries += [seen, removal, forged]
 
@@ -126,14 +128,17 @@ struct ARemovedPersonStopsAtTheRemovalTests {
         let invite = try TestInvite.issue(joining: room, joinerKeys: dave.publicKeys, by: sam.identity, at: start)
         let request = try sam.append(try Payload.joinRequest(invite), at: start.addingTimeInterval(5), room: room)
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id), clock: seeing(sam.feedKey, seq: request.seq),
+            try Payload.removal(of: sam.identity.id, heads: [request.hash]),
+            clock: seeing(sam.feedKey, seq: request.seq),
             at: start.addingTimeInterval(20), room: room)
         let confirmed = try alice.append(
             try Payload.joinConfirmed(try JoinConfirmedBody.signed(confirming: invite, by: dave)),
             at: start.addingTimeInterval(30), room: room)
         entries += [request, removal, confirmed]
 
-        let projected = Projection(viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: alice.chain))
+        let projected = Projection(
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: alice.chain),
+            chains: RoomChains(entries))
         let roster = projected.roster(of: room) { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: alice.chain)
         }

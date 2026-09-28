@@ -100,7 +100,7 @@ struct EachPairHasASpaceOfItsOwnTests {
             wallTime: TestSession.now, room: t.room,
             payload: try Payload.pairLink(
                 try PairLinkBody.seal(forged, from: t.bobID, to: t.carolID, with: try #require(t.bob.legacySecret(with: t.carolID)))),
-            at: try #require(chain.highestKnownEpoch), sealedWith: chain)
+            at: try #require(chain.highestKnownEpoch), sealedWith: chain, roomLink: RoomLink(previous: nil))
         try t.bob.replica.integrate(entry)
         t.bob.sendOwnEntries()
         try await t.settle([t.bob, t.carol], rounds: 3)

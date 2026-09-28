@@ -23,13 +23,13 @@ struct Author {
 
     mutating func append(
         _ payload: Payload, clock: VectorClock = VectorClock(), at wallTime: Date,
-        room: RoomID? = nil, chained: Bool = false
+        room: RoomID? = nil
     ) throws -> Entry {
         let entry = try Entry.append(
             to: head, author: identity.id, device: device,
             clock: clock.merging(head?.clock ?? VectorClock()),
             wallTime: wallTime, room: room, payload: payload, at: .initial, sealedWith: chain,
-            roomLink: chained ? room.map { RoomLink(previous: roomHeads[$0]) } : nil)
+            roomLink: room.map { RoomLink(previous: roomHeads[$0]) })
         head = entry
         if let room { roomHeads[room] = entry.hash }
         return entry

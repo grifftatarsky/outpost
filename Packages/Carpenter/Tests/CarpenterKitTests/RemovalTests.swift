@@ -44,7 +44,7 @@ struct RemovalTests {
     ) throws {
         roster.apply(
             rendered(author.id, .removal, hash: hash, at: offset),
-            body: try Payload.removal(of: person.id))
+            body: try Payload.removal(of: person.id, heads: []))
     }
 
     // MARK: The act itself

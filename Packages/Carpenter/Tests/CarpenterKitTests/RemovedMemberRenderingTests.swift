@@ -44,7 +44,7 @@ struct RemovedMemberRenderingTests {
         entries.append(before)
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: [before.hash]),
             clock: seeing(sam.feedKey, seq: before.seq),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
@@ -56,7 +56,8 @@ struct RemovedMemberRenderingTests {
         entries.append(after)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain),
+            chains: RoomChains(entries))
         let opener: (RenderedEntry) -> Payload? = { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         }
@@ -85,13 +86,14 @@ struct RemovedMemberRenderingTests {
             entries.append(e)
         }
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: [theirs.last!.hash]),
             clock: seeing(sam.feedKey, seq: theirs.last!.seq),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain),
+            chains: RoomChains(entries))
         let out = projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -109,7 +111,7 @@ struct RemovedMemberRenderingTests {
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(100), room: room)
         entries.append(removal)
 
@@ -136,7 +138,7 @@ struct RemovedMemberRenderingTests {
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
         let after = try sam.append(
@@ -168,7 +170,7 @@ struct RemovedMemberRenderingTests {
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
         let after = try sam.append(
@@ -199,7 +201,7 @@ struct RemovedMemberRenderingTests {
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
         entries.append(

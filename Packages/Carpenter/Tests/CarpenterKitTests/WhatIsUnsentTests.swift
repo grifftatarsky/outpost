@@ -27,7 +27,7 @@ struct WhatIsUnsentTests {
         }
         let fork = try Entry.append(
             to: made[1], author: alice.identity.id, device: alice.device, clock: made[1].clock,
-            wallTime: start, room: hangar, payload: try Payload.post("another story").sealed(at: .initial, using: alice.chain))
+            wallTime: start, room: hangar, payload: try Payload.post("another story").sealed(at: .initial, using: alice.chain), roomLink: RoomLink(previous: nil))
         for entry in made where ![6, 8].contains(entry.seq) { try replica.integrate(entry) }
         try replica.integrate(fork)
         replica.close(kitchen)

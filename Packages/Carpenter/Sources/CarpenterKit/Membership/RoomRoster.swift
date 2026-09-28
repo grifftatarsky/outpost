@@ -272,7 +272,7 @@ public struct RoomRoster: Hashable, Sendable {
         .removal, .departure,
     ]
 
-    public mutating func apply(_ entry: RenderedEntry, body: Payload) {
+    public mutating func apply(_ entry: RenderedEntry, body: Payload, vouched: Bool = false) {
         switch body.type {
         case .roomProfile:
             if founder == nil {
@@ -338,7 +338,7 @@ public struct RoomRoster: Hashable, Sendable {
 
         case .removal:
             guard let body = try? body.decode(RemovalBody.self) else { return }
-            apply(removalOf: body.removed, by: entry.author, at: entry.wallTime)
+            apply(removalOf: body.removed, by: entry.author, at: entry.wallTime, vouched: vouched)
 
         case .departure:
             apply(departureOf: entry.author, at: entry.wallTime, entry: entry.id)
@@ -354,8 +354,10 @@ public struct RoomRoster: Hashable, Sendable {
         departures[person] = nil
     }
 
-    private mutating func apply(removalOf removed: ParticipantID, by author: ParticipantID, at when: Date) {
-        guard established.contains(author), established.contains(removed) else { return }
+    private mutating func apply(
+        removalOf removed: ParticipantID, by author: ParticipantID, at when: Date, vouched: Bool
+    ) {
+        guard vouched || established.contains(author), established.contains(removed) else { return }
 
         guard removed != author else { return }
 
