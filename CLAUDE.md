@@ -79,6 +79,54 @@ brief labelled a limit.
 4. **One thing at a time, finished.** A feature is done when the sentences in rule 1 hold on the rig,
    not when it builds.
 
+## The craft
+
+Griff, 2026-09-28: "this is art. You are an artist. You're writing something that's important, will
+help people communicate privately, which you should know is more and more important — and more and
+more vulnerable — every day. So do your best." The standard he named is *Clean Code* (Robert C.
+Martin, chapter 1) and *The Algorithm Design Manual* (Steven Skiena). The passages he chose:
+
+> I like my code to be elegant and efficient. The logic should be straightforward to make it hard for
+> bugs to hide, the dependencies minimal to ease maintenance, error handling complete according to an
+> articulated strategy, and performance close to optimal so as not to tempt people to make the code
+> messy with unprincipled optimizations. Clean code does one thing well. — Bjarne Stroustrup
+
+> You know you are working on clean code when each routine you read turns out to be pretty much what
+> you expected. You can call it beautiful code when the code also makes it look like the language was
+> made for the problem. — Ward Cunningham
+
+> Clean code always looks like it was written by someone who cares. There is nothing obvious that you
+> can do to make it better. — Michael Feathers
+
+And Beck's rules of simple code, in the priority Ron Jeffries gives them: it runs all the tests; it
+contains no duplication; it expresses all the design ideas that are in the system; it has as few
+types, methods and functions as that allows. Here, that means:
+
+- **Model the problem before writing it.** Say what the thing is (a set, a map keyed by the right
+  thing, a chain, an interval, a graph) and pick the structure for the questions it has to answer.
+  Half the traps below are a wrong model: a map keyed on the person instead of the thing, a
+  dictionary taken for an order, a number somebody else chose used as a loop bound.
+- **Correctness is shown, not assumed.** Before building, look for the counterexample: the input, the
+  interleaving, the removed device that breaks the promise. Those are the first tests. A
+  reasonable-looking algorithm is not a correct one until that search comes up empty.
+- **Know the worst case of anything a peer controls.** Every size, count and number that arrives
+  from another device has a bound in code, and a walk over it is linear in what this device holds,
+  never in what somebody claims.
+- **One thing well.** A routine does what its name says and nothing else. With no comments to lean
+  on, a routine that needs explaining has the wrong name or the wrong shape; fix the shape.
+- **No duplication.** Before writing a helper, grep for the one that exists. Two copies of a rule
+  drift apart silently. Knowledge lives in one place.
+- **Error handling follows the strategy that exists.** `try?` for what costs a banner,
+  `persistOrReport` for what costs history, and a failure the member could act on is reported to the
+  member. A new path picks one of those on purpose.
+- **Performance is earned by the model, not by clever code.** A cost is held by a test the way
+  `ProjectionCostTests` holds one; an optimization with no measurement behind it is the unprincipled
+  kind.
+- **Leave it better, in its own commit.** A cleanup is never mixed into a feature. Where nothing can
+  be compiled (a cloud session), a cleanup is only what reading and `grep` can prove: every use of a
+  renamed symbol found, no new name that Darwin, Foundation or SwiftUI already has, and a commit
+  message that says it was not built.
+
 ## Spend tokens like they are Griff's, because they are
 
 - **Read narrowly.** `grep -n` for the symbol, then read the twenty lines around it. Do not read a
