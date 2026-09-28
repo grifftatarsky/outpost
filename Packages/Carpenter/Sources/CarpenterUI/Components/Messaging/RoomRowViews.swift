@@ -40,8 +40,11 @@ public struct RoomAvatar: View {
 
     public init(
         initials: String, diameter: CGFloat, isAccented: Bool, isPinned: Bool,
-        isGroup: Bool = false, isSilenced: Bool = false, image: Image? = nil
+        isGroup: Bool = false, isSilenced: Bool = false, image: Image? = nil,
+        speakers: [Member] = [], isCompact: Bool = false
     ) {
+        self.speakers = Array(speakers.prefix(3))
+        self.isCompact = isCompact
         self.initials = initials
         self.diameter = diameter
         self.isAccented = isAccented
@@ -52,14 +55,16 @@ public struct RoomAvatar: View {
     }
 
     private let image: Image?
+    private let speakers: [Member]
+    private let isCompact: Bool
 
-    private static let stackOffset: CGFloat = 0.18
+    static let peek: CGFloat = 0.24
 
-    private var frontDiameter: CGFloat {
-        isGroup ? diameter / (1 + Self.stackOffset) : diameter
+    static func width(diameter: CGFloat, isCompact: Bool) -> CGFloat {
+        isCompact ? diameter * (1 + 2 * peek) : diameter
     }
 
-    private var ringWidth: CGFloat { max(1.5, frontDiameter * 0.06) }
+    private var ring: CGFloat { max(1.5, diameter * 0.045) }
 
     public var body: some View {
         avatar
@@ -79,22 +84,49 @@ public struct RoomAvatar: View {
 
     @ViewBuilder
     private var avatar: some View {
-        if isGroup {
-            ZStack(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(palette.avatarFillSwatch.over(palette.backgroundSwatch).color)
-                    .frame(width: frontDiameter, height: frontDiameter)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-                AvatarView(initials: initials, diameter: frontDiameter, isAccented: isAccented)
-                    .background { Circle().fill(palette.background).padding(-ringWidth) }
-            }
-            .frame(width: diameter, height: diameter)
-        } else {
+        if !isGroup {
             AvatarView(initials: initials, diameter: diameter, isAccented: isAccented, image: image)
+        } else if speakers.isEmpty {
+            AvatarView(initials: initials, diameter: diameter, isAccented: isAccented)
+        } else if isCompact {
+            overlapping
+        } else {
+            climbing
         }
     }
 
+    private var overlapping: some View {
+        ZStack(alignment: .trailing) {
+            ForEach(Array(speakers.enumerated()).reversed(), id: \.element.id) { index, speaker in
+                face(speaker, diameter: diameter)
+                    .offset(x: -CGFloat(index) * diameter * Self.peek)
+            }
+        }
+        .frame(width: Self.width(diameter: diameter, isCompact: true), height: diameter, alignment: .trailing)
+    }
+
+    private var climbing: some View {
+        let places: [(size: CGFloat, x: CGFloat, y: CGFloat)] =
+            switch speakers.count {
+            case 1: [(0.7, 0, 0)]
+            case 2: [(0.62, 0.1, 0.1), (0.52, -0.14, -0.14)]
+            default: [(0.6, 0.13, 0.13), (0.48, -0.05, -0.05), (0.4, -0.18, -0.18)]
+            }
+        return ZStack {
+            Circle().fill(.thinMaterial)
+            Circle().strokeBorder(palette.separator, lineWidth: 0.5)
+            ForEach(Array(zip(speakers, places).enumerated()).reversed(), id: \.element.0.id) { _, pair in
+                face(pair.0, diameter: diameter * pair.1.size)
+                    .offset(x: diameter * pair.1.x, y: diameter * pair.1.y)
+            }
+        }
+        .frame(width: diameter, height: diameter)
+    }
+
+    private func face(_ speaker: Member, diameter: CGFloat) -> some View {
+        PersonAvatarView(member: speaker, diameter: diameter, usesStrongFill: true)
+            .background { Circle().fill(palette.background).padding(-ring) }
+    }
 }
 
 public struct TagFilterRail: View {

@@ -3521,6 +3521,27 @@ mode.
 
 <!-- COPY END 25e99e9f -->
 
+<!-- COPY BEGIN 74ef0c20 [NEEDS HUMAN REVIEW] -->
+
+### A room shows who spoke in it last
+
+**RULED 2026-09-28 by Griff.** A room's avatar is the people who spoke in it most recently, so a room
+never looks like a one-to-one conversation. In a compact list it is three circles the size of a
+person's, overlapping, with the most recent speaker on the right and the two before peeking out to
+its left. In the ordinary list it is one frosted circle holding the most recent speaker in front, with
+the two before climbing behind toward its top left. The viewer is left out, and a room nobody else
+has spoken in shows its initials.
+
+**A departure from what was asked:** Griff asked for the circle in Liquid Glass. The HIG says not to
+use Liquid Glass in the content layer, and a row is content, so the circle is the standard thin
+material, which looks frosted. Using real glass there is his call.
+
+**Not built:** a room can't have a picture of its own yet, so the "Most recent in Room Avatar" switch he
+asked for, which would show the speakers even over a room's picture, waits for room pictures rather
+than shipping as a switch that does nothing.
+
+<!-- COPY END 74ef0c20 -->
+
 <!-- COPY BEGIN 9de81d9f [NEEDS HUMAN REVIEW] -->
 
 #### Liquid Glass belongs in a container, and custom glass answers a finger

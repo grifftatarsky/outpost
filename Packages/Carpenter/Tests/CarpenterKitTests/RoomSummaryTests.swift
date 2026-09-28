@@ -70,7 +70,16 @@ struct RoomSummaryIndexTests {
             lastAuthor: last.map { projected.member($0.author) },
             lastMessage: last.map { projected.preview($0) } ?? "",
             lastActivity: last?.wallTime ?? inRoom.last?.wallTime ?? .distantPast,
-            hasUnread: unread, isDirect: kind == .solo, initials: partner?.initials, partner: partner?.id)
+            hasUnread: unread, isDirect: kind == .solo, initials: partner?.initials, partner: partner?.id,
+            recentSpeakers: kind == .solo ? [] : speakers(in: conversation, viewer: projected.viewer).map(projected.member))
+    }
+
+    private func speakers(in conversation: [RenderedEntry], viewer: ParticipantID?) -> [ParticipantID] {
+        var found: [ParticipantID] = []
+        for entry in conversation.reversed() where entry.author != viewer && !found.contains(entry.author) {
+            found.append(entry.author)
+        }
+        return Array(found.prefix(3))
     }
 
     @Test("Every summary agrees with one worked out from the room's whole history")

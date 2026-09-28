@@ -4,6 +4,7 @@ import SwiftUI
 public struct AnimatedMark: View {
     @Environment(\.palette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.hapticsEnabled) private var hapticsEnabled
 
     private let size: CGFloat
     private let tint: Color?
@@ -56,9 +57,46 @@ public struct AnimatedMark: View {
                 }
         }
         .buttonStyle(.plain)
+        .sensoryFeedback(trigger: frame) { old, new in
+            hapticsEnabled ? Self.feedback(from: old, to: new) : nil
+        }
         .accessibilityLabel(Text(verbatim: Branding.displayName))
         .accessibilityAddTraits(.isImage)
         .accessibilityRemoveTraits(.isButton)
+    }
+
+    enum Tap: Equatable {
+        case building(Double)
+        case thud
+        case squint
+        case open
+    }
+
+    static func tap(from old: Int, to new: Int) -> Tap? {
+        switch (new - old, new) {
+        case (1, 1): .building(0.35)
+        case (1, 2): .building(0.45)
+        case (1, 3): .building(0.6)
+        case (1, 4): .thud
+        case (1, 5), (1, 12): .squint
+        case (1, 8), (1, 13): .open
+        case (-1, 12), (-1, 7): .squint
+        case (-1, 11): .open
+        case (-1, 3): .thud
+        case (-1, 2): .building(0.45)
+        case (-1, 1): .thud
+        default: nil
+        }
+    }
+
+    private static func feedback(from old: Int, to new: Int) -> SensoryFeedback? {
+        switch tap(from: old, to: new) {
+        case .building(let intensity): .impact(weight: .light, intensity: intensity)
+        case .thud: .impact(weight: .heavy, intensity: 1)
+        case .squint: .impact(flexibility: .soft, intensity: 0.5)
+        case .open: .impact(flexibility: .soft, intensity: 0.35)
+        case nil: nil
+        }
     }
 
     @MainActor

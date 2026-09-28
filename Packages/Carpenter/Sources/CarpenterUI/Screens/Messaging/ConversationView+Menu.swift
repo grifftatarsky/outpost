@@ -169,8 +169,7 @@ extension ConversationView {
             }
             // COPY END 405f1a05
         } label: {
-            Image(systemName: wantsAttention ? "bell.circle.fill" : "ellipsis.circle")
-                .font(.system(size: 21, weight: .regular))
+            Image(systemName: wantsAttention ? "bell.badge.fill" : "ellipsis")
                 .foregroundStyle(wantsAttention ? palette.accentFill : palette.primaryText)
         }
         // COPY BEGIN f2cca848 [NEEDS HUMAN REVIEW]

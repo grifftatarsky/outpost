@@ -146,8 +146,7 @@ public struct OutpostFeedView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 21, weight: .regular))
+                        Image(systemName: "ellipsis")
                             .foregroundStyle(palette.primaryText)
                     }
                     .accessibilityLabel(Text("More", bundle: .module))

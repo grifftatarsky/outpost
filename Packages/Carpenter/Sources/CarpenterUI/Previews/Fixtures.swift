@@ -45,7 +45,8 @@
             lastAuthor: hastur,
             lastMessage: "A smoking room. On a hydrogen airship. Behind an airlock.",
             lastActivity: ago(hours: 4, minutes: 26),
-            hasUnread: true
+            hasUnread: true,
+            recentSpeakers: [hastur, yhtill, camilla]
         )
 
         static let rooms: [RoomSummary] = [
@@ -57,7 +58,8 @@
                 lastAuthor: cassilda,
                 lastMessage: "the mooring mast drawings are 1:200, I can scan them tonight",
                 lastActivity: ago(days: 1),
-                hasUnread: false
+                hasUnread: false,
+                recentSpeakers: [naotalba, hastur, yhtill]
             ),
             RoomSummary(
                 name: "Lighter Than Air",
@@ -65,7 +67,8 @@
                 lastAuthor: naotalba,
                 lastMessage: "ok but a dirigible has a frame, that's the whole argument",
                 lastActivity: ago(days: 2),
-                hasUnread: false
+                hasUnread: false,
+                recentSpeakers: [naotalba, thale]
             ),
             RoomSummary(
                 name: "The Gasbag Gazette",
@@ -73,7 +76,8 @@
                 lastAuthor: thale,
                 lastMessage: "issue 4 is written, someone else lay it out",
                 lastActivity: ago(days: 3),
-                hasUnread: false
+                hasUnread: false,
+                recentSpeakers: [thale]
             ),
             RoomSummary(
                 name: "Blimps Only",
@@ -81,7 +85,8 @@
                 lastAuthor: camilla,
                 lastMessage: "non-rigid or nothing, that is the entire charter",
                 lastActivity: ago(days: 4),
-                hasUnread: false
+                hasUnread: false,
+                recentSpeakers: [camilla, hastur, thale]
             ),
         ]
 
@@ -176,7 +181,8 @@
             lastAuthor: camilla,
             lastMessage: "door code changed again, it's the year the R101 went down",
             lastActivity: ago(days: 2),
-            hasUnread: false
+            hasUnread: false,
+            recentSpeakers: [camilla, yhtill]
         )
 
         static let organisation: RoomsListOrganisation = {

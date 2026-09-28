@@ -97,8 +97,23 @@ extension Projection {
                 in: room, at: positions, for: viewer, readThrough: readThrough, undrawn: undrawn),
             isDirect: kind == .solo,
             initials: partner?.initials,
-            partner: partner?.id
+            partner: partner?.id,
+            recentSpeakers: kind == .solo ? [] : recentSpeakers(at: positions)
         )
+    }
+
+    static let speakersShown = 3
+    static let speakersSearched = 200
+
+    private func recentSpeakers(at positions: [Int]) -> [Member] {
+        var found: [ParticipantID] = []
+        for position in positions.reversed().prefix(Self.speakersSearched) {
+            let entry = rendered[position]
+            guard entry.isConversation, entry.author != viewer, !found.contains(entry.author) else { continue }
+            found.append(entry.author)
+            if found.count == Self.speakersShown { break }
+        }
+        return found.map(member)
     }
 
     private func hasUnread(

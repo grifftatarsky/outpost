@@ -10,9 +10,9 @@ import SwiftUI
 
         static func demo(
             tab: PhoneTab, supporter: SupporterSettings? = nil, awaiting: [AwaitingAdmission] = [],
-            privacyNote: Bool = false
+            privacyNote: Bool = false, density: RoomsListDensity = .comfortable
         ) -> some View {
-            Demo(tab: tab, supporter: supporter, awaiting: awaiting, privacyNote: privacyNote)
+            Demo(tab: tab, supporter: supporter, awaiting: awaiting, privacyNote: privacyNote, density: density)
         }
 
         private struct Demo: View {
@@ -20,6 +20,7 @@ import SwiftUI
             let supporter: SupporterSettings?
             let awaiting: [AwaitingAdmission]
             let privacyNote: Bool
+            let density: RoomsListDensity
             @State private var organisation = Fixtures.organisation
             @State private var preferences = RoomsListPreferences()
 
@@ -46,6 +47,7 @@ import SwiftUI
                     outpostSettings: Fixtures.outpostSettings
                 )
                 .startingOn(tab)
+                .task { preferences.density = density }
                 .environment(\.clock, Fixtures.PreviewClock())
             }
         }
