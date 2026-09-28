@@ -24,7 +24,7 @@ struct WhoCanTellYouWhereToReadSomebodyTests {
             for _ in 0..<count {
                 try await phone.sync(through: mailbox)
                 try await peer.sync(through: mailbox)
-                if thiefToo { try? await thief.sync(through: away) }
+                if thiefToo { _ = try? await thief.sync(through: away) }
                 await phone.settleDeviceSync()
                 await thief.settleDeviceSync()
             }
@@ -133,13 +133,13 @@ struct WhoCanTellYouWhereToReadSomebodyTests {
 
             let away = mailbox.signedIn(as: "_elsewhere")
             let forged = try await away.space(for: asBob.them, naming: LocalPairStore.account(of: alice.id), in: asBobPairs)
-            _ = try await mailbox.join(PairLink(account: "_elsewhere", url: forged), of: bob.id, in: asAlice)
+            _ = await mailbox.join(PairLink(account: "_elsewhere", url: forged), of: bob.id, in: asAlice)
 
             let tag = asBob.outgoingTag(window: 1)
             try await mailbox.put(SyncPacket(wraps: [tag: Data()], ciphertext: Data("real".utf8)), to: alice.id, in: asBobPairs)
             try await away.put(SyncPacket(wraps: [tag: Data()], ciphertext: Data("elsewhere".utf8)), to: alice.id, in: asBobPairs)
 
-            let read = try await mailbox.fetch(from: bob.id, for: [toBob.incomingTag(window: 1)], in: asAlice)
+            let read = await mailbox.fetch(from: bob.id, for: [toBob.incomingTag(window: 1)], in: asAlice)
             #expect(read.map(\.ciphertext) == [Data("real".utf8)], "a space in an account Bob's link does not name was read as his")
         }
     }

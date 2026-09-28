@@ -189,7 +189,7 @@ struct EachPairHasASpaceOfItsOwnTests {
         let digest = sent[forBob]?.contentDigest
 
         let bobs = try t.bob.currentPairs()
-        try await t.mailbox.withdraw(forBob, in: bobs)
+        await t.mailbox.withdraw(forBob, in: bobs)
         try await t.mailbox.acknowledge(
             forBob, from: t.aliceID, with: SealedReceipt(tag: RecipientTag(rawValue: Data([1])), sealed: Data([2])), in: bobs)
 

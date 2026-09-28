@@ -2,6 +2,7 @@ import Testing
 
 @testable import CarpenterUI
 
+@MainActor
 @Suite("The mark on You taps as it moves")
 struct TheMarkTapsAsItMovesTests {
     @Test("Opening builds to a thud as the door shuts, then taps for each squint and each opening of the eyes")

@@ -113,10 +113,10 @@ struct InMemoryMailboxTests {
         #expect(try await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).first?.receipts.count == 1)
         #expect(await t.mailbox.storedPacketCount == 1, "a recipient's receipt removed the packet")
 
-        try await t.mailbox.withdraw(sent.id, in: t.bob)
+        await t.mailbox.withdraw(sent.id, in: t.bob)
         #expect(await t.mailbox.storedPacketCount == 1, "the recipient took the sender's packet away")
 
-        try await t.mailbox.withdraw(sent.id, in: t.alice)
+        await t.mailbox.withdraw(sent.id, in: t.alice)
         #expect(await t.mailbox.storedPacketCount == 0)
     }
 

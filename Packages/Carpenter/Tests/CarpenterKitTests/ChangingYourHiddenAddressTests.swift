@@ -171,7 +171,7 @@ struct ChangingYourHiddenAddressTests {
         #expect(rig.friend.addressBook.current(of: rig.griff) == tablets, "the removal's address did not win")
 
         await rig.phone.rotateAddress(because: "a test: the removed phone tries again")
-        try? await rig.phone.sync(through: rig.mailbox, media: rig.mailbox)
+        _ = try? await rig.phone.sync(through: rig.mailbox, media: rig.mailbox)
         try await rig.rounds(4)
         #expect(
             rig.friend.addressBook.current(of: rig.griff) == tablets,

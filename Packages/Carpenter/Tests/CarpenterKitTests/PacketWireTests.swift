@@ -118,7 +118,7 @@ struct PacketWireTests {
             [], for: [mine], granting: [(to: mine, grant: grant)], window: 7)
         try await mailbox.put(packet, to: mine.them, in: asMine)
 
-        let collected = try await mailbox.fetch(from: mine.me, for: [theirs.incomingTag(window: 7)], in: asTheirs)
+        let collected = await mailbox.fetch(from: mine.me, for: [theirs.incomingTag(window: 7)], in: asTheirs)
         #expect(collected.count == 1)
         #expect(collected.first?.grants == packet.grants, "the fake mailbox skipped serialisation")
     }

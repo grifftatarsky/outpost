@@ -71,7 +71,7 @@ struct CompressionTests {
         let fresh = await mailbox.writtenPackets.filter { !before.contains($0) }
         let entries = alice.replica.allEntries.filter { $0.room == room }.suffix(60)
         let asJSON = try JSONEncoder().encode(Array(entries)).count
-        let written = try await mailbox.storedCiphertextBytes(of: fresh)
+        let written = await mailbox.storedCiphertextBytes(of: fresh)
         #expect(written < asJSON / 2, "sixty messages went out at \(written) bytes against \(asJSON) as JSON")
 
         try await bob.sync(through: mailbox)

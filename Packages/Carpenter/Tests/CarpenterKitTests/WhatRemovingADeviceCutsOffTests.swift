@@ -66,7 +66,7 @@ struct WhatRemovingADeviceCutsOffTests {
         try await rig.restored.revoke(stolenDevice)
         for _ in 0..<6 {
             for session in [rig.restored, rig.peer] { try await session.sync(through: rig.mailbox) }
-            try? await rig.stolen.sync(through: rig.mailbox)
+            _ = try? await rig.stolen.sync(through: rig.mailbox)
             await rig.restored.settleDeviceSync()
             await rig.stolen.settleDeviceSync()
         }
@@ -75,7 +75,7 @@ struct WhatRemovingADeviceCutsOffTests {
         try await rig.peer.send("after the removal", to: rig.room)
         for _ in 0..<12 {
             try await rig.peer.sync(through: rig.mailbox)
-            try? await rig.stolen.sync(through: rig.mailbox)
+            _ = try? await rig.stolen.sync(through: rig.mailbox)
             try await rig.restored.sync(through: rig.mailbox)
         }
 
