@@ -8,8 +8,9 @@
 # files this branch changed; it is printed at the end and copied to the clipboard, so it can be
 # pasted straight back into the session that asked for the run.
 #
-# Usage: Scripts/check-all.sh [simulator-name]   run everything (default simulator: outpost-alpha)
-#        Scripts/check-all.sh --digest           read the last run's logs again, without rebuilding
+# Usage: Scripts/check-all.sh [simulator-name]              run everything (default: outpost-alpha)
+#        Scripts/check-all.sh --only STEP[,STEP] [simulator] run only those steps, e.g. app-suite
+#        Scripts/check-all.sh --digest                      read the last run's logs again
 
 set -uo pipefail
 
@@ -31,10 +32,11 @@ changed = [path for path in sys.argv[3].splitlines() if path]
 escape = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
 lines = [escape.sub("", line) for line in open(log, errors="replace").read().splitlines()]
 
-header = re.compile(r"^(/\S+?):\d+:\d+: (error|warning): ")
+header = re.compile(r"^(/\S+?):\d+(?::\d+)?: (error|warning): ")
 continues = re.compile(r"^(\s|\d|\||\[#|:)")
 test_fault = re.compile(
-    r"recorded an issue|Test run with .* failed|Suite .* failed|error: -\[|Test Case .* failed|"
+    r"recorded an issue|Test run with .* failed|Suite .* failed|error: -\[|Test [Cc]ase .* failed|"
+    r"^Failing test: |^Failing tests:|"
     r"Executed \d+ tests?, with [1-9]|Fatal error|Assertion failed|Precondition failed|"
     r"unexpected signal|crashed|\*\* (BUILD|TEST) FAILED \*\*|Testing failed:|"
     r"The following build commands failed|Undefined symbols|^ld: |^error: (?!SwiftCompile)"
@@ -131,6 +133,7 @@ write_digest() {
 run() {
     local name="$1"
     shift
+    [ -z "$only" ] || [[ "$only" == *",$name,"* ]] || return 0
     printf '%-18s' "$name"
     local started=$SECONDS outcome=passed
     "$@" >"$logs/$name.log" 2>&1 || outcome=FAILED
@@ -141,6 +144,7 @@ run() {
 }
 
 skip() {
+    [ -z "$only" ] || [[ "$only" == *",$1,"* ]] || return 0
     printf '%-18sskipped  (%s)\n' "$1" "$2"
     printf '%-8s %s (%s)\n' skipped "$1" "$2" >>"$logs/summary"
 }
@@ -151,8 +155,24 @@ build_for() {
         CODE_SIGNING_ALLOWED=NO -quiet
 }
 app_suite() {
+    local bundle="$logs/app-suite.xcresult"
     xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter \
-        -destination "platform=iOS Simulator,id=$1" -only-testing:CarpenterTests -quiet
+        -destination "platform=iOS Simulator,id=$1" -only-testing:CarpenterTests -resultBundlePath "$bundle" &&
+        return 0
+    local status=$?
+    xcrun xcresulttool get test-results summary --path "$bundle" >"$logs/app-suite-summary.json" 2>/dev/null
+    python3 - "$logs/app-suite-summary.json" <<'PY'
+import json
+import sys
+
+try:
+    summary = json.load(open(sys.argv[1]))
+except (OSError, ValueError):
+    sys.exit()
+for failure in summary.get("testFailures", []):
+    print(f"Failing test: {failure.get('testName')} in {failure.get('targetName')}: {failure.get('failureText')}")
+PY
+    return $status
 }
 release_leaves() {
     ./Scripts/check-release-leaves.sh "$1" && return 0
@@ -160,6 +180,12 @@ release_leaves() {
     cat /tmp/release-check-build.log 2>/dev/null
     return $status
 }
+
+only=""
+if [ "${1:-}" = "--only" ]; then
+    only=",${2:-},"
+    shift 2
+fi
 
 if [ "${1:-}" = "--digest" ]; then
     if [ ! -d "$logs" ]; then
