@@ -38,7 +38,7 @@ public struct AppLockScreen: View {
             } else if controller.isLocked, controller.lock != nil {
                 SecureField(
                     text: $code,
-                    prompt: isDigits ? Text("Code", bundle: .module) : Text("Passphrase", bundle: .module)
+                    prompt: isDigits ? Text(verbatim: "••••") : Text("Passphrase", bundle: .module)
                 ) {
                     isDigits ? Text("Code", bundle: .module) : Text("Passphrase", bundle: .module)
                 }
@@ -85,7 +85,6 @@ public struct AppLockScreen: View {
             }
             // COPY END 5be5d303
             forgotten
-            Spacer()
             Spacer()
         }
         .padding(.horizontal, 24)
