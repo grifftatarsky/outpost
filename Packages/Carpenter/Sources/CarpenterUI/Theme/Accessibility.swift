@@ -64,7 +64,7 @@ public struct QuietActionButton: ViewModifier {
 
     public func body(content: Content) -> some View {
         content
-            .buttonStyle(.bordered)
+            .buttonStyle(.glass)
             .controlSize(.large)
             .tint(palette.accentColor)
             .foregroundStyle(palette.secondaryActionLabel)

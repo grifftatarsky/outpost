@@ -23,6 +23,8 @@
         case lockSetup = "lock-setup"
         case conversationStates = "conversation-states"
         case lockSetupTyping = "lock-setup-typing"
+        case roomsPrivacyTip = "rooms-privacy-tip"
+        case recoveryKeyConfirm = "recovery-key-confirm"
         case welcome1 = "welcome-1"
         case welcome2 = "welcome-2"
         case welcome3 = "welcome-3"
@@ -123,6 +125,10 @@
                 WelcomeTourView(onContinue: {}, page: Int(String(shot.rawValue.last!))! - 1)
             case .lockSetup:
                 NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }, onNotNow: {}) }
+            case .roomsPrivacyTip:
+                RootView.demo(tab: .rooms, privacyNote: true)
+            case .recoveryKeyConfirm:
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", confirmingAtStart: true) {} }
             case .lockSetupTyping:
                 NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }) }
             }

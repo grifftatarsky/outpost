@@ -9,15 +9,17 @@ import SwiftUI
         }
 
         static func demo(
-            tab: PhoneTab, supporter: SupporterSettings? = nil, awaiting: [AwaitingAdmission] = []
+            tab: PhoneTab, supporter: SupporterSettings? = nil, awaiting: [AwaitingAdmission] = [],
+            privacyNote: Bool = false
         ) -> some View {
-            Demo(tab: tab, supporter: supporter, awaiting: awaiting)
+            Demo(tab: tab, supporter: supporter, awaiting: awaiting, privacyNote: privacyNote)
         }
 
         private struct Demo: View {
             let tab: PhoneTab
             let supporter: SupporterSettings?
             let awaiting: [AwaitingAdmission]
+            let privacyNote: Bool
             @State private var organisation = Fixtures.organisation
             @State private var preferences = RoomsListPreferences()
 
@@ -36,6 +38,7 @@ import SwiftUI
                     outpostAuthors: Fixtures.outpostAuthors,
                     recoveryKey: Fixtures.savedRecoveryKey,
                     connections: Fixtures.connections,
+                    showsPrivacyNote: privacyNote,
                     devices: Fixtures.devices,
                     awaitingAdmission: awaiting,
                     viewer: Fixtures.cassilda.id,

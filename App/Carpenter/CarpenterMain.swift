@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 
 #if DEBUG
     import CarpenterUI
@@ -11,6 +12,10 @@ struct CarpenterMain: App {
     #elseif os(macOS)
         @NSApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
     #endif
+
+    init() {
+        try? Tips.configure()
+    }
 
     @ViewBuilder private var root: some View {
         #if DEBUG

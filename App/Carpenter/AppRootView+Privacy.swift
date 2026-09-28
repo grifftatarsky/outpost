@@ -65,10 +65,6 @@ extension AppRootView {
 
     private func showPrivacyNote() {
         privacyNote = true
-        Task {
-            try? await Task.sleep(for: .seconds(15))
-            privacyNote = false
-        }
     }
 
     func applySharing(_ wanted: NameAndAvatarSharing) async {

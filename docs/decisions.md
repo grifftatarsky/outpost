@@ -2987,13 +2987,21 @@ decides what was collected, from receipts only the recipient's device can sign.
   listed space that is gone.
 - **Watching.** iCloud refuses a watch on one shared space ("not allowed in shared database") and
   accepts one on all of them together, with a visible notification. No push reached beta in two and a
-  half minutes after alpha wrote, the same as the bell on 2026-09-14, so what iCloud sends is **not
-  measured**. That needs a phone.
+  half minutes after alpha wrote, the same as the bell on 2026-09-14, so the simulators cannot answer
+  what iCloud sends.
+- **What rings, measured on Griff's phone, 2026-09-27.** The phone joined a space of beta's and
+  watched all its joined spaces twice: once for everything, once for one record type only. Beta then
+  added a message record, added a receipt record, changed the message record, deleted it, and deleted
+  the receipt, two minutes apart. The watch on everything rang for all five. The watch on the message
+  type rang for the three message changes and stayed silent for both receipt changes. Every banner
+  arrived in the same second as the change.
 
-Nothing is written into your own iCloud in this plan, so notifications have to come from watching
-contacts' spaces all together, where every change wakes the phone, a receipt as much as a message.
-Showing only real messages needs Apple's permission to drop a notification quietly; the fallback is a
-tiny space per contact that can do nothing but ring.
+So a watch can be limited to one record type, and a change to any other type wakes nobody. Deleting or
+changing a record of the watched type rings too, so the watched type has to be one that is only ever
+added or updated to mean "something new is here": a single ring record in each space, updated on each
+send, with messages, receipts and everything else in other types that can be written and deleted
+silently. Apple's permission to drop notifications is not needed, and neither is a separate ring
+space.
 
 **Not built.**
 
@@ -3492,6 +3500,26 @@ and stay the quieter style. A number pad has no return key, so a screen with one
 above the keyboard as well as the swipe; App Lock setup was missing it.
 
 <!-- COPY END bd16f5e7 -->
+
+<!-- COPY BEGIN 25e99e9f [NEEDS HUMAN REVIEW] -->
+
+### A passing note is a tip, and a confirmation is an alert
+
+**RULED 2026-09-27 by Griff**, after asking that the HIG be read about two screens. **FACT**, from the
+HIG: a tip is "a small, transient view that briefly describes how to use a feature"; an alert can
+"give them an opportunity to confirm ... another important action they initiated", while an action
+sheet is for offering further choices related to an action.
+
+"Privacy set" was a line above the tab bar that stayed fifteen seconds and then vanished on a timer,
+an element iOS does not have. It is a TipKit tip at the top of Rooms now, closed with its ×. "Is your
+key somewhere safe?" was a confirmation dialog, which iOS 26 drew as a popover pointing at the wrong
+thing and without its "Not yet"; it is an alert with both buttons.
+
+The quiet button also changed with this: it is Liquid Glass's secondary style (`.glass`), the partner
+of the prominent `.glassProminent`, because the accent-tinted bordered style read as disabled in dark
+mode.
+
+<!-- COPY END 25e99e9f -->
 
 <!-- COPY BEGIN 9de81d9f [NEEDS HUMAN REVIEW] -->
 

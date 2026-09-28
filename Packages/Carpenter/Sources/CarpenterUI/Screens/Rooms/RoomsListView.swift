@@ -1,5 +1,6 @@
 import CarpenterKit
 import SwiftUI
+import TipKit
 
 public struct RoomsListView: View {
     @Environment(\.palette) var palette
@@ -141,24 +142,21 @@ public struct RoomsListView: View {
 
     public var body: some View {
         content
-            .safeAreaInset(edge: .bottom) {
-                // COPY BEGIN 20a8f30f [NEEDS HUMAN REVIEW]
+            .safeAreaInset(edge: .top) {
                 if showsPrivacyNote {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(palette.accentColor)
-                        Text("Privacy set. Change it any time under You › Privacy & Safety.", bundle: .module)
-                    }
-                    .font(CarpenterFont.caption)
-                    .foregroundStyle(palette.secondaryText)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, CarpenterMetrics.screenMargin)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity)
-                    .transition(.opacity)  // cross-fade only
+                    TipView(PrivacySetTip())
+                        .tipBackground(palette.contentSurface)
+                        .padding(.horizontal, CarpenterMetrics.screenMargin)
+                        .padding(.bottom, 8)
                 }
-                // COPY END 20a8f30f
             }
-            .animation(.default, value: showsPrivacyNote)  // cross-fade only
     }
+}
+
+struct PrivacySetTip: Tip {
+    // COPY BEGIN 20a8f30f [NEEDS HUMAN REVIEW]
+    var title: Text { Text("Privacy set", bundle: .module) }
+    var message: Text? { Text("Change it any time under You › Privacy & Safety.", bundle: .module) }
+    // COPY END 20a8f30f
+    var image: Image? { Image(systemName: "hand.raised.fill") }
 }

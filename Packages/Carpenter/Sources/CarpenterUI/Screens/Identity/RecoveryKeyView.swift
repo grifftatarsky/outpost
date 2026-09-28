@@ -79,17 +79,17 @@ public struct RecoveryKeyView: View {
         .toolbarTitleDisplayMode(.inline)
         // COPY END 62a19f8e
         // COPY BEGIN 74d78710 [NEEDS HUMAN REVIEW]
-        .confirmationDialog(
+        .alert(
             Text("Is your key somewhere safe?", bundle: .module),
-            isPresented: $confirming, titleVisibility: .visible
+            isPresented: $confirming
         ) {
+            Button(role: .cancel) {} label: {
+                Text("Not yet", bundle: .module)
+            }
             Button {
                 Task { await onSaved() }
             } label: {
                 Text("It's saved", bundle: .module)
-            }
-            Button(role: .cancel) {} label: {
-                Text("Not yet", bundle: .module)
             }
         } message: {
             Text(
@@ -119,3 +119,13 @@ public struct RecoveryKeyRow {
         self.savedAt = savedAt
     }
 }
+
+#if DEBUG
+    extension RecoveryKeyView {
+        init(text: String, fingerprint: String, confirmingAtStart: Bool, onSaved: @escaping () async -> Void) {
+            self.init(text: text, fingerprint: fingerprint, onSaved: onSaved)
+            _shared = State(initialValue: confirmingAtStart)
+            _confirming = State(initialValue: confirmingAtStart)
+        }
+    }
+#endif
