@@ -104,7 +104,7 @@ extension AppSession {
     }
 
     func discard(_ id: AttachmentID, through mailbox: any MediaMailbox) async {
-        do { try await mailbox.delete(attachment: id) } catch {
+        do { try await mailbox.delete(attachment: id, in: try currentPairs()) } catch {
             Diagnostics.sync.error(
                 "media: could not take back an upload nothing names (\(String(describing: error), privacy: .public))")
         }

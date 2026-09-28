@@ -647,8 +647,7 @@ struct SecondDeviceTests {
         let room = try await session.createRoom(named: "Kitchen")
 
         await #expect(throws: AppSessionError.thatIsYou) {
-            _ = try await session.invite(
-                joinerCode: session.identityCode(), joining: room, mailbox: nil)
+            _ = try await session.invite(joinerCode: session.identityCode(), joining: room, through: nil)
         }
     }
 

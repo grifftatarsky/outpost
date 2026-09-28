@@ -532,20 +532,29 @@ struct InviteEnvelopeTests {
             by: Identity.generate(), at: start)
     }
 
-    @Test("An invite carries the mailbox address with the attestation")
-    func carriesMailbox() throws {
-        let url = URL(string: "https://www.icloud.com/share/abc123")!
-        let invite = Invite(attestation: try attestation(), mailbox: url)
+    @Test("An invite carries the inviter's link, signed so a changed link is refused")
+    func carriesASignedLink() throws {
+        let inviter = Identity.generate()
+        let attestation = try TestInvite.issue(
+            joining: RoomID(), joinerKeys: Identity.generate().publicKeys, by: inviter, at: start)
+        let link = PairLink(account: "_inviter", url: URL(string: "https://www.icloud.com/share/abc123")!)
+        let invite = Invite(attestation: attestation, pair: try SignedPairLink.sign(link, by: inviter))
 
         let restored = try Invite.decoded(from: try invite.encoded())
+        #expect(restored.verifiedPair == link)
 
-        #expect(restored == invite)
-        #expect(restored.mailbox == url)
+        let swapped = Invite(
+            attestation: attestation,
+            pair: SignedPairLink(
+                link: PairLink(account: "_thief", url: link.url), signature: try #require(invite.pair).signature))
+        #expect(swapped.verifiedPair == nil, "a link changed in transit was taken as the inviter's")
+        let signedBySomebodyElse = Invite(attestation: attestation, pair: try SignedPairLink.sign(link, by: Identity.generate()))
+        #expect(signedBySomebodyElse.verifiedPair == nil, "a link signed by somebody other than the inviter was taken")
     }
 
     @Test("An invite with no mailbox is still an invite")
     func mailboxIsOptional() throws {
-        let invite = Invite(attestation: try attestation(), mailbox: nil)
+        let invite = Invite(attestation: try attestation())
         #expect(try Invite.decoded(from: try invite.encoded()) == invite)
     }
 
@@ -555,7 +564,7 @@ struct InviteEnvelopeTests {
         let restored = try Invite.decoded(from: try bare.encoded())
 
         #expect(restored.attestation == bare)
-        #expect(restored.mailbox == nil)
+        #expect(restored.pair == nil)
     }
 
     @Test("Rubbish is still refused")

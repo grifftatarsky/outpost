@@ -8,7 +8,7 @@ import UserNotifications
 struct PushPresentationTests {
     @Test("A bell shows a banner")
     func bellShowsBanner() {
-        let options = PushPresentation.options(forSubscriptionID: PushChannel.bell.subscriptionID)
+        let options = PushPresentation.options(forSubscriptionID: PushChannel.ring.subscriptionID)
         #expect(options.contains(.banner), "an incoming message would arrive invisibly")
     }
 
@@ -31,7 +31,7 @@ struct PushPresentationTests {
 
     @Test("A message for the conversation on screen shows nothing")
     func readingTheRoomSuppressesIt() {
-        let bell = PushChannel.bell.subscriptionID
+        let bell = PushChannel.ring.subscriptionID
         let kitchen = MessageNotification.thread(for: RoomID())
         let hangar = MessageNotification.thread(for: RoomID())
 
@@ -50,7 +50,7 @@ struct PushPresentationTests {
 
     @Test("An undecrypted banner is never mistaken for the room on screen")
     func emptyThreadIsNotAMatch() {
-        let bell = PushChannel.bell.subscriptionID
+        let bell = PushChannel.ring.subscriptionID
         #expect(PushPresentation.options(forSubscriptionID: bell, thread: "", viewing: "").contains(.banner))
         #expect(PushPresentation.options(forSubscriptionID: bell, thread: "", viewing: nil).contains(.banner))
     }
@@ -58,7 +58,7 @@ struct PushPresentationTests {
     @Test("Exactly one channel is visible, and every channel is scoped")
     func channelTableIsHonest() {
         let visible = PushChannel.allCases.filter(\.isVisible)
-        #expect(visible == [.bell], "more than one channel can produce a banner")
+        #expect(visible == [.ring], "more than one channel can produce a banner")
 
         for channel in PushChannel.allCases {
             #expect(

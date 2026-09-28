@@ -26,27 +26,7 @@ struct SendRaceTests {
         )
     }
 
-    private actor SlowMailbox: Mailbox {
-        private let inner = InMemoryMailbox()
-        private var duringPut: (@Sendable () async -> Void)?
-
-        func onPut(_ work: @escaping @Sendable () async -> Void) { duringPut = work }
-
-        func put(_ packet: SyncPacket) async throws {
-            if let duringPut { self.duringPut = nil; await duringPut() }
-            try await inner.put(packet)
-        }
-
-        func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] {
-            try await inner.fetch(for: tags)
-        }
-        func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
-            try await inner.acknowledge(id, with: receipt)
-        }
-        func sentPackets() async throws -> [PacketID: SentPacket] { try await inner.sentPackets() }
-        func withdraw(_ id: PacketID) async throws { try await inner.withdraw(id) }
-        func ring(_ bell: MessageBell) async throws { try await inner.ring(bell) }
-    }
+    private typealias SlowMailbox = HookedMailbox
 
     @Test("A message appended during a sync is still sent afterwards")
     func appendedMidSyncIsNotLost() async throws {
@@ -63,7 +43,7 @@ struct SendRaceTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
@@ -104,7 +84,7 @@ struct SendRaceTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<3 {
             try await alice.sync(through: mailbox)
@@ -144,7 +124,7 @@ struct SendRaceTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)

@@ -28,6 +28,8 @@ public struct SyncPacket: Hashable, Sendable, Codable {
 
     public var storedAt: Date?
 
+    public var from: ParticipantID?
+
     public var receipts: [SealedReceipt] = []
 
     public var recipients: Set<RecipientTag> { Set(wraps.keys) }
@@ -54,6 +56,7 @@ public struct SyncPacket: Hashable, Sendable, Codable {
 public enum MailboxError: Error, Hashable, Sendable {
     case unavailable
     case unknownPacket
+    case unknownPeer
     case budgetExhausted
     case recordTooLarge(bytes: Int, ceiling: Int)
 }
@@ -89,20 +92,6 @@ public struct AcknowledgementFailure: Error, CustomStringConvertible, Sendable {
             .map { "\($0.key.rawValue.uuidString.prefix(8)): \($0.value)" }
             .joined(separator: "; ")
         return "\(failed.count) of \(failed.count + acknowledged) packet(s) not acknowledged — \(named)"
-    }
-}
-
-public struct MessageBell: Hashable, Sendable {
-    public let fetchTag: RecipientTag
-
-    public let name: String
-
-    public let ring: UInt64
-
-    public init(fetchTag: RecipientTag, name: String, ring: UInt64) {
-        self.fetchTag = fetchTag
-        self.name = name
-        self.ring = ring
     }
 }
 
@@ -203,14 +192,17 @@ public enum AttachmentReceipt {
 }
 
 public struct SentPacket: Hashable, Sendable {
+    public let to: ParticipantID
     public let recipients: Set<RecipientTag>
     public let receipts: [SealedReceipt]
     public let createdAt: Date?
     public let contentDigest: Data?
 
     public init(
-        recipients: Set<RecipientTag>, receipts: [SealedReceipt], createdAt: Date?, contentDigest: Data? = nil
+        to: ParticipantID, recipients: Set<RecipientTag>, receipts: [SealedReceipt], createdAt: Date?,
+        contentDigest: Data? = nil
     ) {
+        self.to = to
         self.recipients = recipients
         self.receipts = receipts
         self.createdAt = createdAt
@@ -244,21 +236,28 @@ extension SyncPacket {
 }
 
 public protocol Mailbox: Sendable {
-    func put(_ packet: SyncPacket) async throws
+    func account(in pairs: Pairs) async throws -> String
 
-    func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket]
+    func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL
 
-    func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws
+    func spaceForACode(in pairs: Pairs) async throws -> URL
 
-    func sentPackets() async throws -> [PacketID: SentPacket]
+    func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL
 
-    func withdraw(_ id: PacketID) async throws
+    func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome
 
-    func ring(_ bell: MessageBell) async throws
-}
+    func close(_ peer: ParticipantID, in pairs: Pairs) async throws
 
-extension Mailbox {
-    public func fetch(for tag: RecipientTag) async throws -> [SyncPacket] {
-        try await fetch(for: [tag])
-    }
+    func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws
+
+    func ring(_ peer: ParticipantID, in pairs: Pairs) async throws
+
+    func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) async throws -> [SyncPacket]
+
+    func acknowledge(
+        _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs) async throws
+
+    func sentPackets(in pairs: Pairs) async throws -> [PacketID: SentPacket]
+
+    func withdraw(_ id: PacketID, in pairs: Pairs) async throws
 }

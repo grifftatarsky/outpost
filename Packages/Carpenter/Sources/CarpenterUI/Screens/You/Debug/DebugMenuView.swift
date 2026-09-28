@@ -20,19 +20,10 @@ struct DebugMenuView: View {
                     SettingsRow(
                         icon: "tray.full",
                         title: Text("Check mailbox", bundle: .module),
-                        detail: Text("Put one packet through CloudKit and report each step", bundle: .module)
+                        detail: Text("Report the spaces in iCloud this device can reach", bundle: .module)
                     )
                 }
 
-                Button { Task { await actions.rotateMailboxShare() } } label: {
-                    SettingsRow(
-                        icon: "arrow.triangle.2.circlepath",
-                        title: Text("Rotate mailbox share", bundle: .module),
-                        detail: Text(
-                            "Erase this member's outbox and share it afresh. Every peer then holds a dead offer until the rendezvous heals it.",
-                            bundle: .module)
-                    )
-                }
                 Button { Task { await actions.pretendFocus(true) } } label: {
                     SettingsRow(
                         icon: "moon.fill",

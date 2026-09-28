@@ -5,8 +5,8 @@ import Foundation
 enum PacketRecord {
     static let type = PushChannel.inbox.recordType
 
-    static func write(_ packet: SyncPacket, into record: CKRecord) throws {
-        for (key, field) in PacketWire.fields(of: packet) {
+    static func write(_ fields: [String: PacketField], into record: CKRecord) {
+        for (key, field) in fields {
             switch field {
             case .string(let value): record[key] = value
             case .data(let value): record[key] = value
@@ -16,37 +16,12 @@ enum PacketRecord {
     }
 
     static func read(_ record: CKRecord) -> SyncPacket? {
-        var fields: [String: PacketField] = [:]
-        for key in record.allKeys() {
-            switch record[key] {
-            case let value as String: fields[key] = .string(value)
-            case let value as [Data]: fields[key] = .dataList(value)
-            case let value as Data: fields[key] = .data(value)
-            default: continue
-            }
-        }
-        return PacketWire.packet(from: fields)
+        PacketWire.packet(from: PairIndex.Cached(record).fields)
     }
 }
 
 enum AttachmentRecord {
     static let type = "Attachment"
-
-    static func write(_ attachment: OutgoingAttachment, into record: CKRecord) throws -> URL {
-        let scratch = FileManager.default.temporaryDirectory
-            .appending(path: "\(attachment.id.rawValue.uuidString).sealed")
-        for (key, field) in AttachmentWire.fields(of: attachment) {
-            switch (key, field) {
-            case (AttachmentWire.blob, .data(let bytes)):
-                try bytes.write(to: scratch, options: .atomic)
-                record[key] = CKAsset(fileURL: scratch)
-            case (_, .string(let value)): record[key] = value
-            case (_, .data(let value)): record[key] = value
-            case (_, .dataList(let value)): record[key] = value
-            }
-        }
-        return scratch
-    }
 }
 
 extension AttachmentID {

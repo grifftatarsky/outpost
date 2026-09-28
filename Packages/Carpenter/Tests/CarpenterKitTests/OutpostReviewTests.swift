@@ -30,8 +30,7 @@ struct OutpostReviewTests {
             let joiner = TestSession.make()
             await joiner.load()
             try await joiner.createIdentity(displayName: name)
-            let invite = try await alice.invite(
-                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            let invite = try await alice.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await joiner.redeem(inviteCode: try invite.encoded())
             try await alice.sync(through: mailbox)
             try await joiner.accept(
@@ -122,8 +121,7 @@ struct OutpostReviewTests {
         let camilla = TestSession.make()
         await camilla.load()
         try await camilla.createIdentity(displayName: "Camilla")
-        let invite = try await alice.invite(
-            joinerCode: camilla.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await camilla.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await camilla.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await camilla.accept(

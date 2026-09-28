@@ -38,11 +38,8 @@ enum TestProfileWorld {
     static func open(_ profile: TestProfile) -> (any Mailbox & MediaMailbox)? {
         #if DEBUG
             guard supports(profile.server) else { return nil }
-            let key = ownerKey(for: profile.id)
-            let owner = UserDefaults.standard.string(forKey: key) ?? UUID().uuidString
-            UserDefaults.standard.set(owner, forKey: key)
             do {
-                return try FileMailbox(root: profile.server, owner: owner)
+                return try FileMailbox(root: profile.server)
             } catch {
                 Diagnostics.sync.error(
                     "test profile: could not open its mailbox (\(String(describing: error), privacy: .public))")
@@ -51,10 +48,6 @@ enum TestProfileWorld {
         #else
             return nil
         #endif
-    }
-
-    static func ownerKey(for id: UUID) -> String {
-        "testProfile.\(id.uuidString).mailboxOwner"
     }
 
     static let launch: (session: TestSession?, profiles: TestProfiles) = {
@@ -181,7 +174,6 @@ extension AppRootView {
             Diagnostics.sync.error(
                 "test profile: could not remove its storage (\(String(describing: error), privacy: .public))")
         }
-        UserDefaults.standard.removeObject(forKey: TestProfileWorld.ownerKey(for: id))
         return nil
     }
 

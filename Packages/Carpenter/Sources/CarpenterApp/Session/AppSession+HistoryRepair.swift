@@ -306,40 +306,4 @@ extension AppSession {
                 "storage: could not write \(what, privacy: .public) — it is in memory and will be gone on the next launch (\(String(describing: error), privacy: .public))")
         }
     }
-
-    // MARK: The reverse channel
-
-    public func shareOffers(of url: URL) -> [ShareOffer] {
-        guard enrolment != nil else { return [] }
-        let window = SyncSession.window(at: clock.now)
-
-        return peers().compactMap { peer in
-            guard let sealed = try? peer.secret.wrap(
-                Data(url.absoluteString.utf8), context: PairwiseSecret.shareOfferContext)
-            else { return nil }
-            return ShareOffer(
-                fetchTag: peer.incomingTag(window: window),
-                name: peer.secret.shareOfferName(for: peer.them),
-                sealed: sealed,
-                digest: peer.secret.shareOfferDigest(of: url))
-        }
-    }
-
-    public func openShareOffers(_ found: [String: Data]) -> [String: URL] {
-        guard let me = enrolment?.identity.id, !found.isEmpty else { return [:] }
-
-        var opened: [String: URL] = [:]
-        for peer in peers() {
-            for secret in secrets(with: peer.them) {
-                let name = secret.shareOfferName(for: me)
-                guard let sealed = found[name],
-                    let body = try? secret.unwrap(sealed, context: PairwiseSecret.shareOfferContext),
-                    let text = String(data: body, encoding: .utf8),
-                    let url = URL(string: text)
-                else { continue }
-                opened[name] = url
-            }
-        }
-        return opened
-    }
 }

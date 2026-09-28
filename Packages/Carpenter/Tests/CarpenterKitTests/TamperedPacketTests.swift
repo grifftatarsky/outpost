@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Nobody who can write to your outbox can make a message miss the others", .serialized)
+@Suite("A packet holds one reader, and one changed after it was written is sent again", .serialized)
 struct TamperedPacketTests {
     private struct Three {
         let alice: AppSession
@@ -34,47 +34,22 @@ struct TamperedPacketTests {
         return Three(alice: alice, bob: bob, carol: carol, room: room, mailbox: mailbox)
     }
 
-    private func lastPacket(from three: Three, after before: Set<PacketID>) async throws -> PacketID {
-        let written = await three.mailbox.writtenPackets.filter { !before.contains($0) }
-        return try #require(written.last, "precondition: Alice wrote a packet")
-    }
 
-    @Test("A partner who strips the others from a packet does not make its sender take it back")
-    func strippedRecipientsDoNotSettle() async throws {
+    @Test("A message for two people goes as a packet for each, in each one's own space, sealed for that one alone")
+    func eachPacketHoldsOneReader() async throws {
         let three = try await three()
         let before = Set(await three.mailbox.writtenPackets)
         try await three.alice.send("for both of you", to: three.room)
         try await three.alice.sync(through: three.mailbox)
-        let packet = try await lastPacket(from: three, after: before)
 
-        let bobsTags = Set(try await three.mailbox.sentPackets()[packet].map(\.recipients) ?? [])
-        let beforeBob = Set(await three.mailbox.writtenPackets)
-        try await three.bob.sync(through: three.mailbox)
-        for relayed in await three.mailbox.writtenPackets where !beforeBob.contains(relayed) {
-            await three.mailbox.delete(packet: relayed)
-        }
-        #expect(three.bob.messages(in: three.room).contains { $0.body == "for both of you" })
-        let signedFor = try #require(try await three.mailbox.sentPackets()[packet])
-        let bobs = Set(signedFor.receipts.map(\.tag))
-        try #require(!bobs.isEmpty, "precondition: Bob signed for it")
-        await three.mailbox.tamper(packet: packet) { fields in
-            guard case .dataList(let tags)? = fields[PacketWire.wrapTags],
-                case .dataList(let values)? = fields[PacketWire.wrapValues]
-            else { return }
-            let kept = zip(tags, values).filter { bobs.contains(RecipientTag(rawValue: $0.0)) }
-            fields[PacketWire.wrapTags] = .dataList(kept.map(\.0))
-            fields[PacketWire.wrapValues] = .dataList(kept.map(\.1))
-            fields[PacketWire.outstanding] = .dataList(kept.map(\.0))
-        }
-        try #require(bobsTags.count > 1, "precondition: the packet was for more than Bob")
-
-        try await three.alice.sync(through: three.mailbox)
-        try await three.carol.sync(through: three.mailbox)
-        try await three.alice.sync(through: three.mailbox)
-        try await three.carol.sync(through: three.mailbox)
+        let written = await three.mailbox.writtenPackets.filter { !before.contains($0) }
+        let sent = await three.mailbox.everySentPacket
+        let readers = written.compactMap { sent[$0] }
+        #expect(readers.count >= 2, "precondition: the round wrote for both")
+        #expect(readers.allSatisfy { $0.recipients.count == 1 }, "a packet could be opened by more than one person")
         #expect(
-            three.carol.messages(in: three.room).contains { $0.body == "for both of you" },
-            "Bob made Alice take back a message Carol never collected")
+            Set(readers.map(\.to)) == Set([three.bob, three.carol].compactMap { $0.enrolment?.identity.id }),
+            "the packets were not one for each reader")
     }
 
     @Test("A packet changed on the server after it was written is sent again")
@@ -83,12 +58,12 @@ struct TamperedPacketTests {
         let before = Set(await three.mailbox.writtenPackets)
         try await three.alice.send("untouched", to: three.room)
         try await three.alice.sync(through: three.mailbox)
-        let packet = try await lastPacket(from: three, after: before)
-
-        await three.mailbox.tamper(packet: packet) { fields in
-            guard case .data(var sealed)? = fields[PacketWire.ciphertext], !sealed.isEmpty else { return }
-            sealed[sealed.startIndex] ^= 0xFF
-            fields[PacketWire.ciphertext] = .data(sealed)
+        for packet in await three.mailbox.writtenPackets where !before.contains(packet) {
+            await three.mailbox.tamper(packet: packet) { fields in
+                guard case .data(var sealed)? = fields[PacketWire.ciphertext], !sealed.isEmpty else { return }
+                sealed[sealed.startIndex] ^= 0xFF
+                fields[PacketWire.ciphertext] = .data(sealed)
+            }
         }
         try await three.carol.sync(through: three.mailbox)
         #expect(

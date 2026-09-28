@@ -126,25 +126,13 @@ extension InMemoryKeychainStore.Synced {
 }
 
 public actor InMemoryMailbox: Mailbox, MediaMailbox {
-    private struct Stored {
-        var fields: [String: PacketField]
-        var outstanding: Set<RecipientTag>
-        var storedAt: Date = .distantPast
-        var modifiedAt: Date = .distantPast
+    public struct Ring: Hashable, Sendable {
+        public let from: ParticipantID
+        public let to: ParticipantID
     }
 
     private let clock: any Clock
-    private var serverNow = Date.distantPast
-
-    private func serverTime() -> Date {
-        serverNow = max(serverNow.addingTimeInterval(0.001), clock.now)
-        return serverNow
-    }
-
-    private var stored: [PacketID: Stored] = [:]
-    private var order: [PacketID] = []
-    public var writtenPackets: [PacketID] { order }
-    private var attachments: [AttachmentID: Stored] = [:]
+    private var store = LocalPairStore()
     private var pendingFailure: MailboxError?
     private var packetFailures: [Int: MailboxError] = [:]
     private var uploadFailures: [Int: MailboxError] = [:]
@@ -153,7 +141,7 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     public private(set) var fetchCount = 0
     public private(set) var acknowledgeCount = 0
     public private(set) var withdrawCount = 0
-    public private(set) var bells: [MessageBell] = []
+    public private(set) var rings: [Ring] = []
     public private(set) var uploadCount = 0
     public private(set) var downloadCount = 0
     public private(set) var attachmentAcknowledgeCount = 0
@@ -163,184 +151,179 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
         self.clock = clock
     }
 
-    public var storedPacketCount: Int { stored.count }
-    public var storedAttachmentCount: Int { attachments.count }
+    public var writtenPackets: [PacketID] { store.packetOrder }
+
+    private var packetRecords: [(url: URL, name: String, record: LocalPairStore.Record)] {
+        store.allRecords.filter { UUID(uuidString: $0.name) != nil }
+    }
+
+    private var photoRecords: [(url: URL, name: String, record: LocalPairStore.Record)] {
+        store.allRecords.filter { $0.name.hasPrefix(LocalPairStore.photoPrefix) }
+    }
+
+    public var storedPacketCount: Int { packetRecords.count }
+    public var storedAttachmentIDs: Set<AttachmentID> {
+        Set(photoRecords.compactMap { UUID(uuidString: String($0.name.dropFirst(LocalPairStore.photoPrefix.count))) }
+            .map(AttachmentID.init(rawValue:)))
+    }
+    public var storedAttachmentCount: Int { storedAttachmentIDs.count }
 
     public var serverWrites: Int {
-        writeCount + acknowledgeCount + withdrawCount + bells.count + uploadCount
+        writeCount + acknowledgeCount + withdrawCount + rings.count + uploadCount
             + attachmentAcknowledgeCount + attachmentDeleteCount
     }
 
-    // MARK: Attachments
+    public var everySentPacket: [PacketID: SentPacket] { store.everySentPacket }
 
-    public func upload(_ attachment: OutgoingAttachment) throws {
-        uploadCount += 1
-        if let failure = pendingFailure {
-            pendingFailure = nil
-            throw failure
-        }
-        if let failure = uploadFailures.removeValue(forKey: uploadCount) { throw failure }
-        let now = serverTime()
-        var fields = AttachmentWire.fields(of: attachment)
-        if let held = attachments[attachment.id] {
-            for key in [PacketWire.receiptTags, PacketWire.receiptValues] { fields[key] = held.fields[key] }
-        }
-        attachments[attachment.id] = Stored(
-            fields: fields, outstanding: attachment.recipients,
-            storedAt: attachments[attachment.id]?.storedAt ?? now, modifiedAt: now)
+    public var everyPendingAttachment: [AttachmentID: SentAttachment] { store.everyPendingAttachment }
+
+    public func spaceCount(of participant: ParticipantID) -> Int {
+        store.spaces.values.filter { $0.owner == participant }.count
     }
 
-    public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) throws -> Data? {
-        downloadCount += 1
-        guard let entry = attachments[id] else { return nil }
-        return AttachmentWire.attachment(from: entry.fields)?.ciphertext
+    public func readers(ofSpaceOf owner: ParticipantID) -> [Set<String>] {
+        store.spaces.values.filter { $0.owner == owner }.map(\.joined)
     }
 
-    public func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) throws {
-        guard var entry = attachments[id] else { throw MailboxError.unknownPacket }
-        attachmentAcknowledgeCount += 1
-        guard PacketWire.adding(receipt, to: &entry.fields) else { return }
-        entry.modifiedAt = serverTime()
-        attachments[id] = entry
+    // MARK: Pairing
+
+    public func account(in pairs: Pairs) -> String { LocalPairStore.account(of: pairs.me) }
+
+    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+        try store.space(for: peer, naming: account, in: pairs)
     }
 
-    public func pendingAttachments() throws -> [AttachmentID: SentAttachment] {
-        attachments.reduce(into: [:]) { found, entry in found[entry.key] = AttachmentWire.sent(from: entry.value.fields) }
+    public func spaceForACode(in pairs: Pairs) -> URL { store.spaceForACode(in: pairs) }
+
+    public func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+        try store.claim(url, for: peer, naming: account, in: pairs)
     }
 
-    public func tamper(attachment id: AttachmentID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
-        guard var entry = attachments[id] else { return }
-        change(&entry.fields)
-        if case .dataList(let tags)? = entry.fields[AttachmentWire.outstanding] {
-            entry.outstanding = Set(tags.map(RecipientTag.init(rawValue:)))
-        }
-        attachments[id] = entry
+    public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) -> JoinOutcome {
+        store.join(link, of: peer, in: pairs)
     }
 
-    public var storedAttachmentIDs: Set<AttachmentID> { Set(attachments.keys) }
+    public func close(_ peer: ParticipantID, in pairs: Pairs) { store.close(peer, in: pairs) }
 
-    public func sweepableAttachments() throws -> [AttachmentID: Date] {
-        let settled = clock.now.addingTimeInterval(-MailboxRules.sweepAge)
-        return attachments.reduce(into: [:]) { found, entry in
-            guard entry.value.storedAt < settled else { return }
-            found[entry.key] = entry.value.modifiedAt
-        }
-    }
+    // MARK: Packets
 
-    public func delete(attachment id: AttachmentID) throws {
-        attachmentDeleteCount += 1
-        attachments[id] = nil
-    }
-
-    public func forget(packet id: PacketID) {
-        stored[id] = nil
-        order.removeAll { $0 == id }
-    }
-
-    public func forget(attachment id: AttachmentID) {
-        attachments[id] = nil
-    }
-
-    public func failNextWrite(with error: MailboxError) {
-        pendingFailure = error
-    }
-
-    public func failWrite(number: Int, with error: MailboxError) {
-        packetFailures[writeCount + number] = error
-    }
-
-    public func failUpload(number: Int, with error: MailboxError) {
-        uploadFailures[uploadCount + number] = error
-    }
-
-    public var largestPacketBytes: Int {
-        stored.values.compactMap { entry -> Int? in
-            if case .data(let bytes)? = entry.fields[PacketWire.ciphertext] { return bytes.count }
-            return nil
-        }.max() ?? 0
-    }
-
-    public func put(_ packet: SyncPacket) throws {
+    public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) throws {
         writeCount += 1
         if let failure = pendingFailure {
             pendingFailure = nil
             throw failure
         }
         if let failure = packetFailures.removeValue(forKey: writeCount) { throw failure }
-        let fields = PacketWire.fields(of: packet)
-        let weight = MailboxRules.weigh(fields)
-        guard weight <= MailboxRules.recordByteCeiling else {
-            throw MailboxError.recordTooLarge(
-                bytes: weight, ceiling: MailboxRules.recordByteCeiling)
-        }
-        let now = serverTime()
-        stored[packet.id] = Stored(
-            fields: fields, outstanding: packet.recipients, storedAt: now, modifiedAt: now)
-        order.append(packet.id)
+        try store.put(packet, to: peer, in: pairs, at: clock.now)
     }
 
-    public func fetch(for tags: Set<RecipientTag>) throws -> [SyncPacket] {
+    public func ring(_ peer: ParticipantID, in pairs: Pairs) throws {
+        try store.ring(peer, in: pairs, at: clock.now)
+        rings.append(Ring(from: pairs.me, to: peer))
+    }
+
+    public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) -> [SyncPacket] {
         fetchCount += 1
-        return order.compactMap { stored[$0] }.compactMap { (entry: Stored) -> SyncPacket? in
-            guard var packet = PacketWire.packet(from: entry.fields), !packet.recipients.isDisjoint(with: tags)
-            else { return nil }
-            packet.storedAt = entry.modifiedAt
-            return packet
-        }
+        return store.fetch(from: peer, for: tags, in: pairs)
     }
 
-    public func sentPackets() throws -> [PacketID: SentPacket] {
-        stored.reduce(into: [:]) { found, entry in
-            guard let packet = PacketWire.packet(from: entry.value.fields) else { return }
-            found[entry.key] = SentPacket(
-                recipients: packet.recipients, receipts: packet.receipts, createdAt: entry.value.storedAt,
-                contentDigest: packet.contentDigest)
-        }
-    }
-
-    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) throws {
-        guard var entry = stored[id] else { throw MailboxError.unknownPacket }
+    public func acknowledge(
+        _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+    ) throws {
         acknowledgeCount += 1
-        guard PacketWire.adding(receipt, to: &entry.fields) else { return }
-        entry.modifiedAt = serverTime()
-        stored[id] = entry
+        try store.acknowledge(id, from: peer, with: receipt, in: pairs, at: clock.now)
     }
 
-    public func withdraw(_ id: PacketID) throws {
+    public func sentPackets(in pairs: Pairs) -> [PacketID: SentPacket] { store.sentPackets(in: pairs) }
+
+    public func withdraw(_ id: PacketID, in pairs: Pairs) {
         withdrawCount += 1
-        stored[id] = nil
-        order.removeAll { $0 == id }
+        store.withdraw(id, in: pairs)
     }
 
-    public func delete(packet id: PacketID) {
-        stored[id] = nil
-        order.removeAll { $0 == id }
+    // MARK: Photos
+
+    public func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) throws {
+        uploadCount += 1
+        if let failure = pendingFailure {
+            pendingFailure = nil
+            throw failure
+        }
+        if let failure = uploadFailures.removeValue(forKey: uploadCount) { throw failure }
+        try store.upload(attachment, in: pairs, at: clock.now)
     }
 
-    public func storedCiphertextBytes(of packets: [PacketID]) throws -> Int {
-        packets.reduce(0) { total, id in
-            guard let fields = stored[id]?.fields, case .data(let body)? = fields[PacketWire.ciphertext] else {
-                return total
-            }
+    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) -> Data? {
+        downloadCount += 1
+        return store.download(id, from: sender, in: pairs)
+    }
+
+    public func acknowledge(
+        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+    ) throws {
+        attachmentAcknowledgeCount += 1
+        try store.acknowledge(attachment: id, from: sender, with: receipt, in: pairs, at: clock.now)
+    }
+
+    public func pendingAttachments(in pairs: Pairs) -> [AttachmentID: SentAttachment] {
+        store.pendingAttachments(in: pairs)
+    }
+
+    public func sweepableAttachments(in pairs: Pairs) -> [AttachmentID: Date] {
+        store.sweepableAttachments(in: pairs, at: clock.now)
+    }
+
+    public func delete(attachment id: AttachmentID, in pairs: Pairs) {
+        attachmentDeleteCount += 1
+        store.delete(attachment: id, in: pairs)
+    }
+
+    // MARK: What a test can reach in and do
+
+    public func tamper(attachment id: AttachmentID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
+        store.change(LocalPairStore.photoPrefix + id.rawValue.uuidString, change, at: clock.now)
+    }
+
+    public func tamper(packet id: PacketID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
+        store.change(id.rawValue.uuidString, change, at: clock.now)
+    }
+
+    public func forget(packet id: PacketID) { store.forgetPacket(id) }
+
+    public func delete(packet id: PacketID) { store.forgetPacket(id) }
+
+    public func forget(attachment id: AttachmentID) {
+        for owner in Set(store.spaces.values.map(\.owner)) {
+            store.remove(LocalPairStore.photoPrefix + id.rawValue.uuidString, fromEverySpaceOf: owner)
+        }
+    }
+
+    public func failNextWrite(with error: MailboxError) { pendingFailure = error }
+
+    public func failWrite(number: Int, with error: MailboxError) { packetFailures[writeCount + number] = error }
+
+    public func failUpload(number: Int, with error: MailboxError) { uploadFailures[uploadCount + number] = error }
+
+    public var largestPacketBytes: Int {
+        packetRecords.compactMap { entry -> Int? in
+            if case .data(let bytes)? = entry.record.fields[PacketWire.ciphertext] { return bytes.count }
+            return nil
+        }.max() ?? 0
+    }
+
+    public func storedCiphertextBytes(of packets: [PacketID]) -> Int {
+        let wanted = Set(packets.map(\.rawValue.uuidString))
+        return packetRecords.filter { wanted.contains($0.name) }.reduce(0) { total, entry in
+            guard case .data(let body)? = entry.record.fields[PacketWire.ciphertext] else { return total }
             return total + body.count
         }
     }
 
-    public func tamper(packet id: PacketID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
-        guard var entry = stored[id] else { return }
-        change(&entry.fields)
-        entry.modifiedAt = serverTime()
-        stored[id] = entry
-    }
-
-    public func pendingRecipients() -> Set<RecipientTag> {
-        stored.values.reduce(into: Set<RecipientTag>()) { tags, entry in
-            guard let packet = PacketWire.packet(from: entry.fields) else { return }
-            tags.formUnion(packet.recipients.subtracting(packet.receipts.map(\.tag)))
+    public func pendingRecipients(in pairs: Pairs) -> Set<RecipientTag> {
+        store.sentPackets(in: pairs).values.reduce(into: Set<RecipientTag>()) { tags, sent in
+            tags.formUnion(sent.recipients.subtracting(sent.receipts.map(\.tag)))
         }
     }
-
-    public func ring(_ bell: MessageBell) throws { bells.append(bell) }
 }
 
 public actor RefusingGroupKeychainStore: KeychainStore {
@@ -402,27 +385,38 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
 
     public init() {}
 
-    public func put(_ packet: SyncPacket) async throws { throw Refused() }
-    public func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] { throw Refused() }
-    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws { throw Refused() }
-    public func sentPackets() async throws -> [PacketID: SentPacket] { throw Refused() }
-    public func withdraw(_ id: PacketID) async throws { throw Refused() }
-    public func ring(_ bell: MessageBell) async throws { throw Refused() }
-    public func upload(_ attachment: OutgoingAttachment) async throws { throw Refused() }
-    public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) async throws -> Data? {
+    public func account(in pairs: Pairs) async throws -> String { throw Refused() }
+    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL {
         throw Refused()
     }
-    public func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) async throws {
+    public func spaceForACode(in pairs: Pairs) async throws -> URL { throw Refused() }
+    public func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws
+        -> URL
+    { throw Refused() }
+    public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome {
         throw Refused()
     }
-    public func sweepableAttachments() async throws -> [AttachmentID: Date] {
+    public func close(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
+    public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
+    public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
+    public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) async throws
+        -> [SyncPacket]
+    { throw Refused() }
+    public func acknowledge(_ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs)
+        async throws
+    { throw Refused() }
+    public func sentPackets(in pairs: Pairs) async throws -> [PacketID: SentPacket] { throw Refused() }
+    public func withdraw(_ id: PacketID, in pairs: Pairs) async throws { throw Refused() }
+    public func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) async throws { throw Refused() }
+    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) async throws -> Data? {
         throw Refused()
     }
-
-    public func pendingAttachments() async throws -> [AttachmentID: SentAttachment] {
-        throw Refused()
-    }
-    public func delete(attachment id: AttachmentID) async throws { throw Refused() }
+    public func acknowledge(
+        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+    ) async throws { throw Refused() }
+    public func pendingAttachments(in pairs: Pairs) async throws -> [AttachmentID: SentAttachment] { throw Refused() }
+    public func sweepableAttachments(in pairs: Pairs) async throws -> [AttachmentID: Date] { throw Refused() }
+    public func delete(attachment id: AttachmentID, in pairs: Pairs) async throws { throw Refused() }
 }
 
 public actor FakeMediaScreen: MediaScreen {

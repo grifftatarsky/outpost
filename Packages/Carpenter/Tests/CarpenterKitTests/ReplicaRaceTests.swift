@@ -26,26 +26,7 @@ struct ReplicaRaceTests {
         )
     }
 
-    private actor SlowFetchMailbox: Mailbox {
-        private let inner = InMemoryMailbox()
-        private var duringFetch: (@Sendable () async -> Void)?
-
-        func onFetch(_ work: @escaping @Sendable () async -> Void) { duringFetch = work }
-
-        func put(_ packet: SyncPacket) async throws { try await inner.put(packet) }
-
-        func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] {
-            if let duringFetch { self.duringFetch = nil; await duringFetch() }
-            return try await inner.fetch(for: tags)
-        }
-
-        func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
-            try await inner.acknowledge(id, with: receipt)
-        }
-        func sentPackets() async throws -> [PacketID: SentPacket] { try await inner.sentPackets() }
-        func withdraw(_ id: PacketID) async throws { try await inner.withdraw(id) }
-        func ring(_ bell: MessageBell) async throws { try await inner.ring(bell) }
-    }
+    private typealias SlowFetchMailbox = HookedMailbox
 
     private func pair(_ clock: TestClock, _ mailbox: any Mailbox, aliceAt: URL? = nil) async throws
         -> (alice: AppSession, bob: AppSession, room: RoomID)
@@ -58,7 +39,7 @@ struct ReplicaRaceTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
@@ -113,7 +94,7 @@ struct ReplicaRaceTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
@@ -151,7 +132,7 @@ struct AcknowledgementTests {
                 SyncSession.CollectedPackets.Opened(
                     id: PacketID(),
                     delivery: SyncEngine.Delivery(
-                        entries: [entry], certificates: [], revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
+                        entries: [entry], certificates: [], revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000), from: Identity.generate().id)
             ])
 
         var replica = Replica()
@@ -180,7 +161,7 @@ struct AcknowledgementTests {
                 SyncSession.CollectedPackets.Opened(
                     id: PacketID(),
                     delivery: SyncEngine.Delivery(
-                        entries: [entry], certificates: [certificate], revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
+                        entries: [entry], certificates: [certificate], revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000), from: Identity.generate().id)
             ])
 
         var replica = Replica()
@@ -218,7 +199,7 @@ struct AcknowledgementTests {
                                 for: knownDevice.publicKey, by: known, at: .distantPast),
                             strangerCertificate,
                         ],
-                        revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
+                        revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000), from: Identity.generate().id)
             ])
 
         var replica = Replica()
@@ -255,7 +236,7 @@ struct AcknowledgementTests {
                             try DeviceCertificate.recovered(
                                 for: device.publicKey, by: known, at: .distantPast)
                         ],
-                        revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000))
+                        revocations: [], grants: []), storedAt: Date(timeIntervalSince1970: 1_900_000_000), from: Identity.generate().id)
             ])
 
         var replica = Replica()

@@ -32,7 +32,7 @@ struct WallIsNotARoomTests {
         through mailbox: InMemoryMailbox
     ) async throws {
         let room = try await host.createRoom(named: name)
-        let invite = try await host.invite(joinerCode: guest.identityCode(), joining: room, mailbox: nil)
+        let invite = try await host.invite(joinerCode: await guest.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await guest.redeem(inviteCode: try invite.encoded())
         try await host.sync(through: mailbox)
         try await guest.accept(

@@ -30,7 +30,7 @@ struct WhatRemovingADeviceCutsOffTests {
         try await peer.createIdentity(displayName: "Outie")
 
         let room = try await stolen.createRoom(named: "Kitchen")
-        let invite = try await stolen.invite(joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await stolen.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await stolen.sync(through: mailbox)
         try await peer.accept(invite.attestation, from: try #require(stolen.enrolment?.identity.publicKeys))

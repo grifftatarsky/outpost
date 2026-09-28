@@ -37,7 +37,6 @@ struct AppRootView: View {
     @State var otherDevicesAsked = false
     @State var syncing = false
     @State var syncAgain = false
-    @State var lastRendezvous = Date.distantPast
     @State var lastSync = Date.distantPast
     @State var mediaBytes: Int?
     @Environment(\.scenePhase) private var scenePhase
@@ -55,9 +54,9 @@ struct AppRootView: View {
 
     @State var problem: ActionProblem?
 
-    let cloud = CloudKitMailbox(
-        container: .default(),
-        directory: PeerZoneDirectory(store: AppRootView.mailboxDirectoryStore()))
+    static let pairIndex = PairIndex()
+
+    let cloud = CloudKitMailbox(container: .default(), index: AppRootView.pairIndex)
     #if DEBUG
         let rig = FileMailbox.fromLaunchArguments()
     #endif
@@ -120,7 +119,6 @@ struct AppRootView: View {
         #if DEBUG
             DebugActions(
                 checkMailbox: { await checkMailbox() },
-                rotateMailboxShare: { await rotateMailboxShare() },
                 pretendFocus: { silenced in
                     pretendedFocus = silenced ? true : nil
                     await session.reportFocus(silenced: silenced)
@@ -416,8 +414,6 @@ struct AppRootView: View {
                 }
             #endif
 
-            await (mailbox as? CloudKitMailbox)?.restoreDirectory()
-
             session.checkAccount(with: accountRegistry)
 
             await session.load()
@@ -508,11 +504,8 @@ struct AppRootView: View {
                 },
                 accept: { code in
                     do {
-                        let invite = try await session.redeem(inviteCode: code)
-                        if let url = invite.mailbox, let cloud = mailbox as? CloudKitMailbox {
-                            try await CloudKitMailbox.accept(url, in: .default())
-                            await cloud.subscribeForInbox()
-                        }
+                        try await session.redeem(inviteCode: code)
+                        if let cloud = mailbox as? CloudKitMailbox { await cloud.subscribeForInbox() }
                         await syncNow()
                         return nil
                     } catch {
@@ -527,10 +520,9 @@ struct AppRootView: View {
                 rooms: { session.rooms.filter { !$0.isDirect } },
                 code: code.value,
                 onAdd: { room, joinerCode in
-                    let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
                     do {
                         return try await session.invite(
-                            joinerCode: joinerCode, joining: room, mailbox: url)
+                            joinerCode: joinerCode, joining: room, through: mailbox)
                     } catch {
                         Diagnostics.identity.error(
                             "invite failed: \(String(describing: error), privacy: .public)")
@@ -588,8 +580,6 @@ struct AppRootView: View {
     ) async -> [ParticipantID: Invite] {
         guard !people.isEmpty else { return [:] }
 
-        let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
-
         var missed: [String] = []
         var issued: [ParticipantID: Invite] = [:]
         for person in people.sorted(by: { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }) {
@@ -598,7 +588,7 @@ struct AppRootView: View {
                     throw AppSessionError.noIdentity
                 }
                 issued[person] = try await session.invite(
-                    joinerCode: try keys.encoded(), joining: room, mailbox: url)
+                    joinerCode: try keys.encoded(), joining: room, through: mailbox)
             } catch {
                 Diagnostics.identity.error(
                     "invite failed while making a room: \(String(describing: error), privacy: .public)")

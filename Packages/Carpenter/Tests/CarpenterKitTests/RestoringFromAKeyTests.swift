@@ -87,8 +87,7 @@ struct RestoringFromAKeyTests {
         try await peer.createIdentity(displayName: "Outie")
 
         let room = try await original.createRoom(named: "Kitchen")
-        let invite = try await original.invite(
-            joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await original.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await original.sync(through: mailbox)
         try await peer.accept(

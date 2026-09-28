@@ -116,6 +116,10 @@ extension Payload {
         Payload(type: .focusStatus, body: try encode(status))
     }
 
+    public static func pairLink(_ body: PairLinkBody) throws -> Payload {
+        Payload(type: .pairLink, body: try encode(body))
+    }
+
     public static func supporterBadge(shows: Bool) throws -> Payload {
         Payload(type: .supporterBadge, body: try encode(SupporterBadgeBody(shows: shows)))
     }

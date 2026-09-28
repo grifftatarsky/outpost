@@ -353,8 +353,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         let bobID = try #require(bob.enrolment?.identity.id)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await alice.rescind(invite.attestation)
         #expect(alice.pendingInvitations(in: room).isEmpty, "the purged invitation is still listed")
 
@@ -394,8 +393,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         try await join(bob, into: room, of: alice, through: mailbox)
 
-        let invite = try await alice.invite(
-            joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await settle([alice, bob], mailbox)
 
         await #expect(throws: MembershipError.notAMember) {
@@ -422,8 +420,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         try await join(bob, into: room, of: alice, through: mailbox)
 
-        let invite = try await alice.invite(
-            joinerCode: carol.identityCode(), joining: room, mailbox: nil, lasting: .indefinite)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .indefinite)
         try await settle([alice, bob], mailbox)
         try await alice.leave(room)
         try await settle([alice, bob], mailbox, rounds: 8)
@@ -446,7 +443,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         let bobID = try #require(bob.enrolment?.identity.id)
 
-        let first = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let first = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await alice.rescind(first.attestation)
 
         try await join(bob, into: room, of: alice, through: mailbox)

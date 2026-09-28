@@ -208,7 +208,8 @@ struct DeletingARoomTests {
         let toBob = Peer(secret: pairwise, them: rig.bobID, me: aliceID)
         try await rig.mailbox.put(
             try SyncEngine.pack([], for: [toBob], granting: [(to: toBob, grant: late)],
-                window: SyncSession.window(at: TestSession.now)))
+                window: SyncSession.window(at: TestSession.now)),
+            to: rig.bobID, in: try rig.alice.currentPairs())
         let arrived = try await rig.bob.sync(through: rig.mailbox)
         try #require(!arrived.grantsReceived.isEmpty, "no key reached Bob, so this proves nothing")
 
@@ -232,7 +233,7 @@ struct DeletingARoomTests {
         try await rig.alice.sync(through: rig.mailbox)
         try await rig.bob.sync(through: rig.mailbox)
         try #require(rig.bob.standing(in: rig.hangar) != .present)
-        try #require(try await rig.mailbox.pendingAttachments()[his] != nil, "Alice collected it, so this proves nothing")
+        try #require(await rig.mailbox.everyPendingAttachment[his] != nil, "Alice collected it, so this proves nothing")
         try await rig.bob.deleteRoom(rig.hangar)
 
         #expect(await rig.media.sealed(for: hers) == nil, "a photo from the deleted room is still on this device")
@@ -243,7 +244,7 @@ struct DeletingARoomTests {
         await relaunched.load()
         try await relaunched.sync(through: rig.mailbox, media: rig.mailbox)
         #expect(
-            try await rig.mailbox.pendingAttachments()[his] != nil,
+            await rig.mailbox.everyPendingAttachment[his] != nil,
             "deleting took back a photo other people had not collected yet")
     }
 

@@ -19,12 +19,12 @@ extension AppSession {
         let previous = projection.outpostPhotoReference(of: enrolment.identity.id)
 
         let (reference, ciphertext) = try SealedAttachment.seal(jpeg, kind: .image)
-        let window = SyncSession.window(at: clock.now)
-        let recipients = Set(peers().map { $0.outgoingTag(window: window) })
+        let recipients = addressed(to: peers())
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
         try await mailbox.upload(
-            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients))
+            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
+            in: try currentPairs())
         Diagnostics.sync.notice(
             "outpost avatar: uploaded \(ciphertext.count, privacy: .public) bytes for \(recipients.count, privacy: .public) peer(s)")
 
@@ -51,7 +51,7 @@ extension AppSession {
         guard previous.id != projection.outpostPhotoReference(of: me)?.id,
             previous.id != projection.photoReference(of: me)?.id
         else { return }
-        do { try await mailbox.delete(attachment: previous.id) } catch {
+        do { try await mailbox.delete(attachment: previous.id, in: try currentPairs()) } catch {
             Diagnostics.sync.error(
                 "outpost avatar: could not delete the previous picture (\(String(describing: error), privacy: .public))")
         }
@@ -98,7 +98,7 @@ extension AppSession {
         _ reference: AttachmentReference, from person: ParticipantID, through mailbox: any MediaMailbox
     ) async throws -> Data? {
         let name = Diagnostics.fingerprint(reference.id.rawValue.uuidString)
-        guard let bytes = try await mailbox.download(reference.id, hint: collectionTags(for: person)) else {
+        guard let bytes = try await mailbox.download(reference.id, from: person, in: try currentPairs()) else {
             Diagnostics.sync.notice("avatar: no outbox holds \(name, privacy: .public)")
             return nil
         }
@@ -381,12 +381,8 @@ extension AppSession {
         guard let enrolment, !persisted.outpostMediaOwed.isEmpty else { return }
         let owed = persisted.outpostMediaOwed
         let wall = outpostRoom(for: enrolment.identity.id)
-        let window = SyncSession.window(at: clock.now)
-        let tags = Set(
-            peers().filter { owed.contains($0.them) }.map { $0.outgoingTag(window: window) })
-        guard !tags.isEmpty else { return }
-
-        let waiting = (try? await mailbox.pendingAttachments()) ?? [:]
+        let tags = addressed(to: peers().filter { owed.contains($0.them) })
+        guard !tags.isEmpty, let pairs = pairs() else { return }
 
         let open = entryOpener()
         var offered = 0
@@ -403,9 +399,7 @@ extension AppSession {
                 }
                 do {
                     try await mailbox.upload(
-                        OutgoingAttachment(
-                            id: id, ciphertext: ciphertext,
-                            recipients: (waiting[id]?.recipients ?? []).union(tags)))
+                        OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: tags), in: pairs)
                     noteAttachmentsSent([id], to: Set(owed))
                     offered += 1
                 } catch {
@@ -536,15 +530,14 @@ extension AppSession {
 
         try await storage.media.store(ciphertext, for: reference.id)
 
-        let window = SyncSession.window(at: clock.now)
-        let recipients = Set(
-            peers().filter { targets.contains($0.them) }.map { $0.outgoingTag(window: window) })
+        let recipients = addressed(to: peers().filter { targets.contains($0.them) })
 
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
         do {
             try await mailbox.upload(
-                OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients))
+                OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
+                in: try currentPairs())
         } catch {
             do { try await storage.media.remove(reference.id) } catch {
                 Diagnostics.sync.error(
@@ -565,9 +558,7 @@ extension AppSession {
     private func uploadInParts(
         _ media: PreparedMedia, from file: URL, to targets: Set<ParticipantID>, through mailbox: any MediaMailbox
     ) async throws -> MediaBody {
-        let window = SyncSession.window(at: clock.now)
-        let recipients = Set(
-            peers().filter { targets.contains($0.them) }.map { $0.outgoingTag(window: window) })
+        let recipients = addressed(to: peers().filter { targets.contains($0.them) })
         let sent = PartsSent()
         defer { for id in sent.ids { uploading.remove(id) } }
         let reference: AttachmentReference
@@ -591,13 +582,14 @@ extension AppSession {
     }
 
     private func sendPart(
-        _ part: AttachmentPart, _ ciphertext: Data, to recipients: Set<RecipientTag>,
+        _ part: AttachmentPart, _ ciphertext: Data, to recipients: [ParticipantID: RecipientTag],
         through mailbox: any MediaMailbox, noting sent: PartsSent
     ) async throws {
         try await storage.media.store(ciphertext, for: part.id)
         uploading.insert(part.id)
         sent.ids.append(part.id)
-        try await mailbox.upload(OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: recipients))
+        try await mailbox.upload(
+            OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: recipients), in: try currentPairs())
     }
 
     public func outpost() -> [OutpostPost] {

@@ -68,18 +68,13 @@ struct SealedAttachmentTests {
 
     @Test("The wire mapping carries everything an attachment record needs")
     func wireRoundTrip() {
-        let outgoing = OutgoingAttachment(
-            id: AttachmentID(), ciphertext: bytes,
-            recipients: [RecipientTag(rawValue: Data([1])), RecipientTag(rawValue: Data([2]))])
-        let fields = AttachmentWire.fields(of: outgoing)
+        let tag = RecipientTag(rawValue: Data([1]))
+        let outgoing = OutgoingAttachment(id: AttachmentID(), ciphertext: bytes, recipients: [Identity.generate().id: tag])
+        let fields = AttachmentWire.fields(of: outgoing, for: tag)
         let back = AttachmentWire.attachment(from: fields)
         #expect(back?.id == outgoing.id)
         #expect(back?.ciphertext == bytes)
-        if case .dataList(let tags)? = fields[AttachmentWire.outstanding] {
-            #expect(Set(tags) == Set(outgoing.recipients.map(\.rawValue)))
-        } else {
-            Issue.record("the routing list was not written")
-        }
+        #expect(AttachmentWire.recipients(in: fields) == [tag], "a copy named somebody other than the one it is for")
     }
 }
 
@@ -104,8 +99,7 @@ struct SendingPhotoTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -282,7 +276,7 @@ struct SendingPhotoTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -292,7 +286,11 @@ struct SendingPhotoTests {
         try await alice.send(Self.photo(), to: room, through: mailbox)
         let named = try #require(alice.messages(in: room).last?.media?.id)
         let orphan = AttachmentID()
-        try await mailbox.upload(OutgoingAttachment(id: orphan, ciphertext: Data([1, 2, 3]), recipients: []))
+        try await mailbox.upload(
+            OutgoingAttachment(
+                id: orphan, ciphertext: Data([1, 2, 3]),
+                recipients: [try #require(bob.enrolment?.identity.id): RecipientTag(rawValue: Data([9]))]),
+            in: try alice.currentPairs())
         #expect(await mailbox.storedAttachmentCount == 2)
 
         let relaunched = TestSession.make(keychain: keychain, at: directory)
@@ -311,7 +309,7 @@ struct SendingPhotoTests {
         await sweeping.load()
         try await sweeping.sync(through: mailbox, media: mailbox)
 
-        let waiting = try await mailbox.pendingAttachments()
+        let waiting = await mailbox.everyPendingAttachment
         #expect(waiting[orphan] == nil, "the orphan survived the sweep")
         #expect(waiting[named] != nil, "the sweep deleted a photo an entry names")
         #expect(await mailbox.attachmentDeleteCount == 1)
@@ -335,7 +333,7 @@ struct BlockingTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -411,7 +409,7 @@ struct BlockingTests {
         try await alice.sync(through: mailbox, media: mailbox)
         for _ in 0..<4 { try await bob.sync(through: mailbox, media: mailbox) }
 
-        let waiting = try await mailbox.sentPackets().filter { $0.value.receipts.isEmpty }
+        let waiting = await mailbox.everySentPacket.filter { $0.value.receipts.isEmpty }
         #expect(
             !waiting.isEmpty,
             """
@@ -518,7 +516,7 @@ struct BlockingTests {
         await bob.load()
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)

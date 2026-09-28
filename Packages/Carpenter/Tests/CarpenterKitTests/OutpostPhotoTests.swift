@@ -28,7 +28,9 @@ struct OutpostPhotoTests {
         #expect(bare.body.isEmpty, "a photo alone has no words, not a placeholder line")
         #expect(await alice.holdsAttachment(media.id), "the sender's own copy was not kept")
         #expect(await mailbox.uploadCount == 2)
-        #expect(await mailbox.storedAttachmentCount == 2, "the bytes are in the outbox for an audience")
+        #expect(
+            await mailbox.storedAttachmentCount == 0,
+            "a post nobody can read yet left a copy in iCloud; a copy goes into a reader's own space once there is one")
     }
 
     @Test("The sweep leaves a wall photo alone, and a relaunch still draws it")
@@ -46,7 +48,7 @@ struct OutpostPhotoTests {
 
         try await alice.sync(through: mailbox, media: mailbox)
         #expect(
-            await mailbox.storedAttachmentCount == 1,
+            await mailbox.attachmentDeleteCount == 0,
             "the sweep took a photo an entry names, on a device that was not the one looking after it")
 
         let again = TestSession.make(keychain: keychain, at: directory, media: media)
@@ -237,7 +239,7 @@ struct GalleryAttachmentTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox, media: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -266,7 +268,7 @@ struct GalleryAttachmentTests {
                 SendingPhotoTests.photo(),
                 SendingPhotoTests.photo(),
             ], through: mailbox)
-        #expect(await mailbox.storedAttachmentCount == 4, "precondition: four pictures went up")
+        #expect(await mailbox.uploadCount == 4, "precondition: four pictures went up")
 
         let again = TestSession.make(keychain: keychain, at: directory, media: media)
         await again.load()
@@ -274,7 +276,7 @@ struct GalleryAttachmentTests {
         try await again.sync(through: mailbox, media: mailbox)
 
         #expect(
-            await mailbox.storedAttachmentCount == 4,
+            await mailbox.attachmentDeleteCount == 0,
             "the sweep deleted pictures an entry names, on a device that was not the one looking after them")
         let post = try #require(again.feed().first)
         #expect(post.media.count == 4)

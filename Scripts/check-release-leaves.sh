@@ -46,7 +46,6 @@ LEAVES=(
     "forget-supporter"
     "Blur every photo"
     "Check mailbox"
-    "Rotate mailbox share"
     "Show message delay"
     "Demo conversation"
     "Demo Outpost"

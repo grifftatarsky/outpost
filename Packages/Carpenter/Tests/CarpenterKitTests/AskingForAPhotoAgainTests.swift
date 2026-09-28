@@ -36,7 +36,7 @@ struct AskingForAPhotoAgainTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         let pair = Pair(alice: alice, bob: bob, room: room, mailbox: mailbox, clock: clock)
         try await pair.round(4)

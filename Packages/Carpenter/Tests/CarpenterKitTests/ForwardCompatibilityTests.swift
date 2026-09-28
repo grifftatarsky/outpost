@@ -113,6 +113,12 @@ extension ForwardCompatibilityTests {
             PhotoAskRecord(
                 from: ParticipantID(rawValue: WideID.of([9])), entry: entry, attachment: AttachmentID(), at: stamp.at)
         ]
+        let link = PairLink(account: "_them", url: URL(string: "https://icloud.invalid/share/a")!)
+        state.pairBook = [
+            ParticipantID(rawValue: WideID.of([9])): PairBookEntry(theirs: link, joined: true, announced: link.url)
+        ]
+        state.codeLink = try SignedPairLink.sign(link, by: Identity.generate())
+        state.codeClaims = [CodeClaim(url: link.url, peer: ParticipantID(rawValue: WideID.of([9])))]
         state.holesNoticed = [room: stamp.at]
         state.askedAutomatically = [room: stamp.at]
         state.keyRotationsOwed = [room]

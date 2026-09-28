@@ -18,7 +18,7 @@ struct RoundAcknowledgementTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -46,7 +46,7 @@ struct RoundAcknowledgementTests {
         #expect(!bobs.contains("second"), "precondition: the deleted packet never reached Bob")
 
         try await alice.sync(through: mailbox)
-        let left = try await mailbox.sentPackets()
+        let left = await mailbox.everySentPacket
         #expect(
             written.filter { left.keys.contains($0) }.isEmpty,
             "a packet Bob signed for was left in Alice's outbox")
@@ -73,7 +73,7 @@ struct RoundAcknowledgementTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -87,7 +87,7 @@ struct RoundAcknowledgementTests {
         await log.refuse(true)
         await #expect(throws: (any Error).self) { try await bob.sync(through: mailbox) }
 
-        let outstanding = try await mailbox.sentPackets()
+        let outstanding = await mailbox.everySentPacket
         #expect(
             outstanding[packet]?.receipts.isEmpty == true,
             "a packet was signed for whose entries never reached the disk")

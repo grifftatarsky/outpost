@@ -36,9 +36,11 @@ struct ScannedFieldsTests {
 
     @Test("An attachment's routing fields are named, and its blob deliberately is not")
     func everyAttachmentRoutingFieldIsScanned() {
+        let tag = Self.tag()
         let written = AttachmentWire.fields(
             of: OutgoingAttachment(
-                id: AttachmentID(), ciphertext: Data(count: 1_024), recipients: [Self.tag()]))
+                id: AttachmentID(), ciphertext: Data(count: 1_024), recipients: [Identity.generate().id: tag]),
+            for: tag)
 
         let asked = Set(CloudKitMailbox.scannedFields)
         for field in written.keys where field != AttachmentWire.blob {
@@ -52,5 +54,14 @@ struct ScannedFieldsTests {
             The scan asks for the photo blob, so every routing read drags every photo in the zone \
             down with it. The blob is fetched by `download`, on its own, on purpose.
             """)
+    }
+
+    @Test("A receipt, a ring and a space's tag are all named in the scan")
+    func everyPairFieldIsScanned() {
+        let receipt = PacketWire.receiptFields(SealedReceipt(tag: Self.tag(), sealed: Data(count: 48)))
+        let asked = Set(CloudKitMailbox.scannedFields)
+        for field in Array(receipt.keys) + [PairWire.ring, PairWire.hint] {
+            #expect(asked.contains(field), "`\(field)` is written into a space and the scan does not ask for it")
+        }
     }
 }

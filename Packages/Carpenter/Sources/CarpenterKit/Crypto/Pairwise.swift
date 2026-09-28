@@ -34,33 +34,14 @@ public struct PairwiseSecret: Hashable, Sendable {
         return RecipientTag(rawValue: Data(digest))
     }
 
-    public func bellName(for recipient: ParticipantID) -> String {
+    public var pairHint: PairHint {
         let digest = HMAC<SHA256>.authenticationCode(
-            for: CanonicalBytes.payload(
-                domain: Domain.messageBell, fields: [recipient.rawValue]),
-            using: symmetricKey
-        )
-        return "bell-" + digest.prefix(16).map { String(format: "%02x", $0) }.joined()
+            for: CanonicalBytes.payload(domain: Domain.pairSpace, fields: []), using: symmetricKey)
+        return PairHint(rawValue: Data(digest))
     }
 
-    public func shareOfferName(for recipient: ParticipantID) -> String {
-        let digest = HMAC<SHA256>.authenticationCode(
-            for: CanonicalBytes.payload(
-                domain: Domain.shareOffer, fields: [recipient.rawValue]),
-            using: symmetricKey
-        )
-        return "offer-" + digest.prefix(16).map { String(format: "%02x", $0) }.joined()
-    }
-
-    public static let shareOfferContext = Data(Domain.shareOffer.utf8)
-
-    public func shareOfferDigest(of url: URL) -> String {
-        let digest = HMAC<SHA256>.authenticationCode(
-            for: CanonicalBytes.payload(
-                domain: Domain.shareOfferDigest, fields: [Data(url.absoluteString.utf8)]),
-            using: symmetricKey
-        )
-        return digest.prefix(16).map { String(format: "%02x", $0) }.joined()
+    public static func linkContext(from sender: ParticipantID, to recipient: ParticipantID) -> Data {
+        CanonicalBytes.payload(domain: Domain.pairLink, fields: [sender.rawValue, recipient.rawValue])
     }
 
     public func wrap(_ plaintext: Data, context: Data) throws -> Data {

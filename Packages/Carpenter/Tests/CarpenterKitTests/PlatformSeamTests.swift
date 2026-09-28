@@ -53,82 +53,103 @@ struct PlatformSeamTests {
 
 @Suite("In-memory mailbox")
 struct InMemoryMailboxTests {
-    private let cassilda = RecipientTag(rawValue: Data("cassilda".utf8))
-    private let hastur = RecipientTag(rawValue: Data("hastur".utf8))
-
-    private func packet(_ body: String, to recipients: Set<RecipientTag>) -> SyncPacket {
-        SyncPacket(
-            id: PacketID(),
-            wraps: Dictionary(uniqueKeysWithValues: recipients.map { ($0, Data()) }),
-            ciphertext: Data(body.utf8))
+    private struct Three {
+        let mailbox = InMemoryMailbox()
+        let toBob: Peer
+        let asBob: Peer
+        let asCarol: Peer
+        var alice: Pairs = Pairs(me: Identity.generate().id, hints: [:])
+        var bob: Pairs = Pairs(me: Identity.generate().id, hints: [:])
+        var carol: Pairs = Pairs(me: Identity.generate().id, hints: [:])
     }
 
-    @Test("A packet is fetchable only by the tags it was addressed to")
+    private func three() async throws -> Three {
+        let alice = Identity.generate()
+        let (toBob, asBob) = try peers(alice, Identity.generate())
+        let (toCarol, asCarol) = try peers(alice, Identity.generate())
+        var three = Three(toBob: toBob, asBob: asBob, asCarol: asCarol)
+        (three.alice, three.bob) = try await link(toBob, asBob, through: three.mailbox)
+        let (withCarol, carol) = try await link(toCarol, asCarol, through: three.mailbox)
+        three.alice = Pairs(me: alice.id, hints: three.alice.hints.merging(withCarol.hints) { first, _ in first })
+        three.carol = carol
+        return three
+    }
+
+    private func packet(_ body: String, to peer: Peer) -> SyncPacket {
+        SyncPacket(id: PacketID(), wraps: [peer.outgoingTag(window: 1): Data()], ciphertext: Data(body.utf8))
+    }
+
+    @Test("A packet is fetchable only by the person whose space it is in, under the tag it was addressed to")
     func addressing() async throws {
-        let mailbox = InMemoryMailbox()
-        try await mailbox.put(packet("sealed", to: [cassilda]))
+        let t = try await three()
+        try await t.mailbox.put(packet("sealed", to: t.toBob), to: t.toBob.them, in: t.alice)
 
-        #expect(try await mailbox.fetch(for: cassilda).count == 1)
-        #expect(try await mailbox.fetch(for: hastur).isEmpty)
+        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 1)], in: t.bob).count == 1)
+        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 2)], in: t.bob).isEmpty)
+        #expect(
+            try await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 1)], in: t.carol).isEmpty,
+            "somebody else read a packet in another person's space")
     }
 
-    @Test("Fetching does not consume — only acknowledgement does")
+    @Test("Fetching does not consume — only the sender takes a packet away")
     func fetchIsNotDestructive() async throws {
-        let mailbox = InMemoryMailbox()
-        try await mailbox.put(packet("sealed", to: [cassilda]))
+        let t = try await three()
+        try await t.mailbox.put(packet("sealed", to: t.toBob), to: t.toBob.them, in: t.alice)
+        let tags: Set = [t.asBob.incomingTag(window: 1)]
 
-        #expect(try await mailbox.fetch(for: cassilda).count == 1)
-        #expect(try await mailbox.fetch(for: cassilda).count == 1)
+        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).count == 1)
+        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).count == 1)
     }
 
-    @Test("A receipt stays with the packet; nobody but the sender takes the packet away")
-    func deletesOnlyWhenFullyAcknowledged() async throws {
-        let mailbox = InMemoryMailbox()
-        let sent = packet("sealed", to: [cassilda, hastur])
-        try await mailbox.put(sent)
+    @Test("A receipt sits in its writer's own space; nobody but the sender takes the packet away")
+    func onlyTheSenderTakesAPacketAway() async throws {
+        let t = try await three()
+        let sent = packet("sealed", to: t.toBob)
+        try await t.mailbox.put(sent, to: t.toBob.them, in: t.alice)
+        let tags: Set = [t.asBob.incomingTag(window: 1)]
 
-        try await mailbox.acknowledge(sent.id, with: SealedReceipt(tag: cassilda, sealed: Data([1])))
-        #expect(try await mailbox.fetch(for: cassilda).first?.receipts.count == 1)
-        #expect(try await mailbox.fetch(for: hastur).count == 1)
-        #expect(await mailbox.storedPacketCount == 1)
+        try await t.mailbox.acknowledge(
+            sent.id, from: t.toBob.me, with: SealedReceipt(tag: t.asBob.incomingTag(window: 1), sealed: Data([1])), in: t.bob)
+        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).first?.receipts.count == 1)
+        #expect(await t.mailbox.storedPacketCount == 1, "a recipient's receipt removed the packet")
 
-        try await mailbox.acknowledge(sent.id, with: SealedReceipt(tag: hastur, sealed: Data([2])))
-        #expect(await mailbox.storedPacketCount == 1, "a recipient's receipt removed the packet")
+        try await t.mailbox.withdraw(sent.id, in: t.bob)
+        #expect(await t.mailbox.storedPacketCount == 1, "the recipient took the sender's packet away")
 
-        try await mailbox.withdraw(sent.id)
-        #expect(await mailbox.storedPacketCount == 0)
+        try await t.mailbox.withdraw(sent.id, in: t.alice)
+        #expect(await t.mailbox.storedPacketCount == 0)
     }
 
     @Test("The same receipt twice is kept once")
     func idempotentAcknowledgement() async throws {
-        let mailbox = InMemoryMailbox()
-        let sent = packet("sealed", to: [cassilda, hastur])
-        try await mailbox.put(sent)
+        let t = try await three()
+        let sent = packet("sealed", to: t.toBob)
+        try await t.mailbox.put(sent, to: t.toBob.them, in: t.alice)
 
-        let receipt = SealedReceipt(tag: cassilda, sealed: Data([1]))
-        try await mailbox.acknowledge(sent.id, with: receipt)
-        try await mailbox.acknowledge(sent.id, with: receipt)
+        let receipt = SealedReceipt(tag: t.asBob.incomingTag(window: 1), sealed: Data([1]))
+        try await t.mailbox.acknowledge(sent.id, from: t.toBob.me, with: receipt, in: t.bob)
+        try await t.mailbox.acknowledge(sent.id, from: t.toBob.me, with: receipt, in: t.bob)
 
-        #expect(try await mailbox.sentPackets()[sent.id]?.receipts == [receipt])
+        #expect(try await t.mailbox.sentPackets(in: t.alice)[sent.id]?.receipts == [receipt])
     }
 
     @Test("Every write is counted, so the budget in Epic 4 has something to measure")
     func writesAreInstrumented() async throws {
-        let mailbox = InMemoryMailbox()
-        try await mailbox.put(packet("one", to: [cassilda]))
-        try await mailbox.put(packet("two", to: [cassilda]))
+        let t = try await three()
+        try await t.mailbox.put(packet("one", to: t.toBob), to: t.toBob.them, in: t.alice)
+        try await t.mailbox.put(packet("two", to: t.toBob), to: t.toBob.them, in: t.alice)
 
-        #expect(await mailbox.writeCount == 2)
+        #expect(await t.mailbox.writeCount == 2)
     }
 
     @Test("A failing mailbox surfaces its error rather than silently dropping a packet")
     func failureIsVisible() async throws {
-        let mailbox = InMemoryMailbox()
-        await mailbox.failNextWrite(with: .unavailable)
+        let t = try await three()
+        await t.mailbox.failNextWrite(with: .unavailable)
 
         await #expect(throws: MailboxError.unavailable) {
-            try await mailbox.put(packet("sealed", to: [cassilda]))
+            try await t.mailbox.put(packet("sealed", to: t.toBob), to: t.toBob.them, in: t.alice)
         }
-        #expect(await mailbox.storedPacketCount == 0)
+        #expect(await t.mailbox.storedPacketCount == 0)
     }
 }

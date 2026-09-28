@@ -442,10 +442,66 @@ struct LivePairMailboxMeasurements {
         PairRig.note("test space and its public link removed")
     }
 
+    @Test(.enabled(if: PairRig.step == "alpha-late-make"))
+    func alphaMakesALinkNamingNobody() async throws {
+        let db = PairRig.container.privateCloudDatabase
+        let zone = CKRecordZone.ID(zoneName: "PairLate")
+        _ = try await db.modifyRecordZones(saving: [CKRecordZone(zoneID: zone)], deleting: [])
+        let share = CKShare(recordZoneID: zone)
+        share.publicPermission = .none
+        let record = CKRecord(recordType: "PairMeasure", recordID: CKRecord.ID(recordName: "m1", zoneID: zone))
+        record["body"] = Data([5]) as NSData
+        let saved = try await db.modifyRecords(saving: [share, record], deleting: [])
+        let url = try #require((try saved.saveResults[share.recordID]?.get() as? CKShare)?.url)
+        try PairRig.write([url.absoluteString], "late-url.json")
+        PairRig.note("link made naming nobody")
+    }
+
+    @Test(.enabled(if: PairRig.step == "alpha-late-name"))
+    func alphaNamesBetaLater() async throws {
+        let db = PairRig.container.privateCloudDatabase
+        let zone = CKRecordZone.ID(zoneName: "PairLate")
+        let shareID = try #require(try await db.recordZone(for: zone).share?.recordID)
+        let share = try #require(try await db.record(for: shareID) as? CKShare)
+        let betaName = try PairRig.read(String.self, "beta-user.json")
+        let lookup = CKUserIdentity.LookupInfo(userRecordID: CKRecord.ID(recordName: betaName))
+        let beta: CKShare.Participant? = await withCheckedContinuation { continuation in
+            let operation = CKFetchShareParticipantsOperation(userIdentityLookupInfos: [lookup])
+            let found = Found()
+            operation.perShareParticipantResultBlock = { _, result in found.participant = try? result.get() }
+            operation.fetchShareParticipantsResultBlock = { _ in continuation.resume(returning: found.participant) }
+            PairRig.container.add(operation)
+        }
+        let participant = try #require(beta)
+        participant.permission = .readOnly
+        share.addParticipant(participant)
+        let saved = try await db.modifyRecords(saving: [share], deleting: [])
+        let back = try saved.saveResults[shareID]?.get() as? CKShare
+        PairRig.note("named beta later; link unchanged: \(back?.url?.absoluteString == (try PairRig.read([String].self, "late-url.json"))[0])")
+    }
+
+    @Test(.enabled(if: PairRig.step == "beta-late-try"))
+    func betaTriesTheLateLink() async throws {
+        let url = try #require(URL(string: try PairRig.read([String].self, "late-url.json")[0]))
+        do {
+            let metadata = try await PairRig.container.shareMetadata(for: url)
+            PairRig.note("read the link: role \(metadata.participantRole.rawValue) status \(metadata.participantStatus.rawValue)")
+            _ = try await PairRig.container.accept(metadata)
+            let zones = try await PairRig.sharedChanges(since: nil).0.filter { $0.zoneName == "PairLate" }
+            let zone = try #require(zones.first)
+            let record = try await PairRig.container.sharedCloudDatabase.record(for: CKRecord.ID(recordName: "m1", zoneID: zone))
+            PairRig.note("joined and read m1: \(record.recordID.recordName)")
+        } catch {
+            PairRig.note("refused: \(PairRig.describe(error))")
+        }
+    }
+
     @Test(.enabled(if: PairRig.step == "alpha-clean"))
     func alphaClearsUp() async throws {
         let db = PairRig.container.privateCloudDatabase
-        let mine = try await db.allRecordZones().map(\.zoneID).filter { $0.zoneName.hasPrefix("PairMeasure-") }
+        let mine = try await db.allRecordZones().map(\.zoneID).filter {
+            $0.zoneName.hasPrefix("PairMeasure-") || $0.zoneName == "PairLate" || $0.zoneName == "PairNotify"
+        }
         for group in PairRig.chunks(mine) { _ = try await db.modifyRecordZones(saving: [], deleting: group) }
         PairRig.note("deleted \(mine.count) spaces")
     }

@@ -38,8 +38,7 @@ struct MessageBellTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
 
         try await alice.sync(through: mailbox)
@@ -55,10 +54,10 @@ struct MessageBellTests {
         let mailbox = InMemoryMailbox()
         let (alice, _, room) = try await pairInARoom(clock, mailbox)
 
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
         try await alice.send("are you coming", to: room)
         let report = try await alice.sync(through: mailbox)
-        let after = await mailbox.bells.count
+        let after = await mailbox.rings.count
 
         #expect(report.bellsRung == 1, "a message was sent and nobody was told")
         #expect(after == before + 1)
@@ -70,7 +69,7 @@ struct MessageBellTests {
         let mailbox = InMemoryMailbox()
         let (alice, _, room) = try await pairInARoom(clock, mailbox)
 
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
 
         try await alice.setDisplayName("Alice Liddell")
         let renamed = try await alice.sync(through: mailbox)
@@ -79,7 +78,7 @@ struct MessageBellTests {
         _ = try await alice.createRoom(named: "Quiet Room")
         try await alice.sync(through: mailbox)
 
-        let after = await mailbox.bells.count
+        let after = await mailbox.rings.count
         #expect(
             after == before,
             "\(after - before) notification(s) for something nobody said — the original defect")
@@ -95,10 +94,10 @@ struct MessageBellTests {
         try await alice.send("are you coming", to: room)
         try await alice.sync(through: mailbox)
 
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
         let acknowledgements = await mailbox.acknowledgeCount
         let collected = try await bob.sync(through: mailbox)
-        let after = await mailbox.bells.count
+        let after = await mailbox.rings.count
 
         #expect(collected.entriesReceived > 0, "precondition: Bob actually collected the message")
         #expect(
@@ -159,8 +158,8 @@ struct MessageBellTests {
             "a message went out with nobody rung — delivered, and silent")
     }
 
-    @Test("A bell name is stable, shared by both ends, and different per direction")
-    func bellNaming() throws {
+    @Test("A space's tag is the same from both ends and different for every pair")
+    func spaceTags() throws {
         let alice = Identity.generate()
         let bob = Identity.generate()
         let carol = Identity.generate()
@@ -169,17 +168,8 @@ struct MessageBellTests {
         let bobToAlice = try PairwiseSecret.derive(mine: bob, theirs: alice.publicKeys)
         let aliceToCarol = try PairwiseSecret.derive(mine: alice, theirs: carol.publicKeys)
 
-        #expect(aliceToBob.bellName(for: bob.id) == bobToAlice.bellName(for: bob.id))
-        #expect(aliceToBob.bellName(for: alice.id) == bobToAlice.bellName(for: alice.id))
-
-        #expect(aliceToBob.bellName(for: bob.id) != aliceToBob.bellName(for: alice.id))
-
-        #expect(aliceToBob.bellName(for: bob.id) != aliceToCarol.bellName(for: carol.id))
-
-        #expect(aliceToBob.bellName(for: bob.id) == aliceToBob.bellName(for: bob.id))
-
-        let name = aliceToBob.bellName(for: bob.id)
-        #expect(name.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" })
-        #expect(name.count < 64)
+        #expect(aliceToBob.pairHint == bobToAlice.pairHint, "the two ends of a pair disagree about their spaces")
+        #expect(aliceToBob.pairHint != aliceToCarol.pairHint, "two people's spaces could be taken for each other")
+        #expect(aliceToBob.pairHint.rawValue != aliceToBob.material, "the tag gives away the secret it is made from")
     }
 }

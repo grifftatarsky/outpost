@@ -20,7 +20,8 @@ struct InviteLinkTests {
             attestation: try TestInvite.issue(
                 joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter,
                 at: TestSession.now),
-            mailbox: URL(string: "https://www.icloud.com/share/example"))
+            pair: try SignedPairLink.sign(
+                PairLink(account: "_inviter", url: URL(string: "https://www.icloud.com/share/example")!), by: inviter))
     }
 
     @Test("A code survives the round trip")
@@ -37,7 +38,7 @@ struct InviteLinkTests {
         #expect(read == mine)
     }
 
-    @Test("An invite survives the round trip, mailbox and all")
+    @Test("An invite survives the round trip, its signed link and all")
     func inviteRoundTrips() throws {
         let issued = try invite()
         let url = try InviteLink.url(inviting: issued, scheme: scheme)
@@ -47,7 +48,8 @@ struct InviteLinkTests {
             return
         }
         #expect(read == issued)
-        #expect(read.mailbox == issued.mailbox, "the share URL is what makes the invite usable")
+        #expect(read.verifiedPair == issued.verifiedPair, "the inviter's link is what lets the joiner read them")
+        #expect(read.verifiedPair != nil, "the link's signature did not survive the envelope")
         #expect(
             read.attestation.testPhrase == issued.attestation.testPhrase,
             "the phrase is the whole security check and has to survive the envelope")
@@ -97,7 +99,7 @@ struct InviteLinkTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let bobsLink = try InviteLink.url(
-            offering: try JoinerCode.decoded(from: bob.identityCode()), scheme: scheme)
+            offering: try JoinerCode.decoded(from: await bob.joinerCode(through: mailbox)), scheme: scheme)
         guard case .code(let bobsKeys) = InviteLink.read(bobsLink, scheme: scheme) else {
             Issue.record("Bob's code did not survive the link")
             return
@@ -105,7 +107,7 @@ struct InviteLinkTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         let issued = try await alice.invite(
-            joinerCode: try bobsKeys.encoded(), joining: room, mailbox: nil)
+            joinerCode: try bobsKeys.encoded(), joining: room, through: mailbox)
 
         let inviteLink = try InviteLink.url(inviting: issued, scheme: scheme)
         guard case .invite(let arriving) = InviteLink.read(inviteLink, scheme: scheme) else {

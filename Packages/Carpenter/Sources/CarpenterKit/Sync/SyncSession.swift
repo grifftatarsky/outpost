@@ -58,14 +58,17 @@ public struct SyncReport: Hashable, Sendable {
         public let entries: Set<EntryHash>
         public let recipients: Set<RecipientTag>
         public let digest: Data?
+        public let to: ParticipantID?
 
         public init(
-            packet: PacketID, entries: Set<EntryHash>, recipients: Set<RecipientTag> = [], digest: Data? = nil
+            packet: PacketID, entries: Set<EntryHash>, recipients: Set<RecipientTag> = [], digest: Data? = nil,
+            to: ParticipantID? = nil
         ) {
             self.packet = packet
             self.entries = entries
             self.recipients = recipients
             self.digest = digest
+            self.to = to
         }
     }
 
@@ -147,10 +150,12 @@ public struct SyncReport: Hashable, Sendable {
 
 public struct SyncSession: Sendable {
     private let mailbox: any Mailbox
+    private let pairs: Pairs
     private let clock: any Clock
 
-    public init(mailbox: any Mailbox, clock: any Clock = SystemClock()) {
+    public init(mailbox: any Mailbox, pairs: Pairs, clock: any Clock = SystemClock()) {
         self.mailbox = mailbox
+        self.pairs = pairs
         self.clock = clock
     }
 
@@ -196,54 +201,60 @@ public struct SyncSession: Sendable {
         let now = instant ?? clock.now
         let window = Self.window(at: now)
         let batches = entries.isEmpty ? [[]] : Self.batches(of: entries)
+        var reached: Set<ParticipantID> = []
+        var cutShort: Set<ParticipantID> = []
+        var lastError: (any Error)?
 
-        for (index, batch) in batches.enumerated() {
-            let first = index == 0
-            let packet = try SyncEngine.pack(
-                batch, for: peers,
-                certificates: first ? certificates : [],
-                revocations: first ? revocations : [],
-                granting: first ? granting : [],
-                window: window,
-                requests: first ? requests : [],
-                answers: first ? answers : [],
-                identities: first ? identities : [],
-                notifyWalls: first ? notifyWalls : nil,
-                confirmations: first ? confirming : [],
-                asks: first ? asking : [],
-                addresses: first ? addresses : [])
-            do {
-                try await mailbox.put(packet)
-            } catch {
-                report.cannotSend = error as? MailboxFailure
-                if report.written.isEmpty { throw error }
-                report.sendFailure = String(describing: error)
-                Diagnostics.sync.error(
-                    """
-                    mailbox: packet \(index + 1, privacy: .public) of \(batches.count, privacy: .public) \
-                    would not write; the rest waits for the next round \
-                    (\(String(describing: error), privacy: .public))
-                    """)
-                break
+        for peer in peers {
+            for (index, batch) in batches.enumerated() {
+                let first = index == 0
+                let packet = try SyncEngine.pack(
+                    batch, for: [peer],
+                    certificates: first ? certificates : [],
+                    revocations: first ? revocations : [],
+                    granting: first ? granting.filter { $0.to.them == peer.them } : [],
+                    window: window,
+                    requests: first ? requests : [],
+                    answers: first ? answers : [],
+                    identities: first ? identities : [],
+                    notifyWalls: first ? notifyWalls : nil,
+                    confirmations: first ? confirming : [],
+                    asks: first ? asking : [],
+                    addresses: first ? addresses.filter { $0.recipient == peer.them } : [])
+                do {
+                    try await mailbox.put(packet, to: peer.them, in: pairs)
+                } catch {
+                    lastError = error
+                    cutShort.insert(peer.them)
+                    report.cannotSend = report.cannotSend ?? error as? MailboxFailure
+                    report.sendFailure = String(describing: error)
+                    Diagnostics.sync.error(
+                        """
+                        mailbox: packet \(index + 1, privacy: .public) of \(batches.count, privacy: .public) \
+                        for one person would not write; the rest for them waits for the next round \
+                        (\(String(describing: error), privacy: .public))
+                        """)
+                    break
+                }
+                reached.insert(peer.them)
+                report.packetsWritten += 1
+                report.entriesSent += batch.count
+                report.written.append(
+                    SyncReport.WrittenPacket(
+                        packet: packet.id, entries: Set(batch.map(\.hash)), recipients: packet.recipients,
+                        digest: packet.contentDigest, to: peer.them))
             }
-            report.packetsWritten += 1
-            report.entriesSent += batch.count
-            report.written.append(
-                SyncReport.WrittenPacket(
-                    packet: packet.id, entries: Set(batch.map(\.hash)), recipients: packet.recipients,
-                    digest: packet.contentDigest))
         }
+        if reached.isEmpty, let lastError { throw lastError }
         if batches.count > 1 {
             Diagnostics.sync.notice(
                 """
                 mailbox: a round of \(entries.count, privacy: .public) entries went as \
-                \(report.packetsWritten, privacy: .public) of \(batches.count, privacy: .public) packets
+                \(report.packetsWritten, privacy: .public) packets to \(reached.count, privacy: .public) people
                 """)
         }
 
-        if report.sendFailure == nil {
-            report.bellsRung = await ring(to: ringing, at: now)
-        }
+        report.bellsRung = await ring(to: ringing.filter { reached.contains($0.them) && !cutShort.contains($0.them) })
         return report
     }
 
@@ -279,20 +290,15 @@ public struct SyncSession: Sendable {
         return batches
     }
 
-    private func ring(to peers: [Peer], at instant: Date) async -> Int {
+    private func ring(to peers: [Peer]) async -> Int {
         var rung = 0
         for peer in peers {
-            let bell = MessageBell(
-                fetchTag: peer.incomingTag(window: Self.window(at: instant)),
-                name: peer.secret.bellName(for: peer.them),
-                ring: UInt64(max(instant.timeIntervalSince1970, 0))
-            )
             do {
-                try await mailbox.ring(bell)
+                try await mailbox.ring(peer.them, in: pairs)
                 rung += 1
             } catch {
                 Diagnostics.sync.error(
-                    "mailbox: could not ring a peer's bell: \(String(describing: error), privacy: .public)")
+                    "mailbox: could not ring somebody: \(String(describing: error), privacy: .public)")
             }
         }
         return rung
@@ -322,14 +328,16 @@ public struct SyncSession: Sendable {
             public let storedAt: Date
             public let tag: RecipientTag?
             public let secret: PairwiseSecret?
+            public let from: ParticipantID
 
             public init(
-                id: PacketID, delivery: SyncEngine.Delivery, storedAt: Date, tag: RecipientTag? = nil,
-                secret: PairwiseSecret? = nil
+                id: PacketID, delivery: SyncEngine.Delivery, storedAt: Date, from: ParticipantID,
+                tag: RecipientTag? = nil, secret: PairwiseSecret? = nil
             ) {
                 self.id = id
                 self.delivery = delivery
                 self.storedAt = storedAt
+                self.from = from
                 self.tag = tag
                 self.secret = secret
             }
@@ -369,7 +377,7 @@ public struct SyncSession: Sendable {
         }
         let tags = ways.reduce(into: Set<RecipientTag>()) { $0.formUnion($1.tags) }
 
-        let packets = try await mailbox.fetch(for: tags)
+        let packets = try await mailbox.fetch(from: peer.them, for: tags, in: pairs)
 
         var opened: [CollectedPackets.Opened] = []
         var unopened: [(PacketID, any Error)] = []
@@ -379,8 +387,8 @@ public struct SyncSession: Sendable {
                 opened.append(
                     CollectedPackets.Opened(
                         id: packet.id, delivery: try Self.unpack(packet, as: way.peer, at: now),
-                        storedAt: packet.storedAt ?? now, tag: packet.recipients.intersection(way.tags).first,
-                        secret: way.peer.secret))
+                        storedAt: packet.storedAt ?? now, from: peer.them,
+                        tag: packet.recipients.intersection(way.tags).first, secret: way.peer.secret))
             } catch {
                 unopened.append((packet.id, error))
             }
@@ -475,7 +483,8 @@ public struct SyncSession: Sendable {
         for packet in collected.packets where settled.contains(packet.id) {
             guard let tag = packet.tag else { continue }
             do {
-                try await mailbox.acknowledge(packet.id, with: try receipt(packet.id, tag))
+                try await mailbox.acknowledge(
+                    packet.id, from: packet.from, with: try receipt(packet.id, tag), in: pairs)
                 acknowledged += 1
             } catch {
                 failed[packet.id] = String(describing: error)

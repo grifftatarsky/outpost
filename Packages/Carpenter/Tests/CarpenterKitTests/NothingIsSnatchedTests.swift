@@ -29,7 +29,7 @@ struct NothingIsSnatchedTests {
         try await friend.createIdentity(displayName: "Outie")
 
         let room = try await phone.createRoom(named: "Kitchen")
-        let invite = try await phone.invite(joinerCode: friend.identityCode(), joining: room, mailbox: nil)
+        let invite = try await phone.invite(joinerCode: await friend.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await friend.redeem(inviteCode: try invite.encoded())
         try await phone.sync(through: mailbox)
         try await friend.accept(invite.attestation, from: try #require(phone.enrolment?.identity.publicKeys))

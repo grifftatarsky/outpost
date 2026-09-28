@@ -45,13 +45,6 @@ extension AppRootView {
         await AppIconSwitching.apply(choice)
     }
 
-    static func mailboxDirectoryStore() -> any DocumentStore {
-        let container = Bundle.main.bundleIdentifier ?? "app"
-        return FileDocumentStore(
-            url: StorageLocation.directory(container: container)
-                .appending(path: StorageLocation.mailboxDirectoryName))
-    }
-
     static var registrationProbeURL: URL {
         URL.applicationSupportDirectory
             .appending(path: Bundle.main.bundleIdentifier ?? "app", directoryHint: .isDirectory)
@@ -64,21 +57,11 @@ extension AppRootView {
             cloudTrouble = "Not running on the CloudKit mailbox."
             return
         }
-        cloudTrouble = await cloud.roundTrip()
-    }
-
-    func rotateMailboxShare() async {
-        do {
-            try await cloud.eraseOutbox()
-            try await cloud.prepare()
-            let url = try await cloud.shareURL()
-            lastRendezvous = Date()
-            Diagnostics.sync.notice(
-                "debug: rotated the mailbox share; the next offer carries a new URL (…\(String(url.absoluteString.suffix(6)), privacy: .public))")
-        } catch {
-            Diagnostics.sync.error(
-                "debug: could not rotate the mailbox share: \(String(describing: error), privacy: .public)")
+        guard let pairs = session.pairs() else {
+            cloudTrouble = "No identity on this device yet."
+            return
         }
+        cloudTrouble = await cloud.roundTrip(in: pairs)
     }
 
     func fitTest(
@@ -120,12 +103,12 @@ extension AppRootView {
                 let done = await timing.count
                 await MainActor.run { progress(.uploading(done: done)) }
                 let before = ContinuousClock.now
-                try await cloud.upload(OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: []))
+                try await cloud.putForTiming(part.id, ciphertext)
                 await timing.uploaded(part.id, bytes: ciphertext.count, taking: ContinuousClock.now - before)
             }
         } catch {
             report.failure = "Sealing or uploading failed: \(error)"
-            for id in await timing.ids { try? await cloud.delete(attachment: id) }
+            await cloud.clearTimingSpace()
             return report
         }
         let parts = reference.parts ?? []
@@ -139,7 +122,7 @@ extension AppRootView {
         for (index, part) in parts.enumerated() {
             progress(.downloading(done: index, of: parts.count))
             do {
-                if let bytes = try await cloud.download(part.id, hint: []),
+                if let bytes = try await cloud.readForTiming(part.id),
                     Data(SHA256.hash(data: bytes)) == part.digest
                 {
                     report.piecesMatched += 1
@@ -152,11 +135,7 @@ extension AppRootView {
         report.downloadSeconds = seconds(clock.now - fetchStarted)
 
         progress(.clearing)
-        var cleared = true
-        for part in parts {
-            do { try await cloud.delete(attachment: part.id) } catch { cleared = false }
-        }
-        report.cleared = cleared
+        report.cleared = await cloud.clearTimingSpace()
         Diagnostics.sync.notice(
             """
             debug: fit test — \(report.originalBytes, privacy: .public) → \(report.fittedBytes, privacy: .public) bytes \
@@ -180,7 +159,7 @@ extension AppRootView {
         startedSyncFor = nil
 
         if let cloud = mailbox as? CloudKitMailbox {
-            try await cloud.eraseOutbox()
+            try await cloud.eraseEverySpace()
         }
         try await deathmarkBoard?.eraseEverythingElse()
 

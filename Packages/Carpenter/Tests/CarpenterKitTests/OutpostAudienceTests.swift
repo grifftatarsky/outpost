@@ -19,7 +19,7 @@ struct OutpostAudienceTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -146,8 +146,7 @@ struct OutpostAudienceTests {
 
         let room = try await alice.createRoom(named: "Lanterns")
         for joiner in [bob, carol] {
-            let invite = try await alice.invite(
-                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            let invite = try await alice.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await joiner.redeem(inviteCode: try invite.encoded())
             try await alice.sync(through: mailbox, media: mailbox)
             try await joiner.accept(
@@ -270,7 +269,7 @@ struct OutpostKeyRotationTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -324,7 +323,7 @@ struct OutpostBackfillTests {
         try await carol.createIdentity(displayName: "Carol")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let toBob = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let toBob = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try toBob.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(toBob.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -333,7 +332,7 @@ struct OutpostBackfillTests {
         try await alice.send("posted long before Carol", to: nil)
         try await settle([alice, bob], through: mailbox)
 
-        let toCarol = try await bob.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let toCarol = try await bob.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try toCarol.encoded())
         try await bob.sync(through: mailbox)
         try await carol.accept(toCarol.attestation, from: try #require(bob.enrolment?.identity.publicKeys))
@@ -362,7 +361,7 @@ struct OutpostBackfillTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))

@@ -33,7 +33,7 @@ struct NobodyButTheSenderClearsAPhotoTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -61,7 +61,7 @@ struct NobodyButTheSenderClearsAPhotoTests {
         #expect(
             await pair.mailbox.storedAttachmentIDs.contains(sent),
             "the recipient's collecting took the photo out of the sender's outbox")
-        let receipts = try #require(try await pair.mailbox.pendingAttachments()[sent]?.receipts)
+        let receipts = try #require(await pair.mailbox.everyPendingAttachment[sent]?.receipts)
         #expect(receipts.count == 1, "collecting a photo left no signature on it")
 
         try await pair.alice.sync(through: pair.mailbox, media: pair.mailbox)
@@ -127,7 +127,9 @@ struct NobodyButTheSenderClearsAPhotoTests {
         let forTheOtherPhoto = try AttachmentReceipt.seal(
             other, under: tag, as: bob.identity.id, by: bob.device, to: peer.secret)
         for receipt in [junk, forAPacket, forTheOtherPhoto] {
-            try await pair.mailbox.acknowledge(attachment: sent, with: receipt)
+            try await pair.mailbox.acknowledge(
+                attachment: sent, from: try #require(pair.alice.enrolment?.identity.id), with: receipt,
+                in: try pair.bob.currentPairs())
         }
 
         try await pair.alice.sync(through: pair.mailbox, media: pair.mailbox)
@@ -203,7 +205,7 @@ struct NobodyButTheSenderClearsAPhotoTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -258,7 +260,7 @@ struct APhotoAndTwoDevicesTests {
         try await friend.createIdentity(displayName: "Outie")
 
         let room = try await phone.createRoom(named: "Kitchen")
-        let invite = try await phone.invite(joinerCode: friend.identityCode(), joining: room, mailbox: nil)
+        let invite = try await phone.invite(joinerCode: await friend.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await friend.redeem(inviteCode: try invite.encoded())
         try await phone.sync(through: mailbox, media: mailbox)
         try await friend.accept(invite.attestation, from: try #require(phone.enrolment?.identity.publicKeys))

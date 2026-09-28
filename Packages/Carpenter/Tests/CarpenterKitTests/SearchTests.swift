@@ -28,8 +28,7 @@ struct SearchTests {
         try await theirs.createIdentity(displayName: "Outie")
 
         let room = try await mine.createRoom(named: name)
-        let invite = try await mine.invite(
-            joinerCode: theirs.identityCode(), joining: room, mailbox: nil)
+        let invite = try await mine.invite(joinerCode: await theirs.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await theirs.redeem(inviteCode: try invite.encoded())
         try await mine.sync(through: mailbox)
         try await theirs.accept(

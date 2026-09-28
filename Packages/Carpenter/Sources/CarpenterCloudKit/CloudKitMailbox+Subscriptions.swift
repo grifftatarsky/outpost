@@ -7,11 +7,14 @@ import Foundation
 extension CloudKitMailbox {
     @discardableResult
     public func subscribeForInbox() async -> [CKSubscription.ID] {
-        var registered: [CKSubscription.ID] = []
-
-        let inbox = PushChannel.inbox.subscription()
-        let bell = PushChannel.bell.subscription(inZone: outbox)
-
+        let wanted = [PushChannel.inbox, PushChannel.ring]
+        do {
+            try await seedRecordTypes()
+        } catch {
+            Diagnostics.sync.error(
+                "push: could not make sure the ring's record type exists: \(String(describing: error), privacy: .public)")
+            return []
+        }
         do {
             var standing: [CKSubscription] = []
             do {
@@ -19,46 +22,42 @@ extension CloudKitMailbox {
             } catch {
                 Diagnostics.sync.error(
                     """
-                    inbox: could not read the standing subscriptions, so nothing was swept — one \
+                    push: could not read the standing subscriptions, so nothing was swept — one \
                     naming a record type this container does not have fails the whole read, and \
                     then every stale subscription keeps firing: \
                     \(String(describing: error), privacy: .public)
                     """)
             }
-            let stale = standing
-                .map(\.subscriptionID)
-                .filter { $0 != PushChannel.inbox.subscriptionID }
-
+            let keep = Set(wanted.map(\.subscriptionID))
+            let stale = standing.map(\.subscriptionID).filter { !keep.contains($0) }
             _ = try await container.sharedCloudDatabase.modifySubscriptions(
-                saving: [inbox], deleting: stale)
-            registered.append(PushChannel.inbox.subscriptionID)
+                saving: wanted.map { $0.subscription() }, deleting: stale)
+            _ = try? await container.privateCloudDatabase.modifySubscriptions(saving: [], deleting: ["outpost.bell.v1"])
             Diagnostics.sync.notice(
                 """
-                inbox: subscribed silently for \(PushChannel.inbox.recordType, privacy: .public) \
-                on the shared database, swept \(stale.count, privacy: .public) stale
+                push: watching contacts' spaces — silently for packets, visibly for rings only; \
+                swept \(stale.count, privacy: .public) stale
                 """)
+            return wanted.map(\.subscriptionID)
         } catch {
             Diagnostics.sync.error(
-                "inbox: could not subscribe for packet pushes: \(String(describing: error), privacy: .public)")
+                "push: could not subscribe: \(String(describing: error), privacy: .public)")
+            return []
         }
-
-        do {
-            try await prepare()
-            try? await seedBellRecordType()
-            _ = try await container.privateCloudDatabase.modifySubscriptions(
-                saving: [bell], deleting: [])
-            registered.append(PushChannel.bell.subscriptionID)
-            Diagnostics.sync.notice(
-                "bell: subscribed visibly for \(PushChannel.bell.recordType, privacy: .public) on our own zone")
-        } catch {
-            Diagnostics.sync.error(
-                "bell: could not subscribe for message pushes: \(String(describing: error), privacy: .public)")
-        }
-
-        return registered
     }
 
-
+    private func seedRecordTypes() async throws {
+        let schema = CKRecordZone.ID(zoneName: "Schema")
+        let database = container.privateCloudDatabase
+        _ = try await database.modifyRecordZones(saving: [CKRecordZone(zoneID: schema)], deleting: [])
+        let seeds = [PacketRecord.type, PairWire.ringType, PairWire.receiptType, PairWire.infoType].map { type in
+            let record = CKRecord(recordType: type, recordID: CKRecord.ID(recordName: "seed-\(type)", zoneID: schema))
+            record[PairWire.ring] = "0"
+            return record
+        }
+        _ = try await database.modifyRecords(saving: seeds, deleting: [], savePolicy: .allKeys)
+        _ = try? await database.modifyRecords(saving: [], deleting: seeds.map(\.recordID))
+    }
 
     public func subscriptionReport() async -> String {
         func describe(_ database: CKDatabase, _ label: String) async -> [String] {

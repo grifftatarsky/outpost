@@ -57,34 +57,60 @@ public actor BudgetedMailbox: Mailbox {
         self.clock = clock
     }
 
-    public func put(_ packet: SyncPacket) async throws {
+    public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws {
         try budget.consume(1, at: clock.now)
         do {
-            try await underlying.put(packet)
+            try await underlying.put(packet, to: peer, in: pairs)
         } catch {
             budget.refund(1)
             throw error
         }
     }
 
-    public func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] {
-        try await underlying.fetch(for: tags)
+    public func account(in pairs: Pairs) async throws -> String {
+        try await underlying.account(in: pairs)
     }
 
-    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
-        try await underlying.acknowledge(id, with: receipt)
+    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL {
+        try await underlying.space(for: peer, naming: account, in: pairs)
     }
 
-    public func sentPackets() async throws -> [PacketID: SentPacket] {
-        try await underlying.sentPackets()
+    public func spaceForACode(in pairs: Pairs) async throws -> URL {
+        try await underlying.spaceForACode(in: pairs)
     }
 
-    public func withdraw(_ id: PacketID) async throws {
-        try await underlying.withdraw(id)
+    public func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL {
+        try await underlying.claim(url, for: peer, naming: account, in: pairs)
     }
 
-    public func ring(_ bell: MessageBell) async throws {
-        try await underlying.ring(bell)
+    public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome {
+        try await underlying.join(link, of: peer, in: pairs)
+    }
+
+    public func close(_ peer: ParticipantID, in pairs: Pairs) async throws {
+        try await underlying.close(peer, in: pairs)
+    }
+
+    public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) async throws -> [SyncPacket] {
+        try await underlying.fetch(from: peer, for: tags, in: pairs)
+    }
+
+    public func acknowledge(
+        _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+    ) async throws {
+        try await underlying.acknowledge(id, from: peer, with: receipt, in: pairs)
+    }
+
+    public func sentPackets(in pairs: Pairs) async throws -> [PacketID: SentPacket] {
+        try await underlying.sentPackets(in: pairs)
+    }
+
+    public func withdraw(_ id: PacketID, in pairs: Pairs) async throws {
+        try await underlying.withdraw(id, in: pairs)
+    }
+
+    public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws {
+        try await underlying.ring(peer, in: pairs)
     }
 }
 

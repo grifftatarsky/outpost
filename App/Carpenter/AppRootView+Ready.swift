@@ -205,10 +205,9 @@ extension AppRootView {
                     onDismiss: { [self] request in await session.dismissPhotoRequest(request.id) })
             },
             onInvite: { room, joinerCode, lifetime in
-                let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
                 do {
                     let issued = try await session.invite(
-                        joinerCode: joinerCode, joining: room, mailbox: url,
+                        joinerCode: joinerCode, joining: room, through: mailbox,
                         lasting: lifetime)
                     #if DEBUG
                         if rig != nil, let code = try? issued.encoded() {
@@ -233,10 +232,10 @@ extension AppRootView {
                     Diagnostics.identity.error("show invite: nothing outstanding to show")
                     return nil
                 }
-                let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
+                let pair = await session.standingOffer(to: pending.joiner, through: mailbox)
                 Diagnostics.identity.notice(
-                    "show invite: showing the invitation already standing, mailbox=\(url != nil, privacy: .public)")
-                return Invite(attestation: attestation, mailbox: url)
+                    "show invite: showing the invitation already standing, link=\(pair != nil, privacy: .public)")
+                return Invite(attestation: attestation, pair: pair)
             },
             onDecideJoin: { room, join, admit in
                 let candidates =

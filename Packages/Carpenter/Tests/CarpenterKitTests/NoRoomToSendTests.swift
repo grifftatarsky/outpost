@@ -5,35 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-private actor RefusingMailbox: Mailbox {
-    private let inner = InMemoryMailbox()
-    private var refusal: MailboxFailure?
-
-    func refuse(_ failure: MailboxFailure) { refusal = failure }
-
-    func relent() { refusal = nil }
-
-    func put(_ packet: SyncPacket) async throws {
-        if let refusal { throw refusal }
-        try await inner.put(packet)
-    }
-
-    func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] {
-        try await inner.fetch(for: tags)
-    }
-
-    func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
-        try await inner.acknowledge(id, with: receipt)
-    }
-
-    func sentPackets() async throws -> [PacketID: SentPacket] { try await inner.sentPackets() }
-
-    func withdraw(_ id: PacketID) async throws { try await inner.withdraw(id) }
-
-    func ring(_ bell: MessageBell) async throws {
-        try await inner.ring(bell)
-    }
-}
+private typealias RefusingMailbox = HookedMailbox
 
 @MainActor
 @Suite("An account with no room to send", .serialized)
@@ -50,8 +22,7 @@ struct NoRoomToSendTests {
         try await theirs.createIdentity(displayName: "Outie")
 
         let room = try await mine.createRoom(named: "Kitchen")
-        let invite = try await mine.invite(
-            joinerCode: theirs.identityCode(), joining: room, mailbox: nil)
+        let invite = try await mine.invite(joinerCode: await theirs.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await theirs.redeem(inviteCode: try invite.encoded())
         try await mine.sync(through: mailbox)
         try await theirs.accept(

@@ -38,6 +38,8 @@ public struct RenderedEntry: Identifiable, Hashable, Sendable {
 
     public var supporterBadge: SupporterBadgeBody? = nil
 
+    public var pairLink: PairLinkBody? = nil
+
     public var seq: UInt64 = 0
     public var clock: VectorClock = VectorClock()
 
@@ -145,7 +147,7 @@ public enum LogRenderer {
 
         switch payload.type {
         case .post, .roomProfile, .memberProfile, .comment, .media, .memberPhoto, .focusStatus,
-            .supporterBadge:
+            .supporterBadge, .pairLink:
             let comment = payload.type == .comment ? try? payload.decode(CommentBody.self) : nil
             var made = RenderedEntry(
                 id: entry.hash,
@@ -172,6 +174,9 @@ public enum LogRenderer {
             }
             if payload.type == .supporterBadge {
                 made.supporterBadge = try? payload.decode(SupporterBadgeBody.self)
+            }
+            if payload.type == .pairLink {
+                made.pairLink = try? payload.decode(PairLinkBody.self)
             }
             return .shows(made)
 

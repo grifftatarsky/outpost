@@ -424,19 +424,19 @@ extension AppSession {
         let previous = projection.photoReference(of: me)
 
         let (reference, ciphertext) = try SealedAttachment.seal(jpeg, kind: .image)
-        let window = SyncSession.window(at: clock.now)
-        let recipients = Set(peers().map { $0.outgoingTag(window: window) })
+        let recipients = addressed(to: peers())
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
         try await mailbox.upload(
-            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients))
+            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
+            in: try currentPairs())
         Diagnostics.sync.notice(
             "avatar: uploaded \(ciphertext.count, privacy: .public) bytes for \(recipients.count, privacy: .public) peer(s)")
 
         try await announcePhotoEverywhere(reference)
 
         if let previous, previous.id != reference.id {
-            do { try await mailbox.delete(attachment: previous.id) } catch {
+            do { try await mailbox.delete(attachment: previous.id, in: try currentPairs()) } catch {
                 Diagnostics.sync.error(
                     "avatar: could not delete the previous photo (\(String(describing: error), privacy: .public))")
             }
@@ -451,7 +451,7 @@ extension AppSession {
         }
         await announceOrReport("taking your photo down") { try await announcePhotoEverywhere(nil) }
         do {
-            try await mailbox.delete(attachment: current.id)
+            try await mailbox.delete(attachment: current.id, in: try currentPairs())
             Diagnostics.sync.notice("avatar: taken down")
         } catch {
             Diagnostics.sync.error(

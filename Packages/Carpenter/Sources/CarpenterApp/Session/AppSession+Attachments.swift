@@ -63,11 +63,10 @@ extension AppSession {
         _ id: AttachmentID, digest: Data, from author: ParticipantID,
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
-        let tags = collectionTags(for: author)
         let name = Diagnostics.fingerprint(id.rawValue.uuidString)
         let bytes: Data?
         do {
-            bytes = try await mailbox.download(id, hint: tags)
+            bytes = try await mailbox.download(id, from: author, in: try currentPairs())
         } catch {
             attachmentRetryAfter[id] = clock.now.addingTimeInterval(Self.attachmentRetryInterval)
             Diagnostics.sync.error(
@@ -107,19 +106,18 @@ extension AppSession {
                 "media: could not sign for an attachment (\(String(describing: error), privacy: .public))")
             return
         }
-        await acknowledge(attachment: id, with: receipt, through: mailbox)
+        await acknowledge(attachment: id, from: author, with: receipt, through: mailbox)
     }
 
     private func acknowledge(
-        attachment id: AttachmentID, with receipt: SealedReceipt, through mailbox: any MediaMailbox
+        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt,
+        through mailbox: any MediaMailbox
     ) async {
         do {
-            try await mailbox.acknowledge(attachment: id, with: receipt)
-            attachmentAcknowledgementsOwed[id] = nil
-        } catch MailboxError.unknownPacket {
+            try await mailbox.acknowledge(attachment: id, from: sender, with: receipt, in: try currentPairs())
             attachmentAcknowledgementsOwed[id] = nil
         } catch {
-            attachmentAcknowledgementsOwed[id] = receipt
+            attachmentAcknowledgementsOwed[id] = OwedPhotoReceipt(receipt: receipt, sender: sender)
             Diagnostics.sync.error(
                 "media: could not sign for an attachment; will retry (\(String(describing: error), privacy: .public))")
         }
@@ -147,14 +145,13 @@ extension AppSession {
         guard enrolment != nil, !persisted.attachmentsSent.isEmpty else { return }
         let stored: [AttachmentID: SentAttachment]
         do {
-            stored = try await mailbox.pendingAttachments()
+            stored = try await mailbox.pendingAttachments(in: try currentPairs())
         } catch {
             Diagnostics.sync.error(
                 "media: could not read the outbox to see who has collected what (\(String(describing: error), privacy: .public))")
             return
         }
         let byPerson = Dictionary(peers().map { ($0.them, $0) }, uniquingKeysWith: { first, _ in first })
-        let window = SyncSession.window(at: clock.now)
         var cleared = 0
         var putBack = 0
         for id in Array(persisted.attachmentsSent.keys) where !uploading.contains(id) {
@@ -183,7 +180,7 @@ extension AppSession {
             let expired = clock.now.timeIntervalSince(record.sentAt) > Self.attachmentKeptFor
             if everybody || expired {
                 if stored[id] != nil {
-                    do { try await mailbox.delete(attachment: id) } catch {
+                    do { try await mailbox.delete(attachment: id, in: try currentPairs()) } catch {
                         Diagnostics.sync.error(
                             "media: could not clear a collected attachment (\(String(describing: error), privacy: .public))")
                         continue
@@ -207,9 +204,10 @@ extension AppSession {
                     "media: could not read the kept copy of an attachment (\(String(describing: error), privacy: .public))")
                 continue
             }
-            let tags = Set(owed.compactMap { byPerson[$0]?.outgoingTag(window: window) })
+            let recipients = addressed(to: owed.compactMap { byPerson[$0] })
             do {
-                try await mailbox.upload(OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: tags))
+                try await mailbox.upload(
+                    OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: recipients), in: try currentPairs())
                 putBack += 1
             } catch {
                 Diagnostics.sync.error(
@@ -252,8 +250,8 @@ extension AppSession {
                 }
             }
         }
-        for (id, receipt) in attachmentAcknowledgementsOwed {
-            await acknowledge(attachment: id, with: receipt, through: mailbox)
+        for (id, owed) in attachmentAcknowledgementsOwed {
+            await acknowledge(attachment: id, from: owed.sender, with: owed.receipt, through: mailbox)
         }
     }
 
@@ -262,7 +260,7 @@ extension AppSession {
         sweptAttachments = true
         let waiting: [AttachmentID: Date]
         do {
-            waiting = try await mailbox.sweepableAttachments()
+            waiting = try await mailbox.sweepableAttachments(in: try currentPairs())
         } catch {
             sweptAttachments = false
             Diagnostics.sync.error(
@@ -270,7 +268,9 @@ extension AppSession {
             return
         }
         var referenced = attachmentsThisMemberSent()
-        if !persisted.uploadsLeftForOthers.isEmpty, let stored = try? await mailbox.pendingAttachments() {
+        if !persisted.uploadsLeftForOthers.isEmpty,
+            let pairs = pairs(), let stored = try? await mailbox.pendingAttachments(in: pairs)
+        {
             persisted.uploadsLeftForOthers.removeAll { stored[$0] == nil && waiting[$0] == nil }
         }
         referenced.formUnion(persisted.uploadsLeftForOthers)
@@ -281,7 +281,7 @@ extension AppSession {
             && persisted.attachmentsSent[id] == nil && !uploading.contains(id)
         {
             do {
-                try await mailbox.delete(attachment: id)
+                try await mailbox.delete(attachment: id, in: try currentPairs())
                 Diagnostics.sync.notice("media: cleared an attachment no device of this member is looking after")
             } catch {
                 Diagnostics.sync.error(
@@ -290,7 +290,7 @@ extension AppSession {
         }
         for id in waiting.keys where !referenced.contains(id) && !uploading.contains(id) {
             do {
-                try await mailbox.delete(attachment: id)
+                try await mailbox.delete(attachment: id, in: try currentPairs())
                 Diagnostics.sync.notice("media: swept an upload no entry names")
             } catch {
                 Diagnostics.sync.error(

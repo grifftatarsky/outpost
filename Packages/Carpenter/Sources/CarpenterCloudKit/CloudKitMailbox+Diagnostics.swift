@@ -2,52 +2,51 @@ import CloudKit
 import CarpenterKit
 import Foundation
 
-// MARK: The round trip a member can run from Settings
+// MARK: What a member can check from Settings
 
 extension CloudKitMailbox {
-    public func roundTrip() async -> String {
-        var steps: [String] = []
-
-        func attempt(_ name: String, _ work: () async throws -> String) async -> Bool {
-            do {
-                steps.append("\(name): \(try await work())")
-                return true
-            } catch {
-                steps.append("\(name): FAILED — \(error)")
-                return false
-            }
+    public func roundTrip(in pairs: Pairs) async -> String {
+        var lines: [String] = []
+        do {
+            lines.append("account: \(String(try await account(in: pairs).prefix(8)))…")
+            try await refresh()
+        } catch {
+            return "iCloud could not be read — \(error)"
         }
+        let mine = await index.mine
+        let theirs = await index.theirs
+        let known = Set(pairs.hints.values)
+        lines.append("spaces of yours: \(mine.count), for people this device knows: \(mine.values.filter { $0.hint.map(known.contains) ?? false }.count)")
+        lines.append("spaces you read: \(theirs.count), from people this device knows: \(theirs.values.filter { $0.hint.map(known.contains) ?? false }.count)")
+        let waiting = mine.values.reduce(0) { $0 + $1.records.values.filter { $0.type == PacketRecord.type }.count }
+        lines.append("packets waiting to be collected from you: \(waiting)")
+        lines.append(await index.hasOldOutbox ? "old outbox: still kept while contacts move over" : "old outbox: gone")
+        return lines.joined(separator: "\n")
+    }
+}
 
-        let tag = RecipientTag(rawValue: Data((0..<16).map { _ in UInt8.random(in: 0...255) }))
-        let packet = SyncPacket(
-            wraps: [tag: Data("wrap".utf8)], ciphertext: Data("sealed".utf8))
+extension CloudKitMailbox {
+    private var timingZone: CKRecordZone.ID { CKRecordZone.ID(zoneName: "Timing") }
 
-        guard await attempt("zone", { try await prepare(); return "ready" }) else {
-            return steps.joined(separator: "\n")
-        }
-        guard await attempt("put", { try await put(packet); return "wrote one packet" }) else {
-            return steps.joined(separator: "\n")
-        }
+    public func putForTiming(_ id: AttachmentID, _ ciphertext: Data) async throws {
+        let database = container.privateCloudDatabase
+        _ = try await database.modifyRecordZones(saving: [CKRecordZone(zoneID: timingZone)], deleting: [])
+        let scratch = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).sealed")
+        try ciphertext.write(to: scratch, options: .atomic)
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let record = CKRecord(recordType: AttachmentRecord.type, recordID: CKRecord.ID(recordName: id.recordName, zoneID: timingZone))
+        record[AttachmentWire.blob] = CKAsset(fileURL: scratch)
+        try await save([record], in: database)
+    }
 
-        let found = await attempt("fetch") {
-            let all = try await fetch(for: tag)
-            guard all.contains(where: { $0.id == packet.id }) else {
-                return "did NOT find it — \(all.count) other packet(s) for this tag"
-            }
-            return "found it"
-        }
+    public func readForTiming(_ id: AttachmentID) async throws -> Data? {
+        let record = try await container.privateCloudDatabase.record(for: CKRecord.ID(recordName: id.recordName, zoneID: timingZone))
+        guard let url = (record[AttachmentWire.blob] as? CKAsset)?.fileURL else { return nil }
+        return try Data(contentsOf: url)
+    }
 
-        _ = await attempt("withdraw") {
-            try await withdraw(packet.id)
-            return "removed"
-        }
-
-        _ = await attempt("fetch again") {
-            let all = try await fetch(for: tag)
-            return all.contains { $0.id == packet.id } ? "still there — not deleted" : "gone"
-        }
-
-        steps.append(found ? "\nThe mailbox works for one member." : "\nThe mailbox does not work.")
-        return steps.joined(separator: "\n")
+    @discardableResult
+    public func clearTimingSpace() async -> Bool {
+        (try? await container.privateCloudDatabase.modifyRecordZones(saving: [], deleting: [timingZone])) != nil
     }
 }

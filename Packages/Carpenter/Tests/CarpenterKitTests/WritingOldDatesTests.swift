@@ -163,7 +163,7 @@ struct WhatTheRegistryCountsTests {
                 id: PacketID(),
                 delivery: SyncEngine.Delivery(
                     entries: [], certificates: certificates, revocations: revocations, grants: []),
-                storedAt: storedAt)
+                storedAt: storedAt, from: identity.id)
         }
         let collected = SyncSession.CollectedPackets(
             tags: [],
@@ -364,7 +364,7 @@ struct RemembersRemovalsTests {
         try await griff.approveNewDevice(tablet)
 
         let room = try await griff.createRoom(named: "Kitchen")
-        let invite = try await griff.invite(joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await griff.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await griff.sync(through: mailbox)
         try await peer.accept(invite.attestation, from: try #require(griff.enrolment?.identity.publicKeys))

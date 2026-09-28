@@ -37,8 +37,7 @@ struct AnOutpostRingsTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<2 {
             try await alice.sync(through: mailbox)
@@ -64,10 +63,10 @@ struct AnOutpostRingsTests {
         let mailbox = InMemoryMailbox()
         let (_, bob, post) = try await aWallBobCanRead(clock, mailbox)
 
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
         try await bob.comment(on: post, text: "and the second")
         let report = try await bob.sync(through: mailbox)
-        let after = await mailbox.bells.count
+        let after = await mailbox.rings.count
 
         #expect(report.bellsRung >= 1, "a comment was written and its author was told nothing")
         #expect(after > before)
@@ -79,12 +78,12 @@ struct AnOutpostRingsTests {
         let mailbox = InMemoryMailbox()
         let (_, bob, post) = try await aWallBobCanRead(clock, mailbox)
 
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
         try await bob.react(to: post, emoji: "🔥")
         let report = try await bob.sync(through: mailbox)
 
         #expect(report.bellsRung >= 1, "a reaction was written and its author was told nothing")
-        #expect(await mailbox.bells.count > before)
+        #expect(await mailbox.rings.count > before)
     }
 
     @Test("Taking a reaction back rings nobody")
@@ -96,12 +95,12 @@ struct AnOutpostRingsTests {
         try await bob.react(to: post, emoji: "🔥")
         _ = try await bob.sync(through: mailbox)
 
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
         try await bob.react(to: post, emoji: nil)
         let report = try await bob.sync(through: mailbox)
 
         #expect(report.bellsRung == 0, "taking a like back woke somebody up")
-        #expect(await mailbox.bells.count == before)
+        #expect(await mailbox.rings.count == before)
     }
 
     @Test("Commenting on your own post rings nobody who did not ask")
@@ -111,13 +110,13 @@ struct AnOutpostRingsTests {
         let (alice, _, _) = try await aWallBobCanRead(clock, mailbox)
 
         let mine = try #require(alice.feed().first { $0.isMine })
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
         try await alice.comment(on: mine, text: "a note to myself")
         let report = try await alice.sync(through: mailbox)
 
         #expect(
             report.bellsRung == 0,
             "commenting on your own post rang somebody who never asked to be woken for this wall")
-        #expect(await mailbox.bells.count == before)
+        #expect(await mailbox.rings.count == before)
     }
 }

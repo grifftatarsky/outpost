@@ -60,8 +60,7 @@ struct RemovalSurvivesACrashTests {
         _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
         alongside everyone: [AppSession], through mailbox: InMemoryMailbox
     ) async throws {
-        let invite = try await inviter.invite(
-            joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+        let invite = try await inviter.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await joiner.redeem(inviteCode: try invite.encoded())
         try await settle(everyone + [joiner], through: mailbox)
     }

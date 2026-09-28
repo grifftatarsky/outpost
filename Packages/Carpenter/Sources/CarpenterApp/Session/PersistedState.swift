@@ -55,6 +55,9 @@ struct PersistedState: Codable, Equatable, Sendable {
     var photosAsked: [AttachmentID: AskedPhoto] = [:]
     var photoAsks: [PhotoAskRecord] = []
     var addressAnnounced: [ParticipantID: AnnouncedAddress] = [:]
+    var pairBook: [ParticipantID: PairBookEntry] = [:]
+    var codeLink: SignedPairLink?
+    var codeClaims: [CodeClaim] = []
     var acceptedInvitations: [AcceptedInvitation] = []
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
@@ -126,6 +129,9 @@ struct PersistedState: Codable, Equatable, Sendable {
         photoAsks = try container.decodeIfPresent([PhotoAskRecord].self, forKey: .photoAsks) ?? []
         addressAnnounced =
             try container.decodeIfPresent([ParticipantID: AnnouncedAddress].self, forKey: .addressAnnounced) ?? [:]
+        pairBook = try container.decodeIfPresent([ParticipantID: PairBookEntry].self, forKey: .pairBook) ?? [:]
+        codeLink = try container.decodeIfPresent(SignedPairLink.self, forKey: .codeLink)
+        codeClaims = try container.decodeIfPresent([CodeClaim].self, forKey: .codeClaims) ?? []
         holesNoticed = try container.decodeIfPresent([RoomID: Date].self, forKey: .holesNoticed) ?? [:]
         askedAutomatically =
             try container.decodeIfPresent([RoomID: Date].self, forKey: .askedAutomatically) ?? [:]

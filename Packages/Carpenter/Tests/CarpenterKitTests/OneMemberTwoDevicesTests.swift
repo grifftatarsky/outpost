@@ -22,7 +22,7 @@ struct OneMemberTwoDevicesTests {
         try await friend.createIdentity(displayName: "Outie")
 
         let room = try await phone.createRoom(named: "Kitchen")
-        let invite = try await phone.invite(joinerCode: friend.identityCode(), joining: room, mailbox: nil)
+        let invite = try await phone.invite(joinerCode: await friend.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await friend.redeem(inviteCode: try invite.encoded())
         try await phone.sync(through: mailbox)
         try await friend.accept(invite.attestation, from: try #require(phone.enrolment?.identity.publicKeys))
@@ -69,7 +69,7 @@ struct OneMemberTwoDevicesTests {
         try await carol.createIdentity(displayName: "Carol")
 
         let room = try await friend.createRoom(named: "Kitchen")
-        let invite = try await friend.invite(joinerCode: phone.identityCode(), joining: room, mailbox: nil)
+        let invite = try await friend.invite(joinerCode: await phone.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await phone.redeem(inviteCode: try invite.encoded())
         try await friend.sync(through: mailbox)
         try await phone.accept(invite.attestation, from: try #require(friend.enrolment?.identity.publicKeys))
@@ -83,7 +83,7 @@ struct OneMemberTwoDevicesTests {
         try await phone.approveNewDevice(tablet)
         await tablet.settleDeviceSync { tablet.rooms.contains { $0.id == room } }
 
-        let second = try await friend.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let second = try await friend.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try second.encoded())
         try await friend.sync(through: mailbox)
         try await carol.accept(second.attestation, from: try #require(friend.enrolment?.identity.publicKeys))

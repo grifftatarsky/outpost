@@ -2,113 +2,126 @@ import CloudKit
 import CarpenterKit
 import Foundation
 
-// MARK: Writing a packet, reading one, and acknowledging it
+// MARK: Packets, rings and receipts, each written only into this member's own space for one person
 
 extension CloudKitMailbox {
-    public func put(_ packet: SyncPacket) async throws {
-        let weight = MailboxRules.weigh(PacketWire.fields(of: packet))
+    public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws {
+        let fields = PacketWire.fields(of: packet)
+        let weight = MailboxRules.weigh(fields)
         guard weight <= MailboxRules.recordByteCeiling else {
-            throw MailboxError.recordTooLarge(
-                bytes: weight, ceiling: MailboxRules.recordByteCeiling)
+            throw MailboxError.recordTooLarge(bytes: weight, ceiling: MailboxRules.recordByteCeiling)
         }
-
-        let record = CKRecord(
-            recordType: PacketRecord.type,
-            recordID: CKRecord.ID(recordName: packet.id.recordName, zoneID: outbox))
-
-        try PacketRecord.write(packet, into: record)
-        do {
-            _ = try await container.privateCloudDatabase.modifyRecords(
-                saving: [record], deleting: [], savePolicy: .allKeys)
-        } catch {
-            throw Self.refusal(for: error) ?? error
-        }
-        Diagnostics.sync.notice(
-            "mailbox put: wrote a packet addressed to \(packet.wraps.count, privacy: .public) recipient(s)")
+        let zone = try await zone(for: peer, in: pairs)
+        let record = CKRecord(recordType: PacketRecord.type, recordID: CKRecord.ID(recordName: packet.id.recordName, zoneID: zone))
+        PacketRecord.write(fields, into: record)
+        try await save([record], in: container.privateCloudDatabase)
+        await index.wrote(packet.id.recordName, PairIndex.Cached(type: PacketRecord.type, fields: fields, at: Date()), in: zone)
+        await putInOldOutbox(record, fields: fields, for: peer, in: pairs)
     }
 
-    public func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] {
-        var packets: [SyncPacket] = []
-        let wanted = Set(tags.map(\.rawValue))
-
-        let zones = try await searchable()
-        var scanned = 0
-        for (database, zone) in zones {
-            guard let records = try? await everything(in: zone, of: database) else { continue }
-            scanned += records.count
-
-            var isOurPeer = false
-            for record in records {
-                guard record.recordType == PacketRecord.type else { continue }
-                let addressed = record[PacketWire.wrapTags] as? [Data] ?? []
-                guard addressed.contains(where: wanted.contains) else { continue }
-                guard var packet = PacketRecord.read(record) else { continue }
-                packet.storedAt = record.modificationDate
-                packets.append(packet)
-                isOurPeer = true
-            }
-            if isOurPeer {
-                await directory.learn(zone: zone, in: database.databaseScope, for: tags)
-            }
-        }
-        let owners = zones.map { $0.1.ownerName == CKCurrentUserDefaultName ? "own" : String($0.1.ownerName.suffix(6)) }
-        Diagnostics.sync.notice(
-            """
-            mailbox fetch: \(zones.count, privacy: .public) zone(s) reachable \
-            [\(owners.joined(separator: " "), privacy: .public)] \
-            (\(scanned, privacy: .public) record(s) total), \
-            \(packets.count, privacy: .public) addressed to us
-            """)
-        return packets
+    public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws {
+        let zone = try await zone(for: peer, in: pairs)
+        let record = CKRecord(recordType: PairWire.ringType, recordID: CKRecord.ID(recordName: PairWire.ringRecord, zoneID: zone))
+        record[PairWire.ring] = String(Date().timeIntervalSince1970)
+        try await save([record], in: container.privateCloudDatabase)
     }
 
-    public func sentPackets() async throws -> [PacketID: SentPacket] {
-        let records = (try? await everything(in: outbox, of: container.privateCloudDatabase)) ?? []
+    public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) async throws
+        -> [SyncPacket]
+    {
+        let hint = try pairs.hint(for: peer)
+        try await refresh()
+        let theirs = await index.theirZone(for: hint)
+        let mine = await index.myZone(for: hint)
+        var found = packets(in: theirs, for: tags, from: peer, answeredIn: mine)
+        found += await oldOutboxPackets(for: tags, from: peer)
+        if let theirs { await clearAnswered(to: peer, hint: hint, holding: Set(theirs.records.keys)) }
+        return found
+    }
+
+    public func acknowledge(
+        _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+    ) async throws {
+        try await answer(PairWire.receiptName(for: id), with: receipt, to: peer, in: pairs)
+    }
+
+    public func sentPackets(in pairs: Pairs) async throws -> [PacketID: SentPacket] {
+        try await refresh()
         var sent: [PacketID: SentPacket] = [:]
-        for record in records where record.recordType == PacketRecord.type {
-            guard let id = PacketID(recordName: record.recordID.recordName),
-                let packet = PacketRecord.read(record)
-            else { continue }
-            sent[id] = SentPacket(
-                recipients: packet.recipients, receipts: packet.receipts, createdAt: record.creationDate,
-                contentDigest: packet.contentDigest)
+        for (peer, hint) in pairs.hints {
+            guard let zone = await index.mineFor(hint), let mine = await index.mine[zone] else { continue }
+            let answers = await index.theirZone(for: hint)?.records ?? [:]
+            for (name, cached) in mine.records where cached.type == PacketRecord.type {
+                guard let id = PacketID(recordName: name), let packet = PacketWire.packet(from: cached.fields) else { continue }
+                let receipt = answers[PairWire.receiptName(for: id)].flatMap { PacketWire.receipt(from: $0.fields) }
+                sent[id] = SentPacket(
+                    to: peer, recipients: packet.recipients, receipts: receipt.map { [$0] } ?? [],
+                    createdAt: cached.created, contentDigest: packet.contentDigest)
+            }
         }
         return sent
     }
 
-    public func acknowledge(_ id: PacketID, with receipt: SealedReceipt) async throws {
-        for attempt in 0..<Self.acknowledgementAttempts {
-            do {
-                try await attemptAcknowledgement(recordNamed: id.recordName, with: receipt)
-                return
-            } catch let error as CKError where error.code == .serverRecordChanged {
-                guard attempt < Self.acknowledgementAttempts - 1 else { throw error }
+    public func withdraw(_ id: PacketID, in pairs: Pairs) async throws {
+        try await remove(id.recordName)
+        await withdrawFromOldOutbox(id)
+    }
+
+    // MARK: Shared by packets and photos
+
+    func answer(_ name: String, with receipt: SealedReceipt, to peer: ParticipantID, in pairs: Pairs) async throws {
+        let zone = try await zone(for: peer, in: pairs)
+        let fields = PacketWire.receiptFields(receipt)
+        let record = CKRecord(recordType: PairWire.receiptType, recordID: CKRecord.ID(recordName: name, zoneID: zone))
+        PacketRecord.write(fields, into: record)
+        try await save([record], in: container.privateCloudDatabase)
+        await index.wrote(name, PairIndex.Cached(type: PairWire.receiptType, fields: fields, at: Date()), in: zone)
+    }
+
+    func remove(_ name: String) async throws {
+        let zones = await index.mine.filter { $0.value.records[name] != nil }.map(\.key)
+        guard !zones.isEmpty else { return }
+        let ids = zones.map { CKRecord.ID(recordName: name, zoneID: $0) }
+        _ = try await container.privateCloudDatabase.modifyRecords(saving: [], deleting: ids)
+        for zone in zones { await index.removed(name, from: zone) }
+    }
+
+    private func packets(
+        in theirs: PairIndex.Zone?, for tags: Set<RecipientTag>, from peer: ParticipantID, answeredIn mine: PairIndex.Zone?
+    ) -> [SyncPacket] {
+        guard let theirs else { return [] }
+        return theirs.records
+            .filter { $0.value.type == PacketRecord.type }
+            .sorted { $0.value.created != $1.value.created ? $0.value.created < $1.value.created : $0.key < $1.key }
+            .compactMap { name, cached in
+                guard var packet = PacketWire.packet(from: cached.fields), !packet.recipients.isDisjoint(with: tags) else {
+                    return nil
+                }
+                packet.storedAt = cached.modified
+                packet.from = peer
+                if let answer = mine?.records[PairWire.receiptName(for: packet.id)],
+                    let receipt = PacketWire.receipt(from: answer.fields)
+                {
+                    packet.receipts = [receipt]
+                }
+                return packet
             }
-        }
     }
 
-    private static let acknowledgementAttempts = 4
-
-    private func attemptAcknowledgement(recordNamed name: String, with receipt: SealedReceipt) async throws {
-        guard let (database, record) = try await locate(recordNamed: name) else {
-            throw MailboxError.unknownPacket
-        }
-        var fields: [String: PacketField] = [:]
-        if let tags = record[PacketWire.receiptTags] as? [Data] { fields[PacketWire.receiptTags] = .dataList(tags) }
-        if let values = record[PacketWire.receiptValues] as? [Data] {
-            fields[PacketWire.receiptValues] = .dataList(values)
-        }
-        guard PacketWire.adding(receipt, to: &fields),
-            case .dataList(let tags)? = fields[PacketWire.receiptTags],
-            case .dataList(let values)? = fields[PacketWire.receiptValues]
-        else { return }
-        record[PacketWire.receiptTags] = tags
-        record[PacketWire.receiptValues] = values
-        _ = try await database.modifyRecords(saving: [record], deleting: [], savePolicy: .ifServerRecordUnchanged)
-    }
-
-    public func withdraw(_ id: PacketID) async throws {
-        _ = try await container.privateCloudDatabase.modifyRecords(
-            saving: [], deleting: [CKRecord.ID(recordName: id.recordName, zoneID: outbox)])
+    private func clearAnswered(to peer: ParticipantID, hint: PairHint, holding held: Set<String>) async {
+        guard let zone = await index.mineFor(hint), let mine = await index.mine[zone] else { return }
+        let settled = Date().addingTimeInterval(-MailboxRules.sweepAge)
+        let stale = mine.records.filter { name, cached in
+            guard cached.type == PairWire.receiptType, cached.created < settled else { return false }
+            if let packet = PairWire.packet(fromReceiptName: name) { return !held.contains(packet.recordName) }
+            if let photo = PairWire.attachment(fromReceiptName: name) {
+                return !held.contains(Self.photoRecordName(photo))
+            }
+            return false
+        }.map(\.key)
+        guard !stale.isEmpty else { return }
+        let ids = stale.map { CKRecord.ID(recordName: $0, zoneID: zone) }
+        guard (try? await container.privateCloudDatabase.modifyRecords(saving: [], deleting: ids)) != nil else { return }
+        for name in stale { await index.removed(name, from: zone) }
     }
 }

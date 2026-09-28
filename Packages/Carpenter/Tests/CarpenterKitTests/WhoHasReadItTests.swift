@@ -24,8 +24,7 @@ struct WhoHasReadItTests {
 
         let room = try await host.createRoom(named: "Kitchen")
         for other in others {
-            let invite = try await host.invite(
-                joinerCode: other.identityCode(), joining: room, mailbox: nil)
+            let invite = try await host.invite(joinerCode: await other.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await other.redeem(inviteCode: try invite.encoded())
             try await host.sync(through: mailbox)
             try await other.accept(
@@ -190,8 +189,7 @@ struct PerRoomReportingTests {
         var made: [RoomID] = []
         for name in ["Kitchen", "Hangar"] {
             let room = try await host.createRoom(named: name)
-            let invite = try await host.invite(
-                joinerCode: reader.identityCode(), joining: room, mailbox: nil)
+            let invite = try await host.invite(joinerCode: await reader.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await reader.redeem(inviteCode: try invite.encoded())
             try await host.sync(through: mailbox)
             try await reader.accept(

@@ -9,8 +9,7 @@ func join(
     _ joiner: AppSession, into room: RoomID, of host: AppSession,
     through mailbox: InMemoryMailbox, media: (any MediaMailbox)? = nil, rounds: Int = 5
 ) async throws {
-    let invite = try await host.invite(
-        joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+    let invite = try await host.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
     try await joiner.redeem(inviteCode: try invite.encoded())
     for _ in 0..<rounds {
         try await host.sync(through: mailbox, media: media)

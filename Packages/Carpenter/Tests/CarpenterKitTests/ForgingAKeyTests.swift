@@ -89,7 +89,7 @@ struct ARemovedDeviceCannotHandOutKeysTests {
         try await phone.approveNewDevice(stolen)
 
         let room = try await phone.createRoom(named: "Kitchen")
-        let invite = try await phone.invite(joinerCode: friend.identityCode(), joining: room, mailbox: nil)
+        let invite = try await phone.invite(joinerCode: await friend.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await friend.redeem(inviteCode: try invite.encoded())
         try await phone.sync(through: mailbox)
         try await friend.accept(invite.attestation, from: try #require(phone.enrolment?.identity.publicKeys))
@@ -121,7 +121,8 @@ struct ARemovedDeviceCannotHandOutKeysTests {
         clock.advance(by: 60)
         try await mailbox.put(
             try SyncEngine.pack([], for: [toFriend], granting: [(to: toFriend, grant: forged)],
-                window: SyncSession.window(at: clock.now)))
+                window: SyncSession.window(at: clock.now)),
+            to: friendID, in: Pairs(me: memberID, hints: [friendID: pairwise.pairHint]))
 
         for _ in 0..<3 { try await friend.sync(through: mailbox) }
 

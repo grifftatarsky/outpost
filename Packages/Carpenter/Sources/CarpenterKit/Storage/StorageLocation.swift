@@ -11,7 +11,6 @@ public enum AppGroup {
 public enum StorageLocation {
     public static let logName = "log.carpenter"
     public static let stateName = "state.json"
-    public static let mailboxDirectoryName = "mailbox-directory.json"
     public static let avatarName = "avatar.jpg"
     public static let outpostAvatarName = "outpost-avatar.jpg"
     public static let personAvatarsName = "people-avatars"

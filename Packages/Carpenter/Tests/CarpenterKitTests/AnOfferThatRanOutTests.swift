@@ -64,8 +64,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await alice.sync(through: mailbox)
@@ -105,8 +104,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<3 { try await bob.sync(through: mailbox) }
 
@@ -137,8 +135,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<3 { try await bob.sync(through: mailbox) }
 
@@ -170,8 +167,7 @@ struct AnOfferThatRanOutTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.setAccess(.founder, in: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await bob.sync(through: mailbox)
@@ -189,8 +185,7 @@ struct AnOfferThatRanOutTests {
         let carol = TestSession.make(clock: clock)
         await carol.load()
         try await carol.createIdentity(displayName: "Carol")
-        let ignored = try await alice.invite(
-            joinerCode: carol.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let ignored = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         clock.advance(by: 2 * day)
 
         let carolID = try #require(carol.enrolment?.identity.id)
@@ -246,8 +241,7 @@ struct AnOfferThatRanOutTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.setAccess(.founder, in: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await bob.sync(through: mailbox)
@@ -288,8 +282,7 @@ struct AnOfferThatRanOutTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.setAccess(.founder, in: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await bob.sync(through: mailbox)
@@ -323,8 +316,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await alice.sync(through: mailbox)
@@ -355,8 +347,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil, lasting: .aDay)
         clock.advance(by: 2 * day)
 
         #expect(bob.inspect(inviteCode: try invite.encoded()) == nil)

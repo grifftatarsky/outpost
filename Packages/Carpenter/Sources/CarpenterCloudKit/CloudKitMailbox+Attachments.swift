@@ -2,48 +2,54 @@ import CloudKit
 import CarpenterKit
 import Foundation
 
-// MARK: Photos and clips, which travel as assets
+// MARK: Photos and clips: one copy in the space of each person they are for
 
 extension CloudKitMailbox {
-    public func upload(_ attachment: OutgoingAttachment) async throws {
-        let record = CKRecord(
-            recordType: AttachmentRecord.type,
-            recordID: CKRecord.ID(recordName: attachment.id.recordName, zoneID: outbox))
-        let scratch = try AttachmentRecord.write(attachment, into: record)
+    static func photoRecordName(_ id: AttachmentID) -> String { LocalPairStore.photoPrefix + id.recordName }
+
+    public func upload(_ attachment: OutgoingAttachment, in pairs: Pairs) async throws {
+        let scratch = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).sealed")
+        try attachment.ciphertext.write(to: scratch, options: .atomic)
         defer { try? FileManager.default.removeItem(at: scratch) }
 
-        _ = try await container.privateCloudDatabase.modifyRecords(
-            saving: [record], deleting: [], savePolicy: .allKeys)
+        var records: [CKRecord] = []
+        var written: [(CKRecordZone.ID, [String: PacketField])] = []
+        for (peer, tag) in attachment.recipients {
+            let zone = try await zone(for: peer, in: pairs)
+            let record = CKRecord(
+                recordType: AttachmentRecord.type,
+                recordID: CKRecord.ID(recordName: Self.photoRecordName(attachment.id), zoneID: zone))
+            var fields = AttachmentWire.fields(of: attachment, for: tag)
+            fields[AttachmentWire.blob] = nil
+            PacketRecord.write(fields, into: record)
+            record[AttachmentWire.blob] = CKAsset(fileURL: scratch)
+            records.append(record)
+            written.append((zone, fields))
+        }
+        guard !records.isEmpty else { return }
+        try await save(records, in: container.privateCloudDatabase)
+        for (zone, fields) in written {
+            await index.wrote(
+                Self.photoRecordName(attachment.id), PairIndex.Cached(type: AttachmentRecord.type, fields: fields, at: Date()),
+                in: zone)
+        }
         Diagnostics.sync.notice(
             """
             mailbox: uploaded an attachment of \(attachment.ciphertext.count, privacy: .public) bytes \
-            for \(attachment.recipients.count, privacy: .public) recipient(s)
+            for \(records.count, privacy: .public) person(s)
             """)
     }
 
-    public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) async throws -> Data? {
-        var candidates: [(CKDatabase, CKRecordZone.ID)] = []
-        if tags.isEmpty {
-            candidates.append((container.privateCloudDatabase, outbox))
-        } else {
-            for tag in tags {
-                if let (zone, scope) = await directory.place(for: tag) {
-                    candidates.append((database(for: scope), zone))
-                    break
-                }
-            }
-        }
-        for (database, zone) in try await searchable()
-        where !candidates.contains(where: { $0.1 == zone && $0.0.databaseScope == database.databaseScope }) {
-            candidates.append((database, zone))
-        }
-
-        for (database, zone) in candidates {
+    public func download(_ id: AttachmentID, from sender: ParticipantID, in pairs: Pairs) async throws -> Data? {
+        let hint = try pairs.hint(for: sender)
+        try await refresh()
+        var places: [(CKRecordZone.ID, String)] = []
+        if let zone = await index.theirsFor(hint) { places.append((zone, Self.photoRecordName(id))) }
+        for zone in await index.legacy.keys { places.append((zone, id.recordName)) }
+        for (zone, name) in places {
             do {
-                let record = try await database.record(
-                    for: CKRecord.ID(recordName: id.recordName, zoneID: zone))
-                guard record.recordType == AttachmentRecord.type,
-                    let asset = record[AttachmentWire.blob] as? CKAsset,
+                let record = try await container.sharedCloudDatabase.record(for: CKRecord.ID(recordName: name, zoneID: zone))
+                guard record.recordType == AttachmentRecord.type, let asset = record[AttachmentWire.blob] as? CKAsset,
                     let url = asset.fileURL
                 else { continue }
                 return try Data(contentsOf: url)
@@ -54,65 +60,52 @@ extension CloudKitMailbox {
         return nil
     }
 
-    public func acknowledge(attachment id: AttachmentID, with receipt: SealedReceipt) async throws {
-        for attempt in 0..<4 {
-            do {
-                guard
-                    let (database, record) = try await locate(
-                        recordNamed: id.recordName, keys: [PacketWire.receiptTags, PacketWire.receiptValues])
-                else {
-                    throw MailboxError.unknownPacket
+    public func acknowledge(
+        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+    ) async throws {
+        try await answer(PairWire.receiptName(for: id), with: receipt, to: sender, in: pairs)
+    }
+
+    public func pendingAttachments(in pairs: Pairs) async throws -> [AttachmentID: SentAttachment] {
+        try await refresh()
+        var recipients: [AttachmentID: Set<RecipientTag>] = [:]
+        var receipts: [AttachmentID: [SealedReceipt]] = [:]
+        for hint in pairs.hints.values {
+            guard let zone = await index.mineFor(hint), let mine = await index.mine[zone] else { continue }
+            let answers = await index.theirZone(for: hint)?.records ?? [:]
+            for (name, cached) in mine.records where cached.type == AttachmentRecord.type {
+                guard name.hasPrefix(LocalPairStore.photoPrefix),
+                    let id = AttachmentID(recordName: String(name.dropFirst(LocalPairStore.photoPrefix.count)))
+                else { continue }
+                recipients[id, default: []].formUnion(AttachmentWire.recipients(in: cached.fields))
+                if let answer = answers[PairWire.receiptName(for: id)], answer.modified >= cached.modified,
+                    let receipt = PacketWire.receipt(from: answer.fields)
+                {
+                    receipts[id, default: []].append(receipt)
                 }
-                var fields: [String: PacketField] = [:]
-                if let tags = record[PacketWire.receiptTags] as? [Data] { fields[PacketWire.receiptTags] = .dataList(tags) }
-                if let values = record[PacketWire.receiptValues] as? [Data] {
-                    fields[PacketWire.receiptValues] = .dataList(values)
-                }
-                guard PacketWire.adding(receipt, to: &fields),
-                    case .dataList(let tags)? = fields[PacketWire.receiptTags],
-                    case .dataList(let values)? = fields[PacketWire.receiptValues]
-                else { return }
-                record[PacketWire.receiptTags] = tags
-                record[PacketWire.receiptValues] = values
-                _ = try await database.modifyRecords(
-                    saving: [record], deleting: [], savePolicy: .ifServerRecordUnchanged)
-                return
-            } catch let error as CKError where error.code == .serverRecordChanged {
-                guard attempt < 3 else { throw error }
             }
+        }
+        return recipients.reduce(into: [:]) { found, entry in
+            found[entry.key] = SentAttachment(recipients: entry.value, receipts: receipts[entry.key] ?? [])
         }
     }
 
-    public func pendingAttachments() async throws -> [AttachmentID: SentAttachment] {
-        let records = try await everything(in: outbox, of: container.privateCloudDatabase)
-        var sent: [AttachmentID: SentAttachment] = [:]
-        for record in records where record.recordType == AttachmentRecord.type {
-            guard let id = AttachmentID(recordName: record.recordID.recordName) else { continue }
-            var fields: [String: PacketField] = [:]
-            for key in [AttachmentWire.outstanding, PacketWire.receiptTags, PacketWire.receiptValues] {
-                if let list = record[key] as? [Data] { fields[key] = .dataList(list) }
-            }
-            sent[id] = AttachmentWire.sent(from: fields)
-        }
-        return sent
-    }
-
-    public func sweepableAttachments() async throws -> [AttachmentID: Date] {
+    public func sweepableAttachments(in pairs: Pairs) async throws -> [AttachmentID: Date] {
+        try await refresh()
         let settled = Date().addingTimeInterval(-MailboxRules.sweepAge)
-        let records = try await everything(in: outbox, of: container.privateCloudDatabase)
-        var sweepable: [AttachmentID: Date] = [:]
-        for record in records where record.recordType == AttachmentRecord.type {
-            guard let id = AttachmentID(recordName: record.recordID.recordName),
-                let created = record.creationDate, created < settled
-            else { continue }
-            sweepable[id] = record.modificationDate ?? created
+        var found: [AttachmentID: Date] = [:]
+        for zone in await index.mine.values {
+            for (name, cached) in zone.records where cached.type == AttachmentRecord.type && cached.created < settled {
+                guard let id = AttachmentID(recordName: String(name.dropFirst(LocalPairStore.photoPrefix.count))) else {
+                    continue
+                }
+                found[id] = max(found[id] ?? .distantPast, cached.modified)
+            }
         }
-        return sweepable
+        return found
     }
 
-    public func delete(attachment id: AttachmentID) async throws {
-        _ = try await container.privateCloudDatabase.modifyRecords(
-            saving: [],
-            deleting: [CKRecord.ID(recordName: id.recordName, zoneID: outbox)])
+    public func delete(attachment id: AttachmentID, in pairs: Pairs) async throws {
+        try await remove(Self.photoRecordName(id))
     }
 }

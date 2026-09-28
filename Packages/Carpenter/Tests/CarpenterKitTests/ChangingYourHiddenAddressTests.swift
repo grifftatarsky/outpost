@@ -43,7 +43,7 @@ struct ChangingYourHiddenAddressTests {
         try await friend.createIdentity(displayName: "Outie")
 
         let room = try await phone.createRoom(named: "Kitchen")
-        let invite = try await phone.invite(joinerCode: friend.identityCode(), joining: room, mailbox: nil)
+        let invite = try await phone.invite(joinerCode: await friend.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await friend.redeem(inviteCode: try invite.encoded())
         try await phone.sync(through: mailbox)
         try await friend.accept(invite.attestation, from: try #require(phone.enrolment?.identity.publicKeys))
@@ -102,7 +102,7 @@ struct ChangingYourHiddenAddressTests {
         let said = try #require(rig.friend.messages(in: rig.room).last?.id.entry)
         try await rig.friend.sync(through: rig.mailbox, media: rig.mailbox)
 
-        let session = SyncSession(mailbox: rig.mailbox, clock: rig.clock)
+        let session = SyncSession(mailbox: rig.mailbox, pairs: try rig.tablet.currentPairs(), clock: rig.clock)
         let asThePhone = Peer(secret: phoneKnew[0], them: rig.friendID, me: rig.griff)
         let found = try await session.collect(as: asThePhone, alternates: Array(phoneKnew.dropFirst()))
         #expect(

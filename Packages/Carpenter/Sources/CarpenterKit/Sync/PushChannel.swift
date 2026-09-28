@@ -5,13 +5,13 @@ public enum PushChannel: String, CaseIterable, Sendable {
 
     case inbox
 
-    case bell
+    case ring
 
     public var subscriptionID: String {
         switch self {
         case .deviceFeed: "outpost.sibling-feed.v1"
-        case .inbox: "outpost.inbox.v2"
-        case .bell: "outpost.bell.v1"
+        case .inbox: "outpost.inbox.v3"
+        case .ring: "outpost.ring.v1"
         }
     }
 
@@ -19,11 +19,11 @@ public enum PushChannel: String, CaseIterable, Sendable {
         switch self {
         case .deviceFeed: "SiblingFeed"
         case .inbox: "SyncPacket"
-        case .bell: "MessageBell"
+        case .ring: PairWire.ringType
         }
     }
 
-    public var isVisible: Bool { self == .bell }
+    public var isVisible: Bool { self == .ring }
 
     public static func of(subscriptionID: String?) -> PushChannel? {
         guard let subscriptionID else { return nil }

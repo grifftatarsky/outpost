@@ -161,12 +161,12 @@ public final class AppSession {
 
     var attachmentTasks: [AttachmentID: Task<Data?, any Error>] = [:]
     var hasAskedForWall: Set<ParticipantID> = []
-    var peersLastRound: Set<ParticipantID> = []
+    public internal(set) var peersLastRound: Set<ParticipantID> = []
     var pendingRecipients: [PacketID: Set<RecipientTag>]?
 
     public internal(set) var metSomebodyNew = false
     var attachmentRetryAfter: [AttachmentID: Date] = [:]
-    var attachmentAcknowledgementsOwed: [AttachmentID: SealedReceipt] = [:]
+    var attachmentAcknowledgementsOwed: [AttachmentID: OwedPhotoReceipt] = [:]
     var uploading: Set<AttachmentID> = []
     var sweptAttachments = false
 

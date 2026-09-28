@@ -30,7 +30,7 @@ struct SoloTests {
     ) async throws -> RoomID {
         let bobID = try #require(bob.enrolment?.identity.id)
         let room = try await alice.startSolo(with: bobID)
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -46,7 +46,7 @@ struct SoloTests {
         let room = try await alice.startSolo(with: bobID)
         #expect(alice.rooms.first { $0.id == room }?.isDirect == true, "the founder's side, before anybody is asked")
 
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         #expect(alice.rooms.first { $0.id == room }?.isDirect == true, "still a solo once somebody is asked")

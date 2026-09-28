@@ -43,8 +43,7 @@ struct BeingToldAboutARestoreTests {
         }
 
         let room = try await original.createRoom(named: "Kitchen")
-        let invite = try await original.invite(
-            joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await original.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await original.sync(through: mailbox)
         try await peer.accept(
@@ -258,8 +257,7 @@ struct HoldingHistoryForARestoreTests {
         }
 
         let room = try await original.createRoom(named: "Kitchen")
-        let invite = try await original.invite(
-            joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await original.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await original.sync(through: mailbox)
         try await peer.accept(
@@ -438,8 +436,7 @@ struct NotAskingForHistoryTests {
         await peer.setToldAboutRestores(true)
 
         let room = try await original.createRoom(named: "Kitchen")
-        let invite = try await original.invite(
-            joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await original.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await original.sync(through: mailbox)
         try await peer.accept(

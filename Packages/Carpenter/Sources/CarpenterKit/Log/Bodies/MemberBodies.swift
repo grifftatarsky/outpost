@@ -54,3 +54,28 @@ public struct MemberProfileBody: Hashable, Sendable, Codable {
             .map { String($0.prefix(Self.blurbLimit)) }
     }
 }
+
+public struct PairLinkBody: Hashable, Sendable, Codable {
+    public let recipient: ParticipantID
+    public let sealed: Data
+
+    public init(recipient: ParticipantID, sealed: Data) {
+        self.recipient = recipient
+        self.sealed = sealed
+    }
+
+    public static func seal(
+        _ link: PairLink, from sender: ParticipantID, to recipient: ParticipantID, with secret: PairwiseSecret
+    ) throws -> PairLinkBody {
+        PairLinkBody(
+            recipient: recipient,
+            sealed: try secret.wrap(
+                try JSONEncoder().encode(link), context: PairwiseSecret.linkContext(from: sender, to: recipient)))
+    }
+
+    public func open(from sender: ParticipantID, with secret: PairwiseSecret) -> PairLink? {
+        guard let plaintext = try? secret.unwrap(sealed, context: PairwiseSecret.linkContext(from: sender, to: recipient))
+        else { return nil }
+        return try? JSONDecoder().decode(PairLink.self, from: plaintext)
+    }
+}

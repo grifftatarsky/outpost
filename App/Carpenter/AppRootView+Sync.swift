@@ -16,7 +16,6 @@ import SwiftUI
 // MARK: Rounds, the rendezvous, and device sync
 
 extension AppRootView {
-    static let rendezvousInterval: TimeInterval = 60
     static let foregroundSyncSeconds = 20
     func startDeviceSync() {
         #if DEBUG
@@ -62,59 +61,14 @@ extension AppRootView {
             mailbox: {
                 guard session.enrolment != nil else { return }
 
-                if let cloud = mailbox as? CloudKitMailbox {
-                    try await cloud.prepare()
-                    if Date().timeIntervalSince(lastRendezvous) > Self.rendezvousInterval {
-                        lastRendezvous = Date()
-
-                        do {
-                            let mine = try await cloud.shareURL()
-                            _ = await cloud.offer(session.shareOffers(of: mine))
-                        } catch {
-                            Diagnostics.sync.error(
-                                """
-                                mailbox: could not offer our outbox — no peer can fetch anything \
-                                from us until this succeeds: \
-                                \(String(describing: error), privacy: .public)
-                                """)
-                        }
-
-                        let collected = await cloud.collectOffers()
-                        let genuine = session.openShareOffers(collected)
-                        Diagnostics.sync.notice(
-                            """
-                            mailbox: rendezvous found \(collected.count, privacy: .public) offer(s), \
-                            \(genuine.count, privacy: .public) from peers we recognise
-                            """)
-
-                        for (name, url) in genuine {
-                            do {
-                                try await CloudKitMailbox.accept(url, in: .default())
-                            } catch let error as CKError where error.code == .unknownItem {
-                                Diagnostics.sync.error(
-                                    """
-                                    mailbox: an offered outbox no longer exists; retracting the \
-                                    offer so its owner leaves a current one: \
-                                    \(String(describing: error), privacy: .public)
-                                    """)
-                                do {
-                                    try await cloud.retractOffer(named: name)
-                                } catch {
-                                    Diagnostics.sync.error(
-                                        "mailbox: could not retract the dead offer: \(String(describing: error), privacy: .public)")
-                                }
-                            } catch {
-                                Diagnostics.sync.error(
-                                    "mailbox: could not accept an offered outbox: \(String(describing: error), privacy: .public)")
-                            }
-                        }
-                    }
-                }
                 do {
                     _ = try await session.sync(through: mailbox, media: cloud)
                 } catch where CloudKitHold.isSecurityHold(error) {
                     session.noteICloudHold(true)
                     throw error
+                }
+                if let cloud = mailbox as? CloudKitMailbox, let pairs = session.pairs() {
+                    await cloud.retireOldOutbox(whenEveryoneHasMovedAmong: session.peersLastRound, in: pairs)
                 }
             },
         )

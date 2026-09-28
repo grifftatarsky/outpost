@@ -29,7 +29,7 @@ struct CloudKitPacketRecordTests {
             recordType: PacketRecord.type,
             recordID: CKRecord.ID(
                 recordName: packet.id.recordName, zoneID: CKRecordZone.ID(zoneName: "Outbox")))
-        try PacketRecord.write(packet, into: record)
+        PacketRecord.write(PacketWire.fields(of: packet), into: record)
         let restored = try #require(PacketRecord.read(record))
 
         #expect(restored.grants == packet.grants, "the CloudKit mapping dropped the grant")

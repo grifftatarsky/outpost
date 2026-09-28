@@ -160,7 +160,7 @@ struct HistoryRepairTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -260,7 +260,7 @@ struct HistoryRepairTests {
             try await alice.sync(through: mailbox)
             try await bob.sync(through: mailbox)
         }
-        let left = try await mailbox.sentPackets()
+        let left = await mailbox.everySentPacket
         #expect(
             repairs.filter { left.keys.contains($0) }.isEmpty,
             "a repair packet its reader signed for was left in the outbox for good")
@@ -297,7 +297,7 @@ struct HistoryRepairTests {
         let (_, _, room, _) = try await join(alice: alice, bob: bob, through: mailbox)
         await carol.load()
         try await carol.createIdentity(displayName: "Carol")
-        let invite = try await alice.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -310,12 +310,14 @@ struct HistoryRepairTests {
         #expect(carol.roster(of: room).members.count == 3, "the late joiner was not handed the room")
         let carolID = try #require(carol.enrolment?.identity.id)
 
+        var rounds: [[PacketID]] = []
         for word in ["first", "second", "third"] {
+            let before = Set(await mailbox.writtenPackets)
             try await alice.send(word, to: room)
             try await alice.sync(through: mailbox)
+            rounds.append(await mailbox.writtenPackets.filter { !before.contains($0) })
         }
-        let written = await mailbox.writtenPackets.suffix(3)
-        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob, carol])
+        for packet in rounds[1] { await lose(packet, from: mailbox, sentBy: [alice, bob, carol]) }
         try await bob.sync(through: mailbox)
         try await carol.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 1)
@@ -358,7 +360,7 @@ struct HistoryRepairTests {
 
         await carol.load()
         try await carol.createIdentity(displayName: "Carol")
-        let invite = try await alice.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try invite.encoded())
         try await carol.sync(through: mailbox)
         try await alice.sync(through: mailbox)
@@ -520,7 +522,7 @@ struct FinalRefusalTests {
             packets: [
                 .init(
                     id: packet.id, delivery: try SyncEngine.unpack(packet, as: theirs, window: 7),
-                    storedAt: revokedAt.addingTimeInterval(2))
+                    storedAt: revokedAt.addingTimeInterval(2), from: theirs.them)
             ])
         let (report, settled) = SyncSession.integrate(collected, into: &replica)
 
@@ -566,7 +568,7 @@ struct AutomaticRepairTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -718,7 +720,7 @@ struct AutomaticRepairTests {
         let (alice, bob, room, mailbox) = try await withAHole(clock)
 
         let other = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: other, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: other, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -800,8 +802,7 @@ struct FinalRefusalThroughTheSessionTests {
         try await carol.createIdentity(displayName: "Carol")
 
         for joiner in [bob, carol] {
-            let invite = try await phone.invite(
-                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            let invite = try await phone.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await joiner.redeem(inviteCode: try invite.encoded())
             try await phone.sync(through: mailbox)
             try await joiner.accept(

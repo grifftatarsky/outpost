@@ -27,7 +27,7 @@ struct ReciprocalAccessTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: name)
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -54,7 +54,7 @@ struct ReciprocalAccessTests {
         let bobID = try #require(bob.enrolment?.identity.id)
 
         let solo = try await alice.createRoom(named: "Bob", kind: .solo)
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: solo, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: solo, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(

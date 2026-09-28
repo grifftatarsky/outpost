@@ -27,7 +27,7 @@ struct OutpostUnseenTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -102,8 +102,7 @@ struct OutpostUnseenTests {
 
         let room = try await alice.createRoom(named: "Lanterns")
         for joiner in [bob, carol] {
-            let invite = try await alice.invite(
-                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            let invite = try await alice.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await joiner.redeem(inviteCode: try invite.encoded())
             try await alice.sync(through: mailbox)
             try await joiner.accept(
@@ -152,7 +151,7 @@ struct OutpostNotifyTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -210,8 +209,7 @@ struct OutpostNotifyTests {
 
         let room = try await alice.createRoom(named: "Lanterns")
         for joiner in [bob, carol] {
-            let invite = try await alice.invite(
-                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            let invite = try await alice.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await joiner.redeem(inviteCode: try invite.encoded())
             try await alice.sync(through: mailbox)
             try await joiner.accept(
@@ -230,11 +228,11 @@ struct OutpostNotifyTests {
         try await settle([alice, bob, carol], through: mailbox)
 
         clock.advance(by: 60)
-        let before = await mailbox.bells.count
+        let before = await mailbox.rings.count
         try await alice.send("worth telling one of them about", to: nil)
         try await alice.sync(through: mailbox, media: mailbox)
 
-        let rung = await mailbox.bells.dropFirst(before)
+        let rung = await mailbox.rings.dropFirst(before)
         #expect(rung.count == 1, "a wall post rang \(rung.count) people rather than the one who asked")
     }
 

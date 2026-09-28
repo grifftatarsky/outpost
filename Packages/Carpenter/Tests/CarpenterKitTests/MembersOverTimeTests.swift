@@ -27,8 +27,7 @@ struct MembersOverTimeTests {
         _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
         alongside everyone: [AppSession], through mailbox: InMemoryMailbox
     ) async throws {
-        let invite = try await inviter.invite(
-            joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+        let invite = try await inviter.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await joiner.redeem(inviteCode: try invite.encoded())
         try await settle(everyone + [joiner], through: mailbox)
     }
@@ -229,8 +228,7 @@ struct AddressedPeersTests {
         _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
         through mailbox: InMemoryMailbox
     ) async throws {
-        let invite = try await inviter.invite(
-            joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+        let invite = try await inviter.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await joiner.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await inviter.sync(through: mailbox)
@@ -263,7 +261,7 @@ struct AddressedPeersTests {
         let before = Set(await mailbox.writtenPackets)
         try await alice.send("said in our room", to: ours)
         try await alice.sync(through: mailbox)
-        let waiting = try await mailbox.sentPackets()
+        let waiting = await mailbox.everySentPacket
         let fresh = await mailbox.writtenPackets.filter { !before.contains($0) }
         #expect(fresh.count == 1, "precondition: Alice's round wrote exactly one packet")
         let recipients = try #require(fresh.first.flatMap { waiting[$0]?.recipients })

@@ -127,7 +127,7 @@ struct AppAndExtensionTests {
         try #require(!packets.isEmpty, "precondition: Alice sent the message")
         try await nse.sync(through: rig.mailbox, mode: .readOnly)
         #expect(
-            try await rig.mailbox.sentPackets().filter { packets.contains($0.key) }.allSatisfy { $0.value.receipts.isEmpty },
+            await rig.mailbox.everySentPacket.filter { packets.contains($0.key) }.allSatisfy { $0.value.receipts.isEmpty },
             "the extension, which only reads, signed for a packet")
         try await rig.app.sync(through: rig.mailbox)
 
@@ -136,7 +136,7 @@ struct AppAndExtensionTests {
         #expect(later.integrity.unverifiableOnDisk == 0, "the extension left entries on disk the app could not verify")
         try await rig.alice.sync(through: rig.mailbox)
         #expect(
-            Set(try await rig.mailbox.sentPackets().keys).isDisjoint(with: packets),
+            Set(await rig.mailbox.everySentPacket.keys).isDisjoint(with: packets),
             "a packet was left offered for ever")
     }
 }

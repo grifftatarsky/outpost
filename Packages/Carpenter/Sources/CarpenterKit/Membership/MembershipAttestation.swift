@@ -136,14 +136,20 @@ public struct JoinerCode: Hashable, Sendable, Codable {
     public let keys: IdentityPublicKeys
     public let commitment: Data
     public let requires: PhraseLength
+    public let pair: SignedPairLink?
 
-    public init(keys: IdentityPublicKeys, commitment: Data, requires: PhraseLength = .standard) {
+    public init(
+        keys: IdentityPublicKeys, commitment: Data, requires: PhraseLength = .standard, pair: SignedPairLink? = nil
+    ) {
         self.keys = keys
         self.commitment = commitment
         self.requires = requires
+        self.pair = pair
     }
 
     public var participantID: ParticipantID { keys.participantID }
+
+    public var verifiedPair: PairLink? { pair?.verified(by: keys) }
 
     public func encoded() throws -> String {
         let encoder = JSONEncoder()

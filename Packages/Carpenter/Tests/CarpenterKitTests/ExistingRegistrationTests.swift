@@ -218,8 +218,7 @@ struct EpochLinkRestoreTests {
         await joiner.load()
         try await joiner.createIdentity(displayName: "Bob")
 
-        let invite = try await host.invite(
-            joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+        let invite = try await host.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await joiner.redeem(inviteCode: try invite.encoded())
 
         let relaunched = TestSession.make(keychain: keychain, at: directory)

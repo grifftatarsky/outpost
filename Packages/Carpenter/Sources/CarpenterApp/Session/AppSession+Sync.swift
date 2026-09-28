@@ -14,7 +14,9 @@ extension AppSession {
             Diagnostics.sync.notice("round: iCloud is holding this device; sending and fetching nothing")
             return SyncReport()
         }
-        let session = SyncSession(mailbox: mailbox, clock: clock)
+        guard let pairs = pairs() else { throw AppSessionError.noIdentity }
+        let session = SyncSession(mailbox: mailbox, pairs: pairs, clock: clock)
+        if mode == .full { await pairUp(through: mailbox) }
 
         var report = SyncReport()
         var sending: [Entry] = []
@@ -22,8 +24,11 @@ extension AppSession {
             try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
         }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
-        if mode == .full, let sent = try? await mailbox.sentPackets() {
-            await settleWhatWasSent(sent, through: mailbox)
+        if mode == .full {
+            await pairUp(through: mailbox)
+            if let sent = try? await mailbox.sentPackets(in: pairs) {
+                await settleWhatWasSent(sent, through: mailbox, in: pairs)
+            }
         }
         if mode == .full {
             let now = clock.now
@@ -110,7 +115,8 @@ extension AppSession {
         }
 
         if report.packetsWritten > 0 {
-            for owed in owedGrants { issuedGrants.insert(owed.receipt) }
+            let reached = Set(report.written.compactMap(\.to))
+            for owed in owedGrants where reached.contains(owed.to.them) { issuedGrants.insert(owed.receipt) }
             if announcing {
                 persisted.authorityAnnounced = authority
                 Diagnostics.sync.notice("round: told every peer about a change to this member's devices")
@@ -381,7 +387,9 @@ extension AppSession {
         }
     }
 
-    private func settleWhatWasSent(_ sent: [PacketID: SentPacket], through mailbox: any Mailbox) async {
+    private func settleWhatWasSent(
+        _ sent: [PacketID: SentPacket], through mailbox: any Mailbox, in pairs: Pairs
+    ) async {
         let mine = persisted.outstandingPackets
         var waiting: [PacketID: Set<RecipientTag>] = [:]
         var vanished: [PacketID] = []
@@ -429,7 +437,7 @@ extension AppSession {
                 > SyncSession.tagWindow * Double(SyncSession.windowLookback + 2)
             if missing.isEmpty || expired {
                 do {
-                    try await mailbox.withdraw(packet)
+                    try await mailbox.withdraw(packet, in: pairs)
                     if missing.isEmpty { confirmAnnouncement(packet) }
                     persisted.outstandingPackets[packet] = nil
                     persisted.packetsWritten[packet] = nil
@@ -443,7 +451,7 @@ extension AppSession {
             }
         }
         for packet in altered {
-            try? await mailbox.withdraw(packet)
+            try? await mailbox.withdraw(packet, in: pairs)
             persisted.outstandingPackets[packet] = nil
             persisted.packetsWritten[packet] = nil
             waiting[packet] = nil

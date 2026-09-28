@@ -140,9 +140,15 @@ extension AppSession {
     }
 
     func prepareCodeForSharing(replacingSpent spent: Bool = false) {
-        guard enrolment != nil else { return }
+        guard enrolment != nil, persisted.codeLink != nil else { return }
         guard spent || codeForSharing.isEmpty else { return }
         codeForSharing = identityCode()
+    }
+
+    public func joinerCode(through mailbox: any Mailbox) async -> String {
+        await pairUp(through: mailbox)
+        prepareCodeForSharing()
+        return codeForSharing
     }
 
     public func identityCode() -> String {
@@ -153,7 +159,7 @@ extension AppSession {
         remember(nonce, opening: commitment)
 
         let code = JoinerCode(
-            keys: keys, commitment: commitment, requires: phraseLengthThisMemberRequires)
+            keys: keys, commitment: commitment, requires: phraseLengthThisMemberRequires, pair: persisted.codeLink)
         return (try? code.encoded()) ?? ""
     }
 
@@ -176,17 +182,46 @@ extension AppSession {
     }
 
     public func invite(
-        joinerCode: String, joining room: RoomID, mailbox: URL?,
+        joinerCode: String, joining room: RoomID, through mailbox: (any Mailbox)?,
         lasting lifetime: InvitationLifetime = .aDay
     ) async throws -> Invite {
         let code = try JoinerCode.decoded(from: joinerCode)
 
-        guard code.participantID != enrolment?.identity.id else {
+        guard let enrolment, code.participantID != enrolment.identity.id else {
             throw AppSessionError.thatIsYou
         }
 
         let attestation = try await attest(code: code, joining: room, lasting: lifetime)
-        return Invite(attestation: attestation, mailbox: mailbox)
+        return Invite(attestation: attestation, pair: try await offerOurSpace(to: code, through: mailbox))
+    }
+
+    func offerOurSpace(to code: JoinerCode, through mailbox: (any Mailbox)?) async throws -> SignedPairLink? {
+        guard let enrolment, let mailbox, let theirs = code.verifiedPair else { return nil }
+        replica.introduce(code.keys)
+        if !persisted.knownKeys.contains(code.keys) { persisted.knownKeys.append(code.keys) }
+        take(theirs, from: code.participantID)
+        let pairs = try currentPairs()
+        let url = try await mailbox.space(for: code.participantID, naming: theirs.account, in: pairs)
+        let mine = PairLink(account: try await mailbox.account(in: pairs), url: url)
+        try await saveState()
+        return try SignedPairLink.sign(mine, by: enrolment.identity)
+    }
+
+    public func standingOffer(to joiner: ParticipantID, through mailbox: any Mailbox) async -> SignedPairLink? {
+        guard let enrolment, let pairs = pairs(), pairs.hints[joiner] != nil else { return nil }
+        do {
+            let url = try await mailbox.space(for: joiner, naming: persisted.pairBook[joiner]?.theirs?.account, in: pairs)
+            return try SignedPairLink.sign(PairLink(account: try await mailbox.account(in: pairs), url: url), by: enrolment.identity)
+        } catch {
+            Diagnostics.sync.error(
+                "pairs: could not show the link for a standing invitation: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    func takeOffer(_ link: PairLink?, from inviter: ParticipantID, answering commitment: Data) {
+        if let link { take(link, from: inviter) }
+        if nonce(opening: commitment) != nil { codeWasUsed(by: inviter) }
     }
 
     public func inspect(inviteCode: String) -> Invite? {
@@ -208,6 +243,10 @@ extension AppSession {
         }
 
         try await accept(invite.attestation, from: invite.attestation.inviterKeys)
+        takeOffer(
+            invite.verifiedPair, from: invite.attestation.inviterKeys.participantID,
+            answering: invite.attestation.joinerCommitment)
+        try await saveState()
         return invite
     }
 

@@ -99,11 +99,12 @@ struct PacketWireTests {
         let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: mine.secret)
 
         let mailbox = InMemoryMailbox()
+        let (asMine, asTheirs) = try await link(mine, theirs, through: mailbox)
         let packet = try SyncEngine.pack(
             [], for: [mine], granting: [(to: mine, grant: grant)], window: 7)
-        try await mailbox.put(packet)
+        try await mailbox.put(packet, to: mine.them, in: asMine)
 
-        let collected = try await mailbox.fetch(for: theirs.incomingTag(window: 7))
+        let collected = try await mailbox.fetch(from: mine.me, for: [theirs.incomingTag(window: 7)], in: asTheirs)
         #expect(collected.count == 1)
         #expect(collected.first?.grants == packet.grants, "the fake mailbox skipped serialisation")
     }
