@@ -3461,6 +3461,38 @@ start quietly.
 
 <!-- COPY END 11f7b396 -->
 
+<!-- COPY BEGIN d45b9c64 [NEEDS HUMAN REVIEW] -->
+
+### Text longer than three lines is left-aligned
+
+**RULED 2026-09-27 by Griff.** "If it's over three lines, don't use center ... We should embrace
+left-aligning in most situations." Centered text over three lines gives every line a different
+starting edge and leaves single words stranded on the last line.
+
+The welcome tour was the first change, following his second note: the icon and title stay centered,
+and the explanation sits left-aligned in a card with a thin outline and small rounded corners, lined
+up with the Start button's edges. No paragraph there ends on one word by itself: the last two words of
+each paragraph are held together (`keepingLastWordsTogether`), because SwiftUI has no setting that
+does it.
+
+<!-- COPY END d45b9c64 -->
+
+<!-- COPY BEGIN bd16f5e7 [NEEDS HUMAN REVIEW] -->
+
+### A secondary button is as wide as the primary one beside it
+
+**RULED 2026-09-27 by Griff**, after asking that the HIG be read: "the Not Now buttons are so small
+when the action buttons like Lock the app are full width." **FACT**, from the HIG's Buttons page:
+"Use style — not size — to visually distinguish the preferred choice among multiple options," because
+two buttons of different sizes near each other "can make the interface look confusing and
+inconsistent."
+
+So `quietActionButton()` labels take `primaryAction()` for their width, like the prominent button,
+and stay the quieter style. A number pad has no return key, so a screen with one offers a Done button
+above the keyboard as well as the swipe; App Lock setup was missing it.
+
+<!-- COPY END bd16f5e7 -->
+
 <!-- COPY BEGIN 9de81d9f [NEEDS HUMAN REVIEW] -->
 
 #### Liquid Glass belongs in a container, and custom glass answers a finger

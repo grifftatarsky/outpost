@@ -80,7 +80,7 @@ public struct PermissionExplainerView: View {
                         dismiss()
                         onDecline()
                     } label: {
-                        Text("Not now", bundle: .module)
+                        Text("Not now", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                 }

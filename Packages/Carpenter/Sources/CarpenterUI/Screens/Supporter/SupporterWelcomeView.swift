@@ -162,7 +162,7 @@ struct SupporterWelcomeView: View {
                 Button {
                     answer(false)
                 } label: {
-                    Text("Not now", bundle: .module)
+                    Text("Not now", bundle: .module).primaryAction()
                 }
                 .quietActionButton()
                 // COPY END 7d3bb100

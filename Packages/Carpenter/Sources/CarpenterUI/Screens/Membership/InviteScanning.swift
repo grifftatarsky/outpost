@@ -225,11 +225,11 @@ enum ScanAttempt: Equatable {
                 // COPY BEGIN b3bbfd73 [NEEDS HUMAN REVIEW]
                 AdaptiveStack(spacing: 10) {
                     Button { wantsToScan = true } label: {
-                        Text("Turn on scanning", bundle: .module)
+                        Text("Turn on scanning", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                     Button { scanning = .off } label: {
-                        Text("Not now", bundle: .module)
+                        Text("Not now", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                 }

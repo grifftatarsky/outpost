@@ -78,7 +78,7 @@ public struct AppLockScreen: View {
                     Button {
                         Task { await controller.unlockWithBiometrics() }
                     } label: {
-                        Text("Use \(name)", bundle: .module)
+                        Text("Use \(name)", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                 }
@@ -127,7 +127,7 @@ public struct AppLockScreen: View {
         // COPY BEGIN 7e88ab4a [NEEDS HUMAN REVIEW]
         if controller.isLocked, controller.lock != nil, let onForget {
             Button { forgetting = true } label: {
-                Text("Forgot the code?", bundle: .module)
+                Text("Forgot the code?", bundle: .module).primaryAction()
             }
             .quietActionButton()
             .alert(Text("Erase this phone's copy?", bundle: .module), isPresented: $forgetting) {
@@ -354,6 +354,16 @@ public struct AppLockSetupView: View {
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
+        // COPY BEGIN 672323bd [NEEDS HUMAN REVIEW]
+        .toolbar {
+            ToolbarItem(placement: .keyboard) {
+                HStack {
+                    Spacer()
+                    Button { focus = nil } label: { Text("Done", bundle: .module) }
+                }
+            }
+        }
+        // COPY END 672323bd
         .background(palette.background)
         // COPY BEGIN 61f4704a [NEEDS HUMAN REVIEW]
         .navigationTitle(Text("App Lock", bundle: .module))
@@ -397,7 +407,7 @@ public struct AppLockSetupView: View {
                 .disabled(!ready)
                 if let onNotNow {
                     Button { onNotNow() } label: {
-                        Text("Not now", bundle: .module)
+                        Text("Not now", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                 }

@@ -13,7 +13,7 @@ public struct WelcomeTourView: View {
     private struct Panel: Identifiable {
         let id: Int
         let title: LocalizedStringKey
-        let body: LocalizedStringKey
+        let body: String.LocalizationValue
         let icon: String
     }
 
@@ -67,39 +67,53 @@ public struct WelcomeTourView: View {
             TabView(selection: $page) {
                 ForEach(panels) { panel in
                     VStack(spacing: 20) {
-                        Spacer()
+                        Spacer(minLength: 0)
+                            .frame(maxHeight: 120)
 
                         Image(systemName: panel.icon)
                             .font(.system(size: 44, weight: .light))
                             .foregroundStyle(palette.accentColor)
+                            .frame(height: 56, alignment: .bottom)
 
                         Text(panel.title, bundle: .module)
                             .font(CarpenterFont.navigationTitle)
                             .foregroundStyle(palette.primaryText)
                             .multilineTextAlignment(.center)
 
-                        Text(panel.body, bundle: .module)
-                            .font(CarpenterFont.rowDetail)
-                            .foregroundStyle(palette.secondaryText)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text(verbatim: String(localized: panel.body, bundle: .module).keepingLastWordsTogether)
+                                .font(CarpenterFont.rowDetail)
+                                .foregroundStyle(palette.secondaryText)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
 
-                        // COPY BEGIN a0ba5304 [HUMAN REVIEWED, UNVERIFIED]
-                        if panel.id == panels.count - 1 {
-                            Text(
-                                "\(Branding.displayName) can be as complicated as you want it to be. But if you forget what your options are, there's Tutorial mode in the You page, which will add a ? on every screen to explain!",
-                                bundle: .module
-                            )
-                            .font(CarpenterFont.footnote)
-                            .foregroundStyle(palette.tertiaryText)
-                            .multilineTextAlignment(.center)
-                            .padding(.top, 6)
+                            // COPY BEGIN a0ba5304 [HUMAN REVIEWED, UNVERIFIED]
+                            if panel.id == panels.count - 1 {
+                                Text(
+                                    verbatim: String(
+                                        localized:
+                                            "\(Branding.displayName) can be as complicated as you want it to be. But if you forget what your options are, there's Tutorial mode in the You page, which will add a ? on every screen to explain!",
+                                        bundle: .module
+                                    ).keepingLastWordsTogether)
+                                .font(CarpenterFont.footnote)
+                                .foregroundStyle(palette.tertiaryText)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
+                            // COPY END a0ba5304
                         }
-                        // COPY END a0ba5304
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 16)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(palette.separator, lineWidth: 1)
+                        }
+                        .padding(.top, 4)
 
                         Spacer()
                     }
-                    .padding(.horizontal, 34)
+                    .padding(.horizontal, CarpenterMetrics.screenMargin)
                     .tag(panel.id)
                 }
             }
@@ -136,6 +150,13 @@ public struct WelcomeTourView: View {
 }
 
 #if DEBUG
+    extension WelcomeTourView {
+        init(onContinue: @escaping () -> Void, page: Int) {
+            self.init(onContinue: onContinue)
+            _page = State(initialValue: page)
+        }
+    }
+
     #Preview("Welcome — dark") {
         WelcomeTourView(onContinue: {}).themed(.default).preferredColorScheme(.dark)
     }

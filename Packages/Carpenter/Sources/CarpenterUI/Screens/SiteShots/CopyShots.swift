@@ -22,6 +22,13 @@
         case lockRecovery = "lock-recovery"
         case lockSetup = "lock-setup"
         case conversationStates = "conversation-states"
+        case lockSetupTyping = "lock-setup-typing"
+        case welcome1 = "welcome-1"
+        case welcome2 = "welcome-2"
+        case welcome3 = "welcome-3"
+        case welcome4 = "welcome-4"
+        case welcome5 = "welcome-5"
+        case welcome6 = "welcome-6"
 
         public static let argument = "--copy-shot"
 
@@ -112,8 +119,12 @@
                         onRevealHidden: {})
                 }
                 .environment(\.mediaLoader, Self.loader)
+            case .welcome1, .welcome2, .welcome3, .welcome4, .welcome5, .welcome6:
+                WelcomeTourView(onContinue: {}, page: Int(String(shot.rawValue.last!))! - 1)
             case .lockSetup:
                 NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }, onNotNow: {}) }
+            case .lockSetupTyping:
+                NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }) }
             }
         }
 

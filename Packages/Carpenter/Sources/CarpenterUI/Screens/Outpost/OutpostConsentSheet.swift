@@ -103,7 +103,7 @@ public struct OutpostConsentSheet: View {
             .prominentActionButton()
 
             Button { declining = true } label: {
-                Text("Not for me", bundle: .module)
+                Text("Not for me", bundle: .module).primaryAction()
             }
             .quietActionButton()
             // COPY END bbd251d1

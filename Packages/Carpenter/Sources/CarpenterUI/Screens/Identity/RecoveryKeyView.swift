@@ -64,7 +64,7 @@ public struct RecoveryKeyView: View {
 
                 // COPY BEGIN a0892d83 [NEEDS HUMAN REVIEW]
                 Button { confirming = true } label: {
-                    Text("I've saved it", bundle: .module)
+                    Text("I've saved it", bundle: .module).primaryAction()
                 }
                 .quietActionButton()
                 .disabled(!shared)
