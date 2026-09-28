@@ -61,21 +61,21 @@ struct WhoCanSendYouAKeyTests {
             """)
     }
 
-    private func befriended(with alice: AppSession, through mailbox: InMemoryMailbox) async throws -> AppSession {
-        let carol = TestSession.make()
-        await carol.load()
-        try await carol.createIdentity(displayName: "Carol")
-        let kitchen = try await alice.createRoom(named: "Kitchen")
-        let invite = try await alice.invite(
-            joinerCode: await carol.joinerCode(through: mailbox), joining: kitchen, through: mailbox)
-        try await carol.redeem(inviteCode: try invite.encoded())
-        try await alice.sync(through: mailbox)
-        try await carol.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
+    private func befriended(with host: AppSession, through mailbox: InMemoryMailbox) async throws -> AppSession {
+        let friend = TestSession.make()
+        await friend.load()
+        try await friend.createIdentity(displayName: "Friend")
+        let kitchen = try await host.createRoom(named: "Kitchen")
+        let invite = try await host.invite(
+            joinerCode: await friend.joinerCode(through: mailbox), joining: kitchen, through: mailbox)
+        try await friend.redeem(inviteCode: try invite.encoded())
+        try await host.sync(through: mailbox)
+        try await friend.accept(invite.attestation, from: try #require(host.enrolment?.identity.publicKeys))
         for _ in 0..<2 {
-            try await alice.sync(through: mailbox)
-            try await carol.sync(through: mailbox)
+            try await host.sync(through: mailbox)
+            try await friend.sync(through: mailbox)
         }
-        return carol
+        return friend
     }
 
     @Test("A key sent by somebody who was never in the room is refused")
@@ -98,6 +98,47 @@ struct WhoCanSendYouAKeyTests {
             under the newest key it holds and passes it on to everybody in the room, so the sender would \
             read what the room says next.
             """)
+    }
+
+    @Test("A joining device takes its first key for a room only from the person who invited it")
+    func aJoinerTakesItsFirstKeyFromItsInviter() async throws {
+        let (alice, bob, mailbox, room) = try await joined()
+        let bobID = try #require(bob.enrolment?.identity.id)
+        try await alice.remove(bobID, from: room)
+        let eve = try await befriended(with: bob, through: mailbox)
+        let invite = try await alice.invite(
+            joinerCode: await eve.joinerCode(through: mailbox), joining: room, through: mailbox)
+        try await eve.redeem(inviteCode: try invite.encoded())
+        try await alice.sync(through: mailbox)
+        try await eve.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
+        let eveID = try #require(eve.enrolment?.identity.id)
+        try #require(!bob.deviceRecipients(of: eveID).isEmpty, "precondition: Bob can seal a key to Eve's phone")
+        try #require(eve.chains[room] == nil, "precondition: the joining phone holds no key for the room yet")
+
+        let (grant, from) = try newKey(sentBy: bob, to: eve, in: room, at: .initial)
+        try await eve.adopt(grant, from: from, storedAt: .distantFuture)
+
+        #expect(
+            eve.chains[room] == nil,
+            """
+            Somebody removed from the room sent a key to a phone that was joining it, and the phone took it. \
+            A joining phone cannot read who is in the room yet, so it writes under the first key it holds; \
+            the one who made it up would read what the newcomer says.
+            """)
+    }
+
+    @Test("A first key for a room this phone holds nothing of, from somebody who did not invite it, is refused")
+    func aFirstKeyNeedsAVoucher() async throws {
+        let (alice, _, mailbox, room) = try await joined()
+        let carol = try await befriended(with: alice, through: mailbox)
+        let carolID = try #require(carol.enrolment?.identity.id)
+        try #require(!alice.deviceRecipients(of: carolID).isEmpty, "precondition: Alice can seal a key to Carol's phone")
+        try #require(carol.chains[room] == nil, "precondition: Carol holds no key for this room")
+
+        let (grant, from) = try newKey(sentBy: alice, to: carol, in: room, at: .initial)
+        try await carol.adopt(grant, from: from, storedAt: .distantFuture)
+
+        #expect(carol.chains[room] == nil, "a phone took a room's key from somebody who never let it in")
     }
 
     @Test("A key sent by somebody still in the room is accepted")

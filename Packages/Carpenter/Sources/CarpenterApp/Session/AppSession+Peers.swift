@@ -155,6 +155,12 @@ extension AppSession {
             "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(target.rawValue.base64EncodedString())|\(since)|\(to)"
     }
 
+    private func mayGiveTheFirstKey(_ giver: ParticipantID, to room: RoomID, opening chain: EpochChain) -> Bool {
+        let inviters = persisted.acceptedInvitations.filter { $0.attestation.room == room }.map(\.attestation.inviter)
+        guard inviters.isEmpty else { return inviters.contains(giver) }
+        return replica.allEntries.contains { $0.room == room && $0.author != giver && $0.opened(using: chain) != nil }
+    }
+
     private func outpostOwner(of room: RoomID) -> ParticipantID? {
         guard let me = enrolment?.identity.id else { return nil }
         if room == outpostRoom(for: me) { return me }
@@ -173,16 +179,17 @@ extension AppSession {
             Diagnostics.sync.notice("adopt: refused a key for a conversation this member deleted")
             return
         }
-        if let owner = outpostOwner(of: grant.room) {
+        let owner = outpostOwner(of: grant.room)
+        let held = chains[grant.room]
+        if let owner {
             guard owner == peer.them else {
                 Diagnostics.sync.notice("adopt: refused a key to an Outpost from somebody who does not own it")
                 return
             }
-        } else if roster(of: grant.room).absent.contains(peer.them) {
-            Diagnostics.sync.notice("adopt: refused a key from somebody no longer in the room")
+        } else if held != nil, !roster(of: grant.room).members.contains(peer.them) {
+            Diagnostics.sync.notice("adopt: refused a key from somebody the room does not show as in it")
             return
         }
-        let held = chains[grant.room]
         var chain = held ?? EpochChain(room: grant.room)
         do {
             var opened = false
@@ -208,6 +215,10 @@ extension AppSession {
         } catch {
             Diagnostics.sync.error(
                 "adopt: could not open the epoch key for a room (epoch \(grant.epoch.rawValue, privacy: .public)) — \(String(describing: error), privacy: .public)")
+            return
+        }
+        guard held != nil || owner != nil || mayGiveTheFirstKey(peer.them, to: grant.room, opening: chain) else {
+            Diagnostics.sync.notice("adopt: refused a first key for a room from somebody who did not invite this member to it")
             return
         }
         let taughtSomething =
