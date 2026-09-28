@@ -238,12 +238,16 @@ struct SealedWhileLockedTests {
 
     @Test("Every file the stores keep is written with the protection the setting names at that moment")
     func filesFollowTheSetting() async throws {
-        let files = RecordingFileManager()
+        let requests = ProtectionRequests()
         let dial = ProtectionDial(.whileUnlocked)
         let folder = TestScratch.root.appending(path: "carpenter-protected-\(UUID().uuidString)", directoryHint: .isDirectory)
-        let log = FileLogStore(url: folder.appending(path: "log.carpenter"), protection: dial, fileManager: files)
-        let documents = FileDocumentStore(url: folder.appending(path: "state.json"), protection: dial, fileManager: files)
-        let media = FileMediaStore(directory: folder.appending(path: "media"), protection: dial, fileManager: files)
+        let log = FileLogStore(
+            url: folder.appending(path: "log.carpenter"), protection: dial,
+            fileManager: RecordingFileManager(into: requests))
+        let documents = FileDocumentStore(
+            url: folder.appending(path: "state.json"), protection: dial, fileManager: RecordingFileManager(into: requests))
+        let media = FileMediaStore(
+            directory: folder.appending(path: "media"), protection: dial, fileManager: RecordingFileManager(into: requests))
         var alice = Author()
         let first = try alice.post("one", at: TestSession.now)
         let second = try alice.post("two", at: TestSession.now.addingTimeInterval(1))
@@ -255,23 +259,23 @@ struct SealedWhileLockedTests {
             ("a photo", { try await media.store(Data([1, 2, 3]), for: AttachmentID()) }),
         ]
         for (what, write) in writes {
-            let before = files.requested.count
+            let before = requests.all.count
             try await write()
-            #expect(files.requested.count > before, "\(what) was written without saying how it is protected")
+            #expect(requests.all.count > before, "\(what) was written without saying how it is protected")
         }
-        #expect(files.requested.allSatisfy { $0 == .complete })
+        #expect(requests.all.allSatisfy { $0 == .complete })
 
         dial.turn(to: .afterFirstUnlock)
-        let before = files.requested.count
+        let before = requests.all.count
         try await documents.save(["kept": 2])
         #expect(
-            files.requested.dropFirst(before).contains(.completeUntilFirstUserAuthentication),
+            requests.all.dropFirst(before).contains(.completeUntilFirstUserAuthentication),
             "a store kept the protection it was made with")
     }
 
     @Test("Changing the setting reaches every file and folder already kept, and skips what is not there")
     func reprotectingReachesEverything() throws {
-        let files = RecordingFileManager()
+        let requests = ProtectionRequests()
         let folder = TestScratch.root.appending(path: "carpenter-kept-\(UUID().uuidString)", directoryHint: .isDirectory)
         let inner = folder.appending(path: "media", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: inner, withIntermediateDirectories: true)
@@ -279,10 +283,11 @@ struct SealedWhileLockedTests {
         try Data([2]).write(to: inner.appending(path: "photo.sealed"))
 
         let refused = ProtectedFiles.reprotect(
-            [folder, folder.appending(path: "never-made")], as: .whileUnlocked, using: files)
+            [folder, folder.appending(path: "never-made")], as: .whileUnlocked,
+            using: RecordingFileManager(into: requests))
         #expect(refused.isEmpty)
-        #expect(files.requested.count == 4, "a file or folder was left as it was")
-        #expect(files.requested.allSatisfy { $0 == .complete })
+        #expect(requests.all.count == 4, "a file or folder was left as it was")
+        #expect(requests.all.allSatisfy { $0 == .complete })
     }
 }
 
@@ -340,23 +345,32 @@ private struct RecordUnreadable: KeychainStore {
     func protect(as protection: StorageProtection) async throws { try await real.protect(as: protection) }
 }
 
-private final class RecordingFileManager: FileManager, @unchecked Sendable {
+private final class ProtectionRequests: Sendable {
     private let asked = Mutex<[FileProtectionType]>([])
 
-    var requested: [FileProtectionType] { asked.withLock { $0 } }
+    var all: [FileProtectionType] { asked.withLock { $0 } }
+
+    func note(_ attributes: [FileAttributeKey: Any]) {
+        guard let protection = attributes[.protectionKey] as? FileProtectionType else { return }
+        asked.withLock { $0.append(protection) }
+    }
+}
+
+private final class RecordingFileManager: FileManager {
+    private let requests: ProtectionRequests
+
+    init(into requests: ProtectionRequests) {
+        self.requests = requests
+        super.init()
+    }
 
     override func setAttributes(_ attributes: [FileAttributeKey: Any], ofItemAtPath path: String) throws {
-        note(attributes)
+        requests.note(attributes)
         try super.setAttributes(attributes, ofItemAtPath: path)
     }
 
     override func createFile(atPath path: String, contents data: Data?, attributes: [FileAttributeKey: Any]?) -> Bool {
-        note(attributes ?? [:])
+        requests.note(attributes ?? [:])
         return super.createFile(atPath: path, contents: data, attributes: attributes)
-    }
-
-    private func note(_ attributes: [FileAttributeKey: Any]) {
-        guard let protection = attributes[.protectionKey] as? FileProtectionType else { return }
-        asked.withLock { $0.append(protection) }
     }
 }
