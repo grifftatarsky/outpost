@@ -122,15 +122,12 @@ public struct RecoveryKeyRow {
 
 #if DEBUG
     extension RecoveryKeyView {
-        init(text: String, fingerprint: String, confirmingAtStart: Bool, onSaved: @escaping () async -> Void) {
-            self.init(text: text, fingerprint: fingerprint, onSaved: onSaved)
-            _shared = State(initialValue: confirmingAtStart)
-            _confirming = State(initialValue: confirmingAtStart)
-        }
+        enum Stage { case shared, confirming }
 
-        init(text: String, fingerprint: String, sharedAtStart: Bool, onSaved: @escaping () async -> Void) {
+        init(text: String, fingerprint: String, at stage: Stage, onSaved: @escaping () async -> Void) {
             self.init(text: text, fingerprint: fingerprint, onSaved: onSaved)
-            _shared = State(initialValue: sharedAtStart)
+            _shared = State(initialValue: true)
+            _confirming = State(initialValue: stage == .confirming)
         }
     }
 #endif

@@ -18,9 +18,9 @@
             ]
         }
 
-        @Test("Every symbol the app asks for exists")
+        @Test("Every symbol the app asks for exists, including every icon handed to a settings row")
         func everySymbolResolves() throws {
-            let pattern = /systemName:\s*"([^"]+)"/
+            let pattern = /(?:systemName|icon):\s*"([^"]+)"/
             var named: Set<String> = []
 
             for root in sourceRoots {

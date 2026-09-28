@@ -211,9 +211,11 @@ fi
 #     solo member's message must not look like a failed send rendered a blank instead — for as long
 #     as it had existed, with its own doc comment describing the fix. `SymbolNameTests` checks every
 #     name in the suite; this is the same check at lint time, so a bad name fails before the build.
+#     An `icon:` handed to a settings row or tile becomes an `Image(systemName:)` one call later, so
+#     it is read too: until 2026-09-28 every settings icon went through unchecked.
 if command -v swift >/dev/null 2>&1 && [ "${SKIP_SYMBOL_CHECK:-}" != "1" ]; then
     # shellcheck disable=SC2086
-    symbol_names=$(grep -rhoE 'systemName: "[^"]+"' $sources 2>/dev/null | sed 's/systemName: "//; s/"$//' | sort -u)
+    symbol_names=$(grep -rhoE '(systemName|icon): "[^"]+"' $sources 2>/dev/null | sed -E 's/^(systemName|icon): "//; s/"$//' | sort -u)
     if [ -n "$symbol_names" ]; then
         missing=$(
             printf '%s\n' "$symbol_names" | while IFS= read -r name; do

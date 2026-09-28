@@ -144,9 +144,9 @@
             case .recoveryKey:
                 NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429") {} }
             case .recoveryKeySaved:
-                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", sharedAtStart: true) {} }
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", at: .shared) {} }
             case .recoveryKeyConfirm:
-                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", confirmingAtStart: true) {} }
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", at: .confirming) {} }
             case .lockSetupTyping:
                 NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }) }
             }

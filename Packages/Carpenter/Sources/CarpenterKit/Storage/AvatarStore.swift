@@ -43,16 +43,7 @@ public struct PersonAvatarStore: Sendable {
     }
 
     static func person(named name: String) -> ParticipantID? {
-        guard name.count % 2 == 0 else { return nil }
-        var bytes: [UInt8] = []
-        var index = name.startIndex
-        while index < name.endIndex {
-            let next = name.index(index, offsetBy: 2)
-            guard let byte = UInt8(name[index..<next], radix: 16) else { return nil }
-            bytes.append(byte)
-            index = next
-        }
-        return ParticipantID(rawValue: Data(bytes))
+        Data(lowercaseHex: name).map { ParticipantID(rawValue: $0) }
     }
 
     public func load(for person: ParticipantID) -> Data? {

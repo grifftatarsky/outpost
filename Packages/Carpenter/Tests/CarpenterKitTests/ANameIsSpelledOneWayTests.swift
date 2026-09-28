@@ -48,6 +48,14 @@ struct ANameIsSpelledOneWayTests {
         #expect(SiblingRecord.Name(recordName: "feed-" + name.writer.rawValue.lowercaseHex.uppercased()) == nil)
     }
 
+    @Test("A picture kept for somebody is read back as that person, and a file with no name is nobody")
+    func anAvatarFileNamesItsPerson() {
+        let person = ParticipantID(rawValue: random(32))
+        #expect(PersonAvatarStore.person(named: PersonAvatarStore.name(for: person)) == person)
+        #expect(PersonAvatarStore.person(named: "") == nil, "a file named only .jpg was read as a person")
+        #expect(PersonAvatarStore.person(named: PersonAvatarStore.name(for: person).uppercased()) == nil)
+    }
+
     @Test("A UUID's canonical bytes are its sixteen bytes in order, written out by hand")
     func aUUIDIsItsBytes() throws {
         let id = try #require(UUID(uuidString: "00112233-4455-6677-8899-AABBCCDDEEFF"))
