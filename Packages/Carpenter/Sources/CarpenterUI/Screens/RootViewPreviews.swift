@@ -26,7 +26,7 @@ import SwiftUI
 
             var body: some View {
                 RootView(
-                    rooms: Fixtures.rooms,
+                    rooms: Fixtures.rooms + Fixtures.solos,
                     syncedPeers: Fixtures.syncedPeers,
                     lastSync: Fixtures.now,
                     owner: Fixtures.cassilda,
@@ -48,6 +48,7 @@ import SwiftUI
                 )
                 .startingOn(tab)
                 .task { preferences.density = density }
+                .environment(\.personAvatars, Fixtures.avatars)
                 .environment(\.clock, Fixtures.PreviewClock())
             }
         }

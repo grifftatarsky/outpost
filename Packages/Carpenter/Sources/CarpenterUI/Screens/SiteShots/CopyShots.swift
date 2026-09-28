@@ -25,6 +25,7 @@
         case lockSetupTyping = "lock-setup-typing"
         case roomsPrivacyTip = "rooms-privacy-tip"
         case roomsCompact = "rooms-compact"
+        case solosList = "solos-list"
         case recoveryKeyConfirm = "recovery-key-confirm"
         case welcome1 = "welcome-1"
         case welcome2 = "welcome-2"
@@ -126,6 +127,8 @@
                 WelcomeTourView(onContinue: {}, page: Int(String(shot.rawValue.last!))! - 1)
             case .lockSetup:
                 NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }, onNotNow: {}) }
+            case .solosList:
+                RootView.demo(tab: .messages)
             case .roomsCompact:
                 RootView.demo(tab: .rooms, density: .compact)
             case .roomsPrivacyTip:

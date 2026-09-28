@@ -93,15 +93,16 @@ struct SpeechBubbleShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         let body = CGRect(x: rect.minX + tail, y: rect.minY, width: rect.width - tail, height: rect.height)
-        var path = Path(roundedRect: body, cornerRadius: min(14, body.height / 2), style: .continuous)
-        path.move(to: CGPoint(x: body.minX, y: body.maxY - 12))
-        path.addQuadCurve(
+        let bubble = Path(roundedRect: body, cornerRadius: min(14, body.height / 2), style: .continuous)
+        var point = Path()
+        point.move(to: CGPoint(x: body.minX + 6, y: body.maxY - 14))
+        point.addQuadCurve(
             to: CGPoint(x: rect.minX, y: body.maxY + 2),
-            control: CGPoint(x: body.minX, y: body.maxY - 2))
-        path.addQuadCurve(
-            to: CGPoint(x: body.minX + 12, y: body.maxY - 1),
-            control: CGPoint(x: body.minX + 4, y: body.maxY))
-        path.closeSubpath()
-        return path
+            control: CGPoint(x: body.minX + 2, y: body.maxY - 2))
+        point.addQuadCurve(
+            to: CGPoint(x: body.minX + 14, y: body.maxY - 2),
+            control: CGPoint(x: body.minX + 6, y: body.maxY + 1))
+        point.closeSubpath()
+        return bubble.union(point)
     }
 }

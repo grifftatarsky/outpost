@@ -3,6 +3,7 @@
     import CarpenterKit
     import CryptoKit
     import Foundation
+    import SwiftUI
 
     enum Fixtures {
         static func fixtureMessageID(_ seed: Int) -> MessageID {
@@ -38,6 +39,34 @@
         static let camilla = member("Camilla")
         static let naotalba = member("Naotalba")
         static let thale = member("Thale")
+        static let priya = member("Priya")
+        static let jonah = member("Jonah")
+        static let mae = member("Mae")
+        static let rafi = member("Rafi")
+        static let ines = member("Ines")
+
+        static func solo(_ person: Member, _ message: String, _ when: Date, unread: Bool = false) -> RoomSummary {
+            RoomSummary(
+                name: person.displayName, memberCount: 2, lastAuthor: person, lastMessage: message,
+                lastActivity: when, hasUnread: unread, isDirect: true, initials: person.initials, partner: person.id)
+        }
+
+        static let faces: [(Member, String, Color)] = [
+            (camilla, "🦊", .orange), (naotalba, "🌻", .yellow), (thale, "🐙", .purple), (priya, "🥞", .pink),
+            (jonah, "📚", .blue), (mae, "🎈", .red), (rafi, "🎸", .teal), (ines, "🥾", .green),
+        ]
+
+        @MainActor static let avatars: [ParticipantID: Image] = Dictionary(
+            uniqueKeysWithValues: faces.compactMap { person, emoji, color in
+                let renderer = ImageRenderer(
+                    content: Text(verbatim: emoji)
+                        .font(.system(size: 64))
+                        .frame(width: 120, height: 120)
+                        .background(LinearGradient(
+                            colors: [color.opacity(0.55), color.opacity(0.9)], startPoint: .top, endPoint: .bottom)))
+                renderer.scale = 2
+                return renderer.cgImage.map { (person.id, Image(decorative: $0, scale: 2)) }
+            })
 
         static let zeppelinEnthusiasts = RoomSummary(
             name: "Zeppelin Enthusiasts",
@@ -88,6 +117,36 @@
                 hasUnread: false,
                 recentSpeakers: [camilla, hastur, thale]
             ),
+            RoomSummary(
+                name: "Sunday Pancake Summit", memberCount: 6, lastAuthor: priya,
+                lastMessage: "I'm bringing the blueberries and nobody is allowed to fight me on this",
+                lastActivity: ago(minutes: 12), hasUnread: true, recentSpeakers: [priya, rafi, mae]),
+            RoomSummary(
+                name: "Book club (we read it this time)", memberCount: 5, lastAuthor: jonah,
+                lastMessage: "chapter twelve made me gasp out loud on a train. a stranger asked if I was ok",
+                lastActivity: ago(hours: 2), hasUnread: true, recentSpeakers: [jonah, ines, thale]),
+            RoomSummary(
+                name: "Mae's surprise party 🤫", memberCount: 8, lastAuthor: rafi,
+                lastMessage: "she asked what I'm doing Saturday and I said 'nothing' way too fast",
+                lastActivity: ago(hours: 5), hasUnread: false, recentSpeakers: [rafi, priya, jonah]),
+            RoomSummary(
+                name: "Saturday hike", memberCount: 4, lastAuthor: ines,
+                lastMessage: "trail is muddy, wear the shoes you don't love",
+                lastActivity: ago(days: 1, hours: 3), hasUnread: false, recentSpeakers: [ines, mae]),
+            RoomSummary(
+                name: "The group project that ate June", memberCount: 3, lastAuthor: naotalba,
+                lastMessage: "I renamed the file final_FINAL_v3 and I'm not sorry",
+                lastActivity: ago(days: 5), hasUnread: false, recentSpeakers: [naotalba, camilla]),
+        ]
+
+        static let solos: [RoomSummary] = [
+            solo(priya, "ok the recipe says 'a knob of butter'. what is a knob", ago(minutes: 3), unread: true),
+            solo(mae, "thank you for yesterday. really ❤️", ago(minutes: 40)),
+            solo(rafi, "running ten minutes late, save me a seat by the window", ago(hours: 1)),
+            solo(jonah, "did you ever finish that podcast about lighthouse keepers", ago(hours: 6)),
+            solo(ines, "the view from the top was worth every blister", ago(days: 1)),
+            solo(hastur, "the airship model arrived. it is enormous. where do I put it", ago(days: 2)),
+            solo(camilla, "found your scarf in my coat pocket, it's safe with me", ago(days: 3)),
         ]
 
         static let syncedPeers = ["Cassilda", "Hastur", "Yhtill", "Camilla", "Thale", "Naotalba"]
