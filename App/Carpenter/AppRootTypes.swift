@@ -9,7 +9,6 @@ import OSLog
 import Intents
 import SwiftUI
 
-// TODO: Why is UIKit in an if statement lol.
 #if canImport(UIKit)
     import UIKit
 #endif

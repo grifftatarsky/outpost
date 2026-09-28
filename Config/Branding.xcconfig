@@ -1,6 +1,7 @@
 // APP #################################################################
 APP_DISPLAY_NAME = Outpost
 APP_URL_SCHEME = outpost
+SLASH = /
 APP_REPORT_FORM_URL = https:$(SLASH)$(SLASH)outpostmessaging.com/report
 APP_BUNDLE_ID_PREFIX = com.microgpt
 APP_ICLOUD_CONTAINER = iCloud.$(APP_BUNDLE_ID_PREFIX).outpost
@@ -14,6 +15,4 @@ INFOPLIST_KEY_CFBundleName = $(APP_DISPLAY_NAME)
 SWIFT_VERSION = 6.0
 SWIFT_STRICT_CONCURRENCY = complete
 SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES
-// TODO: IS THIS ACTUALLY NEEDED #######################################
-SLASH = /
 //######################################################################
