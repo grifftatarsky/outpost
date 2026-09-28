@@ -420,3 +420,21 @@ alone passed. A timing bound measured while 1,700 other tests run in parallel is
 machine's load.
 
 <!-- COPY END 12295e6f -->
+
+<!-- COPY BEGIN 8599b81d [NEEDS HUMAN REVIEW] -->
+
+## Per-pair spaces, noticed 2026-09-28
+
+- **A change of devices rings every contact.** A round that tells contacts a device was added or
+  removed rings all of them (`ringing: announcing ? peers()` in `AppSession+Sync.swift`), and the ring
+  is a visible notification. What the notification extension draws when there is no message behind
+  it has not been looked at on a phone.
+- **Empty spaces for codes from earlier builds stay in iCloud.** Until 2026-09-28 every launch before
+  a round finished made one more. Nothing removes them except erasing every space on a reset.
+- **A signed link is not tied to the code or invite it came in.** It could be copied into another;
+  with an honest signer the account is still the signer's own, so the most it does is stall a join.
+- **One space per contact, however many callers ask at once, is only checked in the fake.** The
+  CloudKit side holds the work in flight (`PairIndex.zone(for:making:)`), and nothing in the suite
+  can reach it.
+
+<!-- COPY END 8599b81d -->

@@ -42,18 +42,32 @@ No member can remove another member's entry from the log. A deletion is an entry
 
 ## The mailbox
 
-Each member owns an `Outbox` zone in their **own** iCloud private database, shared with their peers.
-To send, a device writes one **packet** into its own outbox: the entries sealed under a fresh content
-key, that key wrapped separately for each recipient, addressed to tags derived from a secret the two
-members share. One round writes one packet, however many entries it carries.
+Each member keeps one **space** for each person they talk to, in their **own** iCloud private
+database: a zone named `Pair-` and a random number, shared read-only with that person's account
+alone. Nobody writes anywhere but their own iCloud. A space holds:
 
-Recipients read the zone's change feed, not a query. CloudKit's query index is eventually consistent,
-so a record just written may not come back from a query. The change feed is consistent and needs no
+- **Packets** for that person: the entries sealed under a fresh content key, the key wrapped for
+  that person under the secret the two share, addressed to a tag derived from it. A round writes one
+  packet per person, or more when the round is bigger than a packet.
+- One **ring** record, rewritten with random bytes when the round left something that should ring.
+- **Receipts** for what was collected from that person's space. A reader never touches the sender's
+  space; it writes a sealed receipt into its own space for the sender, and the sender takes a packet
+  back once a device of the reader that still counts has signed for it.
+- A **copy of each photo** sent to that person, cleared the same way.
+- A `PairInfo` record whose `hint`, a keyed hash of the pair's secret, lets every device of the
+  member tell which space is whose.
+
+A space's link is exchanged in a code, in an invite, or, between room members who never swapped
+codes, in a room entry sealed to the one person it is for. A contact is read only from the accounts
+that a device of theirs that still counts has named. See
+[Decisions](decisions.md#each-pair-of-people-gets-its-own-mailbox).
+
+Readers read a zone's change feed, not a query. CloudKit's query index is eventually consistent, so
+a record just written may not come back from a query. The change feed is consistent and needs no
 schema.
 
-Each recipient acknowledges a packet by removing its own tag from the packet's list of who still has
-to collect it. When the list is empty the packet is deleted, so an outbox holds what is in flight,
-not a history.
+A member's contacts' old `Outbox` zones, from before 2026-09-27, are still read until every contact
+reads a space, and then the member's own old outbox is erased.
 
 **Storage bills the sender**, in their own iCloud. The public database is never used, so the
 developer's costs do not grow with the number of people using the app.
@@ -160,11 +174,13 @@ There are three subscriptions, each scoped to a record type. One of them is visi
 |---|---|---|---|---|
 | `deviceFeed` | private | `CKDatabaseSubscription` | `SiblingFeed` | silent |
 | `inbox` | shared | `CKDatabaseSubscription` | `SyncPacket` | silent |
-| `bell` | private, own zone | `CKRecordZoneSubscription` | `MessageBell` | alert, mutable content |
+| `ring` | shared | `CKDatabaseSubscription` | `PairRing` | alert, mutable content |
 
-The transport cannot see inside a packet, so the packet channel wakes the app and shows nothing. A
-**bell** is a separate record a sender writes into the recipient's zone only when it has left a real
-message there for them. Nothing else writes that record type, so nothing else can produce a banner.
+The transport cannot see inside a packet, so the packet channel wakes the app and shows nothing. The
+**ring** is one record in the sender's space for each person, rewritten only when the round left a
+message for them, or when the sender's devices changed. A watch limited to one record type rings for
+nothing else: measured on Griff's phone 2026-09-27, where changes to other record types in the same
+space woke nobody.
 
 The notification service extension opens the message on the device and replaces the generic line with
 the room and the sender. It writes nothing to the server.

@@ -330,7 +330,9 @@ missing notification permission as an error.
 
 ### The share is a transport boundary, not a security one
 
-**FACT** — a property of the platform or the protocol, not a choice anybody made.
+**FACT** — a property of the platform or the protocol, not a choice anybody made. **Superseded
+2026-09-27** by [each pair of people gets its own mailbox](#each-pair-of-people-gets-its-own-mailbox);
+it describes the old outbox, which is still read until every contact has moved.
 
 A member's outbox is shared with `publicPermission = .readWrite`, so its URL is a bearer token.
 Payload encryption is doing the access control; a leaked URL yields ciphertext addressed to rotating
@@ -477,7 +479,9 @@ because a clip must not start playing before anybody has looked at it.
 
 ### The rendezvous heals itself
 
-**FACT** — a property of the platform or the protocol, not a choice anybody made.
+**FACT** — a property of the platform or the protocol, not a choice anybody made. **Superseded
+2026-09-27** by [each pair of people gets its own mailbox](#each-pair-of-people-gets-its-own-mailbox);
+the rendezvous was removed.
 
 Two members reach each other through one record each: an offer of their own outbox share, sealed to
 the pairwise secret and left in the other member's zone. The offer used to be written only where
@@ -3003,7 +3007,51 @@ send, with messages, receipts and everything else in other types that can be wri
 silently. Apple's permission to drop notifications is not needed, and neither is a separate ring
 space.
 
-**Not built.**
+**Built 2026-09-27 and 2026-09-28. Proved above the mailbox; not yet run over iCloud.** Each person
+keeps one space per contact in their own iCloud, a zone named `Pair-` and a random number, shared
+read-only with that contact's account alone. It holds the packets for that contact, one ring record,
+the receipts for what was collected from that contact, and a copy of each photo sent to them. Nobody
+writes anywhere but their own iCloud.
+
+Two people learn each other's link one of three ways. A **code** carries a space made for whoever
+uses it, naming nobody until an invite answers the code. An **invite** carries the inviter's link.
+**Room members who never swapped codes** get each other's links as a room entry sealed to the one
+person it is for; whoever talks to both passes it on, the way missing history is passed on, and
+cannot open it.
+
+**Rules added 2026-09-28, all PROPOSED**, after a review of the build found that a stolen device
+could take over where a contact's messages went:
+
+- A link counts only if a device that still counts sent it. A link from a device the person later
+  removes stops counting.
+- A space names the account in the newest such link. A device that has not heard any link for a
+  contact leaves the named account alone, so a member's second device cannot undo the first.
+- A contact is read from every account that a counting device's link names. While a stolen device's
+  link is the newest, the real device's removal still arrives, and then the stolen account drops
+  out. Until a device knows any link for a contact, it reads every space its account has joined for
+  them; each packet is checked for the sender's device signature either way.
+- A link in a code or an invite is taken only for somebody the device holds no link for.
+- Blocking somebody closes the space kept for them at the next round; unblocking makes a new one.
+  The deny list hides people and closes nothing.
+- A device joins a contact's space again whenever it cannot read it, because a reader who is removed
+  from a share and named again has to accept again.
+
+**Where the build departs from the ruling.** The ruling said photos would be stored once, in a
+read-only space, with each mailbox pointing to them. What was built keeps a copy of each photo in
+each recipient's space. One photo space would have to be read by everybody the photo went to, which
+breaks "only the two people can read the space they share", and closing one person's space would
+not end their access to the photos. The cost is storage, one copy per recipient, and that Apple sees
+the same bytes in several spaces and can tell one photo went to several people. This needs Griff's
+answer: [Open questions](open-questions.md#should-a-photo-be-one-copy-per-person-it-went-to).
+
+**The old outbox** is still read, and a packet goes into it for a contact who has not joined a
+space yet. It is erased once every contact reads a space.
+
+**Seen on three simulators, 2026-09-28, proved above the mailbox.** Trig invited Quad and Fifth into
+one room. The room introduced Quad and Fifth, each joined the other's space, and a message from
+Quad reached Fifth with Trig's app closed; nothing in Trig's spaces changed. Over iCloud it has not
+run: both rig accounts were asking for their passwords, and `LivePairTests` is ready for two
+accounts.
 
 <!-- COPY END cd3e5ba0 -->
 
@@ -3025,6 +3073,18 @@ appended to the signed bytes only when present so older removals keep their byte
 entry counts only up to its cutoff; a removal made before cutoffs existed still goes by its date.
 `ARemovedPersonStopsAtTheRemovalTests` and `ARemovedDeviceStopsAtTheCutoffTests` fail with the old
 checks put back.
+
+**Added 2026-09-28, PROPOSED, after a review of the build.** A number alone let a removed device sign
+a second, different entry under a number the removal had seen, and a removed person do the same in a
+room. So a device removal now also names the entry at its cutoff (`head`, signed only when present).
+A second entry from a removed device under a number already filled is refused; the entry at the
+cutoff has to be the one named; a forgery that reached a device first is taken back when the entries
+leading to the named one arrive; and entries that arrived before the removal did, past its cutoff,
+are taken back when it arrives and are not counted as missing. For a removed person, an entry under
+a number their feed already filled counts for nothing, and a removal ends every invitation they made
+that nobody had taken, because a backdated invitation could otherwise bring a second identity of
+theirs back into an open room. **Not closed:** an entry under a number the room's members never
+held, see [Open questions](open-questions.md#can-a-removed-person-still-add-to-a-rooms-past).
 
 <!-- COPY END d920b620 -->
 
@@ -4899,6 +4959,10 @@ Kept briefly so nobody re-derives them.
   subscription, including on the shared database, and nothing was using it.
 - **`pushingOutgoing: false` means the extension does not write.** It skipped the send and left the
   receive path acknowledging, which is a write. Replaced by `SyncMode.readOnly`.
+
+- **The share is a transport boundary** and **the rendezvous heals itself** describe the shared outbox,
+  which [each pair of people gets its own mailbox](#each-pair-of-people-gets-its-own-mailbox) replaced
+  on 2026-09-27. They stay below while old outboxes are still read.
 
 - **A consensus purge opens the room and shows a passing notice.** Ruled 2026-09-13; replaced on
   2026-09-15 by [a permanent line in the transcript](#a-deletion-leaves-a-line-in-the-transcript-not-a-notice-that-fades),

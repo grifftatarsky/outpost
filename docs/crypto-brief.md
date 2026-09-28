@@ -215,6 +215,14 @@ a relaunch. The claimed dates still bound which entries a device may sign. Teste
 `WhatTheRegistryCountsTests`, `WritingOldDatesIntoICloudTests` and `RemembersRemovalsTests`, and live
 in `LiveSiblingFeedTests`.
 
+**What a removed device wrote** (since 2026-09-28). A removal names the last entry of that device's
+feed that the removing device held, by number and hash (`cutoff` and `head`, signed only when
+present). Nothing past it counts, whatever date it carries. A second entry under a number already
+filled is refused, and one that reached a device before the removal did is taken back when the
+removal arrives (`ARemovedDeviceStopsAtTheCutoffTests`). An entry under a number that only another
+room used cannot be checked yet
+([an open question](open-questions.md#can-a-removed-person-still-add-to-a-rooms-past)).
+
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
 removal (erasing it with Find My signs it out). A removed device can no longer add a device of its
@@ -657,48 +665,46 @@ plain dictionary once, so a round owing one person keys to two rooms delivered t
 the rest, and then marked every owed grant issued because *a* packet had been written. Anything else
 addressed per peer has to be a list too.
 
-The record written to CloudKit (`PacketWire.fields`) carries exactly: the packet UUID, the
-outstanding tag list, the wrap tags, the wrapped keys, the sealed body, and the grant tags and
-values. **What that leaks, stated plainly:**
+**Where a packet is written** (since 2026-09-27). Into the sender's own space for one recipient: a
+zone in the sender's iCloud, shared read-only with that recipient's account alone. The record
+(`PacketWire.fields`) carries exactly: the packet UUID, the recipient's tag, the wrapped key, the
+sealed body, and the grant tags and values. **What that leaks, stated plainly:**
 
-- How many recipients a packet has (the length of the tag list).
-- Roughly how much was said (the ciphertext's size).
-- When it was written, and when each recipient collected — each recipient's device leaves a sealed
-  receipt on the packet, so the relay watches the receipts arrive.
-- That a set of packets share a recipient *within one day*.
+- That this sender writes to this reader. The share names the reader's account, and Apple holds
+  every share list.
+- Roughly how much was said (the ciphertext's size), when it was written, and when the reader
+  collected it, because the reader's receipt appears in the reader's own space for the sender.
+- That one photo went to several people. Each recipient's copy carries the same sealed bytes and the
+  same photo number ([an open question](open-questions.md#should-a-photo-be-one-copy-per-person-it-went-to)).
+- The pair's `hint`, a keyed hash of the pair's secret, which is the same in the two people's spaces
+  for each other. Apple can already match those two spaces from their share lists, so it adds
+  nothing.
+- The ring, sixteen random bytes rewritten when a round leaves something that should ring. It tells
+  Apple a message was left, which the packet's own time already does.
 
-**Receipts, not deletions** (since 2026-09-27). A recipient used to acknowledge a packet by removing
-its address from the sender's record and deleting the record when it was the last. Anybody the outbox
-is shared with can edit it, including a device its member removed, which still holds the identity
-and so can work out the member's addresses. So a removed device could collect a packet meant for its
-member and make it vanish; the member's real devices never saw it until the sender next wrote in that
-room. Now a recipient's device appends a receipt, signed by the device and sealed to the sender under
-the pairwise secret (`PacketReceipt`), and never removes anything. A member's devices skip a packet
-only if one of *their* devices that still counts signed for it. The sender takes a packet back only
-once every recipient has a receipt from a device that counts, or the packet has outlived the address
-lookback; a packet that leaves the outbox any other way is sent again (`NothingIsSnatchedTests`).
+**Receipts, in the reader's own space.** A reader never writes into the sender's space; iCloud refuses
+it (measured on the rig 2026-09-27: adding, changing and deleting a record and changing the share
+were all refused). The reader's device signs a receipt and seals it to the sender under the pairwise
+secret (`PacketReceipt`), and writes it into the reader's own space for the sender. The sender keeps
+its own record of who each packet was for, and a digest of what it wrote, and takes a packet back
+only once a device of the reader that still counts has signed for it, or the packet has outlived the
+address lookback (`TamperedPacketTests`, `NothingIsSnatchedTests`).
 
-**The sender's own record, not the server's** (since 2026-09-27). The sender used to read who a packet
-was for from the packet record on the server, which the same people can edit, so one recipient could
-strip the others from it, sign for their own copy and have the sender take back a packet nobody else
-had collected. The sender now keeps its own list of who each packet was for, and a digest of what it
-wrote, and settles against those: a packet altered in place, a recipient stripped or the sealed words
-changed, is taken back and sent again (`TamperedPacketTests`; the digest reads back unchanged from a
-real account, `CloudKitMailboxTests`). What a person with write access can still do is delay: a
-packet they damage reaches the others one round later.
+**Photos the same way.** A photo's copy for each recipient sits in the sender's space for them. The
+reader signs for it with an `AttachmentReceipt`, the same shape as a packet receipt under its own
+domain (`carpenter.attachment-receipt.v1`). A receipt counts only if it was written after the copy it
+answers, so a copy sent again is not cleared by an old receipt (`NobodyButTheSenderClearsAPhotoTests`).
 
-**Photos and clips the same way** (since 2026-09-27). A photo's record used to be cleared by its
-readers: each removed its own address and the last deleted it, so anybody the outbox is shared with
-could make a photo vanish before the others had it. Now a reader signs for a photo with an
-`AttachmentReceipt`: the same shape as a packet receipt, signed by the reader's device and sealed to the
-sender under the pairwise secret, but under its own domain (`carpenter.attachment-receipt.v1`), so a
-signature over a packet with the same number never counts for a photo. The sender keeps its own
-record of who each photo was for, clears it once one device of each of them has signed or nine
-days have passed, and puts back from its own copy a photo that left early
-(`NobodyButTheSenderClearsAPhotoTests`).
+**Who may say where a person is read.** A link to a space counts only if a device of that person that
+still counts sent it; a contact is read only from accounts such links name, and a space names the
+account in the newest one. A stolen device can move that name to its own account while it still
+counts, and removing it moves it back
+([an open question](open-questions.md#should-a-stolen-device-be-able-to-redirect-your-contacts-before-you-remove-it),
+`WhoCanTellYouWhereToReadSomebodyTests`).
 
 It does not leak any participant identifier, any room identifier, any device identifier, or any
-plaintext. **Nothing is ever written with `record[key]` unsealed** — the rule in `CLAUDE.md` exists
+plaintext. **Nothing readable is written with `record[key]`**: every field is sealed except the pair
+hint, which is a keyed hash, and the ring, which is random bytes. The rule in `CLAUDE.md` exists
 because it was broken once, and that is the next section.
 
 ---

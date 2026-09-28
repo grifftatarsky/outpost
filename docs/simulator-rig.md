@@ -84,6 +84,10 @@ TEST_RUNNER_OUTPOST_RIG=1 xcodebuild test -workspace Carpenter.xcworkspace -sche
   -only-testing:CarpenterUITests/RigChecks/testSupporter -parallel-testing-enabled NO
 ```
 
+`testFifthOnboards` takes a name in `RIG_NAME`, `testQuadSays` says what is in `RIG_SAY`, and
+`testSees` opens Checks and waits for the words in `RIG_EXPECT`, so any three members can talk in one
+run.
+
 Each step attaches screenshots to the result bundle and writes the screen's element tree to
 `/tmp/outpost-rig-exchange/<step>.txt`. Export the screenshots with
 `xcrun xcresulttool export attachments`.
@@ -232,22 +236,18 @@ until the password is entered again in Settings. Only the account owner can do t
 
 <!-- COPY BEGIN 29af1dda [NEEDS HUMAN REVIEW] -->
 
-## A quiet peer is usually a dead share
+## A quiet peer
 
-On 2026-09-04 beta read only its own zone all day, and a message from alpha was never found, because
-the share link in alpha's standing offer had gone stale. It healed without re-pairing once alpha
-rewrote its offer.
+Two members who talk each keep a space for the other, and each has joined the other's. Under
+`--mailbox` every space is in `<directory>/pairs.json`: the account it lives in, the account it names,
+and the accounts that have joined it. A space that names nobody and has no hint is one made for a
+code. Two members whose spaces do not name each other have not swapped links yet; their room passes
+the links on while a member who talks to both is running.
 
-The fetch line names reachable zones by owner: `3 zone(s) reachable [own 945e3b fdd60b]`. Two
-accounts that should be paired and each show only `[own]` are not paired. The offer line says what the
-rendezvous did: `offers — 0 written, 1 standing, 0 unplaced, 0 failed` is healthy; `unplaced` means
-no packet from that peer has been seen in the current window; `failed` carries the CloudKit error.
-Rounds run while a room is open or on a push, so keep a conversation open on both devices.
-
-To cause it on purpose: You › Debug › **Rotate mailbox share** on one device, then terminate that app
-within the minute so the other reads the dead offer. The other logs `1 failed` with *Zone does not
-exist*, retracts the offer, and shows `[own]`. Relaunch the first, and within about 90 seconds the
-other reads `found 1 offer(s)` and `2 zone(s) reachable`.
+Over iCloud, a test that stops at its first CloudKit call, with `AuthTokenError` in cloudd's log, is
+the Apple Account asking for its password. On 2026-09-28 alpha and beta both showed *Apple Account
+Verification*, and after *Not Now* every request failed with *User rejected a prompt to enter their
+iCloud account password*. Only Griff can enter it, in Settings on each simulator.
 
 <!-- COPY END 29af1dda -->
 
@@ -304,6 +304,11 @@ devices is **proved above the mailbox** and has to be written down in those word
   per recipient per packet, so Quad, let into a room and an Outpost the same afternoon, got only one
   key. And a round acknowledged packets before writing them to disk, so terminating a device mid-round
   lost a comment on both ends; that comment is still gone.
+- **The room introduces two people, 2026-09-28.** Trig (gamma) invited Quad (delta) and Fifth
+  (outpost-27) into one room. Quad and Fifth never swapped codes; the room passed their links on, each
+  joined the other's space, and with Trig's app closed a message from Quad reached Fifth. Nothing in
+  Trig's spaces changed. It also found that every launch before a round finished made one more empty
+  space for a code, fixed the same night.
 
 <!-- COPY END 9596e0ef -->
 

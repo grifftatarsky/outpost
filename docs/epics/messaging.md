@@ -199,7 +199,7 @@ the defect the tests found.
 <!-- COPY BEGIN 2c974681 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-rendezvous-heals-a-dead-share">
-<summary><b>The rendezvous heals a dead share</b> — Complete (tested)</summary>
+<summary><b>The rendezvous heals a dead share</b> — Superseded 2026-09-27 by <a href="#each-pair-of-people-gets-its-own-mailbox">each pair of people gets its own mailbox</a></summary>
 
 **Story.** As a member whose peer's mailbox share stopped working, I want the two of us to find each
 other again without either of us doing anything, so that a quiet peer is a quiet peer and not a
@@ -221,7 +221,7 @@ dead channel.
   a minute, re-offered on relaunch, accepted, a message each way delivered and read.
 
 **Detail.** [The rendezvous heals itself](../decisions.md#the-rendezvous-heals-itself) ·
-[the rig procedure](../simulator-rig.md#a-quiet-peer-is-usually-a-dead-share).
+[the rig procedure](../simulator-rig.md#a-quiet-peer).
 
 </details>
 
@@ -248,6 +248,41 @@ hold the rest, so that a sender's outbox drains and marks do not lag a round for
 </details>
 
 <!-- COPY END e8faae74 -->
+
+<!-- COPY BEGIN 977c6174 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="each-pair-of-people-gets-its-own-mailbox">
+<summary><b>Each pair of people gets its own mailbox</b> — Complete (proved above the mailbox)</summary>
+
+**Story.** As a member, I want what I send to one person to sit where only that person can read it,
+and nobody else to be able to change or remove it, so that removing or blocking somebody means what
+it says. Ruled by Griff 2026-09-27; see [Decisions](../decisions.md#each-pair-of-people-gets-its-own-mailbox).
+
+**Promises**, confirmed by Griff 2026-09-27: only the two people can read the space they share;
+nothing anyone writes can change or delete mail to anyone else; closing a person's space ends their
+access to all of yours and touches nobody else's; only the sender decides what was collected.
+
+**Acceptance criteria**
+
+- **Done.** One space per contact in your own iCloud, read-only to that contact's account alone.
+- **Done.** Links swapped in a code, an invite, and, between room members who never swapped codes, a
+  sealed room entry passed on by whoever talks to both, who cannot open it.
+- **Done.** A link counts only from a device that still counts, and a contact is read only from
+  accounts such links name (added 2026-09-28 after a review of the build).
+- **Done.** Blocking somebody closes the space kept for them; unblocking makes a new one.
+- **Owed.** The same over iCloud, on two accounts (`LivePairTests`).
+
+**Testing**
+
+- Suite: `EachPairHasASpaceOfItsOwnTests`, `WhoCanTellYouWhereToReadSomebodyTests`,
+  `TheFakeIsNoEasierTests`; every guard fails its test when taken out.
+- Three simulators over the directory mailbox, 2026-09-28: Quad and Fifth, introduced only by the
+  room, joined each other's spaces, and Quad's message reached Fifth with Trig's app closed.
+- Not run over iCloud: both rig accounts wanted their passwords on 2026-09-28.
+
+</details>
+
+<!-- COPY END 977c6174 -->
 
 <!-- COPY BEGIN c2dd58d5 [NEEDS HUMAN REVIEW] -->
 
