@@ -21,6 +21,7 @@
         case lockErasing = "lock-erasing"
         case lockRecovery = "lock-recovery"
         case lockSetup = "lock-setup"
+        case conversationStates = "conversation-states"
 
         public static let argument = "--copy-shot"
 
@@ -104,6 +105,13 @@
                 LockShot(wrongTries: 2, eraseAfter: 5)
             case .lockRecovery:
                 LockShot(wrongTries: 0, eraseAfter: nil, recovering: true)
+            case .conversationStates:
+                NavigationStack {
+                    ConversationView(
+                        room: Fixtures.zeppelinEnthusiasts, transcript: Self.states, hiddenCount: 2,
+                        onRevealHidden: {})
+                }
+                .environment(\.mediaLoader, Self.loader)
             case .lockSetup:
                 NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }, onNotNow: {}) }
             }
@@ -130,6 +138,38 @@
                         askedAt: Fixtures.ago(hours: index + 1))
                 },
                 onSend: { _ in nil }, onDismiss: { _ in })
+        }
+
+        private static let gonePhoto = AttachmentID()
+        private static let askedPhoto = AttachmentID()
+
+        private static func photo(_ id: AttachmentID) -> MediaAttachment {
+            MediaAttachment(
+                reference: AttachmentReference(id: id, key: Data(count: 32), digest: Data(count: 32), byteCount: 1),
+                kind: .image, width: 4, height: 3, preview: nil)
+        }
+
+        private static var states: [TranscriptEntry] {
+            [
+                .notice(RoomNotice(id: Fixtures.hash(40), kind: .removed(Fixtures.camilla, by: Fixtures.hastur), at: Fixtures.ago(hours: 3))),
+                .notice(RoomNotice(id: Fixtures.hash(41), kind: .left(Fixtures.yhtill), at: Fixtures.ago(hours: 2))),
+                .message(Message(
+                    id: Fixtures.fixtureMessageID(42), author: Fixtures.hastur, body: "", sentAt: Fixtures.ago(hours: 1),
+                    isMine: false, isWithdrawn: true)),
+                .message(Message(
+                    id: Fixtures.fixtureMessageID(43), author: Fixtures.hastur, body: "", sentAt: Fixtures.ago(minutes: 40),
+                    isMine: false, media: photo(gonePhoto))),
+                .message(Message(
+                    id: Fixtures.fixtureMessageID(44), author: Fixtures.thale, body: "", sentAt: Fixtures.ago(minutes: 20),
+                    isMine: false, media: photo(askedPhoto))),
+            ]
+        }
+
+        @MainActor private static var loader: MediaLoader {
+            let loader = MediaLoader(source: { _, _ in nil }, screen: nil)
+            loader.asking = MediaAsking(
+                canAsk: { _, _ in true }, isAsked: { $0 == askedPhoto }, ask: { _, _ in true })
+            return loader
         }
 
         private static var repair: HistoryRepairStatus {
