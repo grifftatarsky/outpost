@@ -144,6 +144,25 @@ struct WhoCanTellYouWhereToReadSomebodyTests {
         }
     }
 
+    @Test("A code's space is written down as soon as it is made, so a relaunch does not make another")
+    func aCodesSpaceSurvivesARelaunch() async throws {
+        let mailbox = InMemoryMailbox()
+        let keychain = InMemoryKeychainStore()
+        let directory = TestScratch.root.appending(path: "code-space-\(UUID().uuidString)")
+        let session = TestSession.make(keychain: keychain, at: directory)
+        await session.load()
+        try await session.createIdentity(displayName: "Alice")
+        await session.pairUp(through: mailbox)
+        let made = try #require(session.persisted.codeLink)
+
+        let relaunched = TestSession.make(keychain: keychain, at: directory)
+        await relaunched.load()
+        await relaunched.pairUp(through: mailbox)
+        #expect(relaunched.persisted.codeLink == made, "a relaunch made a second space for the same code")
+        let me = try #require(session.enrolment?.identity.id)
+        #expect(await mailbox.spaceCount(of: me) == 1)
+    }
+
     @Test("A code's space is made once, however many callers ask for it at the same moment")
     func aCodesSpaceIsMadeOnce() async throws {
         let mailbox = InMemoryMailbox()

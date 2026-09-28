@@ -203,6 +203,7 @@ extension AppSession {
             let account = try await mailbox.account(in: pairs)
             persisted.codeLink = try SignedPairLink.sign(PairLink(account: account, url: url), by: identity)
             prepareCodeForSharing(replacingSpent: true)
+            await persistOrReport("the space a code offers") { try await saveState() }
         } catch {
             Diagnostics.sync.error(
                 "pairs: could not make a space for a new code: \(String(describing: error), privacy: .public)")
