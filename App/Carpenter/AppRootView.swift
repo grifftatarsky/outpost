@@ -527,8 +527,10 @@ struct AppRootView: View {
         #if os(iOS)
             .sheet(isPresented: $tappingPhones, onDismiss: { finishTapping() }) {
                 if let tapSwapper {
-                    TapToSwapView(phase: tapSwapper.phase, trouble: tapSwapper.trouble) { tapSwapper.accept() }
-                        .themed(.default)
+                    TapToSwapView(phase: tapSwapper.phase, number: tapSwapper.number, trouble: tapSwapper.trouble) {
+                        tapSwapper.accept()
+                    }
+                    .themed(.default)
                 }
             }
         #endif

@@ -25,11 +25,15 @@ public struct TapToSwapView: View {
     @Environment(\.hapticsEnabled) private var hapticsEnabled
 
     private let phase: TapSwap.Phase
+    private let number: TapSwap.Number?
     private let trouble: Trouble?
     private let onAccept: () -> Void
 
-    public init(phase: TapSwap.Phase, trouble: Trouble?, onAccept: @escaping () -> Void) {
+    public init(
+        phase: TapSwap.Phase, number: TapSwap.Number?, trouble: Trouble?, onAccept: @escaping () -> Void
+    ) {
         self.phase = phase
+        self.number = number
         self.trouble = trouble
         self.onAccept = onAccept
     }
@@ -52,10 +56,10 @@ public struct TapToSwapView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityElement(children: .combine)
                 Spacer()
-                if phase == .touching, trouble == nil {
+                if phase == .touching, trouble == nil, number != nil {
                     // COPY BEGIN 2cdcc344 [NEEDS HUMAN REVIEW]
                     Button(action: onAccept) {
-                        Text("Swap codes", bundle: .module).primaryAction()
+                        Text("Confirm", bundle: .module).primaryAction()
                     }
                     .prominentActionButton()
                     // COPY END 2cdcc344
@@ -76,6 +80,9 @@ public struct TapToSwapView: View {
         }
         .sensoryFeedback(trigger: phase) { old, new in
             hapticsEnabled ? Self.feedback(from: old, to: new) : nil
+        }
+        .sensoryFeedback(trigger: number) { old, new in
+            hapticsEnabled && old == nil && new != nil ? .impact(weight: .medium) : nil
         }
     }
 
@@ -116,7 +123,12 @@ public struct TapToSwapView: View {
         case (.noLocalNetwork?, _): Text("Local Network is off", bundle: .module)
         case (nil, .looking): Text("Hold your iPhone against theirs", bundle: .module)
         case (nil, .crowded): Text("More than one phone is close", bundle: .module)
-        case (nil, .touching): Text("Swap codes with this phone?", bundle: .module)
+        case (nil, .touching):
+            if let number {
+                Text(verbatim: "\(number.first) \(number.second)").font(.largeTitle.weight(.semibold).monospacedDigit())
+            } else {
+                Text("Keep holding them together", bundle: .module)
+            }
         case (nil, .waitingForThem): Text("Waiting for them", bundle: .module)
         case (nil, .swapped): Text("Codes swapped", bundle: .module)
         }
@@ -135,18 +147,26 @@ public struct TapToSwapView: View {
                 bundle: .module)
         case (nil, .looking):
             Text(
-                "They need this screen open too. Nothing is shared until each of you taps Swap codes.",
+                "They need this screen open too. Nothing is shared until each of you taps Confirm.",
                 bundle: .module)
         case (nil, .crowded):
             Text(
                 "Hold just your two phones together, away from anybody else doing the same.",
                 bundle: .module)
         case (nil, .touching):
-            Text(
-                "You can move the phones apart now. Your code goes to theirs and theirs comes to yours, directly, once you both tap Swap codes.",
-                bundle: .module)
+            if let number, number.youSayFirst {
+                Text(
+                    "Say \(number.first) out loud. They answer \(number.second). Confirm only if that is what they say; if it is not, cancel.",
+                    bundle: .module)
+            } else if let number {
+                Text(
+                    "They say \(number.first), and you answer \(number.second). Confirm only if they said \(number.first); if not, cancel.",
+                    bundle: .module)
+            } else {
+                Text("A number appears on both phones once each has found the other.", bundle: .module)
+            }
         case (nil, .waitingForThem):
-            Text("Nothing is shared until they tap Swap codes too.", bundle: .module)
+            Text("Nothing is shared until they tap Confirm too.", bundle: .module)
         case (nil, .swapped):
             Text("Check the characters with them when you add each other.", bundle: .module)
         }

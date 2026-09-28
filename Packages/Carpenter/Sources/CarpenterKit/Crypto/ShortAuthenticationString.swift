@@ -18,6 +18,7 @@ public enum PhraseLength: Int, Hashable, Sendable, Codable, CaseIterable, Compar
 
 public enum ShortAuthenticationString {
     public static let alphabet = Array("23456789ABCDEFGHJKMNPQRSTVWXYZ")
+    static let digits = Array("0123456789")
 
     static let ceiling = 256 - (256 % alphabet.count)
 
@@ -30,18 +31,25 @@ public enum ShortAuthenticationString {
     static func derive(fromTranscript transcript: Data, length: PhraseLength, domain: String)
         -> String
     {
+        derive(fromTranscript: transcript, count: length.rawValue, domain: domain, from: alphabet)
+    }
+
+    static func derive(fromTranscript transcript: Data, count: Int, domain: String, from symbols: [Character])
+        -> String
+    {
+        let ceiling = 256 - (256 % symbols.count)
         var phrase = ""
         var block = UInt64(0)
 
-        while phrase.count < length.rawValue {
+        while phrase.count < count {
             let digest = SHA256.hash(
                 data: CanonicalBytes.payload(
                     domain: domain,
                     fields: [transcript, CanonicalBytes.sequence(block)]))
 
             for byte in digest where Int(byte) < ceiling {
-                phrase.append(alphabet[Int(byte) % alphabet.count])
-                if phrase.count == length.rawValue { break }
+                phrase.append(symbols[Int(byte) % symbols.count])
+                if phrase.count == count { break }
             }
 
             block += 1

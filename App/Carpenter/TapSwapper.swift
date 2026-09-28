@@ -10,6 +10,7 @@
     @Observable
     final class TapSwapper {
         private(set) var phase: TapSwap.Phase = .looking(closest: nil)
+        private(set) var number: TapSwap.Number?
         private(set) var trouble: TapToSwapView.Trouble?
         @ObservationIgnored var onArrival: ((String) -> Void)?
 
@@ -240,16 +241,14 @@
 
         private func measured(_ session: ObjectIdentifier, _ distance: Double?) {
             guard let peer = peer(measuredBy: session) else { return }
-            swap.measured(peer, distance: distance, at: .now)
-            refresh()
+            apply(swap.measured(peer, distance: distance, at: .now))
         }
 
         private func ended(_ session: ObjectIdentifier, refused: Bool) {
             if refused { trouble = .notAllowed }
             guard let peer = peer(measuredBy: session) else { return }
             sessions[peer] = nil
-            swap.measured(peer, distance: nil, at: .now)
-            refresh()
+            apply(swap.measured(peer, distance: nil, at: .now))
         }
 
         // MARK: Doing what the swap says
@@ -264,6 +263,8 @@
         private func refresh() {
             let current = swap.phase(at: .now)
             if current != phase { phase = current }
+            let shown = swap.number
+            if shown != number { number = shown }
         }
     }
 
