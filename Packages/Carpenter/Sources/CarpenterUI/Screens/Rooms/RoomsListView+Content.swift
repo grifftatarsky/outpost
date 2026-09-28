@@ -38,6 +38,12 @@ extension RoomsListView {
                                 diameter: preferences.density == .compact
                                     ? CarpenterMetrics.compactRoomAvatar
                                     : CarpenterMetrics.roomAvatar)
+                                .listRowInsets(
+                                    EdgeInsets(
+                                        top: CarpenterMetrics.conversationRowPadding,
+                                        leading: CarpenterMetrics.screenMargin,
+                                        bottom: CarpenterMetrics.conversationRowPadding,
+                                        trailing: CarpenterMetrics.screenMargin))
                                 .listRowBackground(Color.clear)
                         }
                     } header: {

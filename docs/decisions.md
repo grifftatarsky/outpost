@@ -3530,7 +3530,13 @@ never looks like a one-to-one conversation. In a compact list it is three circle
 person's, overlapping, with the most recent speaker on the right and the two before peeking out to
 its left. In the ordinary list it is one frosted circle holding the most recent speaker in front, with
 the two before climbing behind toward its top left. The viewer is left out, and a room nobody else
-has spoken in shows its initials.
+has spoken in shows its initials. After his second look: no outlines in the stack, the circle frosted
+with a soft shadow and a faint sheen in place of a border, and no letters on the two faces behind,
+which were too small to read.
+
+The rows were reworked with it on an eight-point grid: avatars start at the page margin, in line with
+the filter pills; the unread dot sits centred in the margin; 12 points from avatar to text; 8 above and
+below; the ordinary avatar 48 points and the compact one 40.
 
 **A departure from what was asked:** Griff asked for the circle in Liquid Glass. The HIG says not to
 use Liquid Glass in the content layer, and a row is content, so the circle is the standard thin

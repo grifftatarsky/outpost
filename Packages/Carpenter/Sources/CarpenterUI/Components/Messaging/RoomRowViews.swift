@@ -98,7 +98,7 @@ public struct RoomAvatar: View {
     private var overlapping: some View {
         ZStack(alignment: .trailing) {
             ForEach(Array(speakers.enumerated()).reversed(), id: \.element.id) { index, speaker in
-                face(speaker, diameter: diameter)
+                cutout(speaker, diameter: diameter)
                     .offset(x: -CGFloat(index) * diameter * Self.peek)
             }
         }
@@ -113,10 +113,16 @@ public struct RoomAvatar: View {
             default: [(0.6, 0.13, 0.13), (0.48, -0.05, -0.05), (0.4, -0.18, -0.18)]
             }
         return ZStack {
-            Circle().fill(.thinMaterial)
-            Circle().strokeBorder(palette.separator, lineWidth: 0.5)
-            ForEach(Array(zip(speakers, places).enumerated()).reversed(), id: \.element.0.id) { _, pair in
-                face(pair.0, diameter: diameter * pair.1.size)
+            Circle()
+                .fill(.regularMaterial)
+                .overlay {
+                    Circle().fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.14), .clear], startPoint: .topLeading, endPoint: .center))
+                }
+                .shadow(color: .black.opacity(0.14), radius: diameter * 0.08, y: diameter * 0.03)
+            ForEach(Array(zip(speakers, places).enumerated()).reversed(), id: \.element.0.id) { index, pair in
+                face(index == 0 ? pair.0 : Member(id: pair.0.id, displayName: "", isPlaceholder: true), diameter: diameter * pair.1.size)
                     .offset(x: diameter * pair.1.x, y: diameter * pair.1.y)
             }
         }
@@ -124,6 +130,12 @@ public struct RoomAvatar: View {
     }
 
     private func face(_ speaker: Member, diameter: CGFloat) -> some View {
+        PersonAvatarView(member: speaker, diameter: diameter, usesStrongFill: true)
+            .background { Circle().fill(palette.background) }
+            .shadow(color: .black.opacity(0.16), radius: diameter * 0.06, y: diameter * 0.02)
+    }
+
+    private func cutout(_ speaker: Member, diameter: CGFloat) -> some View {
         PersonAvatarView(member: speaker, diameter: diameter, usesStrongFill: true)
             .background { Circle().fill(palette.background).padding(-ring) }
     }

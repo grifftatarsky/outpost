@@ -29,7 +29,7 @@ struct RoomRow: View {
                 .opacity(room.hasUnread ? 1 : 0)
                 .accessibilityLabel(Text("Unread", bundle: .module))
                 .accessibilityHidden(!room.hasUnread)
-                .padding(.trailing, 8)
+                .frame(width: CarpenterMetrics.screenMargin)
             // COPY END 7f0b8e62
 
             if showsAvatar {
@@ -48,7 +48,7 @@ struct RoomRow: View {
                     width: RoomAvatar.width(diameter: avatarDiameter, isCompact: density == .compact),
                     alignment: .trailing
                 )
-                .padding(.trailing, 13)
+                .padding(.trailing, 12)
             }
 
             VStack(alignment: .leading, spacing: 2) {

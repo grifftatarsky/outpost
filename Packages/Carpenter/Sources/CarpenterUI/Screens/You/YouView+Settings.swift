@@ -6,10 +6,21 @@ import SwiftUI
 
 extension YouView {
     var masthead: some View {
-        AnimatedMark(size: 68)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, -AnimatedMark.touchInset)
-            .padding(.bottom, 4)
+        HStack(alignment: .center, spacing: 0) {
+            AnimatedMark(size: 68, onTap: { markBubbles.markTapped() })
+                .padding(.leading, -AnimatedMark.touchInset)
+            if let bubble = markBubbles.current {
+                SpeechBubble(
+                    text: bubble.text,
+                    onClose: bubble.closable ? { markBubbles.close(bubble.id) } : nil
+                )
+                .offset(y: -18)
+                .transition(.opacity)  // cross-fade only
+            }
+            Spacer(minLength: 0)
+        }
+        .animation(.default, value: markBubbles.current?.id)  // cross-fade only
+        .padding(.bottom, 4)
     }
 
     var identityRow: some View {

@@ -26,6 +26,7 @@ public struct YouView: View {
     let notifications: NotificationSettings?
     let supporter: SupporterSettings?
     @State var welcomingSupporter = false
+    @State var markBubbles = MarkBubbles()
     let onRevealHidden: () async -> Void
     @Binding var blursSensitiveMedia: Bool
     let screening: ScreeningAvailability

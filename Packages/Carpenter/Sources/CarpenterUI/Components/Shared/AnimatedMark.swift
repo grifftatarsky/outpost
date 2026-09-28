@@ -8,6 +8,7 @@ public struct AnimatedMark: View {
 
     private let size: CGFloat
     private let tint: Color?
+    private let onTap: (() -> Void)?
 
     @State private var frame = 0
     @State private var direction = 1
@@ -17,9 +18,10 @@ public struct AnimatedMark: View {
 
     public static let touchInset: CGFloat = 8
 
-    public init(size: CGFloat = 32, tint: Color? = nil) {
+    public init(size: CGFloat = 32, tint: Color? = nil, onTap: (() -> Void)? = nil) {
         self.size = size
         self.tint = tint
+        self.onTap = onTap
     }
 
     private static let frameDuration = Duration.milliseconds(200)
@@ -31,6 +33,7 @@ public struct AnimatedMark: View {
 
     public var body: some View {
         Button {
+            onTap?()
             wantsShut.toggle()
             Task { await settle() }
         } label: {
