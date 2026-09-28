@@ -1,6 +1,7 @@
 import CarpenterApp
 import CarpenterKit
 import CarpenterUI
+import Foundation
 import SwiftUI
 
 // MARK: Tapping two phones to swap codes

@@ -1,5 +1,4 @@
 import Foundation
-import UIKit
 
 enum HardwareName {
     static var ofThisDevice: String {
@@ -9,11 +8,19 @@ enum HardwareName {
             return simulated
         }
         var size = 0
-        sysctlbyname("hw.machine", nil, &size, nil, 0)
-        guard size > 0 else { return UIDevice.current.model }
+        sysctlbyname(model, nil, &size, nil, 0)
+        guard size > 0 else { return AppRootView.deviceName }
         var value = [UInt8](repeating: 0, count: size)
-        sysctlbyname("hw.machine", &value, &size, nil, 0)
+        sysctlbyname(model, &value, &size, nil, 0)
         let identifier = String(decoding: value.prefix { $0 != 0 }, as: UTF8.self)
-        return identifier.isEmpty ? UIDevice.current.model : identifier
+        return identifier.isEmpty ? AppRootView.deviceName : identifier
+    }
+
+    private static var model: String {
+        #if os(macOS)
+            return "hw.model"
+        #else
+            return "hw.machine"
+        #endif
     }
 }

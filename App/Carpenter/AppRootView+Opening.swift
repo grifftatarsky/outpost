@@ -2,6 +2,7 @@ import CarpenterApp
 import CarpenterKit
 import CarpenterUI
 import SwiftUI
+import os
 
 #if canImport(UIKit)
     import UIKit
