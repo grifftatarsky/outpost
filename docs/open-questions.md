@@ -17,31 +17,33 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
-<!-- COPY BEGIN f0e1c11a [NEEDS HUMAN REVIEW] -->
+<!-- COPY BEGIN 9b4525bb [NEEDS HUMAN REVIEW] -->
 
-### What can a phone nearby do to a tap?
+### Does a removal decide who is in a room, or only what the room shows?
 
-Raised 2026-09-28, writing tap-to-swap. The promise Griff confirmed is that a phone across the room
-can't get your code or slip in its own, and that the characters you both read still decide. Two things
-get part of the way past the distance check. The characters stop a code slipped in; they do not stop a
-relay learning one, so accepting that needs Griff's yes.
+Raised 2026-09-28, found by reading `RoomRoster` and `CausalOrder` while answering Griff. No test has
+run it yet.
 
-**A relay.** A modified app within Wi-Fi range can pass the two phones' first messages between them,
-so it sits in the middle while their real distance is measured. It is caught when the two phones also
-find each other directly, since two phones then read as touching; in the moment before they do, it
-could be handed a code. A code is made to be handed out, and one it swaps in shows as characters that
-do not match.
+The room chain decides which of a removed person's entries the room shows. The member list does not
+use it. It reads every entry in one order, and for two entries neither of which had seen the other,
+that order comes from the date each writer put on it. A removed person's modified app can write
+entries dated a second before their removal that claim not to have seen it:
 
-**A shortened distance.** A USD 65 radio made two U1 chips 12 m apart measure 0 m in up to 4% of
-tries ([Ghost Peak](https://www.usenix.org/conference/usenixsecurity22/presentation/leu)). Three
-readings in a row and one touching phone at a time make it harder, not impossible.
+- **A removal of the person who removed them.** It is read first, so the remover is out; the
+  remover's own removal is then ignored, because its author is no longer in the room. The removed
+  person stays in and is handed keys again.
+- **An invitation of a second identity of theirs, and its confirmation.** In an open room both are
+  read as written while they were a member, and that identity stays after the removal.
 
-Recommended: accept both, since the worst either does is learn a code that is meant to be shared, and
-say in the app that the characters are still the check. The alternative, a short number shown on both
-screens to compare during the tap, adds a step to every tap to close a window the characters already
-close.
+Recommended: the member list counts a removed person's entries only where the removal's chain puts
+them, the same rule the room already draws by, so nothing they write after it counts, whatever date
+it carries. One case is left that no entry can settle: two people who remove each other, neither
+having seen the other's removal. Recommended: both are out. The cost is that a removed person can
+take the one who removed them out with them. They can't stay, and anybody still in can invite the
+remover back. The other way, the removal iCloud stored first wins, needs every device to see one
+stored time for an entry that reaches them by different routes, and the mailbox doesn't give that.
 
-<!-- COPY END f0e1c11a -->
+<!-- COPY END 9b4525bb -->
 
 <!-- COPY BEGIN a41e8a48 [NEEDS HUMAN REVIEW] -->
 
@@ -49,11 +51,37 @@ close.
 
 Raised 2026-09-28. Griff ruled both locks, and a PIN, each with a short note and a link to an article
 on Face ID, PINs and passwords ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
-One thing is left. Face ID would need a second copy of the key behind Face ID, which the code's counted
-tries do not guard, and erasing after wrong codes would erase the only copy. His own words on Face ID
-("breached by cops ... not considered effective") point the same way.
+Griff, the same day: "I would offer it as the demoted item, and modal popup warning that FaceID is not
+recommended and link to the outpostmessaging site page for it, which I'll write up unless we decide
+not to do FaceID ... remember we have multiple classes of users, and we allow customization and people
+to do stupid things."
 
-Recommended: no Face ID for Outpost's own lock, and erasing works as it does now.
+What it would take, from Apple's documentation:
+
+- **No entitlement.** One Info.plist string, `NSFaceIDUsageDescription`, without which the system
+  won't let the app use Face ID
+  ([Apple](https://developer.apple.com/documentation/localauthentication/accessing-keychain-items-with-face-id-or-touch-id)).
+- **A key the Secure Enclave holds back, never a yes or no in our code.** The Face ID copy of the key
+  sits in a keychain item released only after a match; the app gets pass or fail and never any face
+  data (same page). A modified app can skip a check in our code; it can't skip that.
+- **Only `biometryCurrentSet`.** Re-enrolling Face ID invalidates the item
+  ([Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/biometrycurrentset)),
+  so a thief who knows the phone's passcode and adds their own face gets nothing. Never `userPresence`,
+  which also opens with the phone's passcode
+  ([Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/userpresence))
+  and would make Outpost's lock no stronger than the phone's.
+- **Always a PIN or passphrase behind it.** Face ID stops after five failed matches, and turning off the
+  phone's passcode makes the item unavailable. Erasing after wrong codes erases both copies.
+- **Nothing reaches us.** Data processed only on the device is not "collected" for the App Store's
+  privacy details ([Apple](https://developer.apple.com/app-store/app-privacy-details/)).
+- **Who it fails.** Apple puts a random match at under 1 in 1,000,000, higher for twins, look-alike
+  siblings and children under 13, and recommends a passcode for them
+  ([Apple](https://support.apple.com/en-us/102381)). That belongs in the warning.
+- **A HIG departure.** The HIG says to avoid an app-specific setting for biometrics
+  ([Managing accounts](https://developer.apple.com/design/human-interface-guidelines/managing-accounts));
+  this one is deliberate and goes in Decisions with its cost. On a phone with Touch ID it says Touch ID.
+
+Recommended: offer it as Griff describes, on those terms.
 
 <!-- COPY END a41e8a48 -->
 
@@ -66,11 +94,19 @@ is left.
 
 **Numbers from before chains.** An entry written before this build carries no link. Those count up to
 the entry the chain begins at, which closes everything after it, but a removed person could still sign
-an old-style entry under a number below that point that the room never held. Recommended: accept it. It
-cannot grow, because every new entry is chained, and it covers only numbers from before a device's first
-chained entry in that room. Griff asked for the gap closed with no new edge cases, so this needs his
-yes. The way to close it without giving a remover any power: each device, the first time it chains in a
-room, lists its own earlier entries there, which costs one entry per room per device, once.
+an old-style entry under a number below that point that the room never held.
+
+This was recommended for accepting, as a fake old message at worst. It can't be: once the member list
+follows the chain (above), such an entry would count for who is in the room too, and a removed person
+could use one to remove the person who removed them and stay. Recommended: close it, one of two ways.
+
+- **Each device lists its own earlier entries once.** The first time it runs this build, a device
+  writes one entry in each room naming the entries it wrote there before chains. An unlinked entry
+  not on its list never counts once its author is gone. It keeps all history and gives a remover no
+  new power; it costs one entry per room per device, once.
+- **Refuse unlinked entries.** Simplest, and it removes the old rule from the code, but every room's
+  history from before 2026-09-28 is lost. Only right if nobody but Griff's own devices and the rig
+  holds any.
 
 <!-- COPY END d041ce54 -->
 
@@ -166,6 +202,11 @@ Griff's answers in the session before, read against the questions raised writing
    outpostmessaging.com. What arrives while the app is locked is kept sealed (promise 2). Whether the key
    made from the code is tied to the phone's hardware is measured on a phone before the PIN's note is
    written. Owed; the article is too.
+
+6. **A phone nearby relaying a tap** — closed with a number: "I like a confirm button with a # key
+   (big fan of the flash/thunder ww2 method, so key saying is nice)." Both phones show one number, the
+   two people say it aloud, each confirms, and only then do the codes cross. Owed.
+   [Decisions](decisions.md#tapping-two-phones-swaps-codes).
 
 <!-- COPY END ecfca29f -->
 

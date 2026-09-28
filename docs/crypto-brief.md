@@ -485,7 +485,9 @@ is no way to put words in somebody's mouth.
 Ed25519 key. Since 2026-09-28 an entry in a room also signs a **room link**, appended last and only when
 present (`"room-link" ‖ hash of this device's last entry in the room`, empty for its first), so an older
 entry signs exactly the bytes it always did. A removal or a departure names the last entry of each of
-the person's devices, and only the chains those reach count (`RoomChains`, `TheRoomChainTests`). Built
+the person's devices, and only the chains those reach are shown (`RoomChains`, `TheRoomChainTests`).
+The member list does not follow them yet, found by reading 2026-09-28
+([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)). Built
 2026-09-28, and the package suite passes; not yet run on the rig. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
 
@@ -1119,8 +1121,10 @@ decide who they are talking to.
   Three readings in a row and one touching phone at a time make it harder; the characters are the
   check that holds.
 
-These two are put to Griff as a question
-([Open questions](open-questions.md#what-can-a-phone-nearby-do-to-a-tap)).
+Griff ruled on 2026-09-28 to close both with a number: both phones show it, the two people say it
+aloud, and each confirms before the codes cross. A relay, or a phone faking its distance, shows a
+number that differs from the one on the phone in the other person's hand. Not built
+([Decisions](decisions.md#tapping-two-phones-swaps-codes)).
 
 <!-- COPY END d6713b39 -->
 

@@ -3189,8 +3189,8 @@ writes in a room now carries a signed room link: the hash of this device's last 
 an empty link for its first (`Entry.roomLink`, appended after everything else under the label
 `room-link`, so an entry without one signs the bytes it always did; `TheRoomChainTests` pins both by
 hand). A removal names the last entry of each of the removed person's devices that the remover holds
-in the room, and somebody who leaves names their own; an entry of theirs counts only if the chain from
-a named entry reaches it, passing through reactions and edits. Entries from before chains count up to
+in the room, and somebody who leaves names their own; an entry of theirs is shown only if the chain
+from a named entry reaches it, passing through reactions and edits. Entries from before chains count up to
 the entry where the chain begins, and not past it. A removal or departure written by an older build
 names nothing and still goes by its clock.
 
@@ -3201,6 +3201,10 @@ others write. Every device has to take this build together. **What it does not c
 before chains can still take a number from below where the chain begins. The first is to be closed,
 on Griff's word to fix the gap; the second waits on him
 ([Open questions](open-questions.md#what-is-left-of-a-removed-persons-reach-into-a-rooms-past)).
+**Nor does the member list follow the chain.** It still reads a removed person's entries in the order
+their dates give, so their modified app could remove the person who removed them, or bring in a second
+identity of theirs. Found by reading on 2026-09-28, not yet shown by a test
+([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)).
 
 <!-- COPY END d920b620 -->
 
@@ -3228,6 +3232,14 @@ over its own code when both people have said yes, and the codes that arrive open
 code sent any other way opens. When one of them then invites the other, the invite goes back to that
 phone the same way. See the [crypto brief](crypto-brief.md#tapping-two-phones) and
 `TappingPhonesTests`.
+
+**RULED 2026-09-28 by Griff, on a phone relaying a tap:** "I like a confirm button with a # key (big
+fan of the flash/thunder ww2 method, so key saying is nice)." Both phones show one number and a
+Confirm button, the two people say the number aloud, each confirms, and only then do the codes cross.
+**Not built.** The number only stops a relay if each phone commits to its key before it sees the
+other's. Otherwise a relay that has seen both keys can try keys of its own until the two numbers
+match; a commitment leaves it one guess per tap, which is why ZRTP commits
+([RFC 6189](https://www.rfc-editor.org/rfc/rfc6189)).
 
 **PROPOSED, the details Griff has not seen:**
 
