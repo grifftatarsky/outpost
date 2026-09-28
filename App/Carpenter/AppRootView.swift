@@ -363,6 +363,7 @@ struct AppRootView: View {
                     await session.setOutpostNotifications(wanted ? .default : .none)
                 }
             }
+            .themed(.default)
         }
         .sheet(isPresented: $explainingNotifications) {
             PermissionExplainerView(
@@ -378,6 +379,7 @@ struct AppRootView: View {
                     }
                 })
                 .interactiveDismissDisabled()
+                .themed(.default)
         }
         .onChange(of: safety.blocksKnownAbusers) { _, on in session.enforcesDenyList = on }
         .onChange(of: safety.blursEveryPhoto) { _, on in
@@ -397,6 +399,9 @@ struct AppRootView: View {
             screening = await SystemMediaScreen().availability()
             session.enforcesDenyList = safety.blocksKnownAbusers
             #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--ask-outpost-notifications") {
+                    askingOutpostNotifications = true
+                }
                 if ProcessInfo.processInfo.arguments.contains("--reset-account") {
                     Diagnostics.identity.notice("launch: --reset-account given; clearing this account")
                     await attempting(

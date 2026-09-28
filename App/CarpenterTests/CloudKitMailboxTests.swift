@@ -61,6 +61,7 @@ struct CloudKitMailboxTests {
 
     private func two() async throws -> Two {
         let mailbox = try await LiveCloudKit.mailbox()
+        try await mailbox.eraseEverySpace()
         let (me, them) = (Identity.generate(), Identity.generate())
         let toThem = Peer(secret: try PairwiseSecret.derive(mine: me, theirs: them.publicKeys), them: them.id, me: me.id)
         return Two(mailbox: mailbox, me: me, them: them, toThem: toThem)
@@ -75,7 +76,6 @@ struct CloudKitMailboxTests {
     @Test("A space for one person is shared with nobody until that person is named, and then with them alone")
     func aSpaceIsSharedWithOnePerson() async throws {
         let t = try await two()
-        defer { Task { try? await t.mailbox.eraseEverySpace() } }
         let url = try await t.mailbox.space(for: t.them.id, naming: nil, in: t.pairs)
         let bare = try await share(url, in: t.mailbox)
         #expect(bare.publicPermission == .none, "a space's link opens for anybody who holds it")
@@ -96,7 +96,6 @@ struct CloudKitMailboxTests {
     @Test("A packet written into a space comes back exactly as it went, addressed to that one person")
     func aPacketComesBackExactly() async throws {
         let t = try await two()
-        defer { Task { try? await t.mailbox.eraseEverySpace() } }
         let tag = t.toThem.outgoingTag(window: 1)
         let sent = SyncPacket(
             wraps: [tag: LiveCloudKit.bytes(48)], ciphertext: LiveCloudKit.bytes(4096), grants: [tag: [LiveCloudKit.bytes(32)]])
@@ -115,7 +114,6 @@ struct CloudKitMailboxTests {
     @Test("A packet at the app's own budget is accepted, and one over the ceiling is refused before it is sent")
     func theCeilingHolds() async throws {
         let t = try await two()
-        defer { Task { try? await t.mailbox.eraseEverySpace() } }
         let tag = t.toThem.outgoingTag(window: 1)
         try await t.mailbox.put(
             SyncPacket(wraps: [tag: Data(count: 32)], ciphertext: LiveCloudKit.bytes(SyncSession.packetByteBudget)),
@@ -130,7 +128,6 @@ struct CloudKitMailboxTests {
     @Test("A photo far over the record ceiling goes as an asset, one copy for each person it is for")
     func aPhotoGoesAsACopyEach() async throws {
         let t = try await two()
-        defer { Task { try? await t.mailbox.eraseEverySpace() } }
         let other = Identity.generate()
         let toOther = Peer(secret: try PairwiseSecret.derive(mine: t.me, theirs: other.publicKeys), them: other.id, me: t.me.id)
         let pairs = Pairs.of(t.toThem, toOther)

@@ -123,6 +123,15 @@ nothing in it is trusted because the app would never have written it.
   the release binary.
 - Filled accent buttons use `primaryAction()`, section labels use `.sectionHeading()`, and a
   destructive control that draws a symbol states its colour.
+- A sheet presented from above `.themed(_:)` does not get the palette `.themed` works out from the
+  system appearance. It gets the environment's default palette, which is the dark one, so it draws
+  dark on a phone set to light. `AppRootView` and `RootView.body` both present sheets from above
+  their `.themed`, and each of those sheets calls `.themed` itself.
+- A system button's label colour goes in `.tint`, not `.foregroundStyle`. The system greys a tinted
+  label when the button is disabled, and keeps an explicit foreground in its own colour, only a
+  little fainter: *I've saved it* looked tappable while it was disabled (2026-09-28). Where the tint
+  already colours a bordered button's fill, put the label colour on the label with
+  `enabledLabelColor(_:)`, which drops it while the button is disabled.
 
 ## Copy
 

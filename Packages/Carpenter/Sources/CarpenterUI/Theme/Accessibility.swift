@@ -66,8 +66,21 @@ public struct QuietActionButton: ViewModifier {
         content
             .buttonStyle(.glass)
             .controlSize(.large)
-            .tint(palette.accentColor)
-            .foregroundStyle(palette.secondaryActionLabel)
+            .tint(palette.secondaryActionLabel)
+    }
+}
+
+public struct EnabledLabelColor: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
+
+    let color: Color
+
+    @ViewBuilder public func body(content: Content) -> some View {
+        if isEnabled {
+            content.foregroundStyle(color)
+        } else {
+            content
+        }
     }
 }
 
@@ -86,6 +99,10 @@ extension View {
 
     public func quietActionButton() -> some View {
         modifier(QuietActionButton())
+    }
+
+    public func enabledLabelColor(_ color: Color) -> some View {
+        modifier(EnabledLabelColor(color: color))
     }
 
     public func fieldChrome(isFocused: Bool = false) -> some View {

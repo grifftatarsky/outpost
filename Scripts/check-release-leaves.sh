@@ -62,6 +62,7 @@ LEAVES=(
     "Make it fit failed"
     "Test a contact's space"
     "pair-notify-anything"
+    "ask-outpost-notifications"
 )
 
 status=0

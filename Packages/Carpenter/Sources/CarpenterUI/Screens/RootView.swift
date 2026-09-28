@@ -578,6 +578,7 @@ public struct RootView: View {
                         await onStopOutpostAccess(stopping, room.id)
                         await onLeaveRoom(room.id)
                     })
+                .themed(theme.accent)
             }
     }
 

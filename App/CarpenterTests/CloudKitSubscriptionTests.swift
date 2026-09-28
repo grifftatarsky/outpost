@@ -9,8 +9,15 @@ import Testing
     .enabled(if: LiveCloudKit.isAsked),
     .serialized)
 struct CloudKitSubscriptionTests {
-    private static func subscriptions(_ database: CKDatabase) async throws -> [CKSubscription] {
-        try await database.allSubscriptions()
+    private static func subscriptions(_ database: CKDatabase, including wanted: [PushChannel] = []) async throws
+        -> [CKSubscription]
+    {
+        var found = try await database.allSubscriptions()
+        for _ in 0..<10 where !wanted.allSatisfy({ channel in found.contains { $0.subscriptionID == channel.subscriptionID } }) {
+            try await Task.sleep(for: .seconds(1))
+            found = try await database.allSubscriptions()
+        }
+        return found
     }
 
     @Test("Both subscriptions exist after asking for them")
@@ -26,7 +33,7 @@ struct CloudKitSubscriptionTests {
             somebody sends it a message and nothing arrives.
             """)
 
-        let shared = try await Self.subscriptions(CKContainer.default().sharedCloudDatabase)
+        let shared = try await Self.subscriptions(CKContainer.default().sharedCloudDatabase, including: [.inbox, .ring])
         let priv = try await Self.subscriptions(CKContainer.default().privateCloudDatabase)
 
         #expect(

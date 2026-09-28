@@ -3088,6 +3088,26 @@ held, see [Open questions](open-questions.md#can-a-removed-person-still-add-to-a
 
 <!-- COPY END d920b620 -->
 
+<!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
+
+### Tapping two phones swaps codes
+
+**RULED 2026-09-28 by Griff.** "I def want tapping phones with Nearby Interaction, that's honestly a
+priority." The promises, confirmed the same day with "make sure the sync has nice haptics, and an
+animation":
+
+1. Tapping swaps codes only between the two phones touching, directly, with nothing in iCloud.
+2. A phone across the room can't get your code or slip in its own. The swap waits until the phones
+   measure a few centimetres apart, and the characters both people read still decide.
+3. Nothing is shared until each person accepts on their own phone. Codes stay as the other way to do
+   it.
+
+It needs two iPhones with Apple's ultra-wideband chip, so it is proved on TestFlight, not on the rig.
+
+**Being built.**
+
+<!-- COPY END 676b4912 -->
+
 <!-- COPY BEGIN d09e6aaf [NEEDS HUMAN REVIEW] -->
 
 ### The app lock is a code the phone counts, not a key that encrypts

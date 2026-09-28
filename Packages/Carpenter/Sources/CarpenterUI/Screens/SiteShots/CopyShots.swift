@@ -26,6 +26,10 @@
         case roomsPrivacyTip = "rooms-privacy-tip"
         case roomsCompact = "rooms-compact"
         case solosList = "solos-list"
+        case outpostReview = "outpost-review"
+        case outpostReviewSettled = "outpost-review-settled"
+        case recoveryKey = "recovery-key"
+        case recoveryKeySaved = "recovery-key-saved"
         case recoveryKeyConfirm = "recovery-key-confirm"
         case welcome1 = "welcome-1"
         case welcome2 = "welcome-2"
@@ -133,6 +137,14 @@
                 RootView.demo(tab: .rooms, density: .compact)
             case .roomsPrivacyTip:
                 RootView.demo(tab: .rooms, privacyNote: true)
+            case .outpostReview:
+                OutpostReviewSheet(review: Self.review(settled: false))
+            case .outpostReviewSettled:
+                OutpostReviewSheet(review: Self.review(settled: true))
+            case .recoveryKey:
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429") {} }
+            case .recoveryKeySaved:
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", sharedAtStart: true) {} }
             case .recoveryKeyConfirm:
                 NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", confirmingAtStart: true) {} }
             case .lockSetupTyping:
@@ -141,6 +153,16 @@
         }
 
         private static var yearFromNow: Date { Fixtures.now.addingTimeInterval(365 * 86_400) }
+
+        private static func review(settled: Bool) -> OutpostReview {
+            OutpostReview(
+                room: RoomID(), roomName: Fixtures.zeppelinEnthusiasts.name,
+                people: [
+                    OutpostReview.Person(member: Fixtures.hastur, grant: settled ? OutpostAccess.Grant() : nil),
+                    OutpostReview.Person(member: Fixtures.camilla, grant: OutpostAccess.Grant(isAllowed: false)),
+                    OutpostReview.Person(member: Fixtures.cassilda, grant: settled ? OutpostAccess.Grant() : nil),
+                ])
+        }
 
         private static func supporter(_ standing: SupporterStanding) -> SupporterSettings {
             SupporterSettings(

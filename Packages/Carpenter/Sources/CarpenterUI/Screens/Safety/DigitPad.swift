@@ -68,7 +68,7 @@ struct DigitPad: View {
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
-        .foregroundStyle(palette.primaryText)
+        .tint(palette.primaryText)
         .disabled(busy)
         .accessibilityLabel(Text(verbatim: digit))
     }
@@ -82,7 +82,7 @@ struct DigitPad: View {
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .foregroundStyle(palette.accentColor)
+            .tint(palette.accentColor)
             .disabled(busy)
             // COPY BEGIN f1fb9c55 [NEEDS HUMAN REVIEW]
             .accessibilityLabel(Text("Use \(biometricName)", bundle: .module))
@@ -100,7 +100,7 @@ struct DigitPad: View {
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
-        .foregroundStyle(palette.primaryText)
+        .tint(palette.primaryText)
         .disabled(entered.isEmpty || busy)
         // COPY BEGIN d911fd09 [NEEDS HUMAN REVIEW]
         .accessibilityLabel(Text("Delete", bundle: .module))

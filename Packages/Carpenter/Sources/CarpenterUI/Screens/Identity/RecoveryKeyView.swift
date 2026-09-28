@@ -127,5 +127,10 @@ public struct RecoveryKeyRow {
             _shared = State(initialValue: confirmingAtStart)
             _confirming = State(initialValue: confirmingAtStart)
         }
+
+        init(text: String, fingerprint: String, sharedAtStart: Bool, onSaved: @escaping () async -> Void) {
+            self.init(text: text, fingerprint: fingerprint, onSaved: onSaved)
+            _shared = State(initialValue: sharedAtStart)
+        }
     }
 #endif
