@@ -116,8 +116,20 @@ TestFlight these have to have been seen, not reasoned about:
 - **Open.** A photo signed for with receipts and cleared by its sender. Replaced on 2026-09-27 what
   was proved on 2026-09-15 (readers deleting it), so the live tests in `CloudKitMailboxTests` have to
   run again: a receipt written onto an attachment record, two written at once, and a photo put back
-  over its record keeping the receipts already on it.
+  over its record keeping the receipts already on it. Changed again 2026-09-28: each reader now gets a
+  copy of their own, sealed for their pair, so the same run proves the new copies too
+  (`CloudKitMailboxTests`, `LivePairTests`).
 - **Open.** A member's second device on one Apple Account (hardware only).
+- **Open, and his.** Advanced On Device Security with the phone locked, on an iPhone: turn it on
+  under This device, lock the phone, and send it a message from the other account. The banner says
+  only "New message", and the message is there after unlocking. `FileProtectionTests` passed on an
+  iPhone on 2026-09-28; this is the part no test can do.
+- **Open, and his.** The room chain on the rig, alpha and beta both on this build (an older build
+  refuses chained entries): remove somebody who then keeps writing, and have somebody else leave.
+  What each wrote before shows on both accounts, and nothing after does.
+- **Open, and his.** A space closing nine days after nothing is shared, on the rig: remove somebody,
+  sync both, then relaunch the remover with `--clock-ahead-days 10`. The space kept for them closes and
+  nothing more is written to them; putting them back in a room opens a new one.
 
 <!-- COPY END dd229921 -->
 
@@ -314,9 +326,12 @@ Added 2026-09-16, from Griff.
   nothing and looked like it worked.
 - **Open, and his.** **Deploy development to production**, in the Console, for
   **`iCloud.com.microgpt.outpost`**. Since 2026-09-27 `SyncPacket` also has `receiptTags` and
-  `receiptValues` (receipts replaced acknowledgements that deleted); `CloudKit/schema.ckdb` has them,
-  and development has to have them before production does. Check with
-  `xcrun cktool export-schema … --environment production | grep "RECORD TYPE"` — six lines, not one.
+  `receiptValues` (receipts replaced acknowledgements that deleted), and since 2026-09-28 `Attachment`
+  has `label` and there are three record types for the space kept per contact: `PairInfo`,
+  `PairReceipt` and `PairRing`. `CloudKit/schema.ckdb` has them all; import it into development first
+  (the command is in `CloudKit/README.md`), because development has to have them before production
+  does. Check with `xcrun cktool export-schema … --environment production | grep "RECORD TYPE"` — ten
+  lines.
 - **The trap, and it was walked into once.** There is a second container,
   `iCloud.com.microgpt.carpenter`, which is **not the app's**. `APP_ICLOUD_CONTAINER` resolves to
   `…outpost`, the built entitlement carries `…outpost`, and `CKContainer.default()` takes the first
