@@ -64,6 +64,24 @@ A failing app-suite test is named from its result bundle, through `xcresulttool`
 
 <!-- COPY END d9819eff -->
 
+<!-- COPY BEGIN 64f99f8f [NEEDS HUMAN REVIEW] -->
+
+**What only a phone can answer.** `FileProtectionTests` is skipped on a simulator, which does not keep
+a file's protection class (measured 2026-09-28). On an iPhone, unlocked:
+
+```bash
+xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS,id=<phone>' -derivedDataPath /tmp/carpenter-device -only-testing:CarpenterTests/FileProtectionTests
+```
+
+Two things each cost a round getting it to pass on 2026-09-28. Xcode's own build folder for the phone
+was left from an old checkout, and a package in it compiled against an older `CarpenterKit`:
+"cannot find type 'ProtectionDial' in scope", for a type that exists. The same code built and passed
+in a fresh `-derivedDataPath`. And a `URL` keeps the resource values it has read, so a test that
+reads a file's protection, changes it and reads again gets the first answer; the test reads through
+`FileManager.attributesOfItem`, which goes to the file every time.
+
+<!-- COPY END 64f99f8f -->
+
 <!-- COPY BEGIN 43897dc9 [NEEDS HUMAN REVIEW] -->
 
 ## The fakes are held to the real seams

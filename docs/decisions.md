@@ -3332,8 +3332,9 @@ values, so a key made from the code alone could be tried against a copied file, 
 phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
 the phone itself.
 
-**Built 2026-09-28 for the phone's lock: the package suite passes on Griff's Mac, and the keychain half
-passes on the simulator. Not run on a phone.** iOS already ties its own keys to the passcode and the phone's hardware, so this choice asks
+**Built 2026-09-28 for the phone's lock: the package suite passes on Griff's Mac, the keychain half
+passes on the simulator, and on an iPhone files are written with the protection it names. Not yet tried
+with the phone locked.** iOS already ties its own keys to the passcode and the phone's hardware, so this choice asks
 iOS for its strongest file and keychain protection rather than making a key of its own. See the
 [crypto brief](crypto-brief.md#advanced-on-device-security) and `SealedWhileLockedTests`.
 

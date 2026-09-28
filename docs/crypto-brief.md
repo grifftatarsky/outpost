@@ -1257,10 +1257,10 @@ passcode, and the passcode can only be tried on that iPhone. While it is locked 
 nothing: messages wait, sealed, in the sender's iCloud and arrive when you unlock it, and a
 notification says only that something arrived.
 
-> **Built 2026-09-28, and the package suite passes on Griff's Mac.** Not run on a phone. The package
-> tests model a locked phone with a fake keychain, and the keychain half passes on the simulator. A
-> simulator does not keep a file's protection class (measured 2026-09-28), so nothing about files has
-> been measured on hardware.
+> **Built 2026-09-28, and the package suite passes on Griff's Mac.** Not yet tried with the phone
+> locked. The package tests model a locked phone with a fake keychain, and the keychain half passes on
+> the simulator. On an iPhone, files are written with the protection the setting names
+> (`FileProtectionTests`, 2026-09-28); a simulator does not keep a file's protection class.
 
 **What actually happens.** No new cryptography: the app asks iOS for its strongest protection, which
 iOS already ties to the passcode and to the phone's own hardware key.

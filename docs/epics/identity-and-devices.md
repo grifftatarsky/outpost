@@ -480,7 +480,8 @@ nothing until I unlock it.
 Ruled by Griff on 2026-09-28, with three promises confirmed; see
 [the decision](../decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)
 and the [crypto brief](../crypto-brief.md#advanced-on-device-security). Built the same day: the
-package suite passes on Griff's Mac and the keychain half passes on the simulator. **Not run on a phone.**
+package suite passes on Griff's Mac, the keychain half passes on the simulator, and files are written
+sealed on an iPhone. **Not yet tried with the phone locked.**
 
 **Acceptance criteria**
 
@@ -498,9 +499,9 @@ package suite passes on Griff's Mac and the keychain half passes on the simulato
 - **Not built.** Outpost's own lock as the seal
   ([Open questions](../open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)).
 - **Owed, on a real iPhone.** With it on: lock the phone, send it a message from the other account, see
-  a banner that says only "New message", unlock it and see the message arrive. `FileProtectionTests` on
-  the phone: a simulator does not keep a file's protection class, so the suite skips it there
-  (measured 2026-09-28).
+  a banner that says only "New message", unlock it and see the message arrive. `FileProtectionTests`
+  passed on an iPhone on 2026-09-28; a simulator does not keep a file's protection class, so the suite
+  skips it there.
 
 </details>
 
