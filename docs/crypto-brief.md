@@ -486,7 +486,8 @@ Ed25519 key. Since 2026-09-28 an entry in a room also signs a **room link**, app
 present (`"room-link" ‖ hash of this device's last entry in the room`, empty for its first), so an older
 entry signs exactly the bytes it always did. A removal or a departure names the last entry of each of
 the person's devices, and only the chains those reach are shown (`RoomChains`, `TheRoomChainTests`).
-The member list does not follow them yet, found by reading 2026-09-28
+Since 2026-09-28 the member list follows the same chains (`Projection.standing`, not yet run), and a
+room entry without its link is refused
 ([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)). Built
 2026-09-28, and the package suite passes; not yet run on the rig. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
@@ -1121,10 +1122,13 @@ decide who they are talking to.
   Three readings in a row and one touching phone at a time make it harder; the characters are the
   check that holds.
 
-Griff ruled on 2026-09-28 to close both with a number: both phones show it, the two people say it
-aloud, and each confirms before the codes cross. A relay, or a phone faking its distance, shows a
-number that differs from the one on the phone in the other person's hand. Not built
-([Decisions](decisions.md#tapping-two-phones-swaps-codes)).
+Griff ruled on 2026-09-28 to close both with a number, and it was built the same day (not yet run).
+Each phone's hello carries `SHA-256("carpenter.tap-commitment.v1" ‖ key)` instead of the key; a phone
+shows its key only to the phone it is touching, once that phone's commitment has arrived, and only once
+per tap. Both phones then derive six digits from the two keys (`carpenter.tap-number.v1`), each is told
+which three its person says, and nothing seals until both have confirmed. A relay has to commit to its
+own keys before it sees either phone's, so it gets one guess in a million per tap, and a miss shows two
+different numbers ([Decisions](decisions.md#tapping-two-phones-swaps-codes)).
 
 <!-- COPY END d6713b39 -->
 

@@ -2846,6 +2846,11 @@ make a packet of long messages go past iCloud's one-megabyte record.
 
 ### Only the sender clears a photo, and keeps its own copy
 
+**RULED 2026-09-28 by Griff, replacing the 2026-09-27 answer below on devices:** "On photos go with the
+fetch-for-device you rec." Every current device of the person a photo is for, and the sender's own
+other devices, fetch it themselves; the sender clears its copy once all of them have it, or after nine
+days. Nothing relies on one device passing a photo to another. Not built yet.
+
 **RULED 2026-09-27 by Griff.** "No user should be able to interfere with your own history or
 recipients." And: "your phone should have the file in case it's requested in a history check or
 someone deletes the photo/video for space."
@@ -2905,8 +2910,8 @@ signed for it on every device or nine days have passed.
 **Claude's choices inside the ruling, not Griff's:** rooms only, not Outposts, because the ruling is
 about a conversation's settings; the one asking checks again once a minute; the sender keeps at most
 two hundred asks; and an ask is handled by whichever of the sender's devices collects it, because
-asks do not travel between a member's devices yet (a question in
-[open questions](open-questions.md#should-an-ask-for-a-photo-reach-every-one-of-the-senders-devices)).
+asks do not travel between a member's devices yet; Griff's answer of 2026-09-28 is that they will
+([open questions](open-questions.md#raised-and-answered-2026-09-28)).
 
 **Not verified:** the screens have not been seen on a device, and the ask has not crossed a real
 account.
@@ -3201,10 +3206,14 @@ others write. Every device has to take this build together. **What it does not c
 before chains can still take a number from below where the chain begins. The first is to be closed,
 on Griff's word to fix the gap. The second goes with every other form an older build wrote, because
 none has shipped ([Open questions](open-questions.md#raised-and-answered-2026-09-28)).
-**Nor does the member list follow the chain.** It still reads a removed person's entries in the order
-their dates give, so their modified app could remove the person who removed them, or bring in a second
-identity of theirs. Found by reading on 2026-09-28, not yet shown by a test
-([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)).
+**The member list follows the chain too**, built 2026-09-28 on Griff's "Fix this", not yet run:
+drawing and membership share one computation (`Projection.standing`), so nothing a removed person
+writes past the removal's chain counts for who is in the room either. **PROPOSED, needs Griff's yes:**
+when two people remove each other and neither removal had seen the other, both are out, and the
+dispute only takes access away: it voids what either side granted past the other's line and keeps
+what they withheld ([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)).
+**The forms older builds wrote are refused**, on Griff's "Security is most important": an entry in a
+room without its link, and a removal or departure that names no heads.
 
 <!-- COPY END d920b620 -->
 
@@ -3241,6 +3250,9 @@ other's. Otherwise a relay that has seen both keys can try keys of its own until
 match; a commitment leaves it one guess per tap, which is why ZRTP commits
 ([RFC 6189](https://www.rfc-editor.org/rfc/rfc6189)). **RULED the same day:** "send the hash and only
 reveal then ... those are fine statistics to work with." Six digits: one guess in a million.
+**Built 2026-09-28, not yet run:** a phone's hello carries a hash of its key; it shows the key only to
+the phone it is touching, once that phone's hash has arrived, and only once per tap; both phones then
+show the same six digits, each told which three its person says, and Confirm appears only then.
 
 **PROPOSED, the details Griff has not seen:**
 
@@ -3327,6 +3339,31 @@ and one who sets erasing at 1 can lose everything to a single typo.
 
 <!-- COPY END d09e6aaf -->
 
+<!-- COPY BEGIN b900e80f [NEEDS HUMAN REVIEW] -->
+
+### The app offers its own Face ID setting, against the HIG's advice
+
+**RULED 2026-09-28 by Griff:** "Depart from HIG." The HIG says: "In general, avoid offering an
+app-specific setting for opting in to biometric authentication. People turn on biometric authentication
+at the system level, so presenting an in-app setting is redundant and could be confusing"
+([Managing accounts](https://developer.apple.com/design/human-interface-guidelines/managing-accounts)).
+That reasoning assumes the system setting speaks for the app. Here it can't: the phone's Face ID setting
+is about unlocking the phone, and the app's lock exists to be different from the phone's lock. So the
+lock offers Face ID as its own, demoted choice, with a warning that it is not recommended and a link to
+an article Griff writes. Griff's own position, for the warning: "It also fails if you're detained by
+ICE and they hold the phone up to your face, which they do, which is why I don't believe in biometrics
+and will say so."
+
+**What it costs:** one more setting to explain, which the warning and the article carry. On a phone
+with Touch ID it says Touch ID.
+
+**Not yet what it should be:** today's lock asks Face ID for a yes or no in the app's own code
+(`SystemBiometrics.evaluate`), which a modified app skips. When the lock becomes a key (Advanced On
+Device Security, owed), Face ID has to release a key the Secure Enclave holds back
+(`biometryCurrentSet`), never answer a yes or no.
+
+<!-- COPY END b900e80f -->
+
 <!-- COPY BEGIN fd2829c5 [NEEDS HUMAN REVIEW] -->
 
 ### Advanced On Device Security seals what this phone keeps while it is locked
@@ -3380,8 +3417,8 @@ iOS for its strongest file and keychain protection rather than making a key of i
   protection, and the extension reads the same keys, so every push would have undone the choice.
 
 **Not built:** Outpost's own lock as the seal, with the PIN, the note on each option and the link
-ruled above; whether it opens with Face ID is
-[an open question](open-questions.md#should-outposts-own-lock-open-with-face-id). The settings page
+ruled above, with Face ID offered as a demoted choice
+([Decisions](#the-app-offers-its-own-face-id-setting-against-the-higs-advice)). The settings page
 offers only what is built.
 
 <!-- COPY END fd2829c5 -->

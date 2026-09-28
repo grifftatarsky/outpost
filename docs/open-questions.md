@@ -21,85 +21,23 @@ Settled decisions live in [Decisions](decisions.md).
 
 ### Does a removal decide who is in a room, or only what the room shows?
 
-Raised 2026-09-28, found by reading `RoomRoster` and `CausalOrder` while answering Griff. Griff:
-"Fix this." The two attacks below are written as tests in `TheRoomChainTests` and should fail until
-the fix; they have not been run yet.
+Raised 2026-09-28, found by reading. Griff: "Fix this." Built the same day, not yet run: the member list
+follows the removal's chain the way the room already drew by, so nothing a removed person writes after
+it counts, whatever date or number it carries (`TheRoomChainTests`).
 
-The room chain decides which of a removed person's entries the room shows. The member list does not
-use it. It reads every entry in one order, and for two entries neither of which had seen the other,
-that order comes from the date each writer put on it. A removed person's modified app can write
-entries dated a second before their removal that claim not to have seen it:
+One case is left that no entry can settle, and it needs Griff's yes. Two people remove each other, and
+neither removal mentions the other. That is what an honest race looks like, and also what a removed
+person's modified app writes when it answers its removal with a backdated one of its own. Built as
+recommended: both are out, and the dispute can only take access away. It voids what either side
+granted after the other's line, and keeps what either side withheld.
 
-- **A removal of the person who removed them.** It is read first, so the remover is out; the
-  remover's own removal is then ignored, because its author is no longer in the room. The removed
-  person stays in and is handed keys again.
-- **An invitation of a second identity of theirs, and its confirmation.** In an open room both are
-  read as written while they were a member, and that identity stays after the removal.
-
-Recommended: the member list counts a removed person's entries only where the removal's chain puts
-them, the same rule the room already draws by, so nothing they write after it counts, whatever date
-it carries. One case is left that no entry can settle: two people who remove each other, neither
-having seen the other's removal. Recommended: both are out. The cost is that a removed person can
-take the one who removed them out with them. They can't stay, and anybody still in can invite the
-remover back. The other way, the removal iCloud stored first wins, needs every device to see one
-stored time for an entry that reaches them by different routes, and the mailbox doesn't give that.
+The cost: a removed person can take the one who removed them out with them, and void what that person
+granted since the point the answer names, so somebody the remover let in since then loses their place.
+Nobody gets back in, nobody removed returns, and anybody still in can invite the remover back. Closing
+it for good needs an order both sides can't choose, which the rooms don't have: iCloud stores each
+person's copy of an entry separately, at different times.
 
 <!-- COPY END 9b4525bb -->
-
-<!-- COPY BEGIN a41e8a48 [NEEDS HUMAN REVIEW] -->
-
-### Should Outpost's own lock open with Face ID?
-
-Raised 2026-09-28. Griff ruled both locks, and a PIN, each with a short note and a link to an article
-on Face ID, PINs and passwords ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
-Griff, the same day: "I would offer it as the demoted item, and modal popup warning that FaceID is not
-recommended and link to the outpostmessaging site page for it, which I'll write up unless we decide
-not to do FaceID ... remember we have multiple classes of users, and we allow customization and people
-to do stupid things."
-
-What it would take, from Apple's documentation:
-
-- **No entitlement.** One Info.plist string, `NSFaceIDUsageDescription`, without which the system
-  won't let the app use Face ID
-  ([Apple](https://developer.apple.com/documentation/localauthentication/accessing-keychain-items-with-face-id-or-touch-id)).
-- **A key the Secure Enclave holds back, never a yes or no in our code.** The Face ID copy of the key
-  sits in a keychain item released only after a match; the app gets pass or fail and never any face
-  data (same page). A modified app can skip a check in our code; it can't skip that.
-- **Only `biometryCurrentSet`.** Re-enrolling Face ID invalidates the item
-  ([Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/biometrycurrentset)),
-  so a thief who knows the phone's passcode and adds their own face gets nothing. Never `userPresence`,
-  which also opens with the phone's passcode
-  ([Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/userpresence))
-  and would make Outpost's lock no stronger than the phone's.
-- **Always a PIN or passphrase behind it.** Face ID stops after five failed matches, and turning off the
-  phone's passcode makes the item unavailable. Erasing after wrong codes erases both copies.
-- **Nothing reaches us.** Data processed only on the device is not "collected" for the App Store's
-  privacy details ([Apple](https://developer.apple.com/app-store/app-privacy-details/)).
-- **Who it fails.** Apple puts a random match at under 1 in 1,000,000, higher for twins, look-alike
-  siblings and children under 13, and recommends a passcode for them
-  ([Apple](https://support.apple.com/en-us/102381)). That belongs in the warning.
-- **A HIG departure.** The HIG says to avoid an app-specific setting for biometrics
-  ([Managing accounts](https://developer.apple.com/design/human-interface-guidelines/managing-accounts));
-  this one is deliberate and goes in Decisions with its cost. On a phone with Touch ID it says Touch ID.
-
-Recommended: offer it as Griff describes, on those terms.
-
-<!-- COPY END a41e8a48 -->
-
-<!-- COPY BEGIN ddabe07b [NEEDS HUMAN REVIEW] -->
-
-### Should an ask for a photo reach every one of the sender's devices?
-
-Raised 2026-09-27. When somebody asks for a photo again, the ask reaches whichever of the sender's
-devices collects it first, and only that device lists it. If the photo was sent from the phone and the
-iPad collected the ask, the iPad can still send it when it has a copy of its own (it keeps any photo it
-has shown), and otherwise says the photo is not on this device. Recommended: pass asks between a
-member's devices the way room keys are passed, so the device that sent the photo always hears.
-
-Also: asks work for photos in conversations and not on Outposts. Recommended: leave Outposts out until
-somebody asks, since a new reader already gets every picture on the wall.
-
-<!-- COPY END ddabe07b -->
 
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
 
@@ -122,15 +60,24 @@ shows it. Now a device refuses a key from somebody the room shows as removed or 
 key it already has, and takes a key to somebody's Outpost only from that person.
 
 What was found on 2026-09-28, reading `AppSession.adopt` and `EpochChain`: the only check on who
-sends a key is that the room does not show them as gone. Somebody who was never in the room passes
-it, so a member's device takes a newer key from anybody it has swapped codes with who knows the room,
-such as somebody invited and never let in, writes under it, and passes it to the whole room. And a
-newer key is taken with or without a link back to the key the device holds. `WhoCanSendYouAKeyTests`
-has the test; it should fail until the fix, and has not been run yet. Proposed: a newer key is taken
-only when its links lead back to the key this device already holds; a device that holds none takes
-its first key only from whoever vouched for it (below).
+sends a key was that the room did not show them as gone, which somebody never in the room passes.
+Built the same day, not yet run: a device that holds a room's key takes a newer one only from somebody
+the room shows as in it; a joining device takes its first key only from its inviter (Griff: "100% a
+joiner should only take the key from the inviter"); with no invitation to go by, as after a restore,
+only a key that opens something somebody else wrote there (`WhoCanSendYouAKeyTests`).
 
-What is still open:
+What is still open, now narrower:
+
+- **A phone that missed the removal.** A device that was offline when somebody was removed still shows
+  them as in, so for that window it would take a key they made up. Closing it means checking a newer key
+  against the room's own record of the change (every change writes one); to be built with care, because a
+  key refused for want of its record is not sent again.
+- **A member can still make up a key.** Somebody in the room can read it anyway, so this is sabotage, not
+  a leak.
+- **Links for older keys** are taken from the inviter first; one the inviter did not have can still come
+  from any member, as below.
+
+The earlier notes, kept for the record:
 
 - **A device that can't read the room yet can't check who sent a key.** That is a device joining the
   room, or one restored from the recovery key. The member list is locked with the room key, so until
@@ -201,6 +148,12 @@ Griff's answers in the session before, read against the questions raised writing
    room has to carry its link, and the weaker forms older builds wrote (an entry with no link, a removal
    that names no heads, a device removal with no cutoff) stop being accepted. Owed.
 9. **A joining device's first key** — "100% a joiner should only take the key from the inviter." Owed.
+
+10. **Face ID for the app's lock** — offered, demoted, with a warning and a link: "Depart from HIG."
+   [Decisions](decisions.md#the-app-offers-its-own-face-id-setting-against-the-higs-advice).
+11. **Photos and a member's devices** — every device fetches its own copy: "On photos go with the
+   fetch-for-device you rec." An ask for a photo travels in device mail like everything else a packet
+   carries, so every one of the sender's devices lists it. Owed.
 
 <!-- COPY END ecfca29f -->
 
