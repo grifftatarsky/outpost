@@ -51,6 +51,17 @@ evidence for anything that crosses the network.
 
 <!-- COPY END 4227807f -->
 
+<!-- COPY BEGIN d9819eff [NEEDS HUMAN REVIEW] -->
+
+**Everything at once.** `Scripts/check-all.sh` runs what CI runs, on this Mac: the package suite,
+the lint, the copy markers, a build for macOS and for the iOS Simulator, the app suite, and the check
+for words a Release build should not carry. Every step runs even when an earlier one fails, so one
+run finds every kind of fault. It ends with a digest of the errors, the failed tests and the warnings
+in files the branch changed, and copies that digest to the clipboard, which is what a session
+without a compiler needs pasted back.
+
+<!-- COPY END d9819eff -->
+
 <!-- COPY BEGIN 43897dc9 [NEEDS HUMAN REVIEW] -->
 
 ## The fakes are held to the real seams
