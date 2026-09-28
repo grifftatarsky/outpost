@@ -19,8 +19,8 @@ struct FileProtectionTests {
             .appending(path: "carpenter-protection-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
-    private func protection(of url: URL) throws -> URLFileProtection? {
-        try url.resourceValues(forKeys: [.fileProtectionKey]).fileProtection
+    private func protection(of url: URL) throws -> FileProtectionType? {
+        try FileManager.default.attributesOfItem(atPath: url.path)[.protectionKey] as? FileProtectionType
     }
 
     @Test("With Advanced On Device Security on, the state is written so it opens only while the phone is unlocked")
