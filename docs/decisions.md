@@ -2963,12 +2963,37 @@ learn it exists; nothing anyone writes can change or delete mail to anyone else;
 space ends their access to all of yours and touches nobody else's; and only the sender's phone
 decides what was collected, from receipts only the recipient's device can sign.
 
-**To measure on the rig before designing around it:** how many spaces and links one account can hold,
-and how long a sync across a few hundred takes; whether a link can be limited to exactly one person;
-and what iCloud sends when a contact writes to their space for you. Nothing is written into your own
-iCloud in this plan, so notifications have to come from watching contacts' spaces, where every change
-wakes the phone, a receipt as much as a message. Showing only real messages needs Apple's permission
-to drop a notification quietly; the fallback is a tiny space per contact that can do nothing but ring.
+**Measured on the rig, 2026-09-27**, alpha making 300 spaces and beta joining them
+(`LivePairMailboxMeasurements`):
+
+- **Making them.** 300 spaces took 57 seconds, their links 208 seconds, 600 small records 119
+  seconds. About a second per contact, paid once, when the contact is added. No limit was hit at 300;
+  more was not tried.
+- **Joining them.** Beta read 299 links in 33 seconds and joined them one at a time in 292 seconds.
+- **One person only.** A link with no public access, naming beta by their iCloud user record, reached
+  beta with read-only access. A link with no public access naming nobody answered beta "share not
+  found". Closing an open link after beta joined through it removed beta. So a one-person link has to
+  name the person when it is made, which means their app sends its user record first.
+- **What each learns about the other.** Neither side saw a name, an email address or a phone number,
+  before or after joining; each saw only the other's user record, which is particular to this app.
+- **Nothing written.** Beta tried to add, change and delete a record in alpha's space, and to change
+  alpha's link. iCloud refused all four.
+- **Checking.** Listing 300 joined spaces took 0.2 seconds; reading all of them the first time, 88
+  seconds; checking with nothing new, 0.11 seconds. After alpha wrote once, beta's check (0.2 seconds)
+  named exactly that space. A check taken straight after joining 299 spaces named 19 where 2 had
+  changed.
+- **A gone space stays listed.** After alpha deleted every space, beta's list still named 18 of them
+  half an hour on. Each answered "space not found" and could not be left. The app has to drop a
+  listed space that is gone.
+- **Watching.** iCloud refuses a watch on one shared space ("not allowed in shared database") and
+  accepts one on all of them together, with a visible notification. No push reached beta in two and a
+  half minutes after alpha wrote, the same as the bell on 2026-09-14, so what iCloud sends is **not
+  measured**. That needs a phone.
+
+Nothing is written into your own iCloud in this plan, so notifications have to come from watching
+contacts' spaces all together, where every change wakes the phone, a receipt as much as a message.
+Showing only real messages needs Apple's permission to drop a notification quietly; the fallback is a
+tiny space per contact that can do nothing but ring.
 
 **Not built.**
 
