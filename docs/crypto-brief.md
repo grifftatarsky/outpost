@@ -220,8 +220,8 @@ feed that the removing device held, by number and hash (`cutoff` and `head`, sig
 present). Nothing past it counts, whatever date it carries. A second entry under a number already
 filled is refused, and one that reached a device before the removal did is taken back when the
 removal arrives (`ARemovedDeviceStopsAtTheCutoffTests`). An entry under a number that only another
-room used cannot be checked yet
-([an open question](open-questions.md#can-a-removed-person-still-add-to-a-rooms-past)).
+room used cannot be checked yet; Griff ruled on 2026-09-28 for the room chain that closes it
+([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)), not built yet.
 
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
@@ -675,7 +675,9 @@ sealed body, and the grant tags and values. **What that leaks, stated plainly:**
 - Roughly how much was said (the ciphertext's size), when it was written, and when the reader
   collected it, because the reader's receipt appears in the reader's own space for the sender.
 - That one photo went to several people. Each recipient's copy carries the same sealed bytes and the
-  same photo number ([an open question](open-questions.md#should-a-photo-be-one-copy-per-person-it-went-to)).
+  same photo number. Griff ruled on 2026-09-28 that each copy is sealed apart
+  ([Decisions](decisions.md#a-photo-is-copied-for-each-person-it-goes-to-and-each-copy-is-sealed-apart)),
+  not built yet.
 - The pair's `hint`, a keyed hash of the pair's secret, which is the same in the two people's spaces
   for each other. Apple can already match those two spaces from their share lists, so it adds
   nothing.
@@ -699,7 +701,7 @@ answers, so a copy sent again is not cleared by an old receipt (`NobodyButTheSen
 still counts sent it; a contact is read only from accounts such links name, and a space names the
 account in the newest one. A stolen device can move that name to its own account while it still
 counts, and removing it moves it back
-([an open question](open-questions.md#should-a-stolen-device-be-able-to-redirect-your-contacts-before-you-remove-it),
+([accepted by Griff](decisions.md#a-stolen-device-can-redirect-your-contacts-until-you-remove-it),
 `WhoCanTellYouWhereToReadSomebodyTests`).
 
 It does not leak any participant identifier, any room identifier, any device identifier, or any
@@ -1155,7 +1157,9 @@ passcode, does not open it.
 a modified app, is not stopped by it: the store is protected by iOS's file protection and the
 keychain, as it is without the lock. A 4-digit code's verifier could be tried against all 10,000
 codes in minutes by anybody who already had the keychain item; the counted tries only bind somebody
-using the app.
+using the app. Griff ruled on 2026-09-28 for an opt-in that does stop a copy being read,
+[Advanced On Device Security](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked);
+not built yet.
 
 <!-- COPY END 9c27f287 -->
 

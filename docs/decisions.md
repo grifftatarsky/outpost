@@ -3019,8 +3019,9 @@ uses it, naming nobody until an invite answers the code. An **invite** carries t
 person it is for; whoever talks to both passes it on, the way missing history is passed on, and
 cannot open it.
 
-**Rules added 2026-09-28, all PROPOSED**, after a review of the build found that a stolen device
-could take over where a contact's messages went:
+**Rules added 2026-09-28 and RULED the same day by Griff**, who confirmed them as his when asked.
+They came from a review of the build that found a stolen device could take over where a contact's
+messages went:
 
 - A link counts only if a device that still counts sent it. A link from a device the person later
   removes stops counting.
@@ -3036,13 +3037,9 @@ could take over where a contact's messages went:
 - A device joins a contact's space again whenever it cannot read it, because a reader who is removed
   from a share and named again has to accept again.
 
-**Where the build departs from the ruling.** The ruling said photos would be stored once, in a
-read-only space, with each mailbox pointing to them. What was built keeps a copy of each photo in
-each recipient's space. One photo space would have to be read by everybody the photo went to, which
-breaks "only the two people can read the space they share", and closing one person's space would
-not end their access to the photos. The cost is storage, one copy per recipient, and that Apple sees
-the same bytes in several spaces and can tell one photo went to several people. This needs Griff's
-answer: [Open questions](open-questions.md#should-a-photo-be-one-copy-per-person-it-went-to).
+**Photos are copied, not shared.** The ruling said photos would be stored once, in a read-only
+space each mailbox points to. On 2026-09-28 Griff ruled for a copy per person instead, each sealed
+apart: [A photo is copied for each person it goes to](#a-photo-is-copied-for-each-person-it-goes-to-and-each-copy-is-sealed-apart).
 
 **The old outbox** is still read, and a packet goes into it for a contact who has not joined a
 space yet. It is erased once every contact reads a space.
@@ -3054,6 +3051,78 @@ run: both rig accounts were asking for their passwords, and `LivePairTests` is r
 accounts.
 
 <!-- COPY END cd3e5ba0 -->
+
+<!-- COPY BEGIN acacb9e8 [NEEDS HUMAN REVIEW] -->
+
+### A photo is copied for each person it goes to, and each copy is sealed apart
+
+**RULED 2026-09-28 by Griff:** "Copy per person, sealed apart", over one read-only space for every
+photo a member sends.
+
+One media space would store each photo once, and it costs more privacy than it saves:
+
+- Everyone you send a photo to would be in one share. In CloudKit's share model every participant can
+  list the others, so your contacts would learn each other's app-specific iCloud IDs and how many
+  people you share with. Not measured; it is how CloudKit shares work.
+- Everyone in it would see the size, count and timing of every photo you send anybody. They could not
+  open them, since the keys travel only in the room.
+- Closing someone's space would no longer end their access to your photos.
+- Apple would still see one file fetched by several accounts, which tells it the same thing identical
+  copies do.
+
+A media space per room was the middle option: its members already know each other, and a removal
+updates the room's share.
+
+**What was chosen.** A copy in each recipient's space, as the per-pair mailbox already builds it,
+sealed a second time under a key derived from that pair's secret and stored under a name derived from
+it too, so no two copies share bytes or a name and Apple cannot match one photo across spaces. **What
+it costs:** a photo sent to a room of eight is stored seven times in your iCloud until each copy is
+collected, or for nine days at most, and each recipient's copy takes one more seal.
+
+**Not built yet.**
+
+<!-- COPY END acacb9e8 -->
+
+<!-- COPY BEGIN 50290c79 [NEEDS HUMAN REVIEW] -->
+
+### A stolen device can redirect your contacts until you remove it
+
+**RULED 2026-09-28 by Griff**, taking the recommendation to accept it.
+
+A device you approved acts as you until you remove it, and that includes sending your contacts a new
+link. Each contact names the account in your newest link on the space they keep for you, so a stolen
+phone signed in to another Apple Account can have your contacts' messages to you left where it reads
+them, and your real devices stop hearing those contacts until you remove it.
+
+Removing it puts everything back: its links stop counting, your contacts name your account again, and
+your devices join again (`WhoCanTellYouWhereToReadSomebodyTests`). Room keys still go only to devices
+that are not removed.
+
+**Why it is accepted.** A device that counts can already read everything you can, so what this adds is
+that your other devices go quiet for those contacts until you act. The alternative, a new account that
+counts only after a day, would also delay every real change of Apple Account.
+
+<!-- COPY END 50290c79 -->
+
+<!-- COPY BEGIN 74e61ee3 [NEEDS HUMAN REVIEW] -->
+
+### The space kept for somebody closes nine days after you last shared anything with them
+
+**RULED 2026-09-28 by Griff:** "Always on", not a setting.
+
+When you no longer share a room, a solo or an Outpost with somebody, the space you keep for them stays
+open and still names them. Nothing new goes into it, because you send them nothing, so they learn
+nothing new from it; it costs one empty zone and a name on a share.
+
+It closes nine days after the last thing you shared with them ends: the time a packet waits, so the
+notice that they were removed still reaches them. Closing de-keys nobody. The secret two people share
+comes from their identity keys and never changes, so nothing is exchanged again, and closing deletes
+one zone. If you share a room or a solo with them again, a new space and link go out automatically,
+the way they do for any new room.
+
+**Not built yet.**
+
+<!-- COPY END 74e61ee3 -->
 
 <!-- COPY BEGIN d920b620 [NEEDS HUMAN REVIEW] -->
 
@@ -3074,7 +3143,8 @@ entry counts only up to its cutoff; a removal made before cutoffs existed still 
 `ARemovedPersonStopsAtTheRemovalTests` and `ARemovedDeviceStopsAtTheCutoffTests` fail with the old
 checks put back.
 
-**Added 2026-09-28, PROPOSED, after a review of the build.** A number alone let a removed device sign
+**Added 2026-09-28 after a review of the build, and RULED the same day by Griff**, who confirmed it
+as his when asked. A number alone let a removed device sign
 a second, different entry under a number the removal had seen, and a removed person do the same in a
 room. So a device removal now also names the entry at its cutoff (`head`, signed only when present).
 A second entry from a removed device under a number already filled is refused; the entry at the
@@ -3083,8 +3153,19 @@ leading to the named one arrive; and entries that arrived before the removal did
 are taken back when it arrives and are not counted as missing. For a removed person, an entry under
 a number their feed already filled counts for nothing, and a removal ends every invitation they made
 that nobody had taken, because a backdated invitation could otherwise bring a second identity of
-theirs back into an open room. **Not closed:** an entry under a number the room's members never
-held, see [Open questions](open-questions.md#can-a-removed-person-still-add-to-a-rooms-past).
+theirs back into an open room.
+
+**The room chain, RULED 2026-09-28 by Griff.** One gap was left: everything a person writes is
+numbered in one sequence across all their rooms, so the numbers they used in rooms you are not in are
+gaps you never hold, and a removed person or device could sign a new entry under one of them and have
+it count as written before the removal. Two ways were weighed. A removal listing a fingerprint of each
+entry the remover held would give the remover a new power: a modified app could leave any of the
+removed person's earlier messages off the list and hide it, where today a remover can only cut off the
+newest ones; and an honest remover who never received some old history would hide it by accident. The
+room chain adds no power: each entry names its author's previous entry in the same room, the removal
+names the last one it saw, and only that chain counts. It changes the log's format, the careful way
+older entries require: the new field is signed only when present, so every existing entry keeps its
+bytes. **Not built yet.**
 
 <!-- COPY END d920b620 -->
 
@@ -3131,7 +3212,8 @@ Settings under App lock. See the [crypto brief](crypto-brief.md#the-app-lock).
   and the keychain, the same as without the lock. A lock that encrypted the store would stop the app
   syncing and the notification extension drawing a banner until the member typed the code, and a
   forgotten code would lose the history. It stops a person holding an unlocked phone, which is who it
-  is for; it does not stop someone who can read the phone's storage directly.
+  is for; it does not stop someone who can read the phone's storage directly. A member who wants that
+  too turns on [Advanced On Device Security](#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked).
 - **Notifications follow the member's own setting, and setting the lock offers to make them private.**
   **RULED 2026-09-27 by Griff:** "when a user sets it up, ask them if they want to switch their push
   notifications ... to the most private setting, and note that if they do not, a bad actor with a
@@ -3170,6 +3252,30 @@ forgets the code and has neither another device nor the recovery key loses what 
 and one who sets erasing at 1 can lose everything to a single typo.
 
 <!-- COPY END d09e6aaf -->
+
+<!-- COPY BEGIN fd2829c5 [NEEDS HUMAN REVIEW] -->
+
+### Advanced On Device Security seals what this phone keeps while it is locked
+
+**RULED 2026-09-28 by Griff**, who confirmed the promises below with "Confirm, build it". It is off
+unless the member turns it on.
+
+1. When it is on, what Outpost keeps on this phone (messages, photos, keys) cannot be read while it is
+   locked (by the phone's lock, or Outpost's own lock, whichever the member chooses), even by someone
+   who copies the phone's storage.
+2. Messages that arrive while it is locked are kept sealed and join the history when it is unlocked.
+   Nothing is lost, and banners only say that something arrived.
+3. Forgetting the code loses only this phone's copy. The recovery key and the member's other devices
+   bring them back, and nothing is erased for anybody else.
+
+**What promise 1 needs**, raised when it was confirmed: a code of 4 to 6 digits has at most a million
+values, so a key made from the code alone could be tried against a copied file, every value, off the
+phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
+the phone itself.
+
+**Not built yet.**
+
+<!-- COPY END fd2829c5 -->
 
 <!-- COPY BEGIN 8aab962a [NEEDS HUMAN REVIEW] -->
 
