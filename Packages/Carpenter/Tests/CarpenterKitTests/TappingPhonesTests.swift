@@ -265,7 +265,7 @@ struct TappingPhonesTests {
         room.measure("alice", "bob", 0.04)
 
         let reveals = room.wire.filter { $0.from == "alice" && Self.isReveal($0.message) }
-        #expect(reveals.map(\.to) == ["bob"], "alice showed her key to a phone she was not touching")
+        #expect(reveals.map { $0.to } == ["bob"], "alice showed her key to a phone she was not touching")
         let committed = try #require(room.wire.firstIndex { $0.from == "bob" && $0.to == "alice" && Self.isHello($0.message) })
         let revealed = try #require(room.wire.firstIndex { $0.from == "alice" && Self.isReveal($0.message) })
         #expect(committed < revealed, "alice showed her key before bob had committed to his")
@@ -307,7 +307,7 @@ struct TappingPhonesTests {
         room.measure("alice", "carol", 0.04)
 
         #expect(
-            room.wire.filter { $0.from == "alice" && Self.isReveal($0.message) }.map(\.to) == ["bob"],
+            room.wire.filter { $0.from == "alice" && Self.isReveal($0.message) }.map { $0.to } == ["bob"],
             "a phone showed its key to a second phone in the same tap")
         #expect(room.phase("alice") != .touching)
     }
