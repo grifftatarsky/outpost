@@ -122,6 +122,51 @@ struct TappingPhonesTests {
         #expect(room.arrived["bob"] == ["alice's code"])
     }
 
+    @Test(
+        "A code that lands after the other phone's ask has lapsed is sent again when that person says yes again",
+        arguments: [1, TapSwap.askLasts + 1])
+    func aLateCodeIsSentAgain(pause: TimeInterval) {
+        let room = aliceAndBob()
+        room.measure("alice", sees: "bob", at: 0.04)
+        room.accept("alice")
+        room.now += TapSwap.askLasts - 5
+        room.measure("bob", sees: "alice", at: 0.04)
+        room.now += 6
+        room.accept("bob")
+        #expect(room.arrived["alice", default: []].isEmpty, "precondition: bob's code landed after alice's ask lapsed")
+        #expect(room.phase("bob") == .waitingForThem)
+
+        room.now += pause
+        room.measure("alice", sees: "bob", at: 0.04)
+        room.accept("alice")
+        #expect(room.arrived["alice"] == ["bob's code"], "the phone that had already sent its code never sent it again")
+        #expect(room.arrived["bob"] == ["alice's code"])
+        #expect(room.phase("alice") == .swapped)
+        #expect(room.phase("bob") == .swapped)
+    }
+
+    @Test("A code that arrives before this phone's person says yes brings nothing back until they do")
+    func aCodeSentFirstBringsNothingBack() {
+        let room = aliceAndBob()
+        room.measure("alice", sees: "bob", at: 0.04)
+        room.accept("alice")
+        room.now += TapSwap.askLasts - 5
+        room.measure("bob", sees: "alice", at: 0.04)
+        room.now += 6
+        room.measure("alice", sees: "bob", at: 1)
+        room.measure("alice", sees: "bob", at: 0.04)
+        #expect(room.phase("alice") == .touching, "precondition: alice's first yes lapsed and she is being asked again")
+
+        let sentBefore = room.wire.filter { $0.from == "alice" }.count
+        room.accept("bob")
+        #expect(room.wire.filter { $0.from == "alice" }.count == sentBefore, "a phone answered a code its person had not said yes to")
+        #expect(room.arrived["alice", default: []].isEmpty)
+
+        room.accept("alice")
+        #expect(room.arrived["alice"] == ["bob's code"])
+        #expect(room.arrived["bob"] == ["alice's code"])
+    }
+
     @Test("Nothing is shared until each person accepts, and an ask left too long lapses")
     func nothingWithoutBothYeses() {
         let room = aliceAndBob()
@@ -248,6 +293,25 @@ struct TappingPhonesTests {
             to: "alice", from: "bob", token: Data("another token".utf8), key: Data(repeating: 9, count: 32))
         #expect(again.rangeWith.isEmpty)
         #expect(room.ranging["alice"] == ["bob"])
+    }
+
+    @Test("A phone's own hello, played back to it, is refused")
+    func itsOwnHelloIsRefused() throws {
+        let room = Room(["alice": "alice's code", "bob": "bob's code", "mallory": "mallory's code"])
+        room.connect("alice", "bob")
+        let hers = try #require(
+            room.wire.lazy.compactMap { sent -> Data? in
+                guard sent.from == "alice", case .hello(_, let key) = sent.message else { return nil }
+                return key
+            }.first)
+        room.link("alice", "mallory")
+        let token = Data("token mallory to alice".utf8)
+
+        let bounced = room.hello(to: "alice", from: "mallory", token: token, key: hers)
+        #expect(bounced.rangeWith.isEmpty, "a phone agreed a key with itself, so what it sent could be bounced back")
+        let theirs = Curve25519.KeyAgreement.PrivateKey().publicKey.rawRepresentation
+        let fresh = room.hello(to: "alice", from: "mallory", token: token, key: theirs)
+        #expect(!fresh.rangeWith.isEmpty, "precondition: a key of its own is taken")
     }
 
     @Test("A token another phone already presented is refused")

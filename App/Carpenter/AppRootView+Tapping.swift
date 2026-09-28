@@ -21,6 +21,7 @@ extension AppRootView {
                 let link = try? InviteLink.url(offering: code, scheme: Branding.urlScheme)
             else { return }
             tapSwapper?.stop()
+            tappedCodes = []
             let swapper = TapSwapper(handingOver: link.absoluteString)
             swapper.onArrival = { arrival in tapArrived(arrival) }
             swapper.start()

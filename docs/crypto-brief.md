@@ -1093,13 +1093,17 @@ decide who they are talking to.
 - **The first hello** carries a Nearby Interaction discovery token, made fresh for that pair, and a
   fresh X25519 public key. Everything after it is sealed with ChaChaPoly under an HKDF-SHA256 key from
   the two keys, in its own domain (`carpenter.tap-swap.v1`), numbered so a message played back is
-  refused, and bound to its sender's key so one bounced back is refused too.
+  refused, and bound to its sender's key so one bounced back is refused too. A hello carrying the
+  phone's own key is refused, because a key agreed with itself would let its own messages be bounced
+  back and opened.
 - **Choosing the phone.** A phone counts as touching at 15 cm or less for three readings in a row, the
   newest under a second old. It is chosen only if no other phone is that close and every phone that
   arrived in the last two seconds has been measured. Another phone coming that close starts over.
-- **Asking.** The ask lasts 30 seconds. Each phone sends its code only after its own person and the
-  other person have both said yes, and takes a code only from the chosen phone, only after both
-  yeses, at most eight hand-overs and 16 KB each.
+- **Asking.** The ask lasts 30 seconds. Each phone sends its code only after its own person has said
+  yes and the other phone has said yes or sent its code. It takes a code only from the chosen phone,
+  only after its own person's yes, at most eight hand-overs and 16 KB each. A phone that has sent its
+  code and hears a yes again sends its code again, because the other phone's ask can lapse just
+  before the code lands, and then that phone asks its person again.
 
 **What it does not do.**
 

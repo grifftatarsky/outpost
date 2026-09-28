@@ -86,7 +86,7 @@ public struct TapSwap: Sendable {
     private var touchedAt: Date?
     private var readyFrom: [TapPeer: Date] = [:]
     private var iAccepted = false
-    private var theyAccepted = false
+    private var theirYes: Date?
     private var handedOver = false
     private var arrivals = 0
 
@@ -134,7 +134,7 @@ public struct TapSwap: Sendable {
                 if body == .ready { readyFrom[peer] = now }
                 return Effects()
             }
-            return take(body)
+            return take(body, at: now)
         }
     }
 
@@ -183,37 +183,41 @@ public struct TapSwap: Sendable {
         else { return }
         candidate = only
         touchedAt = now
-        theyAccepted = readyFrom[only].map { now.timeIntervalSince($0) <= Self.askLasts } ?? false
+        theirYes = readyFrom[only].flatMap { now.timeIntervalSince($0) <= Self.askLasts ? $0 : nil }
     }
 
     private mutating func forgetTheTouch(keepingTheirYes: Bool = true) {
         if let candidate {
-            readyFrom[candidate] = keepingTheirYes && theyAccepted ? touchedAt : nil
+            readyFrom[candidate] = keepingTheirYes ? theirYes : nil
         }
         candidate = nil
         touchedAt = nil
         iAccepted = false
-        theyAccepted = false
+        theirYes = nil
     }
 
     private mutating func handOverIfBothAgreed() -> [Send] {
-        guard iAccepted, theyAccepted, !handedOver, let candidate, let send = seal(.handOver(mine), to: candidate)
+        guard iAccepted, theirYes != nil, !handedOver, let candidate, let send = seal(.handOver(mine), to: candidate)
         else { return [] }
         handedOver = true
         return [send]
     }
 
-    private mutating func take(_ body: Body) -> Effects {
+    private mutating func take(_ body: Body, at now: Date) -> Effects {
         switch body {
+        case .ready where handedOver:
+            guard let candidate, let again = seal(.handOver(mine), to: candidate) else { return Effects() }
+            return Effects(sends: [again])
         case .ready:
-            guard !theyAccepted else { return Effects() }
-            theyAccepted = true
+            guard theirYes == nil else { return Effects() }
+            theirYes = now
             return Effects(sends: handOverIfBothAgreed())
         case .handOver(let text):
-            guard iAccepted, theyAccepted, arrivals < Self.mostHandOvers, text.utf8.count <= Self.largestHandOver
+            guard iAccepted, arrivals < Self.mostHandOvers, text.utf8.count <= Self.largestHandOver
             else { return Effects() }
+            theirYes = theirYes ?? now
             arrivals += 1
-            return Effects(arrived: [text])
+            return Effects(sends: handOverIfBothAgreed(), arrived: [text])
         }
     }
 
@@ -221,7 +225,7 @@ public struct TapSwap: Sendable {
 
     private mutating func greet(_ peer: TapPeer, token: Data, key: Data, at now: Date) -> Effects {
         var state = peers[peer] ?? Peer(connectedAt: now)
-        guard state.key == nil, !token.isEmpty, token.count <= Self.largestToken,
+        guard state.key == nil, key != publicKey, !token.isEmpty, token.count <= Self.largestToken,
             !peers.values.contains(where: { $0.token == token }),
             let theirs = try? Curve25519.KeyAgreement.PublicKey(rawRepresentation: key),
             let shared = try? agreement?.sharedSecretFromKeyAgreement(with: theirs)

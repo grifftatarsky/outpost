@@ -19,6 +19,7 @@
         @ObservationIgnored private var browser: NWBrowser?
         @ObservationIgnored private var dialled: Set<String> = []
         @ObservationIgnored private var links: [TapPeer: NWConnection] = [:]
+        @ObservationIgnored private var greeted: Set<TapPeer> = []
         @ObservationIgnored private var sessions: [TapPeer: NISession] = [:]
         private let watcher = SessionWatcher()
         @ObservationIgnored private var ticker: Task<Void, Never>?
@@ -39,16 +40,14 @@
 
         func start() {
             watcher.onDistance = { [weak self] session, distance in self?.measured(session, distance) }
-            watcher.onResume = { session in
-                if let configuration = session.configuration { session.run(configuration) }
-            }
-            watcher.onEnd = { [weak self] session, error in self?.ended(session, error) }
+            watcher.onEnd = { [weak self] session, refused in self?.ended(session, refused: refused) }
             listen()
             browse()
             ticker = Task { [weak self] in
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(250))
-                    self?.refresh()
+                    guard let self else { return }
+                    self.refresh()
                 }
             }
         }
@@ -101,7 +100,7 @@
                 MainActor.assumeIsolated { self?.adopt(connection) }
             }
             listener.stateUpdateHandler = { [weak self] state in
-                MainActor.assumeIsolated { self?.noteRefusal(in: state) }
+                MainActor.assumeIsolated { self?.listening(changed: state) }
             }
             listener.start(queue: .main)
             self.listener = listener
@@ -113,10 +112,7 @@
                 MainActor.assumeIsolated { self?.found(results) }
             }
             browser.stateUpdateHandler = { [weak self] state in
-                MainActor.assumeIsolated {
-                    if case .waiting(let error) = state { self?.noteRefusal(error) }
-                    if case .failed(let error) = state { self?.noteRefusal(error) }
-                }
+                MainActor.assumeIsolated { self?.browsing(changed: state) }
             }
             browser.start(queue: .main)
             self.browser = browser
@@ -131,8 +127,16 @@
             }
         }
 
-        private func noteRefusal(in state: NWListener.State) {
+        private func listening(changed state: NWListener.State) {
             switch state {
+            case .waiting(let error), .failed(let error): noteRefusal(error)
+            default: break
+            }
+        }
+
+        private func browsing(changed state: NWBrowser.State) {
+            switch state {
+            case .ready where trouble == .noLocalNetwork: trouble = nil
             case .waiting(let error), .failed(let error): noteRefusal(error)
             default: break
             }
@@ -158,6 +162,7 @@
         private func link(_ peer: TapPeer, changed state: NWConnection.State) {
             switch state {
             case .ready:
+                guard greeted.insert(peer).inserted else { return }
                 let session = NISession()
                 session.delegate = watcher
                 sessions[peer] = session
@@ -229,15 +234,19 @@
             session.run(NINearbyPeerConfiguration(peerToken: theirs))
         }
 
-        private func measured(_ session: NISession, _ distance: Double?) {
-            guard let peer = sessions.first(where: { $0.value === session })?.key else { return }
+        private func peer(measuredBy session: ObjectIdentifier) -> TapPeer? {
+            sessions.first { ObjectIdentifier($0.value) == session }?.key
+        }
+
+        private func measured(_ session: ObjectIdentifier, _ distance: Double?) {
+            guard let peer = peer(measuredBy: session) else { return }
             swap.measured(peer, distance: distance, at: .now)
             refresh()
         }
 
-        private func ended(_ session: NISession, _ error: Error?) {
-            if (error as? NIError)?.code == .userDidNotAllow { trouble = .notAllowed }
-            guard let peer = sessions.first(where: { $0.value === session })?.key else { return }
+        private func ended(_ session: ObjectIdentifier, refused: Bool) {
+            if refused { trouble = .notAllowed }
+            guard let peer = peer(measuredBy: session) else { return }
             sessions[peer] = nil
             swap.measured(peer, distance: nil, at: .now)
             refresh()
@@ -253,33 +262,37 @@
         }
 
         private func refresh() {
-            let now = swap.phase(at: .now)
-            if now != phase { phase = now }
+            let current = swap.phase(at: .now)
+            if current != phase { phase = current }
         }
     }
 
+    @MainActor
     private final class SessionWatcher: NSObject, NISessionDelegate {
-        var onDistance: (@MainActor (NISession, Double?) -> Void)?
-        var onResume: (@MainActor (NISession) -> Void)?
-        var onEnd: (@MainActor (NISession, Error?) -> Void)?
+        var onDistance: ((ObjectIdentifier, Double?) -> Void)?
+        var onEnd: ((ObjectIdentifier, Bool) -> Void)?
 
-        func session(_ session: NISession, didUpdate nearbyObjects: [NINearbyObject]) {
+        nonisolated func session(_ session: NISession, didUpdate nearbyObjects: [NINearbyObject]) {
+            let measured = ObjectIdentifier(session)
             let distance = nearbyObjects.first?.distance.map(Double.init)
-            MainActor.assumeIsolated { onDistance?(session, distance) }
+            MainActor.assumeIsolated { onDistance?(measured, distance) }
         }
 
-        func session(
+        nonisolated func session(
             _ session: NISession, didRemove nearbyObjects: [NINearbyObject], reason: NINearbyObject.RemovalReason
         ) {
-            MainActor.assumeIsolated { onDistance?(session, nil) }
+            let measured = ObjectIdentifier(session)
+            MainActor.assumeIsolated { onDistance?(measured, nil) }
         }
 
-        func sessionSuspensionEnded(_ session: NISession) {
-            MainActor.assumeIsolated { onResume?(session) }
+        nonisolated func sessionSuspensionEnded(_ session: NISession) {
+            if let configuration = session.configuration { session.run(configuration) }
         }
 
-        func session(_ session: NISession, didInvalidateWith error: Error) {
-            MainActor.assumeIsolated { onEnd?(session, error) }
+        nonisolated func session(_ session: NISession, didInvalidateWith error: Error) {
+            let measured = ObjectIdentifier(session)
+            let refused = (error as? NIError)?.code == .userDidNotAllow
+            MainActor.assumeIsolated { onEnd?(measured, refused) }
         }
     }
 #endif
