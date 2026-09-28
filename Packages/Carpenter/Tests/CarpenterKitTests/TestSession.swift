@@ -10,7 +10,8 @@ enum TestSession {
     static func storage(
         keychain: any KeychainStore = InMemoryKeychainStore(),
         at directory: URL? = nil,
-        media: any MediaStore = MemoryMediaStore()
+        media: any MediaStore = MemoryMediaStore(),
+        protection: ProtectionDial = ProtectionDial()
     ) -> SessionStorage {
         let root =
             directory
@@ -18,9 +19,10 @@ enum TestSession {
 
         return SessionStorage(
             keychain: keychain,
-            log: FileLogStore(url: root.appending(path: "log.carpenter")),
-            documents: FileDocumentStore(url: root.appending(path: "state.json")),
-            media: media
+            log: FileLogStore(url: root.appending(path: "log.carpenter"), protection: protection),
+            documents: FileDocumentStore(url: root.appending(path: "state.json"), protection: protection),
+            media: media,
+            protection: protection
         )
     }
 
@@ -30,10 +32,11 @@ enum TestSession {
         at directory: URL? = nil,
         denyList: DenyList = .empty,
         media: any MediaStore = MemoryMediaStore(),
+        protection: ProtectionDial = ProtectionDial(),
         clock: any Clock = TestClock(now: now)
     ) -> AppSession {
         AppSession(
-            storage: storage(keychain: keychain, at: directory, media: media),
+            storage: storage(keychain: keychain, at: directory, media: media, protection: protection),
             clock: clock, denyList: denyList)
     }
 }

@@ -468,6 +468,43 @@ settings patterns instead, and have not been compared with the board.
 
 <!-- COPY END 99e8afe2 -->
 
+<!-- COPY BEGIN cbb86a09 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="advanced-on-device-security">
+<summary><b>Advanced On Device Security</b> — Written, not built</summary>
+
+**Story.** As a member, I want what the app keeps on my phone sealed whenever the phone is locked, so
+that somebody who takes it and copies its storage reads nothing, even though the app then fetches
+nothing until I unlock it.
+
+Ruled by Griff on 2026-09-28, with three promises confirmed; see
+[the decision](../decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)
+and the [crypto brief](../crypto-brief.md#advanced-on-device-security). Written the same day in a
+session with no compiler: **not built, not run.**
+
+**Acceptance criteria**
+
+- **Written.** With it on, every file the app keeps is written `.complete` and every key
+  `WhenUnlockedThisDeviceOnly`, and turning it on or off changes what is already kept
+  (`SealedWhileLockedTests`, `SystemKeychainTests`, `FileProtectionTests`).
+- **Written.** While the phone is locked nothing is fetched, loaded or signed for, and a message sent
+  then arrives when it is unlocked (`SealedWhileLockedTests`).
+- **Written.** A phone that starts while locked waits, and never offers to start over.
+- **Written.** The notification extension, which can open nothing then, shows only "New message" and
+  leaves the number on the icon alone.
+- **Written.** Reading a key never changes how it is protected, so the extension cannot undo the choice.
+- **Written.** A switch on its own page under This device, which cannot be turned on without a
+  passcode.
+- **Not built.** Outpost's own lock as the seal
+  ([Open questions](../open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)).
+- **Owed, on a real iPhone.** With it on: lock the phone, send it a message from the other account, see
+  a banner that says only "New message", unlock it and see the message arrive. `FileProtectionTests` on
+  the device as well as the simulator, since a simulator has no passcode to seal anything with.
+
+</details>
+
+<!-- COPY END cbb86a09 -->
+
 <!-- COPY BEGIN 74cc379c [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-device-list-tells-the-truth">

@@ -41,6 +41,7 @@ public enum StorageError: Error, Hashable, Sendable {
 public actor FileLogStore: LogStore {
     private let url: URL
     private let fileManager: FileManager
+    private let dial: ProtectionDial
 
     private let maximumRecordBytes: Int
 
@@ -49,10 +50,12 @@ public actor FileLogStore: LogStore {
     public init(
         url: URL,
         maximumRecordBytes: Int = defaultMaximumRecordBytes,
+        protection dial: ProtectionDial = ProtectionDial(),
         fileManager: FileManager = .default
     ) {
         self.url = url
         self.maximumRecordBytes = maximumRecordBytes
+        self.dial = dial
         self.fileManager = fileManager
     }
 
@@ -176,7 +179,7 @@ public actor FileLogStore: LogStore {
                 fileManager.createFile(
                     atPath: scratch.path,
                     contents: try Self.records(of: kept),
-                    attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+                    attributes: dial.current.fileAttributes)
             else { throw CocoaError(.fileWriteUnknown) }
             _ = try fileManager.replaceItemAt(url, withItemAt: scratch)
             return removed
@@ -192,7 +195,7 @@ public actor FileLogStore: LogStore {
         fileManager.createFile(
             atPath: url.path,
             contents: nil,
-            attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
+            attributes: dial.current.fileAttributes
         )
     }
 }

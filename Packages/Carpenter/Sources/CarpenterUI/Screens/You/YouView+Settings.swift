@@ -178,6 +178,19 @@ extension YouView {
         // COPY END 9c39d599
     }
 
+    private func deviceSecurityRow(_ setting: DeviceSecuritySetting) -> some View {
+        // COPY BEGIN 52316da3 [NEEDS HUMAN REVIEW]
+        NavigationLink {
+            DeviceSecuritySettingsView(setting: setting)
+        } label: {
+            SettingsRow(
+                icon: "lock.shield.fill", tone: .device,
+                title: Text("Advanced On Device Security", bundle: .module),
+                detail: setting.isOn ? Text("On", bundle: .module) : Text("Off", bundle: .module))
+        }
+        // COPY END 52316da3
+    }
+
     var thisDevice: some View {
         Section {
             // COPY BEGIN 07edb102 [NEEDS HUMAN REVIEW]
@@ -202,6 +215,11 @@ extension YouView {
             if let appLock {
                 appLockRow(appLock)
             }
+            #if os(iOS)
+                if let deviceSecurity {
+                    deviceSecurityRow(deviceSecurity)
+                }
+            #endif
             NavigationLink {
                 IntegrityView(report: integrity)
             } label: {

@@ -49,4 +49,6 @@ public struct ReadOnlyKeychainStore: KeychainStore {
     public func remove(_ key: KeychainKey) async throws {}
 
     public func removeAll() async throws {}
+
+    public func protect(as protection: StorageProtection) async throws {}
 }

@@ -17,6 +17,65 @@ Settled decisions live in [Decisions](decisions.md).
 ## Questions
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN a41e8a48 [NEEDS HUMAN REVIEW] -->
+
+### How should Outpost's own lock seal what this phone keeps?
+
+Raised 2026-09-28. Advanced On Device Security was ruled with two choices, the phone's lock or
+Outpost's own. The phone's lock is written; the settings page offers only it. Outpost's own lock needs
+three answers first.
+
+**The key.** Everything the app keeps would be sealed under one key, and that key kept in the keychain
+behind the app's code, with `kSecAccessControlApplicationPassword` ("an application-provided password
+for data encryption key generation",
+[Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/applicationpassword)).
+Promise 1 needs a copied item to be tryable only on the phone. Apple's documentation does not say
+whether the key made from that password is bound to the hardware, so it has to be measured on a
+device before it is promised. Recommended: measure first, and build it only if it holds.
+
+**What arrives while the app is locked.** With the app locked, nothing it keeps can be opened, so it
+would fetch nothing, the way it fetches nothing while the phone is locked: an iPhone in use all day
+with the app locked would collect nothing all day, and every banner would say only "New message".
+Recommended: accept that, and say it on the settings page.
+
+**Face ID and the erasing.** Face ID would need a second copy of the key behind Face ID, which the
+code's counted tries do not guard, and erasing after wrong codes would erase the only copy. Recommended:
+no Face ID for this choice, and erasing works as it does now.
+
+<!-- COPY END a41e8a48 -->
+
+<!-- COPY BEGIN 3e2cf1ce [NEEDS HUMAN REVIEW] -->
+
+### What reaches a phone that stays locked longer than a packet waits?
+
+Raised 2026-09-28, writing Advanced On Device Security. With it on, a locked phone collects nothing.
+A sender takes a packet back after nine days whoever has collected it, so a phone left locked longer
+than that is like one that was off that long. What was sent in the first days comes back through
+history repair when a later message shows the gap; if nothing was sent after it, it comes back only
+when the member asks that room to check. Photos the sender's iCloud has let go do not come back
+([Decisions](decisions.md#only-the-sender-clears-a-photo-and-keeps-its-own-copy)).
+
+Recommended: when the app opens after more than nine days without a round, start a check in every
+room without being asked. It helps a phone that was off as much as one that was locked. Until you
+decide, the settings page does not say that nothing is lost.
+
+<!-- COPY END 3e2cf1ce -->
+
+<!-- COPY BEGIN 6a0c5f97 [NEEDS HUMAN REVIEW] -->
+
+### Should the app's preferences be sealed too?
+
+Raised 2026-09-28, writing Advanced On Device Security. With it on, the history, names, photos and
+keys open only while the phone is unlocked. The app's preferences do not: the theme, favourite emoji,
+which rooms a Focus lets through and which photos you chose to show (each by a random identifier),
+and the device-sync engine's bookkeeping. None of them is a message, a name, a photo or a key.
+
+Recommended: leave them. iOS keeps an app's preferences in a file of its own, so sealing them means
+moving every one into the app's sealed state, which touches every screen that keeps one, to protect
+settings and random identifiers rather than anything anybody said.
+
+<!-- COPY END 6a0c5f97 -->
+
 <!-- COPY BEGIN d041ce54 [NEEDS HUMAN REVIEW] -->
 
 ### What is left of a removed person's reach into a room's past?

@@ -3306,7 +3306,28 @@ values, so a key made from the code alone could be tried against a copied file, 
 phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
 the phone itself.
 
-**Not built yet.**
+**Written 2026-09-28 for the phone's lock, in a session with no compiler: not built, not run on a
+phone.** iOS already ties its own keys to the passcode and the phone's hardware, so this choice asks
+iOS for its strongest file and keychain protection rather than making a key of its own. See the
+[crypto brief](crypto-brief.md#advanced-on-device-security) and `SealedWhileLockedTests`.
+
+**PROPOSED, the details Griff has not seen:**
+
+- **A switch on its own page under This device**, off by default. It cannot be turned on while the
+  iPhone has no passcode, because without one iOS protects nothing; it can always be turned off.
+- **A choice that cannot be read counts as on.** The phone locked with it on, or not yet unlocked
+  since it started, reads as sealed, so nothing is ever written the ordinary way by mistake.
+- **While the phone is locked, the app leaves what it keeps alone**: no round, no device sync, no
+  load, nothing signed for. The notification extension can open nothing, so it shows the plain
+  banner at once and leaves the number on the icon as it was.
+- **Turning it on or off changes what is already kept**, every key and file, and finishes the next
+  time the app opens if it was interrupted. Two quick changes run one after the other.
+- **Reading a key no longer changes how it is protected.** A read used to move a key to the ordinary
+  protection, and the extension reads the same keys, so every push would have undone the choice.
+
+**Not built:** Outpost's own lock as the seal
+([Open questions](open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)). The
+settings page offers only what is built.
 
 <!-- COPY END fd2829c5 -->
 

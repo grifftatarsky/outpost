@@ -139,9 +139,9 @@ extension AppRootView {
         session = AppSession(storage: .onDisk(profile: next?.profile), clock: UITestMode.clock)
         session.enforcesDenyList = safety.blocksKnownAbusers
         mediaLoader = makeMediaLoader()
-        loadAvatars()
         session.checkAccount(with: accountRegistry)
-        await session.load()
+        await openSession()
+        loadAvatars()
         await session.settleRegistration()
         await session.nameThisDeviceIfUnnamed(HardwareName.ofThisDevice)
         resolveOwnOutpostAvatar()

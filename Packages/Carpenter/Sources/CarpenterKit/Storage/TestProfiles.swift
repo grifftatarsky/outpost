@@ -156,4 +156,8 @@ public struct DeviceOnlyKeychainStore: KeychainStore {
     public func removeAll() async throws {
         try await inner.removeAll()
     }
+
+    public func protect(as protection: StorageProtection) async throws {
+        try await inner.protect(as: protection)
+    }
 }

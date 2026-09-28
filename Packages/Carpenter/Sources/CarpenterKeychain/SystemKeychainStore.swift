@@ -5,10 +5,12 @@ import Security
 public struct SystemKeychainStore: KeychainStore {
     private let service: String
     private let accessGroup: String?
+    private let dial: ProtectionDial
 
-    public init(service: String, accessGroup: String? = nil) {
+    public init(service: String, accessGroup: String? = nil, protection dial: ProtectionDial = ProtectionDial()) {
         self.service = service
         self.accessGroup = accessGroup
+        self.dial = dial
     }
 
     public func data(for key: KeychainKey) async throws -> Data? {
@@ -23,10 +25,12 @@ public struct SystemKeychainStore: KeychainStore {
         return legacy.data
     }
 
-    static func accessibility(for scope: KeychainScope) -> CFString {
-        switch scope {
-        case .device: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        case .synchronized: kSecAttrAccessibleAfterFirstUnlock
+    static func accessibility(for scope: KeychainScope, protection: StorageProtection) -> CFString {
+        switch (scope, protection) {
+        case (.device, .afterFirstUnlock): kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        case (.device, .whileUnlocked): kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        case (.synchronized, .afterFirstUnlock): kSecAttrAccessibleAfterFirstUnlock
+        case (.synchronized, .whileUnlocked): kSecAttrAccessibleWhenUnlocked
         }
     }
 
@@ -50,15 +54,10 @@ public struct SystemKeychainStore: KeychainStore {
             guard let item = result as? [String: Any],
                 let data = item[kSecValueData as String] as? Data
             else { return nil }
-            let found = Found(
+            return Found(
                 data: data,
                 synchronized: (item[kSecAttrSynchronizable as String] as? Bool) ?? false,
                 group: item[kSecAttrAccessGroup as String] as? String)
-            let accessible = item[kSecAttrAccessible as String] as? String
-            if !found.synchronized, accessible != Self.accessibility(for: .device) as String {
-                keepOnThisDevice(key, in: found.group ?? group)
-            }
-            return found
         case errSecItemNotFound: return nil
         case errSecMissingEntitlement, errSecNoAccessForItem: return nil
         default: throw KeychainError(status: status)
@@ -86,7 +85,7 @@ public struct SystemKeychainStore: KeychainStore {
         let target = match(key, in: group, synchronized: scope == .synchronized)
         let changes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: Self.accessibility(for: scope),
+            kSecAttrAccessible as String: Self.accessibility(for: scope, protection: dial.current),
         ]
 
         let updated = SecItemUpdate(target as CFDictionary, changes as CFDictionary)
@@ -105,13 +104,37 @@ public struct SystemKeychainStore: KeychainStore {
         }
     }
 
-    private func keepOnThisDevice(_ key: KeychainKey, in group: String?) {
-        let changes = [kSecAttrAccessible as String: Self.accessibility(for: .device)]
-        let status = SecItemUpdate(
-            match(key, in: group, synchronized: false) as CFDictionary, changes as CFDictionary)
-        if status != errSecSuccess {
-            Diagnostics.sync.error(
-                "keychain: could not keep an item on this device only (\(status, privacy: .public))")
+    public func protect(as protection: StorageProtection) async throws {
+        let wanted = Self.accessibility(for: .device, protection: protection)
+        var refused: OSStatus?
+        for item in try deviceItems() {
+            guard let account = item[kSecAttrAccount as String] as? String,
+                item[kSecAttrAccessible as String] as? String != wanted as String
+            else { continue }
+            let status = SecItemUpdate(
+                match(KeychainKey(account), in: item[kSecAttrAccessGroup as String] as? String, synchronized: false)
+                    as CFDictionary,
+                [kSecAttrAccessible as String: wanted] as CFDictionary)
+            if status != errSecSuccess { refused = refused ?? status }
+        }
+        if let refused { throw KeychainError(status: refused) }
+    }
+
+    private func deviceItems() throws -> [[String: Any]] {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: false,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        switch status {
+        case errSecSuccess: return result as? [[String: Any]] ?? []
+        case errSecItemNotFound: return []
+        default: throw KeychainError(status: status)
         }
     }
 

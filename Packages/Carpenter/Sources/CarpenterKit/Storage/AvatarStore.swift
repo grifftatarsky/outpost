@@ -2,9 +2,13 @@ import Foundation
 
 public struct FileAvatarStore: Sendable {
     private let url: URL
+    private let dial: ProtectionDial
 
-    public init(directory: URL, name: String = StorageLocation.avatarName) {
+    public init(
+        directory: URL, name: String = StorageLocation.avatarName, protection dial: ProtectionDial = ProtectionDial()
+    ) {
         url = directory.appending(path: name)
+        self.dial = dial
     }
 
     public func load() -> Data? {
@@ -12,7 +16,7 @@ public struct FileAvatarStore: Sendable {
     }
 
     public func save(_ jpeg: Data) throws {
-        try jpeg.write(to: url, options: .atomic)
+        try ProtectedFiles.write(jpeg, to: url, as: dial.current)
     }
 
     public func remove() throws {
@@ -23,9 +27,11 @@ public struct FileAvatarStore: Sendable {
 
 public struct PersonAvatarStore: Sendable {
     private let directory: URL
+    private let dial: ProtectionDial
 
-    public init(directory: URL) {
+    public init(directory: URL, protection dial: ProtectionDial = ProtectionDial()) {
         self.directory = directory.appending(path: StorageLocation.personAvatarsName)
+        self.dial = dial
     }
 
     private func url(for person: ParticipantID) -> URL {
@@ -69,7 +75,7 @@ public struct PersonAvatarStore: Sendable {
 
     public func save(_ jpeg: Data, for person: ParticipantID) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try jpeg.write(to: url(for: person), options: .atomic)
+        try ProtectedFiles.write(jpeg, to: url(for: person), as: dial.current)
     }
 
     public func remove(for person: ParticipantID) throws {
@@ -131,7 +137,7 @@ public struct PersonAvatarStore: Sendable {
         let url = directory
             .appending(path: Self.name(for: person) + kind.infix + attachment.rawValue.uuidString)
             .appendingPathExtension("jpg")
-        try jpeg.write(to: url, options: .atomic)
+        try ProtectedFiles.write(jpeg, to: url, as: dial.current)
     }
 
     public func removePublished(for person: ParticipantID, _ kind: Published) throws {

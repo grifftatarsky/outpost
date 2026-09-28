@@ -51,10 +51,12 @@ struct SystemKeychainTests {
         #expect(try await store.data(for: key) == Data([2]))
     }
 
-    private func accessibility(of key: KeychainKey, synchronized: Bool) -> String? {
+    private func accessibility(
+        of key: KeychainKey, synchronized: Bool, service: String = "com.microgpt.carpenter.tests"
+    ) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "com.microgpt.carpenter.tests",
+            kSecAttrService as String: service,
             kSecAttrAccount as String: key.rawValue,
             kSecUseDataProtectionKeychain as String: true,
             kSecAttrSynchronizable as String: synchronized,
@@ -78,8 +80,8 @@ struct SystemKeychainTests {
         #expect(accessibility(of: shared, synchronized: true) == kSecAttrAccessibleAfterFirstUnlock as String)
     }
 
-    @Test("A key written the old way, which could travel in a backup, is kept on the device the first time it is read")
-    func oldItemsAreMovedOnRead() async throws {
+    @Test("A key written the old way, which could travel in a backup, is kept on the device once the app protects what it keeps")
+    func oldItemsAreKeptOnTheDevice() async throws {
         let key = scratchKey()
         defer { Task { try? await store.remove(key) } }
         let old: [String: Any] = [
@@ -94,9 +96,59 @@ struct SystemKeychainTests {
         #expect(SecItemAdd(old as CFDictionary, nil) == errSecSuccess)
         #expect(accessibility(of: key, synchronized: false) == kSecAttrAccessibleAfterFirstUnlock as String)
 
-        #expect(try await store.data(for: key) == Data([7]))
+        try await store.protect(as: .afterFirstUnlock)
 
+        #expect(try await store.data(for: key) == Data([7]))
         #expect(accessibility(of: key, synchronized: false) == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
+    }
+
+    @Test("With Advanced On Device Security on, a key is written so it opens only while the phone is unlocked")
+    func sealedKeysOpenOnlyWhileUnlocked() async throws {
+        let sealed = SystemKeychainStore(
+            service: "com.microgpt.carpenter.tests", protection: ProtectionDial(.whileUnlocked))
+        let key = scratchKey()
+        defer { Task { try? await sealed.remove(key) } }
+
+        try await sealed.set(Data([1]), for: key, scope: .device)
+
+        #expect(accessibility(of: key, synchronized: false) == kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
+        #expect(try await sealed.data(for: key) == Data([1]))
+    }
+
+    @Test("Changing the setting reaches every key already kept, in both directions")
+    func protectingReachesEveryKey() async throws {
+        let service = "com.microgpt.carpenter.tests.protect.\(UUID().uuidString)"
+        let keychain = SystemKeychainStore(service: service)
+        let keys = [scratchKey(), scratchKey(), scratchKey()]
+        for key in keys { try await keychain.set(Data([9]), for: key, scope: .device) }
+        defer { Task { try? await keychain.removeAll() } }
+
+        try await keychain.protect(as: .whileUnlocked)
+        for key in keys {
+            #expect(accessibility(of: key, synchronized: false, service: service) == kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
+        }
+
+        try await keychain.protect(as: .afterFirstUnlock)
+        for key in keys {
+            #expect(accessibility(of: key, synchronized: false, service: service) == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
+            #expect(try await keychain.data(for: key) == Data([9]), "protecting a key changed what it holds")
+        }
+    }
+
+    @Test("Reading a key never changes how it is protected, so the notification extension cannot undo the setting")
+    func readingChangesNothing() async throws {
+        let sealed = SystemKeychainStore(
+            service: "com.microgpt.carpenter.tests", protection: ProtectionDial(.whileUnlocked))
+        let key = scratchKey()
+        defer { Task { try? await sealed.remove(key) } }
+        try await sealed.set(Data([5]), for: key, scope: .device)
+
+        let reader = SystemKeychainStore(service: "com.microgpt.carpenter.tests")
+        #expect(try await reader.data(for: key) == Data([5]))
+
+        #expect(
+            accessibility(of: key, synchronized: false) == kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String,
+            "a read opened a sealed key to anybody with the phone locked")
     }
 
     @Test("Rewriting a key replaces it in place and leaves one copy")

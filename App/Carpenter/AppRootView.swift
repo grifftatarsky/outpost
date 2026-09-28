@@ -387,15 +387,6 @@ struct AppRootView: View {
         }
         .task {
             mediaLoader = makeMediaLoader()
-            ownAvatar = Self.decodeAvatar(avatarStore.load())
-            personAvatars = personAvatarStore.loadAll().compactMapValues { Self.decodeAvatar($0) }
-            if session.showsOthersAvatars {
-                sharedAvatars = personAvatarStore.loadAllPublished(.rooms)
-                    .compactMapValues { Self.decodeAvatar($0) }
-                outpostAvatars = personAvatarStore.loadAllPublished(.outpost)
-                    .compactMapValues { Self.decodeAvatar($0) }
-            }
-            resolveOwnOutpostAvatar()
             screening = await SystemMediaScreen().availability()
             session.enforcesDenyList = safety.blocksKnownAbusers
             #if DEBUG
@@ -421,23 +412,13 @@ struct AppRootView: View {
 
             session.checkAccount(with: accountRegistry)
 
-            await session.load()
+            await openSession()
             #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--forget-supporter") {
                     await session.forgetSupporterYear()
                 }
             #endif
-            await session.settleRegistration()
-            await session.nameThisDeviceIfUnnamed(HardwareName.ofThisDevice)
-            startDeviceSync()
-
-            var delay = 1
-            while session.isWaitingForAnIdentity {
-                try? await Task.sleep(for: .seconds(delay))
-                if Task.isCancelled { break }
-                if await session.recheckForSyncedIdentity() { break }
-                delay = min(delay * 2, 30)
-            }
+            await finishOpening()
         }
         .onChange(of: session.state) { _, _ in startDeviceSync() }
         .task(id: session.state) { await settleDistribution() }
@@ -459,6 +440,19 @@ struct AppRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .CKAccountChanged)) { _ in
             Task { await syncNow() }
         }
+        #if os(iOS)
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: UIApplication.protectedDataWillBecomeUnavailableNotification)
+            ) { _ in
+                session.phoneLocked(true)
+            }
+            .onReceive(
+                NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)
+            ) { _ in
+                Task { await reopenIfUnlocked() }
+            }
+        #endif
         .onReceive(NotificationCenter.default.publisher(for: Self.becameActive)) { _ in
             Task {
                 await session.recheckForSyncedIdentity()
@@ -480,6 +474,7 @@ struct AppRootView: View {
         }
         .task { await forgetOldSiriDonations() }
         .environment(\.appLock, appLock)
+        .environment(\.deviceSecurity, deviceSecurity)
         .overlay {
             if !appLock.loaded {
                 Rectangle().fill(.background).ignoresSafeArea()
@@ -488,6 +483,7 @@ struct AppRootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task {
+                await reopenIfUnlocked()
                 await session.recheckForSyncedIdentity()
 
                 await syncNow()

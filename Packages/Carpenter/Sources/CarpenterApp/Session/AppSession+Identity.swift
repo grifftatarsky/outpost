@@ -8,6 +8,12 @@ extension AppSession {
     // MARK: Lifecycle
 
     public func load() async {
+        guard !storageIsSealed else {
+            waitsForUnlock = true
+            Diagnostics.identity.notice("load: this phone is locked and what it keeps is sealed; waiting for it to unlock")
+            return
+        }
+        waitsForUnlock = false
         do {
             let store = IdentityStore(keychain: storage.keychain)
             if try await store.wasRemoved() {
@@ -88,6 +94,9 @@ extension AppSession {
 
             state = hasOwnName ? .ready : .needsProfile
             Diagnostics.identity.notice("load: \(String(describing: self.state), privacy: .public)")
+        } catch where storageIsSealed {
+            waitsForUnlock = true
+            Diagnostics.identity.notice("load: this phone locked while loading; waiting for it to unlock")
         } catch {
             state = .failed(error.localizedDescription)
         }

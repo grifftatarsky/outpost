@@ -182,4 +182,5 @@ actor HalfWritableKeychainStore: KeychainStore {
 
     func remove(_ key: KeychainKey) throws { items[key] = nil }
     func removeAll() throws { items = [:] }
+    func protect(as protection: StorageProtection) throws {}
 }

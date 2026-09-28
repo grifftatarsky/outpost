@@ -262,6 +262,7 @@
         func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) throws { stored = data }
         func remove(_ key: KeychainKey) throws { stored = nil }
         func removeAll() throws { stored = nil }
+        func protect(as protection: StorageProtection) throws {}
     }
 
 #endif

@@ -243,7 +243,7 @@ extension AppRootView {
             at: URL.applicationSupportDirectory.appending(
                 path: container, directoryHint: .isDirectory))
         try? FileManager.default.removeItem(at: StorageLocation.directory(container: container))
-        FocusFilterStore.shared.writeRooms([])
+        FocusFilterStore.shared.writeRooms([], as: session.protection.current)
 
         do {
             try FileManager.default.removeItem(
@@ -283,7 +283,7 @@ extension AppRootView {
         session.enforcesDenyList = safety.blocksKnownAbusers
         mediaLoader = makeMediaLoader()
         session.checkAccount(with: accountRegistry)
-        await session.load()
+        await openSession()
         await session.settleRegistration()
     }
 

@@ -36,7 +36,7 @@ extension AppRootView {
         session.syncDevices(through: engine)
     }
     func syncNow() async {
-        guard !UITestMode.isOn, !switchingWorld else { return }
+        guard !UITestMode.isOn, !switchingWorld, !session.storageIsSealed else { return }
         if syncing {
             syncAgain = true
             return
@@ -79,7 +79,8 @@ extension AppRootView {
         await collectSharedPhotos()
         await reportFocusNow()
         FocusFilterStore.shared.writeRooms(
-            session.rooms.map { FocusFilterStore.RoomEntry(id: $0.id, name: $0.name) })
+            session.rooms.map { FocusFilterStore.RoomEntry(id: $0.id, name: $0.name) },
+            as: session.protection.current)
 
         if outcome.deviceSyncFailed { Diagnostics.sync.error("device sync refresh failed") }
         if outcome.mailboxFailed { Diagnostics.sync.error("sync failed") }

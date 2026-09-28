@@ -160,6 +160,7 @@ struct AppLockControllerTests {
         }
         func remove(_ key: KeychainKey) async throws { try await inner.remove(key) }
         func removeAll() async throws { try await inner.removeAll() }
+        func protect(as protection: StorageProtection) async throws { try await inner.protect(as: protection) }
     }
 
     private func controller(
@@ -312,6 +313,7 @@ struct AppLockControllerTests {
         }
         func remove(_ key: KeychainKey) async throws { try await inner.remove(key) }
         func removeAll() async throws { try await inner.removeAll() }
+        func protect(as protection: StorageProtection) async throws { try await inner.protect(as: protection) }
     }
 
     @Test("A lock that cannot be read yet, before the phone's first unlock, keeps the app covered")

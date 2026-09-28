@@ -9,6 +9,10 @@ extension AppSession {
     public func sync(
         through mailbox: any Mailbox, media: (any MediaMailbox)? = nil, mode: SyncMode = .full
     ) async throws -> SyncReport {
+        guard !storageIsSealed else {
+            Diagnostics.sync.notice("round: this phone is locked and what it keeps is sealed; collecting nothing")
+            return SyncReport()
+        }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
         guard !isHeldByICloud else {
             Diagnostics.sync.notice("round: iCloud is holding this device; sending and fetching nothing")
@@ -209,7 +213,7 @@ extension AppSession {
                 sendOwnEntries()
             } catch {
                 entriesNotWrittenDown = owed
-                integrity.writesFailed += 1
+                if !storageIsSealed { integrity.writesFailed += 1 }
                 Diagnostics.sync.error(
                     """
                     storage: could not write \(owed.count, privacy: .public) arriving \

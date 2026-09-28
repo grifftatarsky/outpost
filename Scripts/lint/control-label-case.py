@@ -22,6 +22,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2] / "Packages/Carpenter/Sources
 PROPER = {
     # The product's own nouns
     "Outpost", "Outposts", "Supporter", "Solo", "Solos", "You",
+    # The feature Griff named on 2026-09-28
+    "Advanced", "On", "Device", "Security",
     # Apple's features and platforms, spelled the way Apple spells them
     "Apple", "Account", "Keychain", "iCloud", "Face", "ID", "App", "Store", "TestFlight",
     "VoiceOver", "Photos", "Messages", "Contacts", "Settings", "Focus", "Dynamic", "Type",

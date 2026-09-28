@@ -142,7 +142,7 @@ struct FocusFilterTests {
         let rooms = [FocusFilterStore.RoomEntry(id: RoomID(), name: "Lanterns"), FocusFilterStore.RoomEntry(id: RoomID(), name: "Kitchen")]
         defaults.set(Data("[\"old\"]".utf8), forKey: "focusFilter.rooms")
 
-        store.writeRooms(rooms)
+        store.writeRooms(rooms, as: .afterFirstUnlock)
 
         #expect(store.rooms() == rooms)
         #expect(defaults.dictionaryRepresentation().values.allSatisfy { value in

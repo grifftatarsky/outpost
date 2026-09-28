@@ -7,21 +7,26 @@ public struct SessionStorage: Sendable {
     public let log: any LogStore
     public let documents: any DocumentStore
     public let media: any MediaStore
+    public let protection: ProtectionDial
+    public let locations: [URL]
 
     public init(
         keychain: any KeychainStore, log: any LogStore, documents: any DocumentStore,
-        media: any MediaStore = MemoryMediaStore()
+        media: any MediaStore = MemoryMediaStore(), protection: ProtectionDial = ProtectionDial(),
+        locations: [URL] = []
     ) {
         self.keychain = keychain
         self.log = log
         self.documents = documents
         self.media = media
+        self.protection = protection
+        self.locations = locations
     }
 
     public var readOnly: SessionStorage {
         SessionStorage(
             keychain: ReadOnlyKeychainStore(keychain), log: ReadOnlyLogStore(log),
-            documents: ReadOnlyDocumentStore(documents), media: media)
+            documents: ReadOnlyDocumentStore(documents), media: media, protection: protection)
     }
 }
 
@@ -49,6 +54,10 @@ public final class AppSession {
     public internal(set) var enrolment: Enrolment?
 
     public internal(set) var isHeldByICloud = false
+
+    public internal(set) var phoneIsLocked = false
+    public internal(set) var waitsForUnlock = false
+    public internal(set) var protectionChoice: ProtectionChoice?
 
     public internal(set) var pendingDevice: DeviceKeys?
     var pendingIdentity: Identity?
@@ -207,6 +216,7 @@ public final class AppSession {
     public internal(set) var isSilenced = false
     var deviceSync: (any EntrySync)?
     var incomingTask: Task<Void, Never>?
+    var protectionWork: Task<Void, Error>?
 
     public func arrivalDelay(of message: MessageID) -> TimeInterval? {
         arrivalDelays[message.entry]

@@ -74,6 +74,12 @@ public enum SessionProblem {
                 localized: "That device is out, but the key for ^[\(rooms) conversation](inflect: true) has not been rotated yet, so the device can still read new messages there until it is.",
                 bundle: .module, comment: "A device was revoked but some rooms' keys were not rotated")
             // COPY END 8947ed4f
+        case .protectionUnfinished:
+            // COPY BEGIN 1248d4d6 [NEEDS HUMAN REVIEW]
+            return String(
+                localized: "Some of what this iPhone keeps could not be changed yet. It is tried again the next time the app opens.",
+                bundle: .module, comment: "Advanced On Device Security could not re-protect everything stored")
+            // COPY END 1248d4d6
         }
     }
 

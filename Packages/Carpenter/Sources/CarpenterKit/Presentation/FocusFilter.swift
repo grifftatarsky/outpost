@@ -51,10 +51,12 @@ public struct FocusFilterStore: @unchecked Sendable {
     }
 
     public static var shared: FocusFilterStore {
-        let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier)
-        return FocusFilterStore(
-            defaults: UserDefaults(suiteName: AppGroup.identifier) ?? .standard,
-            directory: group?.appending(path: "Focus", directoryHint: .isDirectory))
+        FocusFilterStore(defaults: UserDefaults(suiteName: AppGroup.identifier) ?? .standard, directory: directory)
+    }
+
+    public static var directory: URL? {
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier)?
+            .appending(path: "Focus", directoryHint: .isDirectory)
     }
 
     private var roomsFile: URL? { directory?.appending(path: "rooms.json") }
@@ -81,12 +83,12 @@ public struct FocusFilterStore: @unchecked Sendable {
         return rooms
     }
 
-    public func writeRooms(_ rooms: [RoomEntry]) {
+    public func writeRooms(_ rooms: [RoomEntry], as protection: StorageProtection) {
         defaults.removeObject(forKey: Self.roomsKey)
         guard let directory, let roomsFile, let data = try? JSONEncoder().encode(rooms) else { return }
         StorageLocation.leaveOutOfBackups(directory)
         do {
-            try data.write(to: roomsFile, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            try ProtectedFiles.write(data, to: roomsFile, as: protection)
         } catch {
             Diagnostics.sync.error(
                 "focus: could not keep the room list (\(String(describing: error), privacy: .public))")

@@ -81,6 +81,7 @@ public enum AppSessionError: Error, Hashable, Sendable {
     case tooManyPictures
     case tooBigToSend
     case keyNotRotated(rooms: Int)
+    case protectionUnfinished
 }
 
 extension RoomsListOrganisation {

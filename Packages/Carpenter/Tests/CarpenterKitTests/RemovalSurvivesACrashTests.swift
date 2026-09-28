@@ -24,6 +24,7 @@ actor RefusingEpochKeychainStore: KeychainStore {
 
     func remove(_ key: KeychainKey) async throws { try await real.remove(key) }
     func removeAll() async throws { try await real.removeAll() }
+    func protect(as protection: StorageProtection) async throws { try await real.protect(as: protection) }
 }
 
 @MainActor

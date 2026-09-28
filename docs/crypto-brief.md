@@ -1134,24 +1134,30 @@ boots, and left out of iCloud and computer backups.
 | `device.signing`, `device.certificate`, every `epoch.*` room key | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
 | `recovery.unsaved` (only until the member saves the key) | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
 
+With [Advanced On Device Security](#advanced-on-device-security) on, every one of them is
+`kSecAttrAccessibleWhenUnlockedThisDeviceOnly` instead.
+
 Everything uses `kSecUseDataProtectionKeychain: true`, and the log, media and document stores are
-written with `FileProtectionType.completeUntilFirstUserAuthentication` in a directory marked
-`isExcludedFromBackup`.
+written with `FileProtectionType.completeUntilFirstUserAuthentication`, or `.complete` with Advanced
+On Device Security on, in a directory marked `isExcludedFromBackup`.
 
 **Fixed 2026-09-27: the device's keys went into backups.** Until then every `.device` item was saved
 `kSecAttrAccessibleAfterFirstUnlock`, which Apple's documentation says migrates "to a new device when
 using encrypted backups", and the store was backed up. Under standard data protection Apple holds the
 keys to iCloud Backup, so a default iCloud Backup held the room keys and the sealed log together: the
 whole history, openable by whoever can open the backup. Items are now `ThisDeviceOnly`, an item saved
-the old way is moved the first time it is read, and the store, the Focus room list and the
-diagnostics files are out of backups (`SystemKeychainTests`, `StoreLeftOutOfBackupsTests`). From
+the old way is moved when the app protects what it keeps (the first launch of a build that has not
+done it yet, since 2026-09-28; before that, the first time the item was read), and the store, the
+Focus room list and the diagnostics files are out of backups (`SystemKeychainTests`,
+`StoreLeftOutOfBackupsTests`). From
 Apple's documentation, not measured on a device. The cost: restoring a phone from a backup no longer
 brings this app back with it; the recovery key or another device's approval does.
 
 **Two consequences, named.** `afterFirstUnlock` means that on a phone which has been unlocked once
 since boot, the keys are available to the operating system even while the screen is locked. That is
 required — the app has to sync in the background and the notification extension has to decrypt a
-message to draw a banner — and it is a real reduction from `WhenUnlocked`.
+message to draw a banner — and it is a real reduction from `WhenUnlocked`. A member who would rather
+give up both can turn on [Advanced On Device Security](#advanced-on-device-security).
 
 ---
 
@@ -1184,10 +1190,75 @@ a modified app, is not stopped by it: the store is protected by iOS's file prote
 keychain, as it is without the lock. A 4-digit code's verifier could be tried against all 10,000
 codes in minutes by anybody who already had the keychain item; the counted tries only bind somebody
 using the app. Griff ruled on 2026-09-28 for an opt-in that does stop a copy being read,
-[Advanced On Device Security](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked);
-not built yet.
+[Advanced On Device Security](#advanced-on-device-security).
 
 <!-- COPY END 9c27f287 -->
+
+<!-- COPY BEGIN eb2e47b3 [NEEDS HUMAN REVIEW] -->
+
+## Advanced On Device Security
+
+**In plain words.** Off unless you turn it on. With it on, what the app keeps on your iPhone (the
+history, names, photos and every key) can be read only while the iPhone is unlocked. Somebody who
+takes it while it is locked and copies its storage gets files they cannot open without the iPhone's
+passcode, and the passcode can only be tried on that iPhone. While it is locked the app fetches
+nothing: messages wait, sealed, in the sender's iCloud and arrive when you unlock it, and a
+notification says only that something arrived.
+
+> **Written 2026-09-28 in a session with no compiler.** Not built, and not run on a phone. The package
+> tests model a locked phone with a fake keychain; nothing here has been measured on hardware.
+
+**What actually happens.** No new cryptography: the app asks iOS for its strongest protection, which
+iOS already ties to the passcode and to the phone's own hardware key.
+
+- **Files.** The log, the state, photos and clips, every avatar, the Focus room list, the old copies of
+  the log and state left in Application Support, and the app's temporary folder are written and kept
+  as `FileProtectionType.complete`, which Apple describes as "stored in an encrypted format on disk
+  and cannot be read from or written to while the device is locked or booting"
+  ([Apple](https://developer.apple.com/documentation/foundation/fileprotectiontype/complete)). Apple's
+  security guide says the key for that class is discarded shortly after the phone locks, ten seconds
+  when it asks for the passcode immediately
+  ([Apple Platform Security](https://support.apple.com/guide/security/data-protection-classes-secb010e978a/web)).
+  Every store reads the setting at the moment it writes (`ProtectionDial`, `ProtectedFiles`).
+- **Keys.** Every keychain item is `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`: "can be accessed
+  only while the device is unlocked by the user"
+  ([Apple](https://developer.apple.com/documentation/security/ksecattraccessiblewhenunlockedthisdeviceonly)).
+- **The choice** is a keychain item, `storage.protection`, holding what was chosen and what has been
+  applied. A choice that cannot be read counts as on (`ProtectionChoice.read`).
+- **Changing it** records the choice, then re-protects every key and every file already kept, then
+  marks it applied. Interrupted, it finishes the next time the app opens. Changes run one at a time,
+  so the choice, its record and every key end up agreeing (`SealedWhileLockedTests`).
+- **Reading a key never changes how it is protected**, since 2026-09-28. A read used to move a key to
+  the ordinary protection, and the notification extension reads the same keys, so every push would
+  have undone the setting (`SystemKeychainTests.readingChangesNothing`).
+- **While the phone is locked** (`UIApplication.isProtectedDataAvailable` is false), the app runs no
+  round and no device sync, loads nothing and signs for nothing, and it loads when iOS says protected
+  data is available again. A write refused because the phone locked during a round is not signed for,
+  so the sender offers it again, and it is not counted as damage in the history check. The
+  notification extension cannot open the keychain, so it shows the plain banner at once and leaves
+  the number on the icon alone.
+
+**What it does not do.**
+
+- **Nothing without a passcode.** "Data protection is enabled automatically when the user sets an
+  active passcode for the device"
+  ([Apple](https://developer.apple.com/documentation/uikit/encrypting-your-app-s-files)). The switch
+  cannot be turned on while the iPhone has none.
+- **Nothing against somebody who knows the passcode.** Outpost's own lock as the seal is the choice
+  that would; it is not built
+  ([Open questions](open-questions.md#how-should-outposts-own-lock-seal-what-this-phone-keeps)).
+- **Not everything the app keeps.** Its preferences (theme, favourite emoji, which rooms a Focus lets
+  through and which photos you chose to show, each by a random identifier) and the device-sync
+  engine's bookkeeping stay readable once the phone has been unlocked after it starts. None of them is
+  a message, a name, a photo or a key
+  ([Open questions](open-questions.md#should-the-apps-preferences-be-sealed-too)).
+
+**What it costs.** Nothing arrives in the background while the phone is locked, and every banner in
+that time says only "New message". A phone left locked for longer than a packet waits is like one that
+was off that long
+([Open questions](open-questions.md#what-reaches-a-phone-that-stays-locked-longer-than-a-packet-waits)).
+
+<!-- COPY END eb2e47b3 -->
 
 <!-- COPY BEGIN 6442968d [NEEDS HUMAN REVIEW] -->
 

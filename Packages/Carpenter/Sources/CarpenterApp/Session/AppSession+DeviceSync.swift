@@ -266,7 +266,7 @@ extension AppSession {
     }
 
     public func refreshDeviceSync() async {
-        guard let deviceSync else { return }
+        guard let deviceSync, !storageIsSealed else { return }
         do {
             try await deviceSync.refresh()
         } catch {

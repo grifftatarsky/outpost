@@ -15,13 +15,17 @@ public enum StorageLocation {
     public static let outpostAvatarName = "outpost-avatar.jpg"
     public static let personAvatarsName = "people-avatars"
 
+    public static func fallback(container: String, root: URL = .applicationSupportDirectory) -> URL {
+        root.appending(path: container, directoryHint: .isDirectory)
+    }
+
     public static func directory(
         container: String,
         appGroup: String? = AppGroup.identifier,
         root: URL = .applicationSupportDirectory,
         fileManager: FileManager = .default
     ) -> URL {
-        let fallback = root.appending(path: container, directoryHint: .isDirectory)
+        let fallback = Self.fallback(container: container, root: root)
 
         guard let appGroup,
             let group = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroup)

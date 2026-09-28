@@ -96,6 +96,11 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
         let session = AppSession(storage: storage)
         await session.load()
 
+        guard session.enrolment != nil else {
+            DiagnosticsExport.note("nse: nothing on this device could be read; saying only that something arrived")
+            return Rich(copy: MessageNotification.generic, badge: nil, quietly: false)
+        }
+
         if await session.deathmarkNamesThisDevice(on: CloudKitDeathmarkBoard(container: .default())) {
             DiagnosticsExport.note("nse: this device was erased everywhere; saying only that something arrived")
             return Rich(copy: MessageNotification.generic, badge: nil, quietly: true)

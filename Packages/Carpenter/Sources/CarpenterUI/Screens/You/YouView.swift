@@ -5,6 +5,7 @@ import SwiftUI
 public struct YouView: View {
     @Environment(\.palette) var palette
     @Environment(\.appLock) var appLock
+    @Environment(\.deviceSecurity) var deviceSecurity
     @Environment(\.dynamicTypeSize) var typeSize
 
     @Binding var accent: Accent

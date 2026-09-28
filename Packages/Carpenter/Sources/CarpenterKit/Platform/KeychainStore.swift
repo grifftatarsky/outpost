@@ -19,4 +19,6 @@ public protocol KeychainStore: Sendable {
     func remove(_ key: KeychainKey) async throws
 
     func removeAll() async throws
+
+    func protect(as protection: StorageProtection) async throws
 }

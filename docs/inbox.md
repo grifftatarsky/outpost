@@ -438,3 +438,20 @@ machine's load.
   can reach it.
 
 <!-- COPY END 8599b81d -->
+
+<!-- COPY BEGIN 4165cfd0 [NEEDS HUMAN REVIEW] -->
+
+## The keychain while the phone is locked, noticed 2026-09-28
+
+- **The shared keychain group is found once per process, with a probe that needs the phone
+  unlocked.** `SharedKeychain.group` adds and deletes a probe item with no accessibility given, which
+  Apple defaults to `WhenUnlocked`, and keeps the answer in a `static let`. A process that starts
+  while the phone is locked, a push waking the app, gets `nil` for the rest of its life and files
+  every key it writes in the app's own group, where the notification extension cannot read it. The
+  next process that reads the key moves it back, so nothing is lost, but banners can be plain until
+  then. Not measured.
+- **Picked clips are copied into the temporary folder and not deleted.** `PickedClip` copies what the
+  photo picker hands over, and only the debug fit test removes its copy. iOS empties the folder
+  eventually. With Advanced On Device Security on, the folder is sealed like the rest.
+
+<!-- COPY END 4165cfd0 -->

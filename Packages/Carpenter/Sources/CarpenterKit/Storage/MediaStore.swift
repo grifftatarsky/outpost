@@ -10,10 +10,14 @@ public protocol MediaStore: Sendable {
 
 public actor FileMediaStore: MediaStore {
     private let directory: URL
+    private let dial: ProtectionDial
     private let fileManager: FileManager
 
-    public init(directory: URL, fileManager: FileManager = .default) {
+    public init(
+        directory: URL, protection dial: ProtectionDial = ProtectionDial(), fileManager: FileManager = .default
+    ) {
         self.directory = directory
+        self.dial = dial
         self.fileManager = fileManager
     }
 
@@ -28,10 +32,7 @@ public actor FileMediaStore: MediaStore {
     public func store(_ sealed: Data, for id: AttachmentID) throws {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         let scratch = directory.appending(path: ".\(id.rawValue.uuidString).\(UUID().uuidString)")
-        try sealed.write(to: scratch, options: .atomic)
-        try fileManager.setAttributes(
-            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-            ofItemAtPath: scratch.path)
+        try ProtectedFiles.write(sealed, to: scratch, as: dial.current, using: fileManager)
         _ = try fileManager.replaceItemAt(url(for: id), withItemAt: scratch)
     }
 

@@ -68,13 +68,19 @@ public actor InMemoryKeychainStore: KeychainStore {
         public init() {}
     }
 
+    public struct LockedPhone: Error {}
+
     private let synced: Synced
+    private let dial: ProtectionDial
     private var local: [KeychainKey: Data] = [:]
+    private var protections: [KeychainKey: StorageProtection] = [:]
 
     public private(set) var writes = 0
+    public private(set) var phoneIsLocked = false
 
-    public init(syncingThrough synced: Synced = Synced()) {
+    public init(syncingThrough synced: Synced = Synced(), protection dial: ProtectionDial = ProtectionDial()) {
         self.synced = synced
+        self.dial = dial
     }
 
     public func sibling() -> InMemoryKeychainStore {
@@ -82,31 +88,51 @@ public actor InMemoryKeychainStore: KeychainStore {
     }
 
     public func data(for key: KeychainKey) async throws -> Data? {
-        if let data = local[key] { return data }
+        if let data = local[key] {
+            guard !(phoneIsLocked && protections[key] == .whileUnlocked) else { throw LockedPhone() }
+            return data
+        }
         return await synced.item(key)
     }
 
     public func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) async throws {
+        guard !(phoneIsLocked && dial.current == .whileUnlocked) else { throw LockedPhone() }
         writes += 1
         switch scope {
         case .synchronized:
             local[key] = nil
+            protections[key] = nil
             await synced.set(data, for: key)
         case .device:
             local[key] = data
+            protections[key] = dial.current
             await synced.set(nil, for: key)
         }
     }
 
     public func remove(_ key: KeychainKey) async throws {
         local[key] = nil
+        protections[key] = nil
         await synced.set(nil, for: key)
     }
 
     public func removeAll() async throws {
         local = [:]
+        protections = [:]
         await synced.clear()
     }
+
+    public func protect(as protection: StorageProtection) async throws {
+        let touchesSealed = protection == .whileUnlocked || protections.values.contains(.whileUnlocked)
+        guard !(phoneIsLocked && touchesSealed) else { throw LockedPhone() }
+        for key in local.keys { protections[key] = protection }
+    }
+
+    public func lockPhone() { phoneIsLocked = true }
+
+    public func unlockPhone() { phoneIsLocked = false }
+
+    public var protectedKeys: [KeychainKey: StorageProtection] { protections }
 
     public func scope(for key: KeychainKey) async -> KeychainScope? {
         if local[key] != nil { return .device }
@@ -383,6 +409,7 @@ public actor RefusingGroupKeychainStore: KeychainStore {
 
     public func remove(_ key: KeychainKey) throws { items[key] = nil }
     public func removeAll() throws { items = [:] }
+    public func protect(as protection: StorageProtection) throws {}
 }
 
 public actor UnreadableKeychainStore: KeychainStore {
@@ -411,6 +438,10 @@ public actor UnreadableKeychainStore: KeychainStore {
 
     public func remove(_ key: KeychainKey) throws { items[key] = nil }
     public func removeAll() throws { items = [:] }
+
+    public func protect(as protection: StorageProtection) throws {
+        guard readable else { throw Refused() }
+    }
 }
 
 public actor FailingMailbox: Mailbox, MediaMailbox {
