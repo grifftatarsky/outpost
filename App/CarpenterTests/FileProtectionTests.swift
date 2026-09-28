@@ -2,7 +2,17 @@ import CarpenterKit
 import Foundation
 import Testing
 
-@Suite("What this phone keeps is written with the protection the setting names")
+private let onASimulator: Bool = {
+    #if targetEnvironment(simulator)
+        return true
+    #else
+        return false
+    #endif
+}()
+
+@Suite(
+    "What this phone keeps is written with the protection the setting names",
+    .disabled(if: onASimulator, "A simulator does not keep a file's protection class, so only an iPhone can answer this"))
 struct FileProtectionTests {
     private func scratch() -> URL {
         FileManager.default.temporaryDirectory
