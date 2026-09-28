@@ -24,27 +24,47 @@ extension AppSession {
 
     private func addressable() -> Set<ParticipantID> {
         guard let me = enrolment?.identity.id else { return [] }
-        let projected = projection
-
-        var reachable: Set<ParticipantID> = []
-        for room in projected.namedRoomIDs() {
-            let roster = roster(of: room)
-            reachable.formUnion(roster.members)
-            reachable.formUnion(roster.requests.keys)
-            reachable.formUnion(roster.absent)
-        }
-        reachable.formUnion(outpostAccess.audience(at: clock.now))
-        reachable.formUnion(projected.outpostAuthors().map(\.id))
+        let shared = sharedParticipants()
+        var reachable = shared
+        for room in projection.namedRoomIDs() { reachable.formUnion(roster(of: room).absent) }
         for repair in persisted.repairs { reachable.formUnion(repair.asked) }
         for duty in persisted.repairDuties { reachable.insert(duty.from) }
-        for invitation in invitationsOutsideTheirRoom() {
-            reachable.insert(invitation.attestation.inviter)
-        }
-        if projected.namedRoomIDs().isEmpty {
-            reachable.formUnion(persisted.knownKeys.map(\.participantID))
-        }
         reachable.remove(me)
-        return reachable
+        return reachable.subtracting(quiet(besides: shared))
+    }
+
+    func sharedParticipants() -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id else { return [] }
+        let projected = projection
+        let rooms = projected.namedRoomIDs()
+        var shared: Set<ParticipantID> = []
+        for room in rooms {
+            let roster = roster(of: room)
+            shared.formUnion(roster.members)
+            shared.formUnion(roster.requests.keys)
+        }
+        shared.formUnion(outpostAccess.audience(at: clock.now))
+        shared.formUnion(projected.outpostAuthors().map(\.id))
+        for invitation in invitationsOutsideTheirRoom() {
+            shared.insert(invitation.attestation.inviter)
+        }
+        if rooms.isEmpty {
+            shared.formUnion(persisted.knownKeys.map(\.participantID))
+        }
+        shared.remove(me)
+        return shared
+    }
+
+    func outOfTouch() -> Set<ParticipantID> {
+        quiet(besides: sharedParticipants())
+    }
+
+    private func quiet(besides shared: Set<ParticipantID>) -> Set<ParticipantID> {
+        let longAgo = clock.now.addingTimeInterval(-SyncSession.packetWaitsFor)
+        return Set(persisted.pairBook.compactMap { peer, entry in
+            guard let stopped = entry.sharedNothingSince, stopped <= longAgo, !shared.contains(peer) else { return nil }
+            return peer
+        })
     }
 
     func peersToRingForWall(carrying sending: [Entry]) -> [Peer] {

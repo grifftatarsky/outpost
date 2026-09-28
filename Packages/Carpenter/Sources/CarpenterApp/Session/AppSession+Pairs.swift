@@ -7,12 +7,13 @@ struct PairBookEntry: Codable, Equatable, Sendable {
     var announced: URL?
     var gone: Set<URL> = []
     var shut = false
+    var sharedNothingSince: Date?
 
     init(theirs: PairLink? = nil) {
         self.theirs = theirs
     }
 
-    private enum CodingKeys: String, CodingKey { case theirs, joinedSpace, announced, gone, shut }
+    private enum CodingKeys: String, CodingKey { case theirs, joinedSpace, announced, gone, shut, sharedNothingSince }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -21,6 +22,7 @@ struct PairBookEntry: Codable, Equatable, Sendable {
         announced = try container.decodeIfPresent(URL.self, forKey: .announced)
         gone = try container.decodeIfPresent(Set<URL>.self, forKey: .gone) ?? []
         shut = try container.decodeIfPresent(Bool.self, forKey: .shut) ?? false
+        sharedNothingSince = try container.decodeIfPresent(Date.self, forKey: .sharedNothingSince)
     }
 }
 
@@ -62,23 +64,27 @@ extension AppSession {
         await makeACodeLink(through: mailbox, in: pairs, identity: enrolment.identity)
         await settleCodeClaims(through: mailbox, in: pairs)
 
-        let blocked = persisted.preferences.blockedPeople
-        for peer in blocked where persisted.pairBook[peer]?.shut != true && pairs.hints[peer] != nil {
+        noteWhoIsStillShared()
+        let closing = persisted.preferences.blockedPeople.union(outOfTouch())
+        for peer in closing where persisted.pairBook[peer]?.shut != true && pairs.hints[peer] != nil {
             do {
                 try await mailbox.close(peer, in: pairs)
                 persisted.pairBook[peer, default: PairBookEntry()].shut = true
                 persisted.pairBook[peer]?.announced = nil
             } catch {
                 Diagnostics.sync.error(
-                    "pairs: could not close the space of somebody blocked: \(String(describing: error), privacy: .public)")
+                    """
+                    pairs: could not close the space of somebody blocked or no longer shared with: \
+                    \(String(describing: error), privacy: .public)
+                    """)
             }
         }
-        for peer in persisted.pairBook.keys where persisted.pairBook[peer]?.shut == true && !blocked.contains(peer) {
+        for peer in persisted.pairBook.keys where persisted.pairBook[peer]?.shut == true && !closing.contains(peer) {
             persisted.pairBook[peer]?.shut = false
         }
 
         let account = try? await mailbox.account(in: pairs)
-        let everyone = Set(peers().map(\.them)).union(persisted.pairBook.keys).subtracting(blocked)
+        let everyone = Set(peers().map(\.them)).union(persisted.pairBook.keys).subtracting(closing)
         for peer in everyone where pairs.hints[peer] != nil {
             let theirs = link(for: peer)
             let url: URL
@@ -96,6 +102,20 @@ extension AppSession {
                 await announce(PairLink(account: account, url: url), to: peer)
             {
                 persisted.pairBook[peer, default: PairBookEntry()].announced = url
+            }
+        }
+    }
+
+    private func noteWhoIsStillShared() {
+        guard !viewMayBeStale else { return }
+        let shared = sharedParticipants()
+        let now = clock.now
+        for peer in Set(peers().map(\.them)).union(persisted.pairBook.keys) {
+            let since = persisted.pairBook[peer]?.sharedNothingSince
+            if shared.contains(peer) {
+                if since != nil { persisted.pairBook[peer]?.sharedNothingSince = nil }
+            } else if since == nil {
+                persisted.pairBook[peer, default: PairBookEntry()].sharedNothingSince = now
             }
         }
     }

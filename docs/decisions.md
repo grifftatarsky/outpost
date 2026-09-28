@@ -3127,7 +3127,16 @@ comes from their identity keys and never changes, so nothing is exchanged again,
 one zone. If you share a room or a solo with them again, a new space and link go out automatically,
 the way they do for any new room.
 
-**Not built yet.**
+**Written 2026-09-28, not yet built or run**, in a session with no Swift compiler. "Sharing" is being
+in a named room with them (as a member or with a request open), either of you seeing the other's
+Outpost, or an invitation from them still open; somebody removed or gone from a room is not sharing,
+but is still written to until the nine days are up, which is what carries the notice. Each device
+marks the moment it first sees that you share nothing (`PairBookEntry.sharedNothingSince`), starts no
+mark while its view of the rooms may be stale, and clears the mark the moment you share anything
+again. At its first round nine days after the mark, it closes the space, and from then on nothing is
+written to that person and nothing is read from them (`ASpaceClosesWhenNothingIsSharedTests`).
+**On two devices:** each keeps its own mark, and a device whose nine days are not up yet makes the
+space again, so it closes for good when the last device's nine days are up. Not measured.
 
 <!-- COPY END 74e61ee3 -->
 

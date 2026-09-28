@@ -119,6 +119,7 @@ extension ForwardCompatibilityTests {
         paired.announced = link.url
         paired.gone = [URL(string: "https://icloud.invalid/share/gone")!]
         paired.shut = true
+        paired.sharedNothingSince = stamp.at
         state.pairBook = [ParticipantID(rawValue: WideID.of([9])): paired]
         state.codeLink = try SignedPairLink.sign(link, by: Identity.generate())
         state.codeClaims = [CodeClaim(url: link.url, peer: ParticipantID(rawValue: WideID.of([9])))]

@@ -273,6 +273,9 @@ access to all of yours and touches nobody else's; only the sender decides what w
 - **Written, not built** (2026-09-28, no compiler in that session). Each person's copy of a photo is
   sealed apart for their pair and named from its secret, and nothing in iCloud names the photo
   (`PhotoCopiesAreSealedApartTests`; ruled by Griff the same day).
+- **Written, not built** (2026-09-28). The space kept for somebody closes nine days after you last
+  share anything with them, and sharing again opens a new one (`ASpaceClosesWhenNothingIsSharedTests`;
+  ruled by Griff the same day, always on).
 - **Owed.** The same over iCloud, on two accounts (`LivePairTests`).
 
 **Testing**
