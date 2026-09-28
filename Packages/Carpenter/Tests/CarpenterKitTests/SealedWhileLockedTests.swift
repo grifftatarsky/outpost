@@ -340,7 +340,7 @@ private struct RecordUnreadable: KeychainStore {
     func protect(as protection: StorageProtection) async throws { try await real.protect(as: protection) }
 }
 
-private final class RecordingFileManager: FileManager {
+private final class RecordingFileManager: FileManager, @unchecked Sendable {
     private let asked = Mutex<[FileProtectionType]>([])
 
     var requested: [FileProtectionType] { asked.withLock { $0 } }

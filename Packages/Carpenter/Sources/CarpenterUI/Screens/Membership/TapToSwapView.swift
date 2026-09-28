@@ -1,8 +1,16 @@
 import CarpenterKit
 import SwiftUI
 
+public struct TapToSwap: Sendable {
+    public let start: @MainActor @Sendable () -> Void
+
+    public init(start: @escaping @MainActor @Sendable () -> Void) {
+        self.start = start
+    }
+}
+
 extension EnvironmentValues {
-    @Entry public var tapToSwap: (() -> Void)?
+    @Entry public var tapToSwap: TapToSwap?
 }
 
 public struct TapToSwapView: View {

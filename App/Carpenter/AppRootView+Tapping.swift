@@ -6,9 +6,9 @@ import SwiftUI
 // MARK: Tapping two phones to swap codes
 
 extension AppRootView {
-    var tapToSwap: (() -> Void)? {
+    var tapToSwap: TapToSwap? {
         #if os(iOS)
-            TapSwapper.canMeasure ? { Task { await startTapping() } } : nil
+            TapSwapper.canMeasure ? TapToSwap(start: { [self] in Task { await startTapping() } }) : nil
         #else
             nil
         #endif

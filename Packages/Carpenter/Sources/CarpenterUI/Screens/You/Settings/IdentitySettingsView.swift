@@ -129,7 +129,7 @@ struct IdentitySettingsView: View {
             if let tapToSwap, !identityCode.isEmpty {
                 // COPY BEGIN cdd906bc [NEEDS HUMAN REVIEW]
                 Section {
-                    Button(action: tapToSwap) {
+                    Button { tapToSwap.start() } label: {
                         SettingsRow(
                             icon: "iphone.radiowaves.left.and.right",
                             title: Text("Tap phones to swap codes", bundle: .module))
