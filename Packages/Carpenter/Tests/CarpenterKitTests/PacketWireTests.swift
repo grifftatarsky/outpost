@@ -91,6 +91,20 @@ struct PacketWireTests {
         #expect(PacketWire.packet(from: [PacketWire.packetID: .string("not-a-uuid")]) == nil)
     }
 
+    @Test("A packet naming one address twice is refused rather than stopping the device that reads it")
+    func aRepeatedAddressIsRefused() throws {
+        let (mine, _) = try peers()
+        var author = Author()
+        let packet = try SyncEngine.pack([try author.post("twice", at: TestSession.now)], for: [mine], window: 7)
+
+        var fields = PacketWire.fields(of: packet)
+        let tag = try #require(packet.wraps.keys.first).rawValue
+        fields[PacketWire.wrapTags] = .dataList([tag, tag])
+        fields[PacketWire.wrapValues] = .dataList([Data([1]), Data([2])])
+
+        #expect(PacketWire.packet(from: fields) == nil)
+    }
+
     @Test("The in-memory mailbox carries a grant through the wire mapping")
     func fakeMailboxSerialises() async throws {
         let (mine, theirs) = try peers()

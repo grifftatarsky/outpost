@@ -43,11 +43,10 @@ public enum PacketWire {
             case .dataList(let tags)? = fields[wrapTags],
             case .dataList(let values)? = fields[wrapValues],
             case .data(let payload)? = fields[ciphertext],
-            tags.count == values.count
+            tags.count == values.count, Set(tags).count == tags.count
         else { return nil }
 
-        let wraps = Dictionary(
-            uniqueKeysWithValues: zip(tags.map(RecipientTag.init(rawValue:)), values))
+        let wraps = Dictionary(zip(tags.map(RecipientTag.init(rawValue:)), values)) { first, _ in first }
 
         var grants: [RecipientTag: [Data]] = [:]
         if case .dataList(let grantKeys)? = fields[grantTags],
