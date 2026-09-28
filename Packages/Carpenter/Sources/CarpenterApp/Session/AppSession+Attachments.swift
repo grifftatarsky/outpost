@@ -94,7 +94,7 @@ extension AppSession {
 
     private static let attachmentRetryInterval: TimeInterval = 30
 
-    static let attachmentKeptFor = SyncSession.tagWindow * Double(SyncSession.windowLookback + 2)
+    static let attachmentKeptFor = SyncSession.packetWaitsFor
 
     private func signFor(_ id: AttachmentID, from author: ParticipantID, through mailbox: any MediaMailbox) async {
         guard let enrolment, let peer = peers().first(where: { $0.them == author }) else { return }

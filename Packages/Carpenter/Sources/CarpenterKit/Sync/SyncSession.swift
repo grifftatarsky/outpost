@@ -167,6 +167,8 @@ public struct SyncSession: Sendable {
 
     public static let windowLookback: UInt64 = 7
 
+    public static let packetWaitsFor = tagWindow * Double(windowLookback + 2)
+
     public static func recentTags(for peer: Peer, at instant: Date) -> Set<RecipientTag> {
         let current = window(at: instant)
         let oldest = current >= windowLookback ? current - windowLookback : 0

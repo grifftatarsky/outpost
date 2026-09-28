@@ -433,8 +433,7 @@ extension AppSession {
                     continue
                 }
             }
-            let expired = clock.now.timeIntervalSince(created)
-                > SyncSession.tagWindow * Double(SyncSession.windowLookback + 2)
+            let expired = clock.now.timeIntervalSince(created) > SyncSession.packetWaitsFor
             if missing.isEmpty || expired {
                 do {
                     try await mailbox.withdraw(packet, in: pairs)

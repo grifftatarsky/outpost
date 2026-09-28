@@ -9,7 +9,7 @@ struct KeptSalt: Codable, Equatable, Sendable {
 }
 
 struct AddressBook: Codable, Equatable, Sendable {
-    static let overlap = SyncSession.tagWindow * Double(SyncSession.windowLookback + 2)
+    static let overlap = SyncSession.packetWaitsFor
     static let key = KeychainKey("address.book")
 
     private(set) var own: [KeptSalt] = []
