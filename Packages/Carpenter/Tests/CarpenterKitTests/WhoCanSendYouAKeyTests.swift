@@ -197,6 +197,9 @@ struct WhoCanSendYouAKeyTests {
         #expect(
             try alice.chains[room]?.secret(for: highest) == held,
             "a second key for the same epoch replaced the one everybody else is using")
+        #expect(
+            alice.writingKey(of: room)?.secret == held,
+            "a key slipped in beside the one everybody is using, with no record of who made it, was written under")
     }
 }
 

@@ -437,11 +437,17 @@ links are in their chain, the answer is yes and cannot be withdrawn. **This is t
 line in the codebase to audit**, and the failure mode is silent: too many links is not an error
 anywhere, it is a reader who can see more than intended and no log line anywhere says so.
 
-**Known weakness, named.** Two members advancing the same room's epoch at the same moment is
-untested and genuinely needs three real accounts to exercise — it is on
-[Proofs a rig cannot run](proofs-a-rig-cannot-run.md). If rival advances resolved differently on
-different devices, members would hold different secrets for the same epoch number and messages would
-stop opening for somebody, with no error that names the cause.
+**Several keys for one number** (built 2026-09-29, not yet run). A phone holds every key it is given
+for an epoch number and opens with any of them (`EpochChain.hold`, `sealingKeys`). It writes under the
+newest key whose record of the change was written by somebody the room shows as in, the record matched
+to the key by its proof; a key whose record has not arrived counts only as the first held for its number
+and only while whoever gave it is in. Among several that count, every phone takes the lowest
+fingerprint (SHA-256 under `carpenter.epoch-fingerprint.v1`). This closes two holes: a key a member made
+up before being removed is no longer written under once the removal arrives, and the real key is taken
+beside it; and two members advancing the epoch at the same moment no longer leave phones on different
+keys (`AMadeUpKeyTests`). One giver may add one key per number and no number holds more than sixteen.
+The two-advances case still needs three real accounts to prove over iCloud
+([Proofs a rig cannot run](proofs-a-rig-cannot-run.md)).
 
 ---
 

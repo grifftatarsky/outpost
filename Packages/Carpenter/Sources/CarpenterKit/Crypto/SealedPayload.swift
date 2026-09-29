@@ -55,24 +55,27 @@ extension Payload {
 
 extension SealedPayload {
     public func opened(using chain: EpochChain, by writer: FeedKey? = nil) throws -> Payload {
-        let key = try chain.sealingKey(for: epoch)
+        let keys = chain.sealingKeys(for: epoch)
+        guard !keys.isEmpty else { throw CryptoError.unknownEpoch }
         guard let box = try? ChaChaPoly.SealedBox(combined: ciphertext) else {
             throw CryptoError.openFailed
         }
-        if let writer,
-            let plaintext = try? ChaChaPoly.open(
+        for key in keys {
+            if let writer,
+                let plaintext = try? ChaChaPoly.open(
+                    box, using: key,
+                    authenticating: SealedPayload.context(room: chain.room, epoch: epoch, by: writer))
+            {
+                return try JSONDecoder().decode(Payload.self, from: plaintext)
+            }
+            if let plaintext = try? ChaChaPoly.open(
                 box, using: key,
-                authenticating: SealedPayload.context(room: chain.room, epoch: epoch, by: writer))
-        {
-            return try JSONDecoder().decode(Payload.self, from: plaintext)
+                authenticating: SealedPayload.context(room: chain.room, epoch: epoch, by: nil))
+            {
+                return try JSONDecoder().decode(Payload.self, from: plaintext)
+            }
         }
-        guard let plaintext = try? ChaChaPoly.open(
-            box, using: key,
-            authenticating: SealedPayload.context(room: chain.room, epoch: epoch, by: nil))
-        else {
-            throw CryptoError.openFailed
-        }
-        return try JSONDecoder().decode(Payload.self, from: plaintext)
+        throw CryptoError.openFailed
     }
 
     public func opened(

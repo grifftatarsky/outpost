@@ -130,11 +130,11 @@ public struct EpochGrant: Hashable, Sendable, Codable {
 
 extension EpochChain {
     public mutating func adopt(
-        _ grant: EpochGrant, using peer: PairwiseSecret, as device: DeviceKeys? = nil
+        _ grant: EpochGrant, using peer: PairwiseSecret, as device: DeviceKeys? = nil, from giver: ParticipantID? = nil
     ) throws {
         guard grant.room == room else { throw CryptoError.wrongRoom }
         let secret = try grant.open(with: peer, as: device)
-        if !knownEpochs.contains(grant.epoch) { adopt(secret, at: grant.epoch) }
+        hold(secret, at: grant.epoch, from: giver)
         if let link = grant.link { try record(link) }
         try record(grant.links)
     }

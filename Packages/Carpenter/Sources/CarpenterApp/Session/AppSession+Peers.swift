@@ -89,8 +89,8 @@ extension AppSession {
         var owed: [(to: Peer, grant: EpochGrant, receipt: String)] = []
 
         for room in persisted.knownRooms {
-            guard let chain = chains[room], let epoch = chain.highestKnownEpoch
-            else { continue }
+            guard let chain = chains[room], let writing = writingKey(of: room) else { continue }
+            let epoch = writing.epoch
 
             if Self.withholdsKeys(
                 viewMayBeStale: viewMayBeStale, roomHasAbsences: !roster(of: room).absent.isEmpty)
@@ -99,7 +99,7 @@ extension AppSession {
                     "mailbox sync: holding this room's keys for a round — something did not verify and somebody here is out of the room")
                 continue
             }
-            let secret = try chain.secret(for: epoch)
+            let secret = writing.secret
 
             let isWall = room == outpostRoom(for: enrolment.identity.id)
             let floors = isWall
@@ -113,13 +113,13 @@ extension AppSession {
             var passesOn: Bool?
             for target in targets {
                 let floor = isWall ? (floors[target] ?? nil).map(EpochNumber.init(rawValue:)) : nil
-                let link = floor.map { epoch > $0 ? chain.link(at: epoch) : nil } ?? chain.link(at: epoch)
+                let link = floor.map { epoch > $0 ? writing.link : nil } ?? writing.link
                 let links = floor.map { ceiling in chain.everyLink.filter { $0.epoch > ceiling } }
                     ?? chain.everyLink
                 let devices = deviceRecipients(of: target)
                 guard !devices.isEmpty else { continue }
                 let receipt = Self.grantReceipt(
-                    room: room, epoch: epoch, target: target, floor: floor, devices: devices)
+                    room: room, epoch: epoch, key: secret, target: target, floor: floor, devices: devices)
                 guard !issuedGrants.contains(receipt) else { continue }
 
                 guard let pairwise = pairwiseSecret(with: target) else { continue }
@@ -147,9 +147,45 @@ extension AppSession {
     private func holdsWhatItsMakerSaw(_ epoch: EpochNumber, in room: RoomID, under secret: EpochSecret) -> Bool {
         guard epoch != .initial else { return true }
         let held = entriesByHash
-        return projection.keyChanges(in: room, opening: payloadOpener()).contains { change in
-            change.link.epoch == epoch && change.isAuthentic(under: secret)
-                && change.heads.allSatisfy { held[$0] != nil }
+        return projection.keyChanges(in: room, opening: payloadOpener()).contains { made in
+            made.change.link.epoch == epoch && made.change.isAuthentic(under: secret)
+                && made.change.heads.allSatisfy { held[$0] != nil }
+        }
+    }
+
+    func writingKey(of room: RoomID) -> WritingKey? {
+        cached(\.cachedWritingKeys, room) {
+            guard let chain = chains[room] else { return nil }
+            let makers = outpostOwner(of: room).map { Set([$0]) } ?? roster(of: room).members
+            let changes = projection.keyChanges(in: room, opening: payloadOpener())
+            for epoch in chain.knownEpochs.sorted(by: >) {
+                let trusted = chain.heldSecrets(at: epoch).compactMap { secret in
+                    trustedKey(secret, at: epoch, in: chain, makers: makers, changes: changes)
+                }
+                if let chosen = trusted.min(by: {
+                    $0.secret.fingerprint.lexicographicallyPrecedes($1.secret.fingerprint)
+                }) {
+                    return chosen
+                }
+            }
+            return nil
+        }
+    }
+
+    private func trustedKey(
+        _ secret: EpochSecret, at epoch: EpochNumber, in chain: EpochChain, makers: Set<ParticipantID>,
+        changes: [(author: ParticipantID, change: EpochChangeBody)]
+    ) -> WritingKey? {
+        guard epoch != .initial else { return WritingKey(epoch: epoch, secret: secret, link: nil) }
+        let records = changes.filter { $0.change.link.epoch == epoch && $0.change.isAuthentic(under: secret) }
+        guard !records.isEmpty else {
+            guard (try? chain.secret(for: epoch)) == secret, let giver = chain.giver(of: secret, at: epoch),
+                makers.contains(giver)
+            else { return nil }
+            return WritingKey(epoch: epoch, secret: secret, link: chain.link(at: epoch))
+        }
+        return records.first { makers.contains($0.author) }.map {
+            WritingKey(epoch: epoch, secret: secret, link: $0.change.link)
         }
     }
 
@@ -162,13 +198,14 @@ extension AppSession {
     }
 
     private static func grantReceipt(
-        room: RoomID, epoch: EpochNumber, target: ParticipantID, floor: EpochNumber?,
+        room: RoomID, epoch: EpochNumber, key: EpochSecret, target: ParticipantID, floor: EpochNumber?,
         devices: [DeviceRecipient]
     ) -> String {
         let since = floor.map { String($0.rawValue) } ?? "all"
         let to = devices.map { $0.device.rawValue.base64EncodedString() }.joined(separator: ",")
+        let which = key.fingerprint.base64EncodedString()
         return
-            "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(target.rawValue.base64EncodedString())|\(since)|\(to)"
+            "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(which)|\(target.rawValue.base64EncodedString())|\(since)|\(to)"
     }
 
     private func mayGiveTheFirstKey(_ giver: ParticipantID, to room: RoomID, opening chain: EpochChain) -> Bool {
@@ -212,7 +249,7 @@ extension AppSession {
             var lastError: any Error = CryptoError.openFailed
             for secret in [peer.secret] + alternateSecrets(with: peer.them).filter({ $0 != peer.secret }) {
                 do {
-                    try chain.adopt(grant, using: secret, as: enrolment?.device)
+                    try chain.adopt(grant, using: secret, as: enrolment?.device, from: peer.them)
                     opened = true
                     break
                 } catch CryptoError.notSealedForThisDevice {
@@ -238,7 +275,7 @@ extension AppSession {
             return
         }
         let taughtSomething =
-            chain.knownEpochs.count != held?.knownEpochs.count
+            chain.heldKeyCount != held?.heldKeyCount
             || chain.everyLink.count != held?.everyLink.count
         chains[grant.room] = chain
         if held == nil, persisted.restoredWithTheRecoveryKey,
@@ -282,4 +319,10 @@ extension AppSession {
             try await announceProfile(in: grant.room)
         }
     }
+}
+
+struct WritingKey {
+    let epoch: EpochNumber
+    let secret: EpochSecret
+    let link: EpochLink?
 }

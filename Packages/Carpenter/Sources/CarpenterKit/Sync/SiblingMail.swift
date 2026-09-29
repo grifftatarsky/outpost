@@ -130,6 +130,13 @@ public struct SiblingMail: Hashable, Sendable, Codable {
     struct EpochMark: Hashable, Sendable, Codable {
         let room: RoomID
         let epoch: EpochNumber
+        let key: Data?
+
+        init(_ held: HeldEpoch) {
+            room = held.room
+            epoch = held.epoch
+            key = EpochSecret(material: held.material).fingerprint
+        }
     }
 
     struct AddressMark: Hashable, Sendable, Codable {
@@ -228,7 +235,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
     }
 
     public mutating func shared(_ epochs: [HeldEpoch]) {
-        sharedEpochs.formUnion(epochs.map { EpochMark(room: $0.room, epoch: $0.epoch) })
+        sharedEpochs.formUnion(epochs.map(EpochMark.init))
     }
 
     public mutating func shared(_ addresses: [HeldAddress]) {
@@ -265,12 +272,12 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         plan.recipients = active.keys.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
 
         let entries = all.filter { $0.seq > sharedClock[FeedKey(author: $0.author, device: $0.device)] ?? 0 }
-        let epochs = held.filter { !sharedEpochs.contains(EpochMark(room: $0.room, epoch: $0.epoch)) }
+        let epochs = held.filter { !sharedEpochs.contains(EpochMark($0)) }
         for entry in entries {
             let feed = FeedKey(author: entry.author, device: entry.device)
             plan.sharedClock[feed] = Swift.max(plan.sharedClock[feed] ?? 0, entry.seq)
         }
-        plan.sharedEpochs.formUnion(epochs.map { EpochMark(room: $0.room, epoch: $0.epoch) })
+        plan.sharedEpochs.formUnion(epochs.map(EpochMark.init))
 
         let people = known.filter { !sharedPeople.contains($0.participantID) }
         plan.sharedPeople = Set(people.map(\.participantID))

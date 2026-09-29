@@ -32,10 +32,14 @@ extension Projection {
         standing(in: room, opening: opening).roster
     }
 
-    public func keyChanges(in room: RoomID, opening: (RenderedEntry) -> Payload?) -> [EpochChangeBody] {
-        var changes: [EpochChangeBody] = []
+    public func keyChanges(
+        in room: RoomID, opening: (RenderedEntry) -> Payload?
+    ) -> [(author: ParticipantID, change: EpochChangeBody)] {
+        var changes: [(author: ParticipantID, change: EpochChangeBody)] = []
         for entry in entries(in: room) where entry.type == .epochChange {
-            if let change = try? opening(entry)?.decode(EpochChangeBody.self) { changes.append(change) }
+            if let change = try? opening(entry)?.decode(EpochChangeBody.self) {
+                changes.append((author: entry.author, change: change))
+            }
         }
         return changes
     }

@@ -475,6 +475,10 @@ correct rather than only add to.
 - **Built, tests pass** (2026-09-29, package suite). A phone passes a room's new key on only once it holds everything
   the key's maker had seen, so a phone that got the key before the removal cannot hand it to the person
   removed (`PassingOnANewKeyTests`; ruled by Griff the same day).
+- **Built, not yet run** (2026-09-29). A phone writes only under a key made by somebody the room shows
+  as in, and holds every key it is given for a number, so a key a removed member made up stops being
+  used when the removal arrives and the real key is taken beside it (`AMadeUpKeyTests`; ruled by Griff
+  the same day).
 
 **Testing**
 

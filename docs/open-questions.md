@@ -37,6 +37,12 @@ Nobody gets back in, nobody removed returns, and anybody still in can invite the
 it for good needs an order both sides can't choose, which the rooms don't have: iCloud stores each
 person's copy of an entry separately, at different times.
 
+Griff, 2026-09-29, on both out: "2 doesn't make sense. The first user should be honored." When one
+removal had seen the other, the first already wins. In the case above neither had, so "first" has to
+be an order the removed person cannot write for themselves, and the question back to him is which: the
+one who has been in the room longer, or iCloud's time, which each phone sees at a different moment.
+Both out stays in the build until he picks.
+
 <!-- COPY END 9b4525bb -->
 
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
@@ -74,20 +80,24 @@ tests pass in the package suite: whoever makes a key writes down the last entry 
 only the new key can make, and a phone passes the key on only once it holds every one of them
 (`PassingOnANewKeyTests`).
 
+What was found on 2026-09-29, reading `EpochGrant.adopt`: a key never replaced one already held, so a
+member who sent some phones a key of their own for the room's next number before being removed blocked
+the real key the remover made at that number. Those phones kept writing under the made-up key after the
+removal arrived, so the removed member read them, and they could not read the rest of the room. Built
+the same day on Griff's "I think 1 is fine", not yet run: a phone holds every key it is given for a
+number and opens with any of them, and writes only under a key whose record of the change was written
+by somebody the room shows as in. A key whose record has not arrived counts only as the first held for
+its number, and only while whoever gave it is in. Two members who turn the key at once end up writing
+under the same one (`AMadeUpKeyTests`).
+
 What is still open, now narrower:
 
 - **A phone that missed the removal.** A device that was offline when somebody was removed still shows
-  them as in, so for that window it would take a key they made up. Closing it means checking a newer key
-  against the room's own record of the change (every change writes one); to be built with care, because a
-  key refused for want of its record is not sent again.
-- **A member can still make up a key, and it can outlast their removal.** Found by reading 2026-09-29,
-  not run. A key never replaces one already held (`EpochGrant.adopt`), so a member who sends some phones
-  a key of their own for the room's next number before being removed blocks the real key the remover
-  makes at that number. Those phones keep writing under the made-up key after the removal arrives, so
-  the removed member reads them, and they cannot read what the rest of the room writes. It lasts until
-  the room's key changes again. This is more than sabotage. Recommended: a phone writes only under a
-  key whose record of the change was written by somebody the room shows as in, and holds rival keys for
-  one number side by side rather than keeping whichever came first.
+  them as in, so until the removal reaches it, it takes a key they made up and writes under it. Since
+  2026-09-29 that ends when the removal arrives (below); before then it is the window every removal has.
+- **A member can still make up a key while they are in.** Whoever takes it writes under it, and only
+  those holding it can read what is written, until the maker's removal arrives or the room's key
+  changes. Sabotage by somebody in the room, not a leak.
 - **Links for older keys** are taken from the inviter first; one the inviter did not have can still come
   from any member, as below.
 

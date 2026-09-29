@@ -33,6 +33,10 @@ public struct EpochSecret: Hashable, Sendable {
     public static func random() -> EpochSecret {
         EpochSecret(material: SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) })
     }
+
+    public var fingerprint: Data {
+        Data(SHA256.hash(data: CanonicalBytes.payload(domain: Domain.epochFingerprint, fields: [material])))
+    }
 }
 
 public struct EpochLink: Hashable, Sendable, Codable {
@@ -78,7 +82,11 @@ public struct EpochChain: Sendable {
     public let room: RoomID
 
     private var secrets: [EpochNumber: EpochSecret] = [:]
+    private var rivals: [EpochNumber: [EpochSecret]] = [:]
+    private var givenBy: [EpochNumber: [EpochSecret: ParticipantID]] = [:]
     private var links: [EpochNumber: EpochLink] = [:]
+
+    public static let mostRivals = 16
 
     public init(room: RoomID) {
         self.room = room
@@ -101,8 +109,45 @@ public struct EpochChain: Sendable {
 
     public var highestKnownEpoch: EpochNumber? { secrets.keys.max() }
 
+    public var heldKeyCount: Int { secrets.count + rivals.values.reduce(0) { $0 + $1.count } }
+
+    public func heldSecrets(at epoch: EpochNumber) -> [EpochSecret] {
+        ((try? secret(for: epoch)).map { [$0] } ?? []) + (rivals[epoch] ?? [])
+    }
+
+    public func giver(of secret: EpochSecret, at epoch: EpochNumber) -> ParticipantID? {
+        givenBy[epoch]?[secret]
+    }
+
     public mutating func adopt(_ secret: EpochSecret, at epoch: EpochNumber) {
+        if let held = secrets[epoch], held != secret, !(rivals[epoch] ?? []).contains(held) {
+            rivals[epoch, default: []].append(held)
+        }
+        rivals[epoch]?.removeAll { $0 == secret }
         secrets[epoch] = secret
+    }
+
+    public mutating func hold(_ secret: EpochSecret, at epoch: EpochNumber, from giver: ParticipantID? = nil) {
+        if secrets[epoch] == nil, let derived = try? self.secret(for: epoch) { secrets[epoch] = derived }
+        guard let primary = secrets[epoch] else {
+            secrets[epoch] = secret
+            if let giver { givenBy[epoch, default: [:]][secret] = giver }
+            return
+        }
+        guard primary != secret, epoch != .initial, !(rivals[epoch] ?? []).contains(secret),
+            (rivals[epoch]?.count ?? 0) < Self.mostRivals
+        else { return }
+        if let giver {
+            guard !(givenBy[epoch]?.values.contains(giver) ?? false) else { return }
+            givenBy[epoch, default: [:]][secret] = giver
+        }
+        rivals[epoch, default: []].append(secret)
+    }
+
+    public func choosing(_ secret: EpochSecret, at epoch: EpochNumber) -> EpochChain {
+        var chosen = self
+        chosen.adopt(secret, at: epoch)
+        return chosen
     }
 
     public mutating func record(_ link: EpochLink) throws {
@@ -171,6 +216,10 @@ public struct EpochChain: Sendable {
     public func sealingKey(for epoch: EpochNumber) throws -> SymmetricKey {
         Self.derivedKey(
             from: try secret(for: epoch), room: room, epoch: epoch, domain: Domain.epochSealing)
+    }
+
+    public func sealingKeys(for epoch: EpochNumber) -> [SymmetricKey] {
+        heldSecrets(at: epoch).map { Self.derivedKey(from: $0, room: room, epoch: epoch, domain: Domain.epochSealing) }
     }
 
     public mutating func warm(downTo epoch: EpochNumber) throws {

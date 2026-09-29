@@ -773,6 +773,38 @@ holds can be passed on, so the wait ends.
 
 <!-- COPY END c709dc0f -->
 
+<!-- COPY BEGIN 6264031c [NEEDS HUMAN REVIEW] -->
+
+### A phone writes only under a key made by somebody in the room
+
+**RULED 2026-09-29 by Griff** — "I think 1 is fine", on: "A phone writes only under a key made by
+someone the room shows as in, so a removed member's key stops being used the moment the removal
+arrives."
+
+A key never used to replace one already held, so a member could hand some phones a key of their own
+for the room's next number before being removed, and the real key the remover made at that number was
+refused beside it. Those phones kept writing under the made-up key, readable by the removed member.
+
+So a phone holds every key it is given for a number and opens with any of them. It writes under the
+newest key whose record of the change was written by somebody the room shows as in (for an Outpost,
+its owner), and passes that key on. A key whose record has not arrived counts only if it is the first
+the phone holds for its number and whoever gave it is in, which covers the real key arriving a round
+before its record. Among several that count for one number, every phone takes the one with the lowest
+fingerprint, so two members who turn the key at once end up on the same key. One person can put only
+one key beside a number, and no number holds more than sixteen, so a flood cannot crowd out the real
+key. The room's first key has no record and no second key.
+
+**Cost:** a key with no record is never written under unless it is the first for its number, and a
+phone whose newest key is waiting on its record writes under the one before it until the record
+arrives. The keychain keeps every key for a number in one item; a single key keeps the form it always
+had.
+
+**What would change it:** a key that has to be written under before any record of it can exist.
+
+**Built** 2026-09-29, not yet run (`AMadeUpKeyTests`).
+
+<!-- COPY END 6264031c -->
+
 <!-- COPY BEGIN fce6a062 [NEEDS HUMAN REVIEW] -->
 
 ### Somebody who stays rotates the key after somebody leaves
@@ -3247,6 +3279,8 @@ writes past the removal's chain counts for who is in the room either. **PROPOSED
 when two people remove each other and neither removal had seen the other, both are out, and the
 dispute only takes access away: it voids what either side granted past the other's line and keeps
 what they withheld ([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)).
+Griff, 2026-09-29: "The first user should be honored." Both out stays in the build until he picks what
+"first" means when neither removal had seen the other.
 **The forms older builds wrote are refused**, on Griff's "Security is most important": an entry in a
 room without its link, and a removal or departure that names no heads.
 

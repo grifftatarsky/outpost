@@ -188,7 +188,7 @@ extension AppSession {
         let preferences = fromRemoved ? MemberPreferences() : feed.preferences
         let deletedAfterMerge = persisted.preferences.merged(with: preferences).roomsDeleted
         for held in epochs
-        where chains[held.room]?.knownEpochs.contains(held.epoch) != true
+        where chains[held.room]?.heldSecrets(at: held.epoch).contains(EpochSecret(material: held.material)) != true
             && !deletedAfterMerge.contains(held.room)
         {
             if fromRemoved, !persisted.rekeyBeforeWriting.contains(held.room) {
@@ -197,7 +197,7 @@ extension AppSession {
                     "device sync: took a room key from a removed device; the room gets a new key before anything is written")
             }
             var chain = chains[held.room] ?? EpochChain(room: held.room)
-            chain.adopt(EpochSecret(material: held.material), at: held.epoch)
+            chain.hold(EpochSecret(material: held.material), at: held.epoch)
             chains[held.room] = chain
 
             await persistOrReport("a room key from another of your devices") {
@@ -291,10 +291,8 @@ extension AppSession {
 
     func heldEpochs() -> [HeldEpoch] {
         chains.flatMap { room, chain in
-            chain.knownEpochs.compactMap { epoch in
-                (try? chain.secret(for: epoch)).map {
-                    HeldEpoch(room: room, epoch: epoch, material: $0.material)
-                }
+            chain.knownEpochs.flatMap { epoch in
+                chain.heldSecrets(at: epoch).map { HeldEpoch(room: room, epoch: epoch, material: $0.material) }
             }
         }
     }

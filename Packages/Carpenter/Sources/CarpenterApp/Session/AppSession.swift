@@ -108,6 +108,7 @@ public final class AppSession {
     @ObservationIgnored var cachedReadEvidence: [RoomID: ReadEvidence] = [:]
     @ObservationIgnored var cachedPositions: [RoomID: [MessageID: Int]] = [:]
     @ObservationIgnored var cachedReporting: [RoomID: Set<ParticipantID>] = [:]
+    @ObservationIgnored var cachedWritingKeys: [RoomID: WritingKey?] = [:]
     @ObservationIgnored var cachedOutpostAccess: OutpostAccess?
     @ObservationIgnored var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
     @ObservationIgnored var cachedComparisonHalves: [ParticipantID: String] = [:]
@@ -150,6 +151,7 @@ public final class AppSession {
         cachedReadEvidence = [:]
         cachedPositions = [:]
         cachedReporting = [:]
+        cachedWritingKeys = [:]
         cachedOutpostAccess = nil
         cachedDevicesAdded = [:]
         cachedLinksHeard = nil
@@ -362,6 +364,7 @@ public final class AppSession {
         }
         if persisted.rekeyBeforeWriting.contains(chainRoom) { try await rekeyBeforeWriting(chainRoom) }
         guard let chain = chains[chainRoom] else { throw AppSessionError.noIdentity }
+        let writing = writingKey(of: chainRoom)
 
         let entry = try Entry.append(
             after: head,
@@ -371,8 +374,8 @@ public final class AppSession {
             wallTime: clock.now,
             room: room,
             payload: payload,
-            at: chain.highestKnownEpoch ?? .initial,
-            sealedWith: chain,
+            at: writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
+            sealedWith: writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain,
             alsoFor: extra,
             roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
         )
@@ -523,8 +526,9 @@ public final class AppSession {
     func persistEpoch(
         _ secret: EpochSecret, at epoch: EpochNumber, for room: RoomID
     ) async throws {
-        try await storage.keychain.set(
-            secret.material, for: Self.epochKey(room, epoch), scope: .device)
+        var keys = chains[room]?.heldSecrets(at: epoch) ?? []
+        if !keys.contains(secret) { keys.insert(secret, at: 0) }
+        try await storage.keychain.set(Self.keychainForm(of: keys), for: Self.epochKey(room, epoch), scope: .device)
 
         if !persisted.knownRooms.contains(room) { persisted.knownRooms.append(room) }
         var held = persisted.epochs[room] ?? []
@@ -541,9 +545,11 @@ public final class AppSession {
 
             for raw in persisted.epochs[room] ?? [] {
                 let epoch = EpochNumber(rawValue: raw)
-                guard let material = try await storage.keychain.data(for: Self.epochKey(room, epoch))
+                guard let stored = try await storage.keychain.data(for: Self.epochKey(room, epoch))
                 else { continue }
-                chain.adopt(EpochSecret(material: material), at: epoch)
+                let keys = Self.keys(inKeychainForm: stored)
+                chain.adopt(keys[0], at: epoch)
+                for rival in keys.dropFirst() { chain.hold(rival, at: epoch) }
                 found = true
             }
 
@@ -553,6 +559,19 @@ public final class AppSession {
 
     static func epochKey(_ room: RoomID, _ epoch: EpochNumber) -> KeychainKey {
         KeychainKey("epoch.\(room.rawValue.uuidString).\(epoch.rawValue)")
+    }
+
+    static func keychainForm(of keys: [EpochSecret]) -> Data {
+        guard keys.count > 1, let list = try? JSONEncoder().encode(keys.map(\.material)) else {
+            return keys.first?.material ?? Data()
+        }
+        return list
+    }
+
+    static func keys(inKeychainForm stored: Data) -> [EpochSecret] {
+        guard stored.count != 32, let list = try? JSONDecoder().decode([Data].self, from: stored), !list.isEmpty
+        else { return [EpochSecret(material: stored)] }
+        return list.map(EpochSecret.init(material:))
     }
 
     func outpostRoom(for participant: ParticipantID) -> RoomID {
