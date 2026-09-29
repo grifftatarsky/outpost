@@ -235,6 +235,7 @@ extension AppSession {
         }
 
         var answered: Set<RepairDuty> = []
+        let withheld = heldBack()
         for duty in persisted.repairDuties {
             if duty.request.reason == .recovery, isHoldingBack(duty.from) { continue }
             guard let peer = byID[duty.from] else {
@@ -253,7 +254,7 @@ extension AppSession {
                 let sent = try await session.send(
                     entries, to: [peer], certificates: knownCertificates(),
                     revocations: persisted.revocations, at: clock.now, answers: [answer],
-                    identities: knownIdentities())
+                    identities: knownIdentities(), withholding: withheld)
                 noteWritten(sent)
                 report = report.adding(sent)
                 if sent.sendFailure == nil { answered.insert(duty) }

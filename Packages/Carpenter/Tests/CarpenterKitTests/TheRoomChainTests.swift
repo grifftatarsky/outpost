@@ -38,10 +38,14 @@ struct TheRoomChainTests {
         ]
     }
 
-    private func standing(_ entries: [Entry], chain: EpochChain, room: RoomID) -> Projection.Standing {
-        Projection(
-            viewer: Identity.generate().id, rendered: LogRenderer.render(entries, using: chain),
-            chains: RoomChains(entries)
+    private func standing(
+        _ entries: [Entry], chain: EpochChain, room: RoomID, readInOrder read: [Entry] = [],
+        on viewer: ParticipantID = Identity.generate().id
+    ) -> Projection.Standing {
+        let times = Dictionary(uniqueKeysWithValues: read.enumerated().map { ($1.hash, start + Double($0)) })
+        return Projection(
+            viewer: viewer, rendered: LogRenderer.render(entries, using: chain), chains: RoomChains(entries),
+            claimTimes: times
         ).standing(in: room, opening: { rendered in entries.first { $0.hash == rendered.id }?.opened(using: chain) })
     }
 
@@ -194,8 +198,9 @@ struct TheRoomChainTests {
 
     // MARK: Who is in the room
 
-    @Test("Somebody removed cannot stay by removing the one who removed them: both are out")
-    func aRemovalCannotBeAnsweredFromOutside() throws {
+    private func removedEachOther() throws -> (
+        alice: Author, sam: Author, room: RoomID, entries: [Entry], removal: Entry, answer: Entry
+    ) {
         var (alice, sam, room, entries) = try room()
         let said = try sam.append(try Payload.post("before"), at: start + 10, room: room)
         let removal = try alice.append(
@@ -204,17 +209,50 @@ struct TheRoomChainTests {
         let answer = try sam.append(
             try Payload.removal(of: alice.identity.id, heads: [entries[2].hash]), at: start + 19, room: room)
         entries += [said, removal, answer]
+        return (alice, sam, room, entries, removal, answer)
+    }
 
-        let members = standing(entries, chain: alice.chain, room: room).roster.members
+    @Test("Somebody removed cannot stay by removing the one who removed them, whatever date they write on it")
+    func aRemovalCannotBeAnsweredFromOutside() throws {
+        let (alice, sam, room, entries, removal, answer) = try removedEachOther()
+
+        let members = standing(entries, chain: alice.chain, room: room, readInOrder: [removal, answer]).roster.members
         #expect(
             !members.contains(sam.identity.id),
             """
             After Alice removed Sam, Sam wrote a removal of Alice dated a second before hers and claiming \
             not to have seen it. It was read first, so Alice's removal no longer counted and Sam stayed in.
             """)
-        #expect(
-            !members.contains(alice.identity.id),
-            "two removals that each claim not to have seen the other have to leave both people out")
+        #expect(members.contains(alice.identity.id), "the removal stored first did not stand")
+    }
+
+    @Test("When two people remove each other without either seeing the other's, the removal stored first stands")
+    func theFirstRemovalStands() throws {
+        let (alice, sam, room, entries, removal, answer) = try removedEachOther()
+
+        let members = standing(entries, chain: alice.chain, room: room, readInOrder: [answer, removal]).roster.members
+        #expect(members.contains(sam.identity.id), "Sam removed Alice first, and his removal did not stand")
+        #expect(!members.contains(alice.identity.id))
+    }
+
+    @Test("A phone counts its own member's removal ahead of one it did not see before making it")
+    func yourOwnRemovalComesFirstOnYourPhone() throws {
+        let (alice, sam, room, entries, removal, answer) = try removedEachOther()
+
+        let members = standing(
+            entries, chain: alice.chain, room: room, readInOrder: [answer, removal], on: alice.identity.id
+        ).roster.members
+        #expect(members.contains(alice.identity.id), "Alice's phone showed her out by a removal she had not seen")
+        #expect(!members.contains(sam.identity.id))
+    }
+
+    @Test("A removal this phone could not time comes after every removal it could")
+    func anUntimedRemovalComesLast() throws {
+        let (alice, sam, room, entries, removal, _) = try removedEachOther()
+
+        let members = standing(entries, chain: alice.chain, room: room, readInOrder: [removal]).roster.members
+        #expect(members.contains(alice.identity.id), "a removal with no time this phone could vouch for stood")
+        #expect(!members.contains(sam.identity.id))
     }
 
     @Test("Somebody removed cannot remove anybody else, whatever date they write on it")
@@ -324,7 +362,7 @@ struct TheRoomChainTests {
             try Payload.removal(of: alice.identity.id, heads: [before.hash]), at: start + 19, room: room)
         entries += [said, out, removal, answer]
 
-        let members = standing(entries, chain: alice.chain, room: room).roster.members
+        let members = standing(entries, chain: alice.chain, room: room, readInOrder: [out, removal, answer]).roster.members
         #expect(
             !members.contains(mallory.identity.id),
             "Sam's answer dated Alice's removal of Mallory after his cut, and Mallory came back in")

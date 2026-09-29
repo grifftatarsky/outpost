@@ -479,6 +479,12 @@ correct rather than only add to.
   as in, and holds every key it is given for a number, so a key a removed member made up stops being
   used when the removal arrives and the real key is taken beside it (`AMadeUpKeyTests`; ruled by Griff
   the same day).
+- **Built, not yet run** (2026-09-29). A removed person hears last: the remover writes them nothing
+  until every other member's space holds the removal, and every phone holds back the removal and
+  anything written after it from the person removed. When two people remove each other, the removal a phone could read first stands, timed
+  so that an answer written early and hidden counts after the removal it answers
+  (`TellingTheRemovedLastTests`; ruled by Griff the same day). What is left of a race is a question for
+  him ([Open questions](open-questions.md#what-is-left-of-a-removal-race)).
 
 **Testing**
 

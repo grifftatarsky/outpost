@@ -18,14 +18,15 @@ struct RoomOfThree {
     var carolID: ParticipantID { carol.enrolment!.identity.id }
     var samID: ParticipantID { sam.enrolment!.identity.id }
 
-    static func make() async throws -> RoomOfThree {
-        let mailbox = InMemoryMailbox()
+    static func make(sharing clock: TestClock? = nil) async throws -> RoomOfThree {
+        let mailbox = clock.map { InMemoryMailbox(clock: $0) } ?? InMemoryMailbox()
         let carolKeychain = InMemoryKeychainStore()
         let carolFolder = TestScratch.root.appending(path: "carpenter-carol-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: carolFolder, withIntermediateDirectories: true)
-        let alice = TestSession.make()
-        let carol = TestSession.make(keychain: carolKeychain, at: carolFolder)
-        let sam = TestSession.make()
+        let own = { clock ?? TestClock(now: TestSession.now) }
+        let alice = TestSession.make(clock: own())
+        let carol = TestSession.make(keychain: carolKeychain, at: carolFolder, clock: own())
+        let sam = TestSession.make(clock: own())
         for (session, name) in [(alice, "Alice"), (carol, "Carol"), (sam, "Sam")] {
             await session.load()
             try await session.createIdentity(displayName: name)

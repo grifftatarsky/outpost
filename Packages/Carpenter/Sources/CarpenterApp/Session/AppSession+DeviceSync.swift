@@ -184,6 +184,7 @@ extension AppSession {
             if !persisted.knownKeys.contains(keys) { persisted.knownKeys.append(keys) }
         }
         let epochs = trust == .historical ? [] : feed.epochs
+        if !fromRemoved { takeClaimTimes(feed.claimTimes) }
 
         let preferences = fromRemoved ? MemberPreferences() : feed.preferences
         let deletedAfterMerge = persisted.preferences.merged(with: preferences).roomsDeleted
@@ -338,11 +339,13 @@ extension AppSession {
                     collected: state.collected, revocations: state.revocations, people: people)))
             }
             if let mail = plan.mail {
+                let carried = Set(mail.entries.map(\.hash))
                 drafts.append((.mail(mail.number), SiblingFeed(
                     entries: mail.entries, certificates: state.certificates, epochs: mail.epochs,
                     member: enrolment.identity.id, writtenAt: now,
                     preferences: mail.carriesPreferences ? persisted.preferences : MemberPreferences(),
-                    forwarded: mail.forwarded, people: mail.people, addresses: mail.addresses)))
+                    forwarded: mail.forwarded, people: mail.people, addresses: mail.addresses,
+                    claimTimes: persisted.claimTimes.filter { carried.contains($0.key) })))
             }
             if !plan.catchUpsFor.isEmpty {
                 func catchUp(_ entries: [Entry]) -> SiblingFeed {
@@ -350,7 +353,7 @@ extension AppSession {
                         entries: entries, certificates: state.certificates, epochs: held,
                         member: enrolment.identity.id, writtenAt: now, preferences: persisted.preferences,
                         through: plan.through, revocations: persisted.revocations, people: people,
-                        addresses: addresses)
+                        addresses: addresses, claimTimes: persisted.claimTimes)
                 }
                 let everything = catchUp(replica.allEntries)
                 for target in plan.catchUpsFor {

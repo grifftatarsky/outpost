@@ -75,6 +75,8 @@ struct PersistedState: Codable, Equatable, Sendable {
     var restoredWithTheRecoveryKey = false
     var rekeyBeforeWriting: Set<RoomID> = []
     var resend: Set<EntryHash> = []
+    var claimTimes: [EntryHash: Date] = [:]
+    var removalsTold: Set<EntryHash> = []
 
     var preferences = MemberPreferences()
 
@@ -173,5 +175,7 @@ struct PersistedState: Codable, Equatable, Sendable {
             try container.decodeIfPresent(Bool.self, forKey: .restoredWithTheRecoveryKey) ?? false
         rekeyBeforeWriting = try container.decodeIfPresent(Set<RoomID>.self, forKey: .rekeyBeforeWriting) ?? []
         resend = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .resend) ?? []
+        claimTimes = try container.decodeIfPresent([EntryHash: Date].self, forKey: .claimTimes) ?? [:]
+        removalsTold = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .removalsTold) ?? []
     }
 }

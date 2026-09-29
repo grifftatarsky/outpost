@@ -45,11 +45,13 @@ public struct RoomRoster: Hashable, Sendable {
         public let removed: ParticipantID
         public let by: ParticipantID
         public let at: Date
+        public let entry: EntryHash
 
-        public init(removed: ParticipantID, by: ParticipantID, at: Date) {
+        public init(removed: ParticipantID, by: ParticipantID, at: Date, entry: EntryHash) {
             self.removed = removed
             self.by = by
             self.at = at
+            self.entry = entry
         }
     }
 
@@ -272,7 +274,7 @@ public struct RoomRoster: Hashable, Sendable {
         .removal, .departure,
     ]
 
-    public mutating func apply(_ entry: RenderedEntry, body: Payload, vouched: Bool = false) {
+    public mutating func apply(_ entry: RenderedEntry, body: Payload) {
         switch body.type {
         case .roomProfile:
             if founder == nil {
@@ -338,7 +340,7 @@ public struct RoomRoster: Hashable, Sendable {
 
         case .removal:
             guard let body = try? body.decode(RemovalBody.self) else { return }
-            apply(removalOf: body.removed, by: entry.author, at: entry.wallTime, vouched: vouched)
+            apply(removalOf: body.removed, by: entry.author, at: entry.wallTime, entry: entry.id)
 
         case .departure:
             apply(departureOf: entry.author, at: entry.wallTime, entry: entry.id)
@@ -355,15 +357,15 @@ public struct RoomRoster: Hashable, Sendable {
     }
 
     private mutating func apply(
-        removalOf removed: ParticipantID, by author: ParticipantID, at when: Date, vouched: Bool
+        removalOf removed: ParticipantID, by author: ParticipantID, at when: Date, entry: EntryHash
     ) {
-        guard vouched || established.contains(author), established.contains(removed) else { return }
+        guard established.contains(author), established.contains(removed) else { return }
 
         guard removed != author else { return }
 
         guard removals[removed] == nil else { return }
 
-        removals[removed] = Removal(removed: removed, by: author, at: when)
+        removals[removed] = Removal(removed: removed, by: author, at: when, entry: entry)
         established.remove(removed)
 
         if let attestation = requests[removed] {

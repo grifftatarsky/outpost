@@ -6,6 +6,11 @@ import Foundation
 
 extension AppSession {
     func peers() -> [Peer] {
+        let untold = waitingToBeTold
+        return everyPeer().filter { !untold.contains($0.them) }
+    }
+
+    func everyPeer() -> [Peer] {
         guard let me = enrolment?.identity.id else { return [] }
         return reachableParticipants().compactMap { participant in
             pairwiseSecret(with: participant).map { Peer(secret: $0, them: participant, me: me) }

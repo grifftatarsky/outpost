@@ -29,6 +29,10 @@ struct AddressBook: Codable, Equatable, Sendable {
         Self.recent(peers[person] ?? [], at: now)
     }
 
+    func learned(_ salt: AddressSalt, of person: ParticipantID) -> Date? {
+        peers[person]?.first { $0.salt == salt }?.storedAt
+    }
+
     private static func recent(_ kept: [KeptSalt], at now: Date) -> [AddressSalt?] {
         let live = kept.reversed().filter { $0.until.map { now.timeIntervalSince($0) < overlap } ?? true }
         return live.map(\.salt) + [nil]

@@ -24,7 +24,7 @@ extension AppSession {
 
         var report = SyncReport()
         var sending: [Entry] = []
-        for peer in peers() {
+        for peer in everyPeer() {
             try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
         }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
@@ -42,6 +42,7 @@ extension AppSession {
             let sent: SyncReport
             (sent, sending) = try await sendWhatIsOwed(through: session)
             report = report.adding(sent)
+            report = report.adding(await tellTheRemoved(after: sent, through: session))
         }
 
         update(\.viewMayBeStale, to: report.entriesRejected > 0 || report.credentialsRejected > 0)
@@ -78,7 +79,7 @@ extension AppSession {
             Diagnostics.sync.notice(
                 "mailbox sync: owe \(owedGrants.count, privacy: .public) epoch key(s) to peers; sending")
         }
-        let sending = unsentEntries()
+        let sending = removalsFirst(unsentEntries())
         let authority = ownAuthorityDigest()
         let announcing = authority != persisted.authorityAnnounced
 
@@ -104,12 +105,12 @@ extension AppSession {
 
         do {
             report = try await session.send(
-                sending, to: peers(), certificates: knownCertificates(),
+                sending, to: membersFirst(peers(), carrying: sending), certificates: knownCertificates(),
                 revocations: persisted.revocations,
                 granting: owedGrants.map { (to: $0.to, grant: $0.grant) }, at: clock.now,
                 ringing: announcing ? peers() : peersToRing(in: ringingRooms) + ringingWall,
                 identities: knownIdentities(), notifyWalls: sayingWishes,
-                confirming: owedConfirmations.map(\.body), announcing: announcing)
+                confirming: owedConfirmations.map(\.body), announcing: announcing, withholding: heldBack())
         } catch let refused as MailboxFailure {
             cannotSend = refused
             Diagnostics.sync.error(
@@ -141,7 +142,8 @@ extension AppSession {
         let alternates = alternateSecrets(with: peer.them)
         let signedFor = ownMemberSignedFor(from: peer, alternates: alternates)
         let collected = try await session.collect(
-            as: peer, alternates: alternates, at: clock.now, alreadyTaken: signedFor)
+            as: peer, alternates: alternates, learned: whenAddressesWereLearned(of: peer.them), at: clock.now,
+            alreadyTaken: signedFor)
 
         for (_, reason) in collected.unopened {
             Diagnostics.sync.error(
@@ -201,8 +203,12 @@ extension AppSession {
             }
         }
 
+        let sealed = timeClaims(in: received.integrated, readableFrom: received.readableFrom)
         for received in received.grantsReceived {
             try await adopt(received.grant, from: peer, storedAt: received.storedAt)
+        }
+        if !sealed.isEmpty, let keysArrived = received.grantsReceived.map(\.storedAt).max() {
+            _ = timeClaims(in: sealed, readableFrom: received.readableFrom, keysArrivedAt: keysArrived)
         }
 
         let owed = entriesNotWrittenDown + received.integrated

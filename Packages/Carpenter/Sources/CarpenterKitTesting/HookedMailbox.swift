@@ -6,6 +6,7 @@ public actor HookedMailbox: Mailbox {
     private var duringPut: (@Sendable () async -> Void)?
     private var duringFetch: (@Sendable () async -> Void)?
     private var refusal: MailboxFailure?
+    private var unreachable: Set<ParticipantID> = []
 
     public init(inner: InMemoryMailbox = InMemoryMailbox()) {
         self.inner = inner
@@ -15,9 +16,12 @@ public actor HookedMailbox: Mailbox {
     public func onFetch(_ work: @escaping @Sendable () async -> Void) { duringFetch = work }
     public func refuse(_ failure: MailboxFailure) { refusal = failure }
     public func relent() { refusal = nil }
+    public func cannotReach(_ peer: ParticipantID) { unreachable.insert(peer) }
+    public func reachesEveryone() { unreachable = [] }
 
     public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws {
         if let refusal { throw refusal }
+        if unreachable.contains(peer) { throw MailboxError.unavailable }
         if let duringPut {
             self.duringPut = nil
             await duringPut()

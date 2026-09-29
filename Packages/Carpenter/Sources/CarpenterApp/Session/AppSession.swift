@@ -278,6 +278,7 @@ public final class AppSession {
             viewer: enrolment?.identity.id ?? ParticipantID(rawValue: Data()),
             rendered: LogRenderer.render(replica.allEntries, reading: renderStepReader()),
             chains: RoomChains(replica.allEntries),
+            claimTimes: persisted.claimTimes,
             revealsNames: persisted.preferences.isShowingOthersNames,
             viewerName: persisted.preferences.displayName?.value,
             nicknames: persisted.preferences.currentNicknames,

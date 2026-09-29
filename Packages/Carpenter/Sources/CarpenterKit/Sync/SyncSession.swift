@@ -53,6 +53,13 @@ public struct SyncReport: Hashable, Sendable {
 
     public var integrated: [Entry] = []
 
+    public var readableFrom: [EntryHash: Date] = [:]
+
+    mutating func took(_ entry: Entry, readableFrom instant: Date) {
+        integrated.append(entry)
+        readableFrom[entry.hash] = min(readableFrom[entry.hash] ?? instant, instant)
+    }
+
     public struct WrittenPacket: Hashable, Sendable {
         public let packet: PacketID
         public let entries: Set<EntryHash>
@@ -128,6 +135,7 @@ public struct SyncReport: Hashable, Sendable {
         merged.forksFound += other.forksFound
         merged.bellsRung += other.bellsRung
         merged.integrated.append(contentsOf: other.integrated)
+        merged.readableFrom.merge(other.readableFrom, uniquingKeysWith: min)
         merged.written.append(contentsOf: other.written)
         merged.sendFailure = merged.sendFailure ?? other.sendFailure
         merged.cannotSend = merged.cannotSend ?? other.cannotSend
@@ -170,9 +178,17 @@ public struct SyncSession: Sendable {
     public static let packetWaitsFor = tagWindow * Double(windowLookback + 2)
 
     public static func recentTags(for peer: Peer, at instant: Date) -> Set<RecipientTag> {
+        Set(recentWindows(for: peer, at: instant).keys)
+    }
+
+    static func recentWindows(for peer: Peer, at instant: Date) -> [RecipientTag: UInt64] {
         let current = window(at: instant)
         let oldest = current >= windowLookback ? current - windowLookback : 0
-        return Set((oldest...(current + 1)).map { peer.incomingTag(window: $0) })
+        return Dictionary(uniqueKeysWithValues: (oldest...(current + 1)).map { (peer.incomingTag(window: $0), $0) })
+    }
+
+    static func firstLooked(for window: UInt64) -> Date {
+        Date(timeIntervalSince1970: Double(window > 0 ? window - 1 : 0) * tagWindow)
     }
 
     public static let packetByteBudget = 700 * 1024
@@ -192,22 +208,33 @@ public struct SyncSession: Sendable {
         confirming: [JoinConfirmedBody] = [],
         asking: [PhotoAsk] = [],
         addresses: [AddressAnnouncement] = [],
-        announcing: Bool = false
+        announcing: Bool = false,
+        withholding withheld: @Sendable (Entry, ParticipantID) -> Bool = { _, _ in false }
     ) async throws -> SyncReport {
         var report = SyncReport()
+        let carriesMoreThanEntries =
+            !requests.isEmpty || !answers.isEmpty || notifyWalls != nil || !confirming.isEmpty || !asking.isEmpty
+            || announcing
         guard !peers.isEmpty,
-            !entries.isEmpty || !granting.isEmpty || !requests.isEmpty || !answers.isEmpty
-                || notifyWalls != nil || !confirming.isEmpty || !asking.isEmpty || !addresses.isEmpty || announcing
+            !entries.isEmpty || !granting.isEmpty || !addresses.isEmpty || carriesMoreThanEntries
         else { return report }
 
         let now = instant ?? clock.now
         let window = Self.window(at: now)
-        let batches = entries.isEmpty ? [[]] : Self.batches(of: entries)
+        let forEveryone = entries.isEmpty ? [[]] : Self.batches(of: entries)
         var reached: Set<ParticipantID> = []
         var cutShort: Set<ParticipantID> = []
         var lastError: (any Error)?
 
         for peer in peers {
+            var batches = forEveryone
+            if entries.contains(where: { withheld($0, peer.them) }) {
+                let theirs = entries.filter { !withheld($0, peer.them) }
+                let owedThem =
+                    granting.contains { $0.to.them == peer.them } || addresses.contains { $0.recipient == peer.them }
+                guard !theirs.isEmpty || owedThem || carriesMoreThanEntries else { continue }
+                batches = theirs.isEmpty ? [[]] : Self.batches(of: theirs)
+            }
             for (index, batch) in batches.enumerated() {
                 let first = index == 0
                 let packet = try SyncEngine.pack(
@@ -368,29 +395,32 @@ public struct SyncSession: Sendable {
     }
 
     public func collect(
-        as peer: Peer, alternates: [PairwiseSecret] = [], at instant: Date? = nil,
-        alreadyTaken: @Sendable (SyncPacket) -> Bool = { _ in false }
+        as peer: Peer, alternates: [PairwiseSecret] = [], learned: [PairwiseSecret: Date] = [:],
+        at instant: Date? = nil, alreadyTaken: @Sendable (SyncPacket) -> Bool = { _ in false }
     ) async throws -> CollectedPackets {
         let now = instant ?? clock.now
-        var ways: [(peer: Peer, tags: Set<RecipientTag>)] = []
+        var ways: [(peer: Peer, windows: [RecipientTag: UInt64])] = []
         for secret in [peer.secret] + alternates where !ways.contains(where: { $0.peer.secret == secret }) {
             let way = Peer(secret: secret, them: peer.them, me: peer.me)
-            ways.append((way, Self.recentTags(for: way, at: now)))
+            ways.append((way, Self.recentWindows(for: way, at: now)))
         }
-        let tags = ways.reduce(into: Set<RecipientTag>()) { $0.formUnion($1.tags) }
+        let tags = ways.reduce(into: Set<RecipientTag>()) { $0.formUnion($1.windows.keys) }
 
         let packets = try await mailbox.fetch(from: peer.them, for: tags, in: pairs)
 
         var opened: [CollectedPackets.Opened] = []
         var unopened: [(PacketID, any Error)] = []
         for packet in packets where !alreadyTaken(packet) {
-            guard let way = ways.first(where: { !$0.tags.isDisjoint(with: packet.recipients) }) else { continue }
+            guard let way = ways.first(where: { way in packet.recipients.contains { way.windows[$0] != nil } }),
+                let earliest = packet.recipients.compactMap({ way.windows[$0] }).min()
+            else { continue }
+            let findable = max(Self.firstLooked(for: earliest), learned[way.peer.secret] ?? .distantPast)
             do {
                 opened.append(
                     CollectedPackets.Opened(
                         id: packet.id, delivery: try Self.unpack(packet, as: way.peer, at: now),
-                        storedAt: packet.storedAt ?? now, from: peer.them,
-                        tag: packet.recipients.intersection(way.tags).first, secret: way.peer.secret))
+                        storedAt: max(packet.storedAt ?? now, findable), from: peer.them,
+                        tag: packet.recipients.first { way.windows[$0] != nil }, secret: way.peer.secret))
             } catch {
                 unopened.append((packet.id, error))
             }
@@ -447,14 +477,15 @@ public struct SyncSession: Sendable {
             report.entriesDelivered += delivery.entries.count
             for entry in delivery.entries {
                 do {
-                    switch try replica.integrate(entry, checked: checked) {
-                    case .accepted:
-                        report.entriesReceived += 1
-                        report.integrated.append(entry)
+                    let result = try replica.integrate(entry, checked: checked)
+                    switch result {
+                    case .accepted: report.entriesReceived += 1
                     case .alreadyPresent: report.entriesAlreadyPresent += 1
-                    case .forked:
-                        report.forksFound += 1
-                        report.integrated.append(entry)
+                    case .forked: report.forksFound += 1
+                    }
+                    if result != .alreadyPresent {
+                        let published = replica.registry(for: entry.author)?.publishedAt(entry.device)
+                        report.took(entry, readableFrom: max(packet.storedAt, published ?? .distantPast))
                     }
                 } catch {
                     let isFinal = replica.refusesForever(entry)

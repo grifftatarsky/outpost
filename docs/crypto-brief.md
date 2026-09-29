@@ -507,7 +507,12 @@ entry signs exactly the bytes it always did. A removal or a departure names the 
 the person's devices, and only the chains those reach are shown (`RoomChains`, `TheRoomChainTests`).
 Since 2026-09-28 the member list follows the same chains (`Projection.standing`; its tests pass in the package suite, 2026-09-29), and a
 room entry without its link is refused
-([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)). Built
+([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)). When
+two people remove each other without either removal naming the other, the one a phone could read first
+stands: the latest of the copy's stored time and the stored times of what the phone needed to read it,
+namely the address, the signing device's certificate and the key. The remover tells the removed person
+last ([Decisions](decisions.md#a-removed-person-hears-last-and-the-first-removal-stands); built
+2026-09-29, not yet run). Built
 2026-09-28, and the package suite passes; not yet run on the rig. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
 

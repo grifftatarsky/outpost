@@ -38,6 +38,10 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public func storedAt(_ digest: Data) -> Date? { stored[digest] }
 
+    public func publishedAt(_ device: DeviceID) -> Date? {
+        submitted[device].flatMap { stored[$0.digest] }
+    }
+
     public mutating func settle(_ digest: Data, storedAt: Date) {
         guard stored[digest] != nil, stored[digest] != storedAt else { return }
         stored[digest] = storedAt

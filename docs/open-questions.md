@@ -37,13 +37,39 @@ Nobody gets back in, nobody removed returns, and anybody still in can invite the
 it for good needs an order both sides can't choose, which the rooms don't have: iCloud stores each
 person's copy of an entry separately, at different times.
 
-Griff, 2026-09-29, on both out: "2 doesn't make sense. The first user should be honored." When one
-removal had seen the other, the first already wins. In the case above neither had, so "first" has to
-be an order the removed person cannot write for themselves, and the question back to him is which: the
-one who has been in the room longer, or iCloud's time, which each phone sees at a different moment.
-Both out stays in the build until he picks.
+Griff, 2026-09-29, on both out: "2 doesn't make sense. The first user should be honored." Answered
+the same day with his "Build it": the removal a phone could read first stands, and the removed person
+hears last ([Decisions](decisions.md#a-removed-person-hears-last-and-the-first-removal-stands)). Both
+out is gone from the build. What is left is the next question.
 
 <!-- COPY END 9b4525bb -->
+
+<!-- COPY BEGIN 7b287af7 [NEEDS HUMAN REVIEW] -->
+
+### What is left of a removal race?
+
+Raised 2026-09-29 while building the answer to the last one. Each needs Griff's yes, or a different
+design.
+
+1. **Two honest people remove each other within seconds.** Each phone goes by when it could read each
+   removal, and every person's copy is stored separately, so phones can disagree about which came
+   first, and each of the two sees themselves in on their own phone. Recommendation: accept it until
+   the rig shows it. The fix would be for phones to compare when they read each removal and all take
+   the earliest. That settles on one answer, but any member could lie about a time.
+2. **A removed person's modified app can work out the removal before it is told.** Phones that hold
+   the removal stop sending that person what is written after it, and the gap shows. Every phone writes to the room's
+   members first, so each member holds the removal before the gap can appear, unless every write to
+   one member fails at the same moment. Friends of friends outside the room pass entries on too, and
+   cannot hold anything back because they cannot read the room; that path is slower still.
+   Recommendation: accept it. The stronger fix is to lock the removal under the room's new key and
+   hand the key out only once every member holds the removal. That delays every removal for everybody,
+   and loses it if the remover's phone dies first.
+3. **A member who sides with the removed person can tell them early.** Nothing in the design stops a
+   member passing on what they read.
+4. **A member whose space can never be written holds the telling up for good.** Recommendation: after
+   the nine days a packet waits, tell the removed person anyway.
+
+<!-- COPY END 7b287af7 -->
 
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
 

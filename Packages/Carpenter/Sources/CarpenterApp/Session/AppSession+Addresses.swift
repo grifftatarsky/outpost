@@ -60,18 +60,30 @@ extension AppSession {
     }
 
     func alternateSecrets(with person: ParticipantID) -> [PairwiseSecret] {
-        guard let identity = enrolment?.identity, let keys = replica.registry(for: person)?.identity else { return [] }
         let current = pairwiseSecret(with: person)
-        var secrets: [PairwiseSecret] = []
+        return recentSecrets(with: person).map { $0.secret }.filter { $0 != current }
+    }
+
+    func whenAddressesWereLearned(of person: ParticipantID) -> [PairwiseSecret: Date] {
+        var learned: [PairwiseSecret: Date] = [:]
+        for (secret, theirs) in recentSecrets(with: person) {
+            if let theirs, let at = addressBook.learned(theirs, of: person) { learned[secret] = at }
+        }
+        return learned
+    }
+
+    private func recentSecrets(with person: ParticipantID) -> [(secret: PairwiseSecret, theirs: AddressSalt?)] {
+        guard let identity = enrolment?.identity, let keys = replica.registry(for: person)?.identity else { return [] }
+        var found: [(secret: PairwiseSecret, theirs: AddressSalt?)] = []
         for mine in addressBook.ownRecent(at: clock.now) {
             for theirs in addressBook.recent(of: person, at: clock.now) {
                 guard let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys, mySalt: mine, theirSalt: theirs),
-                    secret != current, !secrets.contains(secret)
+                    !found.contains(where: { $0.secret == secret })
                 else { continue }
-                secrets.append(secret)
+                found.append((secret, theirs))
             }
         }
-        return secrets
+        return found
     }
 
     func secrets(with person: ParticipantID) -> [PairwiseSecret] {

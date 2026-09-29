@@ -805,6 +805,52 @@ had.
 
 <!-- COPY END 6264031c -->
 
+<!-- COPY BEGIN fe38bc20 [NEEDS HUMAN REVIEW] -->
+
+### A removed person hears last, and the first removal stands
+
+**RULED 2026-09-29 by Griff** — "nah i see that's cool then. Build it.", on: "A removed person isn't
+told until the removal is stored in every other member's space. So anything they send back lands
+after it everywhere, and every phone sees the removal first." And on two people removing each other:
+"The first user should be honored."
+
+When two people remove each other and neither removal had seen the other, the one a phone could read
+first stands. That replaces both out. A phone counts its own member's removal first. Otherwise it goes
+by when it could first have read each removal, in iCloud's time; a removal it cannot time comes after
+every one it can, and the entry's hash breaks a tie.
+
+iCloud's time for a record is when its sender wrote it, not when anybody could read it, and a sender
+chooses when that is. So a removed person could write a removal of the remover early, hide it, and
+show it after being removed, and it would count as first. A phone therefore takes the latest of the
+copy's stored time and the stored time of everything it needed to read it: when it learned the
+address the copy came to, the day before the window that address names, when the signing device's
+certificate was stored, and when the key that opens it arrived. A removal that arrived under a key the
+phone did not hold yet gets no time at all. A member's devices pass these times to each other, and a
+device takes the earlier of its own and one from another of its member's devices that counts.
+
+Every phone holds back from somebody it shows as out of a room their removal and anything written after
+it, in rounds and in answers to repair, and writes to the room's members before anybody else. What was
+written before still reaches them. The remover writes nothing to the removed person
+until every other member's space it can reach holds a copy its own device wrote. Each round it writes
+the removal again to any member still missing one, and then to the removed person. Which removals have
+been told is kept; the rest are worked out from the log, so a crash between writing the removal and
+saving loses nothing.
+
+**Cost:** while the removed person has not been told, the remover writes them nothing from any room. A
+member whose space cannot be written holds that up, and the removed person is not told. Somebody removed
+and invited back into a room of three or more gets what was said while they were out only through
+history repair. Two honest people who remove each other within seconds can each see themselves in on
+their own phone, and other phones can disagree about which was first
+([Open questions](open-questions.md#what-is-left-of-a-removal-race)).
+
+**What would change it:** one order for the room that every phone can read and no member can write,
+which iCloud does not give across people's spaces.
+
+**Built** 2026-09-29, not yet run (`TellingTheRemovedLastTests`, `TheRoomChainTests`). It crosses the
+network, so it is unproven until the rig runs it.
+
+<!-- COPY END fe38bc20 -->
+
 <!-- COPY BEGIN fce6a062 [NEEDS HUMAN REVIEW] -->
 
 ### Somebody who stays rotates the key after somebody leaves
@@ -3275,12 +3321,10 @@ on Griff's word to fix the gap. The second goes with every other form an older b
 none has shipped ([Open questions](open-questions.md#raised-and-answered-2026-09-28)).
 **The member list follows the chain too**, built 2026-09-28 on Griff's "Fix this", its tests passing in the package suite 2026-09-29:
 drawing and membership share one computation (`Projection.standing`), so nothing a removed person
-writes past the removal's chain counts for who is in the room either. **PROPOSED, needs Griff's yes:**
-when two people remove each other and neither removal had seen the other, both are out, and the
-dispute only takes access away: it voids what either side granted past the other's line and keeps
-what they withheld ([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)).
-Griff, 2026-09-29: "The first user should be honored." Both out stays in the build until he picks what
-"first" means when neither removal had seen the other.
+writes past the removal's chain counts for who is in the room either. When two people remove each
+other and neither removal had seen the other, the removal a phone could read first stands, on Griff's
+"The first user should be honored" ([A removed person hears last, and the first removal
+stands](#a-removed-person-hears-last-and-the-first-removal-stands)).
 **The forms older builds wrote are refused**, on Griff's "Security is most important": an entry in a
 room without its link, and a removal or departure that names no heads.
 

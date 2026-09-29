@@ -10,17 +10,19 @@ public struct Projection: Sendable {
     let namedRooms: Set<RoomID>
     let outpostAuthorOrder: [ParticipantID]
     let chains: RoomChains
+    let claimTimes: [EntryHash: Date]
     public let members: [ParticipantID: Member]
     public let supporterBadges: Set<ParticipantID>
 
     public init(
         viewer: ParticipantID, rendered: [RenderedEntry], chains: RoomChains = RoomChains(),
-        revealsNames: Bool = true, viewerName: String? = nil, nicknames: [ParticipantID: String] = [:],
-        met: Set<ParticipantID>? = nil, anonPersona: AnonPersona = .default
+        claimTimes: [EntryHash: Date] = [:], revealsNames: Bool = true, viewerName: String? = nil,
+        nicknames: [ParticipantID: String] = [:], met: Set<ParticipantID>? = nil, anonPersona: AnonPersona = .default
     ) {
         self.viewer = viewer
         self.rendered = rendered
         self.chains = chains
+        self.claimTimes = claimTimes
         var roomPositions: [RoomID: [Int]] = [:]
         var positionByID: [EntryHash: Int] = [:]
         var profiles: [RoomID: RenderedEntry] = [:]

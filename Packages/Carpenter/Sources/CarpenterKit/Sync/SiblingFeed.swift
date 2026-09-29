@@ -51,9 +51,11 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
 
     public let addresses: [HeldAddress]
 
+    public let claimTimes: [EntryHash: Date]
+
     private enum CodingKeys: String, CodingKey {
         case member, writtenAt, entries, certificates, epochs, preferences, collected, through
-        case revocations, forwarded, people, addresses
+        case revocations, forwarded, people, addresses, claimTimes
     }
 
     public init(from decoder: any Decoder) throws {
@@ -73,6 +75,7 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         forwarded = try container.decodeIfPresent([ForwardedGrant].self, forKey: .forwarded) ?? []
         people = try container.decodeIfPresent([IdentityPublicKeys].self, forKey: .people) ?? []
         addresses = try container.decodeIfPresent([HeldAddress].self, forKey: .addresses) ?? []
+        claimTimes = try container.decodeIfPresent([EntryHash: Date].self, forKey: .claimTimes) ?? [:]
     }
 
     public init(
@@ -87,7 +90,8 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         revocations: [DeviceRevocation] = [],
         forwarded: [ForwardedGrant] = [],
         people: [IdentityPublicKeys] = [],
-        addresses: [HeldAddress] = []
+        addresses: [HeldAddress] = [],
+        claimTimes: [EntryHash: Date] = [:]
     ) {
         self.member = member
         self.writtenAt = writtenAt
@@ -101,6 +105,7 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         self.forwarded = forwarded
         self.people = people
         self.addresses = addresses
+        self.claimTimes = claimTimes
     }
 }
 

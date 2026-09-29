@@ -8,6 +8,8 @@ extension Projection {
         var out: Set<EntryHash> = []
     }
 
+    public static let claimTypes: Set<PayloadType> = [.removal, .departure]
+
     private struct Claim {
         let entry: RenderedEntry
         let subject: ParticipantID
@@ -32,9 +34,8 @@ extension Projection {
         let claims: [Claim] = entries(in: room).compactMap { claim($0, payloads[$0.id]) }
 
         var cutting = Set(claims.indices)
-        var contested: Set<Int> = []
         while true {
-            let walked = walk(room, claims: claims, cutting: cutting, contested: contested, payloads: payloads)
+            let walked = walk(room, claims: claims, cutting: cutting, payloads: payloads)
             let voided = Set(walked.voidedBy.keys).intersection(cutting)
             let idle = cutting.subtracting(walked.took).subtracting(voided)
             let defeated = voided.filter { !(walked.voidedBy[$0] ?? []).isSubset(of: voided) }
@@ -42,12 +43,20 @@ extension Projection {
                 cutting.subtract(idle)
             } else if !defeated.isEmpty {
                 cutting.subtract(defeated)
-            } else if !voided.isEmpty {
-                contested.formUnion(voided)
+            } else if let first = voided.min(by: { comesFirst(claims[$0].entry, claims[$1].entry) }) {
+                cutting.subtract(walked.voidedBy[first] ?? [])
             } else {
                 return walked.standing
             }
         }
+    }
+
+    func comesFirst(_ one: RenderedEntry, _ other: RenderedEntry) -> Bool {
+        let (mine, theirs) = (one.author == viewer, other.author == viewer)
+        if mine != theirs { return mine }
+        let (read, alsoRead) = (claimTimes[one.id] ?? .distantFuture, claimTimes[other.id] ?? .distantFuture)
+        if read != alsoRead { return read < alsoRead }
+        return one.id.rawValue.lexicographicallyPrecedes(other.id.rawValue)
     }
 
     private func claim(_ entry: RenderedEntry, _ payload: Payload?) -> Claim? {
@@ -63,9 +72,7 @@ extension Projection {
         }
     }
 
-    private func walk(
-        _ room: RoomID, claims: [Claim], cutting: Set<Int>, contested: Set<Int>, payloads: [EntryHash: Payload]
-    ) -> Walk {
+    private func walk(_ room: RoomID, claims: [Claim], cutting: Set<Int>, payloads: [EntryHash: Payload]) -> Walk {
         var walked = Walk(standing: Standing(roster: RoomRoster(room: room)))
         var readmitted: [Int: RenderedEntry] = [:]
         let claimAt = Dictionary(uniqueKeysWithValues: claims.indices.map { (claims[$0].entry.id, $0) })
@@ -77,16 +84,14 @@ extension Projection {
                 claims[index].cuts(entry)
                     && !(readmitted[index].map { Self.isAfterReadmission(entry, $0) } ?? false)
             }
-            let binding = Self.withholds(entry, payload) ? cutters.subtracting(contested) : cutters
-            if !binding.isEmpty {
+            if !cutters.isEmpty {
                 walked.standing.out.insert(entry.id)
-                if let own { walked.voidedBy[own] = binding }
+                if let own { walked.voidedBy[own] = cutters }
                 continue
             }
             guard let payload else { continue }
-            let vouched = own.map { contested.contains($0) } ?? false
             let absent = walked.standing.roster.absent
-            walked.standing.roster.apply(entry, body: payload, vouched: vouched)
+            walked.standing.roster.apply(entry, body: payload)
             let now = walked.standing.roster.absent
             if let own, now.contains(claims[own].subject), !absent.contains(claims[own].subject) {
                 walked.took.insert(own)
@@ -97,17 +102,6 @@ extension Projection {
             }
         }
         return walked
-    }
-
-    private static func withholds(_ entry: RenderedEntry, _ payload: Payload?) -> Bool {
-        switch entry.type {
-        case .removal, .departure, .invitationRescinded:
-            return true
-        case .admission:
-            return (try? payload?.decode(AdmissionBody.self))?.admitted == false
-        default:
-            return false
-        }
     }
 
     static func isAfterReadmission(_ entry: RenderedEntry, _ readmitted: RenderedEntry) -> Bool {

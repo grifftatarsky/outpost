@@ -157,6 +157,8 @@ extension ForwardCompatibilityTests {
         state.restoredWithTheRecoveryKey = true
         state.rekeyBeforeWriting = [RoomID()]
         state.resend = [EntryHash(rawValue: Data(repeating: 0x61, count: 32))]
+        state.claimTimes = [EntryHash(rawValue: Data(repeating: 0x62, count: 32)): stamp.at]
+        state.removalsTold = [EntryHash(rawValue: Data(repeating: 0x63, count: 32))]
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)
