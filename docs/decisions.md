@@ -803,9 +803,34 @@ had.
 
 **What would change it:** a key that has to be written under before any record of it can exist.
 
-**Built** 2026-09-29, not yet run (`AMadeUpKeyTests`).
+**Built** 2026-09-29. The first run found a member whose key lost the tie stopped handing it out;
+fixed, not yet re-run (`AMadeUpKeyTests`).
 
 <!-- COPY END 6264031c -->
+
+<!-- COPY BEGIN 000ef40b [NEEDS HUMAN REVIEW] -->
+
+### A key that reaches a joining phone before it can check its giver waits
+
+**RULED 2026-09-29 by Griff** — "Yes, build", on: "keep a refused first key and try it again once the
+inviter's key has arrived, under the usual check that its sender is in the room."
+
+A phone joining a room takes its first key only from whoever invited it, and any later key only from
+somebody it shows as in the room. Until the room's history arrives it shows nobody, so another member's
+key was refused, and its sender did not send it again until their app next started. When two keys were
+in play for the room's newest number, the new member could miss the one everybody writes under and
+read nothing until the next key change.
+
+So a phone that accepted an invitation to a room keeps such a key instead of refusing it. It takes the
+key once it shows whoever gave it as in the room, through the same checks as any other key, and drops
+it if it shows them removed or gone. One key waits per person per room.
+
+**Cost:** a key from somebody who is never shown as in the room waits for good: one per person, for
+rooms this member accepted an invitation to.
+
+**Built** 2026-09-29, not yet run (`AKeyThatWaitsTests`).
+
+<!-- COPY END 000ef40b -->
 
 <!-- COPY BEGIN fe38bc20 [NEEDS HUMAN REVIEW] -->
 

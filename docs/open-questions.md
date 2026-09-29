@@ -77,7 +77,7 @@ second member were built on Griff's "yes" and settle the first two; not yet run
 ### What can still miss a key that lost a tie?
 
 Raised 2026-09-29, after the first run found that a member whose key lost a tie stopped handing it
-out. That is fixed, not yet re-run: a phone passes on the key it made for the newest number, or the
+out, and answered the same day. That is fixed, not yet re-run: a phone passes on the key it made for the newest number, or the
 one it writes under if it made none
 ([Decisions](decisions.md#a-phone-writes-only-under-a-key-made-by-somebody-in-the-room)). Two gaps
 are left, and both need two members to have turned the key at once.
@@ -87,11 +87,17 @@ are left, and both need two members to have turned the key at once.
    before the inviter's is refused, and its sender does not send it again until its app next starts.
    If that was the key everybody writes under, the new member cannot read the room until then, or
    until the next key change. **Recommendation:** keep a refused first key and try it again once the
-   inviter's key has arrived, under the usual check that its sender is in the room.
+   inviter's key has arrived, under the usual check that its sender is in the room. Griff, 2026-09-29:
+   "Yes, build." Built the same day, not yet run: such a key waits until the phone shows its giver as
+   in the room, whether it came before the inviter's key or before the room's history
+   ([Decisions](decisions.md#a-key-that-reaches-a-joining-phone-before-it-can-check-its-giver-waits)).
 2. **A second key change before the losing member syncs strands their key.** A phone passes on keys
    only for the newest number, so what the losing member wrote during the tie stays unreadable to
    everybody else. **Recommendation:** accept it. Passing on keys for older numbers too would resend
-   every key a phone ever made each time its app starts.
+   every key a phone ever made each time its app starts. Griff, 2026-09-29: "That's fine they're being
+   removed. Nothing after that moment shoild be written tie or not." That covers two people removing
+   each other, where the key that loses belongs to the one removed. Asked again the same day about two
+   members who both remove somebody else at once, where the member whose key lost stays in the room.
 
 <!-- COPY END cd86ea13 -->
 

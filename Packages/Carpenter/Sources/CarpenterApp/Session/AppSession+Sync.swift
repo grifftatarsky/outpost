@@ -207,6 +207,7 @@ extension AppSession {
         for received in received.grantsReceived {
             try await adopt(received.grant, from: peer, storedAt: received.storedAt)
         }
+        try await adoptGrantsThatWaited()
         var timed = onArrival.timed
         if !onArrival.sealed.isEmpty, let keysArrived = received.grantsReceived.map(\.storedAt).max() {
             timed += timeClaims(

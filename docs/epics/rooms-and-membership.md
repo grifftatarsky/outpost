@@ -481,6 +481,10 @@ correct rather than only add to.
   beside it (`AMadeUpKeyTests`; ruled by Griff the same day). It passes on the key it made for a number,
   or the one it writes under if it made none: the first run found a member whose key lost the tie
   stopped handing it out.
+- **Built, not yet run** (2026-09-29). A key that reaches a joining phone before its inviter's, or from
+  somebody the phone does not yet show as in the room, waits until it does, and is dropped if the phone
+  shows them removed or gone, so somebody who joins while two keys are in play gets both
+  (`AKeyThatWaitsTests`; ruled by Griff the same day).
 - **Built, not yet run** (2026-09-29). A removed person hears last: the remover writes them nothing
   until another member has read the removal and noted it, or every other member's space holds it.
   Every phone holds back the removal and anything written after it from the person removed. When two

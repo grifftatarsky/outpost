@@ -447,8 +447,10 @@ up before being removed is no longer written under once the removal arrives, and
 beside it; and two members advancing the epoch at the same moment no longer leave phones on different
 keys (`AMadeUpKeyTests`). Each phone passes on the key it made for the number, or the one it writes
 under if it made none. The first run found why: a member whose key lost the tie stopped handing it
-out, and nobody else could read what they had written under it. One giver may add one key per number
-and no number holds more than sixteen.
+out, and nobody else could read what they had written under it. A key that reaches a phone still
+joining the room before its inviter's, or from somebody that phone does not yet show as in, waits until
+it does, and is dropped if the phone shows them removed or gone (`AKeyThatWaitsTests`, not yet run).
+One giver may add one key per number and no number holds more than sixteen.
 The two-advances case still needs three real accounts to prove over iCloud
 ([Proofs a rig cannot run](proofs-a-rig-cannot-run.md)).
 

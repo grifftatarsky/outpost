@@ -159,6 +159,14 @@ extension ForwardCompatibilityTests {
         state.resend = [EntryHash(rawValue: Data(repeating: 0x61, count: 32))]
         state.claimTimes = [EntryHash(rawValue: Data(repeating: 0x62, count: 32)): stamp.at]
         state.removalsTold = [EntryHash(rawValue: Data(repeating: 0x63, count: 32))]
+        state.grantsWaiting = [
+            ForwardedGrant(
+                from: ParticipantID(rawValue: WideID.of([9])),
+                grant: try EpochGrant.issue(
+                    EpochSecret.random(), at: .initial, in: room, link: nil,
+                    to: PairwiseSecret.derive(mine: Identity.generate(), theirs: Identity.generate().publicKeys)),
+                storedAt: stamp.at)
+        ]
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)

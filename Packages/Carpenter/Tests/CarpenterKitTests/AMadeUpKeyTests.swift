@@ -116,6 +116,109 @@ extension RoomOfThree {
         try await chosenFirst.sync(through: mailbox, media: mailbox)
         try await settle()
     }
+
+    fileprivate func friend(of host: AppSession, named name: String) async throws -> AppSession {
+        let friend = TestSession.make()
+        await friend.load()
+        try await friend.createIdentity(displayName: name)
+        try await join(friend, into: try await host.createRoom(named: "Kitchen"), of: host, through: mailbox)
+        for _ in 0..<3 {
+            for session in [alice, carol, sam, friend] { try await session.sync(through: mailbox, media: mailbox) }
+        }
+        return friend
+    }
+
+    fileprivate func invite(_ joiner: AppSession, by host: AppSession) async throws {
+        let invite = try await host.invite(
+            joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
+        try await joiner.redeem(inviteCode: try invite.encoded())
+    }
+
+    fileprivate func letIn(_ joiner: AppSession, by host: AppSession) async throws {
+        for _ in 0..<5 {
+            try await host.sync(through: mailbox, media: mailbox)
+            try await joiner.sync(through: mailbox, media: mailbox)
+        }
+    }
+
+    fileprivate func hand(_ key: TrustedKey, from giver: AppSession, to receiver: AppSession) async throws {
+        let giverID = try #require(giver.enrolment?.identity.id)
+        let receiverID = try #require(receiver.enrolment?.identity.id)
+        let devices = giver.deviceRecipients(of: receiverID)
+        try #require(!devices.isEmpty, "precondition: the giver can seal a key to the receiver's phone")
+        let grant = try EpochGrant.issue(
+            key.secret, at: key.epoch, in: room, link: key.link,
+            to: try #require(giver.pairwiseSecret(with: receiverID)), devices: devices
+        ).signed(by: try #require(giver.enrolment?.device), from: giverID, to: receiverID)
+        let secret = try #require(receiver.pairwiseSecret(with: giverID))
+        try await receiver.adopt(grant, from: Peer(secret: secret, them: giverID, me: receiverID), storedAt: .distantFuture)
+    }
+}
+
+@MainActor
+@Suite("A key that reaches a joining phone before it can check who gave it waits", .serialized)
+struct AKeyThatWaitsTests {
+    @Test("Somebody who joins during a tie gets both keys when another member's comes before the inviter's")
+    func anotherMembersKeyBeforeTheInviters() async throws {
+        let t = try await RoomOfThree.make()
+        try await t.turnTheKeyTogether()
+        let dave = try await t.friend(of: t.alice, named: "Dave")
+        try await t.invite(dave, by: t.carol)
+        let alices = try #require(t.alice.keyToPassOn(in: t.room))
+        let carols = try #require(t.carol.keyToPassOn(in: t.room))
+        try await t.hand(alices, from: t.alice, to: dave)
+        try #require(dave.chains[t.room] == nil, "precondition: Dave holds no key for the room yet")
+
+        try await t.letIn(dave, by: t.carol)
+        let held = Set(dave.chains[t.room]?.heldSecrets(at: alices.epoch) ?? [])
+        #expect(held == [alices.secret, carols.secret], "Dave dropped the key Alice sent before his inviter's")
+        let bodies = dave.messages(in: t.room).map { $0.body }
+        #expect(bodies.contains("under Alice's key") && bodies.contains("under Carol's key"))
+    }
+
+    @Test("A key from a member the joining phone does not know is in yet waits until it does")
+    func aKeyBeforeTheHistory() async throws {
+        let t = try await RoomOfThree.make()
+        try await t.turnTheKeyTogether()
+        let dave = try await t.friend(of: t.alice, named: "Dave")
+        try await t.invite(dave, by: t.carol)
+        let alices = try #require(t.alice.keyToPassOn(in: t.room))
+        let carols = try #require(t.carol.keyToPassOn(in: t.room))
+        try await t.hand(carols, from: t.carol, to: dave)
+        try #require(dave.chains[t.room] != nil, "precondition: Dave took his inviter's key")
+        try #require(
+            !dave.roster(of: t.room).members.contains(t.aliceID), "precondition: Dave's phone does not know Alice is in")
+        try await t.hand(alices, from: t.alice, to: dave)
+
+        try await t.letIn(dave, by: t.carol)
+        let held = Set(dave.chains[t.room]?.heldSecrets(at: alices.epoch) ?? [])
+        #expect(
+            held == [alices.secret, carols.secret],
+            "Dave dropped Alice's key because his phone did not yet know she was in the room")
+    }
+
+    @Test("A key from somebody the room removed never counts on a joining phone, and one person can leave only one waiting")
+    func aRemovedMembersKeyNeverCounts() async throws {
+        let t = try await RoomOfThree.make()
+        try await t.alice.remove(t.samID, from: t.room)
+        try await t.settle()
+        let dave = try await t.friend(of: t.sam, named: "Dave")
+        try await t.invite(dave, by: t.carol)
+        let number = try #require(t.key(of: t.carol))
+        let madeUp = (0..<3).map { _ in EpochSecret.random() }
+        for secret in madeUp {
+            try await t.hand(TrustedKey(epoch: number, secret: secret, link: nil, maker: t.samID), from: t.sam, to: dave)
+        }
+        #expect(
+            dave.persisted.grantsWaiting.filter { $0.from == t.samID }.count == 1,
+            "more than one key from one person waited")
+
+        try await t.letIn(dave, by: t.carol)
+        try #require(dave.roster(of: t.room).absent.contains(t.samID), "precondition: Dave's phone knows Sam was removed")
+        let held = dave.chains[t.room]?.heldSecrets(at: number) ?? []
+        #expect(madeUp.allSatisfy { !held.contains($0) }, "Dave took a key from somebody the room had removed")
+        #expect(!dave.persisted.grantsWaiting.contains(where: { $0.from == t.samID }))
+    }
 }
 
 @Suite("Several keys for one number")

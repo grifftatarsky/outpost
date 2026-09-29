@@ -227,6 +227,28 @@ extension AppSession {
         return replica.allEntries.contains { $0.room == room && $0.author != giver && $0.opened(using: chain) != nil }
     }
 
+    private func keepUntilShownIn(_ grant: EpochGrant, from giver: ParticipantID, storedAt: Date) -> Bool {
+        guard persisted.acceptedInvitations.contains(where: { $0.attestation.room == grant.room }),
+            !roster(of: grant.room).absent.contains(giver)
+        else { return false }
+        persisted.grantsWaiting.removeAll { $0.grant.room == grant.room && $0.from == giver }
+        persisted.grantsWaiting.append(ForwardedGrant(from: giver, grant: grant, storedAt: storedAt))
+        Diagnostics.sync.notice("adopt: keeping a room key until this phone shows whoever gave it as in the room")
+        return true
+    }
+
+    func adoptGrantsThatWaited() async throws {
+        guard let me = enrolment?.identity.id else { return }
+        for waiting in persisted.grantsWaiting where chains[waiting.grant.room] != nil {
+            let roster = roster(of: waiting.grant.room)
+            let isIn = roster.members.contains(waiting.from)
+            guard isIn || roster.absent.contains(waiting.from) else { continue }
+            persisted.grantsWaiting.removeAll { $0 == waiting }
+            guard isIn, let secret = pairwiseSecret(with: waiting.from), let storedAt = waiting.storedAt else { continue }
+            try await adopt(waiting.grant, from: Peer(secret: secret, them: waiting.from, me: me), storedAt: storedAt)
+        }
+    }
+
     private func outpostOwner(of room: RoomID) -> ParticipantID? {
         guard let me = enrolment?.identity.id else { return nil }
         if room == outpostRoom(for: me) { return me }
@@ -253,7 +275,9 @@ extension AppSession {
                 return
             }
         } else if held != nil, !roster(of: grant.room).members.contains(peer.them) {
-            Diagnostics.sync.notice("adopt: refused a key from somebody the room does not show as in it")
+            if !keepUntilShownIn(grant, from: peer.them, storedAt: storedAt) {
+                Diagnostics.sync.notice("adopt: refused a key from somebody the room does not show as in it")
+            }
             return
         }
         var chain = held ?? EpochChain(room: grant.room)
@@ -284,7 +308,9 @@ extension AppSession {
             return
         }
         guard held != nil || owner != nil || mayGiveTheFirstKey(peer.them, to: grant.room, opening: chain) else {
-            Diagnostics.sync.notice("adopt: refused a first key for a room from somebody who did not invite this member to it")
+            if !keepUntilShownIn(grant, from: peer.them, storedAt: storedAt) {
+                Diagnostics.sync.notice("adopt: refused a first key for a room from somebody who did not invite this member to it")
+            }
             return
         }
         let taughtSomething =
