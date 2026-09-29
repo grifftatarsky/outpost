@@ -63,7 +63,8 @@ struct SiblingFeedIsSealedTests {
                 HeldAddress(
                     owner: friend.participantID, salt: AddressSalt(number: 2, bytes: addressSalt),
                     since: Date(timeIntervalSince1970: 6_000), storedAt: Date(timeIntervalSince1970: 6_000))
-            ])
+            ],
+            claimTimes: [EntryHash(rawValue: Data(repeating: 0xC1, count: 32)): Date(timeIntervalSince1970: 7_000)])
     }
 
     private static func sealed() throws -> SealedSiblingFeed {
