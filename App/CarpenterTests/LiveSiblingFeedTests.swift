@@ -200,7 +200,7 @@ struct LiveSiblingFeedTests {
         await asking.onIncoming { record in
             await seenByNewcomer.add(record)
             guard case .approval(let target) = record.name.kind, target == newcomer.id else { return }
-            try? await asking.send(
+            _ = try? await asking.send(
                 [], deleting: [record.name, SiblingRecord.Name(writer: newcomer.id, kind: .request)])
         }
         try await asking.start()

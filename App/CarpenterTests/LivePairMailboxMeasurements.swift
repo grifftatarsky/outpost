@@ -249,7 +249,7 @@ struct LivePairMailboxMeasurements {
         for metadata in metadatas where ["PairMeasure-0", "PairMeasure-1"].contains(metadata.share.recordID.zoneID.zoneName) {
             PairRig.note("\(metadata.share.recordID.zoneID.zoneName): role \(metadata.participantRole.rawValue) status \(metadata.participantStatus.rawValue) permission \(metadata.participantPermission.rawValue)")
         }
-        try await PairRig.timed("accepted \(metadatas.count) links") {
+        await PairRig.timed("accepted \(metadatas.count) links") {
             for group in PairRig.chunks(metadatas, 50) {
                 for metadata in group {
                     do { _ = try await PairRig.container.accept(metadata) } catch {
