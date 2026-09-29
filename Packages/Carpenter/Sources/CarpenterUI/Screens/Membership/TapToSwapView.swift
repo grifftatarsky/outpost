@@ -116,22 +116,25 @@ public struct TapToSwapView: View {
     }
 
     // COPY BEGIN d79f5f73 [NEEDS HUMAN REVIEW]
-    @ViewBuilder
     private var headline: some View {
-        switch (trouble, phase) {
-        case (.notAllowed?, _): Text("Nearby Interaction is off", bundle: .module)
-        case (.noLocalNetwork?, _): Text("Local Network is off", bundle: .module)
-        case (nil, .looking): Text("Hold your iPhone against theirs", bundle: .module)
-        case (nil, .crowded): Text("More than one phone is close", bundle: .module)
-        case (nil, .touching):
-            if let number {
-                Text(verbatim: "\(number.first) \(number.second)").font(.largeTitle.weight(.semibold).monospacedDigit())
-            } else {
-                Text("Keep holding them together", bundle: .module)
+        Group {
+            switch (trouble, phase) {
+            case (.notAllowed?, _): Text("Nearby Interaction is off", bundle: .module)
+            case (.noLocalNetwork?, _): Text("Local Network is off", bundle: .module)
+            case (nil, .looking): Text("Hold your iPhone against theirs", bundle: .module)
+            case (nil, .crowded): Text("More than one phone is close", bundle: .module)
+            case (nil, .touching):
+                if let number {
+                    Text(verbatim: "\(number.first) \(number.second)")
+                        .font(.largeTitle.weight(.semibold).monospacedDigit())
+                } else {
+                    Text("Keep holding them together", bundle: .module)
+                }
+            case (nil, .waitingForThem): Text("Waiting for them", bundle: .module)
+            case (nil, .swapped): Text("Codes swapped", bundle: .module)
             }
-        case (nil, .waitingForThem): Text("Waiting for them", bundle: .module)
-        case (nil, .swapped): Text("Codes swapped", bundle: .module)
         }
+        .heading()
     }
 
     @ViewBuilder

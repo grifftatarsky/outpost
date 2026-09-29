@@ -145,8 +145,9 @@ struct TappingPhonesTests {
         let his = try #require(room.number("bob"))
         #expect(hers.first == his.first && hers.second == his.second)
         #expect(hers.youSayFirst != his.youSayFirst, "both phones told their person to speak first")
-        #expect((hers.first + hers.second).count == TapSwap.numberLength)
-        #expect((hers.first + hers.second).allSatisfy(\.isNumber))
+        let digits = hers.first + hers.second
+        #expect(digits.count == TapSwap.numberLength)
+        #expect(digits.allSatisfy { $0.isNumber })
     }
 
     @Test(
