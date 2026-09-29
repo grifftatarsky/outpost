@@ -11,9 +11,16 @@ final class RigChecks: XCTestCase {
         try? FileManager.default.createDirectory(atPath: exchange, withIntermediateDirectories: true)
     }
 
+    var roomName: String { ProcessInfo.processInfo.environment["RIG_ROOM"] ?? "Checks" }
+
+    func names(_ variable: String) -> [String] {
+        (ProcessInfo.processInfo.environment[variable] ?? "").split(separator: ",").map(String.init)
+    }
+
     func launch(_ extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["--mailbox", "/tmp/outpost-rig-mailbox"] + extra
+        let offline = ProcessInfo.processInfo.environment["RIG_OFFLINE"] == "1" ? ["--mailbox-refuses", "full"] : []
+        app.launchArguments += ["--mailbox", "/tmp/outpost-rig-mailbox"] + offline + extra
         app.launch()
         _ = app.wait(for: .runningForeground, timeout: 20)
         return app
@@ -385,16 +392,16 @@ final class RigChecks: XCTestCase {
         settle(app)
         app.buttons["Rooms"].firstMatch.tap()
         sleep(1)
-        if !app.staticTexts["Checks"].firstMatch.waitForExistence(timeout: 3) {
+        if !app.staticTexts[roomName].firstMatch.waitForExistence(timeout: 3) {
             XCTAssertTrue(tapIfThere(app, "Make a room", timeout: 3) || tapIfThere(app, "New room", timeout: 3))
             let name = app.textFields["Name"].firstMatch
             XCTAssertTrue(name.waitForExistence(timeout: 5))
             name.tap()
-            name.typeText("Checks")
+            name.typeText(roomName)
             XCTAssertTrue(tapIfThere(app, "Create"))
             sleep(3)
         }
-        app.staticTexts["Checks"].firstMatch.tap()
+        app.staticTexts[roomName].firstMatch.tap()
         sleep(2)
         shoot(app, "invite-1-room")
         XCTAssertTrue(roomMenu(app, "Invite someone"))
@@ -441,11 +448,11 @@ final class RigChecks: XCTestCase {
         settle(app)
         app.buttons["Rooms"].firstMatch.tap()
         sleep(1)
-        let room = app.staticTexts["Checks"].firstMatch
-        XCTAssertTrue(room.waitForExistence(timeout: 10), "Checks is not in the list")
+        let room = app.staticTexts[roomName].firstMatch
+        XCTAssertTrue(room.waitForExistence(timeout: 10), "\(roomName) is not in the list")
         room.tap()
         sleep(3)
-        _ = tapIfThere(app, "Open Checks", timeout: 2)
+        _ = tapIfThere(app, "Open \(roomName)", timeout: 2)
         sleep(1)
         _ = tapIfThere(app, "Not now", timeout: 1)
     }
@@ -571,22 +578,80 @@ final class RigChecks: XCTestCase {
         let app = launch()
         sleep(3)
         openChecks(app)
+        remove("Quad", in: app)
+        sleep(8)
+        shoot(app, "r-4-removed")
+    }
+
+    func remove(_ name: String, in app: XCUIApplication) {
         XCTAssertTrue(roomMenu(app, "Who is in this room"))
         sleep(2)
         shoot(app, "r-1-members")
-        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Quad")).firstMatch
-        XCTAssertTrue(row.waitForExistence(timeout: 3))
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 3), "\(name) is not in the member list")
         row.press(forDuration: 1.0)
         sleep(1)
         shoot(app, "r-2-row-menu")
         XCTAssertTrue(tapIfThere(app, "Remove from room", timeout: 3))
         sleep(1)
         shoot(app, "r-3-confirm")
-        let confirm = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Remove Quad")).firstMatch
+        let confirm = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Remove \(name)")).firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 3))
         confirm.tap()
+    }
+
+    func testRemoves() throws {
+        let removed = try XCTUnwrap(ProcessInfo.processInfo.environment["RIG_REMOVE"], "set RIG_REMOVE to who to remove")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        remove(removed, in: app)
+        sleep(3)
+        _ = tapIfThere(app, "Done", timeout: 3)
+        if let said = ProcessInfo.processInfo.environment["RIG_SAY"] {
+            sleep(1)
+            send(app, said)
+        }
         sleep(8)
         shoot(app, "r-4-removed")
+    }
+
+    func testStaysOpen() throws {
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        sleep(UInt32(ProcessInfo.processInfo.environment["RIG_SECONDS"].flatMap { UInt32($0) } ?? 30))
+        shoot(app, "open-\(roomName.lowercased())")
+    }
+
+    func testRecordsMembers() throws {
+        let people = names("RIG_PEOPLE")
+        XCTAssertFalse(people.isEmpty, "set RIG_PEOPLE to the names to look for")
+        let record = try XCTUnwrap(ProcessInfo.processInfo.environment["RIG_RECORD"], "set RIG_RECORD to a file name")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        sleep(UInt32(ProcessInfo.processInfo.environment["RIG_SECONDS"].flatMap { UInt32($0) } ?? 30))
+        XCTAssertTrue(roomMenu(app, "Who is in this room"))
+        sleep(2)
+        shoot(app, "members-\(record)")
+        write(people.map { "\($0)=\(shows(app, $0) ? "in" : "out")" }.joined(separator: ","), to: record)
+    }
+
+    func shows(_ app: XCUIApplication, _ name: String) -> Bool {
+        let rows = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name))
+        return (0..<rows.count).contains { stillThere(rows.element(boundBy: $0)) }
+    }
+
+    func testNeverSees() throws {
+        let unexpected = try XCTUnwrap(
+            ProcessInfo.processInfo.environment["RIG_EXPECT"], "set RIG_EXPECT to the words that must not arrive")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        let message = app.staticTexts[unexpected].firstMatch
+        XCTAssertFalse(message.waitForExistence(timeout: 90), "\(unexpected) reached this phone")
+        shoot(app, "never-seen")
     }
 
     func testQuadDeletes() throws {

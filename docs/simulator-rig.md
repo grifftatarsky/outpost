@@ -88,7 +88,13 @@ TEST_RUNNER_OUTPOST_RIG=1 xcodebuild test -workspace Carpenter.xcworkspace -sche
 
 `testFifthOnboards` takes a name in `RIG_NAME`, `testQuadSays` says what is in `RIG_SAY`, and
 `testSees` opens Checks and waits for the words in `RIG_EXPECT`, so any three members can talk in one
-run.
+run. `RIG_ROOM` names another room than Checks, and `RIG_OFFLINE=1` launches with every write refused,
+so a member can act without anybody hearing until the next step.
+
+**The removal walk** runs as one script, `Scripts/rig-walk-removals.sh`, on Trig, Quad and Fifth: two
+people removing each other with neither sending, what is said after the removal, and two members
+turning the key at once. It makes two new rooms each run, stops at the first failing step, and leaves
+every step's log in `/tmp/outpost-rig-exchange`. Written 2026-09-29, not yet run.
 
 Each step attaches screenshots to the result bundle and writes the screen's element tree to
 `/tmp/outpost-rig-exchange/<step>.txt`. Export the screenshots with
