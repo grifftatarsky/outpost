@@ -30,8 +30,8 @@ struct EntryHashTests {
         #expect(reread == entry)
     }
 
-    @Test("An entry is written down with exactly the fields it always had, and never its hash")
-    func storedFormIsUnchanged() throws {
+    @Test("An entry is written down with exactly its fields, a room entry with its link, and never its hash")
+    func storedFormIsExact() throws {
         let (first, second) = try twoEntries()
         let keys = { (entry: Entry) throws -> Set<String> in
             let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(entry))
@@ -41,7 +41,10 @@ struct EntryHashTests {
         #expect(try keys(first) == ["author", "device", "seq", "clock", "wallTime", "payload", "signature"])
         #expect(
             try keys(second)
-                == ["author", "device", "seq", "previous", "clock", "wallTime", "room", "payload", "signature"])
+                == [
+                    "author", "device", "seq", "previous", "clock", "wallTime", "room", "payload", "roomLink",
+                    "signature",
+                ])
     }
 
     @Test("Two entries are equal exactly when their hashes are")

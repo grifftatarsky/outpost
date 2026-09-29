@@ -64,11 +64,13 @@ struct WireFormTests {
         #expect(
             keys == [
                 "author", "device", "seq", "previous", "clock", "wallTime", "room", "payload",
-                "signature",
+                "roomLink", "signature",
             ])
 
         let payload = fields?["payload"] as? [String: Any]
         #expect(Set(payload?.keys ?? [:].keys) == ["epoch", "ciphertext"])
+        let link = fields?["roomLink"] as? [String: Any]
+        #expect(Set(link?.keys ?? [:].keys) == ["previous"])
     }
 
     @Test("An entry verifies and forwards without being readable")
