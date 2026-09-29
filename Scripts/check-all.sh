@@ -41,8 +41,11 @@ test_fault = re.compile(
     r"unexpected signal|crashed|\*\* (BUILD|TEST) FAILED \*\*|Testing failed:|"
     r"The following build commands failed|Undefined symbols|^ld: |^error: (?!SwiftCompile)"
 )
+crash = re.compile(r"^Stack dump:|^\d+\.\s+While |PLEASE submit a bug report|failed due to signal|\S: error: ")
+generic = re.compile(r"^error: (Build failed|fatalError)\s*$")
 
 out, seen = [], set()
+specific = False
 index = 0
 while index < len(lines):
     line = lines[index]
@@ -59,10 +62,15 @@ while index < len(lines):
         if wanted and line not in seen:
             seen.add(line)
             out.extend(block)
+            specific = specific or kind == "error"
         continue
-    if outcome == "failed" and len(line) < 400 and test_fault.search(line) and line not in seen:
+    if (
+        outcome == "failed" and line not in seen
+        and ((len(line) < 400 and test_fault.search(line)) or crash.search(line))
+    ):
         seen.add(line)
-        out.append(line)
+        out.append(line[:400])
+        specific = specific or not generic.match(line)
         index += 1
         taken = 0
         while (
@@ -76,8 +84,8 @@ while index < len(lines):
         continue
     index += 1
 
-if not out and outcome == "failed":
-    out = [line for line in lines[-40:] if len(line) < 400]
+if outcome == "failed" and not specific:
+    out += [f"(nothing above names a cause; the last lines of {log}:)"] + [line[:400] for line in lines[-60:]]
 print("\n".join(out[:200]))
 if len(out) > 200:
     print(f"… {len(out) - 200} more lines in {log}")
