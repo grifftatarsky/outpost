@@ -414,6 +414,19 @@ that device counted in the sender's registry when iCloud stored the packet
 has not yet heard of the removal still takes a key the removed device signs; a removed device still
 signed in to the Apple Account can delay the news by deleting records.
 
+**A phone passes a key on only once it holds what the key's maker had seen** (built 2026-09-29, not
+yet run). Changing a room's key writes an entry into the room (`EpochChangeBody`, sealed under the old
+key) carrying the link, `heads` (the last entry of every feed in the room that the maker held) and
+`proof`: HMAC-SHA256 over the heads, keyed by HKDF-SHA256 from the *new* epoch secret with its own
+domain (`carpenter.epoch-change.v1`) and the room and epoch bound in. A member passes its newest key to
+everybody its member list shows as in (`grantsOwed`), and now only once it holds that entry, with a
+proof that checks under the key, and every entry the entry names. A phone that got the key before the
+removal that caused it (a round split across packets carries keys in its first packet; a member's
+other device hands keys over in a record of its own) keeps it until the removal arrives. A removed
+member can open the entry, since it is sealed under the old key, and copy it, but cannot write one
+that names less, because the proof takes the new key. The room's first key has no such entry and is
+passed on as before (`PassingOnANewKeyTests`, `AKeyChangeRecordTests`).
+
 Grants also travel sealed to their recipient under the pairwise secret now; before, each grant sat
 in the packet record as JSON with its room and epoch in the clear.
 

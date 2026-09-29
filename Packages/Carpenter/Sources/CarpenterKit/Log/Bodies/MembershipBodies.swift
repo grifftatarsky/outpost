@@ -132,10 +132,8 @@ public struct AdmissionBody: Hashable, Sendable, Codable {
 
 public struct EpochChangeBody: Hashable, Sendable, Codable {
     public let link: EpochLink
-
-    public init(link: EpochLink) {
-        self.link = link
-    }
+    public let heads: [EntryHash]
+    public let proof: Data
 }
 
 public struct RoomAccessBody: Hashable, Sendable, Codable {

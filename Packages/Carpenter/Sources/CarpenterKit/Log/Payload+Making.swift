@@ -86,9 +86,11 @@ extension Payload {
             fallbackText: nil)
     }
 
-    public static func epochChange(_ link: EpochLink) throws -> Payload {
+    public static func epochChange(
+        _ link: EpochLink, heads: [EntryHash], under secret: EpochSecret
+    ) throws -> Payload {
         Payload(
-            type: .epochChange, body: try encode(EpochChangeBody(link: link)),
+            type: .epochChange, body: try encode(EpochChangeBody(link: link, heads: heads, under: secret)),
             fallbackText: nil)
     }
 

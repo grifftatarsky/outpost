@@ -462,14 +462,20 @@ correct rather than only add to.
   what they already hold, and the app does not claim otherwise.
 - **Done.** The removed member's copy says *"You were removed from this room"* in those words, keeps the
   history readable, and blocks the composer. No push, no banner, no message to them from the room.
-- **Done.** Two members removing each other resolve the same way on every device: the first remover wins.
+- **Built, not yet run** (2026-09-28). Two members removing each other resolve the same way on every
+  device: both are out, and a dispute only ever takes access away. Waiting on Griff's yes
+  ([Open questions](../open-questions.md)).
 - **Done.** Re-admission starts a membership; it never restores one.
 - **Done.** Entries from a removed member are refused on the receiving side and not drawn; a removed device
   cannot produce entries for the room.
-- **Built, rig proof owed** (2026-09-28; the package suite passes). Every entry names its device's last
-  entry in the room, a removal or a departure names where each of the person's chains ends, and only
-  those chains count, so nothing can be slipped in under a number the room never held
-  (`TheRoomChainTests`; ruled by Griff the same day). Needs every device on this build together.
+- **Built, not yet run** (2026-09-28; the chain's first form passed the package suite, the rewrite that
+  lets a removal decide who is in the room has not run). Every entry names its device's last entry in
+  the room, a removal or a departure names where each of the person's chains ends, and only those
+  chains count, so nothing can be slipped in under a number the room never held (`TheRoomChainTests`;
+  ruled by Griff the same day). Needs every device on this build together.
+- **Built, not yet run** (2026-09-29). A phone passes a room's new key on only once it holds everything
+  the key's maker had seen, so a phone that got the key before the removal cannot hand it to the person
+  removed (`PassingOnANewKeyTests`; ruled by Griff the same day).
 
 **Testing**
 

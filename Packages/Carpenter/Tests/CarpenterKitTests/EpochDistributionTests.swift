@@ -276,7 +276,7 @@ struct EpochDistributionTests {
         var author = Author(chain: chain)
 
         let advanced = try EpochChain.advance(from: founding, at: .initial, room: room)
-        let payload = try Payload.epochChange(advanced.link)
+        let payload = try Payload.epochChange(advanced.link, heads: [], under: advanced.secret)
         let entry = try author.append(payload, at: start, room: room)
 
         #expect(entry.payload.epoch == EpochNumber.initial)

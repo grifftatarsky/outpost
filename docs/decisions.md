@@ -738,6 +738,40 @@ absent — and then, once `adopt` was made to say so, `link absent`.
 
 <!-- COPY END 1b5a47c5 -->
 
+<!-- COPY BEGIN c709dc0f [NEEDS HUMAN REVIEW] -->
+
+### A key is passed on only by a phone that holds what its maker had seen
+
+**RULED 2026-09-29 by Griff** — "that's a great idea ... So do that", on the proposal below.
+
+Every member passes its newest room key to everybody its member list shows as in, so that somebody the
+key's maker could not reach still gets it. A phone can hold a new key before the removal that caused
+it: a round too big for one packet carries keys in its first packet, and a member's other device hands
+keys over in a record of its own. That phone still shows the removed person as in, and passed them the
+key.
+
+So whoever makes a key writes, in the entry that records the change, the last entry of every feed in
+the room that they held, with a proof only the new key can make. A phone passes the key on only once
+it holds that entry and every entry it names. The guarantee Griff approved: a phone passes a room's new
+key on only after it holds everything the key's maker had seen in the room, so the removal always
+reaches a phone before that phone can give the new key to anybody.
+
+**Cost:** a phone missing anything the maker named holds the key back until it arrives; the maker
+holds everything it named, so its own hand-off is never held. A key-change entry written before this
+build carries no list and does not decode, so a room whose newest key is older than this build is
+passed on only by its maker. Griff, on dropping older forms: "I do not care about resetting the rig or
+the phone."
+
+**What it does not decide:** which key a phone takes. A phone that missed the removal still takes a
+key the removed person made up; that is still [an open question](open-questions.md).
+
+**What would change it:** a maker naming an entry that others can never get. Today every entry a phone
+holds can be passed on, so the wait ends.
+
+**Built** 2026-09-29, not yet run (`PassingOnANewKeyTests`, `AKeyChangeRecordTests`).
+
+<!-- COPY END c709dc0f -->
+
 <!-- COPY BEGIN fce6a062 [NEEDS HUMAN REVIEW] -->
 
 ### Somebody who stays rotates the key after somebody leaves

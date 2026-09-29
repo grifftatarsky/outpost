@@ -52,6 +52,28 @@ public struct EpochLink: Hashable, Sendable, Codable {
     }
 }
 
+extension EpochChangeBody {
+    public init(link: EpochLink, heads: [EntryHash], under secret: EpochSecret) {
+        self.init(
+            link: link, heads: heads,
+            proof: Data(
+                HMAC<SHA256>.authenticationCode(for: Self.naming(heads), using: Self.key(of: link, under: secret))))
+    }
+
+    public func isAuthentic(under secret: EpochSecret) -> Bool {
+        HMAC<SHA256>.isValidAuthenticationCode(
+            proof, authenticating: Self.naming(heads), using: Self.key(of: link, under: secret))
+    }
+
+    private static func naming(_ heads: [EntryHash]) -> Data {
+        CanonicalBytes.payload(domain: Domain.epochChange, fields: heads.map(\.rawValue))
+    }
+
+    private static func key(of link: EpochLink, under secret: EpochSecret) -> SymmetricKey {
+        EpochChain.changeKey(for: secret, room: link.room, epoch: link.epoch)
+    }
+}
+
 public struct EpochChain: Sendable {
     public let room: RoomID
 
@@ -164,6 +186,10 @@ public struct EpochChain: Sendable {
     private func requireSecret(at epoch: EpochNumber) throws -> EpochSecret {
         guard let secret = secrets[epoch] else { throw CryptoError.unknownEpoch }
         return secret
+    }
+
+    fileprivate static func changeKey(for secret: EpochSecret, room: RoomID, epoch: EpochNumber) -> SymmetricKey {
+        derivedKey(from: secret, room: room, epoch: epoch, domain: Domain.epochChange)
     }
 
     private static func wrappingKey(

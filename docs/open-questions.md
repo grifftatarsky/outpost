@@ -66,19 +66,20 @@ the room shows as in it; a joining device takes its first key only from its invi
 joiner should only take the key from the inviter"); with no invitation to go by, as after a restore,
 only a key that opens something somebody else wrote there (`WhoCanSendYouAKeyTests`).
 
+What was found on 2026-09-28, reading `SyncSession.send`: a round too big for one packet (700 KB) carries
+keys in its first packet, and the removal can be in a later one that has not arrived. That phone still
+showed the removed person as in, and a member passes its newest key to everybody it shows as in, so it
+sent them the key. Built 2026-09-29 at Griff's go-ahead ("that's a great idea ... So do that"), not yet
+run: whoever makes a key writes down the last entry they held from each person in the room, with a proof
+only the new key can make, and a phone passes the key on only once it holds every one of them
+(`PassingOnANewKeyTests`).
+
 What is still open, now narrower:
 
 - **A phone that missed the removal.** A device that was offline when somebody was removed still shows
   them as in, so for that window it would take a key they made up. Closing it means checking a newer key
   against the room's own record of the change (every change writes one); to be built with care, because a
   key refused for want of its record is not sent again.
-- **A phone that has the new key before the removal passes it on.** Found 2026-09-28 by reading, not
-  run. A round too big for one packet (700 KB) goes as several. Keys ride in the first (`SyncSession.send`),
-  and the removal can be in a later one that has not arrived. That phone still shows the removed person
-  as in, and a member passes its newest key to everybody it shows as in, so it sends the key to them.
-  Recommended, waiting on Griff: whoever makes a key writes down, sealed under that key, the last entry
-  they held from each person in the room, and a phone passes the key on only once it holds all of them.
-  The removed person cannot forge that list without the key.
 - **A member can still make up a key.** Somebody in the room can read it anyway, so this is sabotage, not
   a leak.
 - **Links for older keys** are taken from the inviter first; one the inviter did not have can still come

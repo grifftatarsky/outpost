@@ -517,9 +517,9 @@ extension AppSession {
         try await append(try Payload.departure(heads: lastEntries(of: enrolment.identity.id, in: room)), to: room)
     }
 
-    func lastEntries(of person: ParticipantID, in room: RoomID) -> [EntryHash] {
+    func lastEntries(of person: ParticipantID? = nil, in room: RoomID) -> [EntryHash] {
         var last: [FeedKey: EntryLink] = [:]
-        for entry in replica.allEntries where entry.author == person && entry.room == room {
+        for entry in replica.allEntries where entry.room == room && (person == nil || entry.author == person) {
             if (last[entry.feedKey]?.seq ?? 0) < entry.seq { last[entry.feedKey] = entry.link }
         }
         return last.values.map(\.hash).sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
@@ -637,7 +637,8 @@ extension AppSession {
         let advanced = try EpochChain.advance(
             from: try chain.secret(for: epoch), at: epoch, room: room)
 
-        try await append(try Payload.epochChange(advanced.link), to: room)
+        try await append(
+            try Payload.epochChange(advanced.link, heads: lastEntries(in: room), under: advanced.secret), to: room)
 
         try adopt(secret: advanced.secret, link: advanced.link, at: epoch.next, in: room)
 

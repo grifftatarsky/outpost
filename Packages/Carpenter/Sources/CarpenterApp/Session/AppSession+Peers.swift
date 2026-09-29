@@ -110,6 +110,7 @@ extension AppSession {
                 ? outpostReaders().sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
                 : Array(notShutOut(roster(of: room).rewrapTargets(of: enrolment.identity.id)))
 
+            var passesOn: Bool?
             for target in targets {
                 let floor = isWall ? (floors[target] ?? nil).map(EpochNumber.init(rawValue:)) : nil
                 let link = floor.map { epoch > $0 ? chain.link(at: epoch) : nil } ?? chain.link(at: epoch)
@@ -122,6 +123,12 @@ extension AppSession {
                 guard !issuedGrants.contains(receipt) else { continue }
 
                 guard let pairwise = pairwiseSecret(with: target) else { continue }
+                if passesOn == nil { passesOn = holdsWhatItsMakerSaw(epoch, in: room, under: secret) }
+                guard passesOn == true else {
+                    Diagnostics.sync.notice(
+                        "mailbox sync: holding a room's newest key until everything its maker had seen has arrived")
+                    break
+                }
 
                 owed.append(
                     (
@@ -135,6 +142,15 @@ extension AppSession {
             }
         }
         return owed
+    }
+
+    private func holdsWhatItsMakerSaw(_ epoch: EpochNumber, in room: RoomID, under secret: EpochSecret) -> Bool {
+        guard epoch != .initial else { return true }
+        let held = entriesByHash
+        return projection.keyChanges(in: room, opening: payloadOpener()).contains { change in
+            change.link.epoch == epoch && change.isAuthentic(under: secret)
+                && change.heads.allSatisfy { held[$0] != nil }
+        }
     }
 
     func deviceRecipients(of participant: ParticipantID) -> [DeviceRecipient] {

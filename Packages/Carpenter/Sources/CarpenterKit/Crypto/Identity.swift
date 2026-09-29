@@ -271,6 +271,7 @@ enum Domain {
     static let epochLink = "carpenter.epoch-link.v1"
     static let epochWrapping = "carpenter.epoch-wrapping.v1"
     static let epochSealing = "carpenter.epoch-sealing.v1"
+    static let epochChange = "carpenter.epoch-change.v1"
     static let epochGrant = "carpenter.epoch-grant.v1"
     static let epochGrantSignature = "carpenter.epoch-grant-signature.v1"
     static let grantEnvelope = "carpenter.grant-envelope.v1"
