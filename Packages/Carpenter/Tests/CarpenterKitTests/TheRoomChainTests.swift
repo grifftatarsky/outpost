@@ -246,6 +246,53 @@ struct TheRoomChainTests {
         #expect(!members.contains(sam.identity.id))
     }
 
+    private func notedByBob(
+        _ notes: [(Entry, TimeInterval)], alice: inout Author, room: RoomID
+    ) throws -> [Entry] {
+        var bob = Author(chain: alice.chain)
+        var made = try admit(bob.identity, by: &alice, into: room, at: start + 5)
+        for (removal, offset) in notes {
+            made.append(try bob.append(try Payload.removalNoted(removal.hash, storedAt: start + offset), at: start + 40, room: room))
+        }
+        return made
+    }
+
+    @Test("Another member's notes decide which removal came first, over what this phone read")
+    func notesDecideTheRace() throws {
+        let race = try removedEachOther()
+        var alice = race.alice
+        let entries = try race.entries + notedByBob([(race.removal, 0), (race.answer, 5)], alice: &alice, room: race.room)
+
+        let members = standing(entries, chain: alice.chain, room: race.room, readInOrder: [race.answer, race.removal])
+            .roster.members
+        #expect(members.contains(alice.identity.id), "this phone went by its own reading over another member's notes")
+        #expect(!members.contains(race.sam.identity.id))
+    }
+
+    @Test("A note from a removal's own author counts for nothing")
+    func aNoteOnYourOwnRemovalDoesNotCount() throws {
+        let race = try removedEachOther()
+        var (alice, sam) = (race.alice, race.sam)
+        let early = try sam.append(try Payload.removalNoted(race.answer.hash, storedAt: start - 100), at: start + 41, room: race.room)
+        let entries = try race.entries + [early]
+            + notedByBob([(race.removal, 0), (race.answer, 5)], alice: &alice, room: race.room)
+
+        let members = standing(entries, chain: alice.chain, room: race.room).roster.members
+        #expect(members.contains(alice.identity.id), "Sam's own note, dating his answer early, decided the race")
+        #expect(!members.contains(sam.identity.id))
+    }
+
+    @Test("Your own removal comes first on your phone only until another member's note says otherwise")
+    func notesOverruleYourOwnRemoval() throws {
+        let race = try removedEachOther()
+        var alice = race.alice
+        let entries = try race.entries + notedByBob([(race.answer, 0), (race.removal, 5)], alice: &alice, room: race.room)
+
+        let members = standing(entries, chain: alice.chain, room: race.room, on: alice.identity.id).roster.members
+        #expect(!members.contains(alice.identity.id), "Alice's phone kept her in against notes saying Sam's removal came first")
+        #expect(members.contains(race.sam.identity.id))
+    }
+
     @Test("A removal this phone could not time comes after every removal it could")
     func anUntimedRemovalComesLast() throws {
         let (alice, sam, room, entries, removal, _) = try removedEachOther()

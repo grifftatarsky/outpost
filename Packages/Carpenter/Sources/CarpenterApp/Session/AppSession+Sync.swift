@@ -203,13 +203,17 @@ extension AppSession {
             }
         }
 
-        let sealed = timeClaims(in: received.integrated, readableFrom: received.readableFrom)
+        let onArrival = timeClaims(in: received.integrated, readableFrom: received.readableFrom)
         for received in received.grantsReceived {
             try await adopt(received.grant, from: peer, storedAt: received.storedAt)
         }
-        if !sealed.isEmpty, let keysArrived = received.grantsReceived.map(\.storedAt).max() {
-            _ = timeClaims(in: sealed, readableFrom: received.readableFrom, keysArrivedAt: keysArrived)
+        var timed = onArrival.timed
+        if !onArrival.sealed.isEmpty, let keysArrived = received.grantsReceived.map(\.storedAt).max() {
+            timed += timeClaims(
+                in: onArrival.sealed, readableFrom: received.readableFrom, keysArrivedAt: keysArrived
+            ).timed
         }
+        await noteRemovals(timed)
 
         let owed = entriesNotWrittenDown + received.integrated
         if !owed.isEmpty {

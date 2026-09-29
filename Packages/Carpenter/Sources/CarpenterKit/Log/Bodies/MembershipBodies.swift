@@ -100,6 +100,16 @@ public struct RemovalBody: Hashable, Sendable, Codable {
     }
 }
 
+public struct RemovalNotedBody: Hashable, Sendable, Codable {
+    public let removal: EntryHash
+    public let storedAt: Date
+
+    public init(removal: EntryHash, storedAt: Date) {
+        self.removal = removal
+        self.storedAt = storedAt
+    }
+}
+
 public struct DepartureBody: Hashable, Sendable, Codable {
     public let heads: [EntryHash]
 

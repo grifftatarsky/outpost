@@ -508,10 +508,12 @@ the person's devices, and only the chains those reach are shown (`RoomChains`, `
 Since 2026-09-28 the member list follows the same chains (`Projection.standing`; its tests pass in the package suite, 2026-09-29), and a
 room entry without its link is refused
 ([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)). When
-two people remove each other without either removal naming the other, the one a phone could read first
-stands: the latest of the copy's stored time and the stored times of what the phone needed to read it,
-namely the address, the signing device's certificate and the key. The remover tells the removed person
-last ([Decisions](decisions.md#a-removed-person-hears-last-and-the-first-removal-stands); built
+two people remove each other without either removal naming the other, the first stands. First is the
+earliest time noted by another member who read it. Each member notes when its copy was stored, which
+is the latest of the copy's stored time and the stored times of what the phone needed to read it:
+the address, the signing device's certificate and the key. The remover tells the removed person once
+another member has noted the removal or every member's space holds it
+([Decisions](decisions.md#a-removed-person-hears-last-and-the-first-removal-stands); built
 2026-09-29, not yet run). Built
 2026-09-28, and the package suite passes; not yet run on the rig. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:

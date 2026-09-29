@@ -6,19 +6,30 @@ import Foundation
 extension AppSession {
     func heldBack() -> @Sendable (Entry, ParticipantID) -> Bool {
         let held = entriesByHash
+        let projected = projection
         var ends: [ParticipantID: [RoomID: [Entry]]] = [:]
-        for room in projection.namedRoomIDs() {
+        for room in projected.namedRoomIDs() {
             let roster = roster(of: room)
             for person in roster.absent {
                 let end = roster.removal(of: person)?.entry ?? roster.departure(of: person)?.entry
                 if let end, let entry = held[end] { ends[person, default: [:]][room, default: []].append(entry) }
             }
         }
-        let knownEnds = ends
+        let inside = untold.compactMap { room, told in held[told.entry].map { ($0, roster(of: room).members) } }
+        let (knownEnds, knownNotes) = (ends, projected.removalNoteIDs)
         return { entry, person in
+            guard !knownNotes.contains(entry.hash) else { return false }
+            let outsideTheRoom = inside.contains { removal, members in
+                !members.contains(person) && Self.follows(entry, removal)
+            }
+            if outsideTheRoom { return true }
             guard let room = entry.room, let known = knownEnds[person]?[room] else { return false }
-            return known.contains { $0.hash == entry.hash || entry.clock[$0.feedKey] >= $0.seq }
+            return known.contains { Self.follows(entry, $0) }
         }
+    }
+
+    nonisolated private static func follows(_ entry: Entry, _ end: Entry) -> Bool {
+        entry.hash == end.hash || entry.clock[end.feedKey] >= end.seq
     }
 
     func membersFirst(_ peers: [Peer], carrying entries: [Entry]) -> [Peer] {
@@ -61,7 +72,9 @@ extension AppSession {
                 report = report.adding(again)
                 holding.formUnion(Self.holders(of: removal, in: again))
             }
-            guard owed.isSubset(of: holding) else { continue }
+            let noted = projection.noters(of: told.entry, in: room, opening: payloadOpener())
+                .intersection(roster(of: room).members).subtracting([me, told.removed])
+            guard !noted.isEmpty || owed.isSubset(of: holding) else { continue }
             let tell = await writeRemoval(removal, to: [removed], through: session)
             report = report.adding(tell)
             if tell.packetsWritten > 0 { persisted.removalsTold.insert(told.entry) }
@@ -93,21 +106,37 @@ extension AppSession {
 
     func timeClaims(
         in entries: [Entry], readableFrom: [EntryHash: Date], keysArrivedAt: Date? = nil
-    ) -> [Entry] {
+    ) -> (timed: [Entry], sealed: [Entry]) {
         var sealed: [Entry] = []
-        var times: [EntryHash: Date] = [:]
+        var timed: [Entry] = []
         for entry in entries where entry.room != nil && persisted.claimTimes[entry.hash] == nil {
             guard let payload = chain(sealing: entry).flatMap(entry.opened(using:)) else {
                 sealed.append(entry)
                 continue
             }
             guard Projection.claimTypes.contains(payload.type), let read = readableFrom[entry.hash] else { continue }
-            times[entry.hash] = max(read, keysArrivedAt ?? read)
+            persisted.claimTimes[entry.hash] = max(read, keysArrivedAt ?? read)
+            timed.append(entry)
         }
-        if !times.isEmpty {
-            persisted.claimTimes.merge(times) { held, _ in held }
-            projectionInputsChanged()
+        if !timed.isEmpty { projectionInputsChanged() }
+        return (timed, sealed)
+    }
+
+    func noteRemovals(_ timed: [Entry]) async {
+        guard let me = enrolment?.identity.id else { return }
+        for entry in timed where entry.author != me {
+            guard let room = entry.room, let storedAt = persisted.claimTimes[entry.hash],
+                let payload = chain(sealing: entry).flatMap(entry.opened(using:)), payload.type == .removal,
+                let body = try? payload.decode(RemovalBody.self), body.removed != me,
+                roster(of: room).members.contains(me)
+            else { continue }
+            do {
+                try await append(
+                    try Payload.removalNoted(entry.hash, storedAt: storedAt), to: room, readableAt: entry.payload.epoch)
+            } catch {
+                Diagnostics.sync.error(
+                    "removal: could not note a removal this phone read (\(String(describing: error), privacy: .public))")
+            }
         }
-        return sealed
     }
 }

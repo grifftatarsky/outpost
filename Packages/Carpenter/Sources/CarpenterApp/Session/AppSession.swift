@@ -338,7 +338,7 @@ public final class AppSession {
 
     func append(
         _ payload: Payload, to room: RoomID?, isWall: Bool = false,
-        alsoFor extra: PairwiseSecret? = nil
+        alsoFor extra: PairwiseSecret? = nil, readableAt readable: EpochNumber? = nil
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
 
@@ -375,8 +375,8 @@ public final class AppSession {
             wallTime: clock.now,
             room: room,
             payload: payload,
-            at: writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
-            sealedWith: writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain,
+            at: readable ?? writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
+            sealedWith: readable == nil ? (writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain) : chain,
             alsoFor: extra,
             roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
         )

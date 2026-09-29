@@ -72,6 +72,12 @@ extension Payload {
             type: .removal, body: try encode(RemovalBody(removed: member, heads: heads)), fallbackText: nil)
     }
 
+    public static func removalNoted(_ removal: EntryHash, storedAt: Date) throws -> Payload {
+        Payload(
+            type: .removalNoted, body: try encode(RemovalNotedBody(removal: removal, storedAt: storedAt)),
+            fallbackText: nil)
+    }
+
     public static func departure(heads: [EntryHash]) throws -> Payload {
         Payload(type: .departure, body: try encode(DepartureBody(heads: heads)), fallbackText: nil)
     }

@@ -809,15 +809,29 @@ had.
 
 ### A removed person hears last, and the first removal stands
 
-**RULED 2026-09-29 by Griff** — "nah i see that's cool then. Build it.", on: "A removed person isn't
-told until the removal is stored in every other member's space. So anything they send back lands
-after it everywhere, and every phone sees the removal first." And on two people removing each other:
-"The first user should be honored."
+**RULED 2026-09-29 by Griff**, in three steps. On two people removing each other: "The first user
+should be honored." On telling: "nah i see that's cool then. Build it.", for a removed person hearing
+only once every other member's space holds the removal. And "yes" to notes from a second member, so
+that nobody waits on a member who can't be reached: "I think we (#4) don't want to wait 9 days for
+anyone getting kicked out of a groupchat. I'd like you to figure out a proper algorithm for this". The
+promises he agreed to:
 
-When two people remove each other and neither removal had seen the other, the one a phone could read
-first stands. That replaces both out. A phone counts its own member's removal first. Otherwise it goes
-by when it could first have read each removal, in iCloud's time; a removal it cannot time comes after
-every one it can, and the entry's hash breaks a tie.
+- The removed person is told as soon as one other member has read the removal.
+- Anything they write after they could know is stored after that member's copy was. Every phone ends
+  up going by that member's note, so every phone counts the removal first.
+- Two honest removals seconds apart end up decided the same way on every phone, except in a room of two.
+
+**Notes.** Every member who reads a removal they are not part of writes a short note into the room.
+The note says which removal it is, and when iCloud stored the copy they read. It is locked under the
+same key as the removal, so everybody who can read the removal can read the note, the person removed
+included, and no phone holds a note back from anybody. That is safe because a note only ever reports
+a time from before the removed person could have known.
+
+**Order.** When two people remove each other and neither removal had seen the other, every phone goes
+by the earliest time noted for each removal by anybody except its author, counting only notes the
+room's chain does not cut. Until a note arrives, a phone goes by when it could first read each removal
+itself, and its own member's removal counts first. A removal it cannot time comes after every one it
+can, and the entry's hash breaks a tie.
 
 iCloud's time for a record is when its sender wrote it, not when anybody could read it, and a sender
 chooses when that is. So a removed person could write a removal of the remover early, hide it, and
@@ -825,33 +839,32 @@ show it after being removed, and it would count as first. A phone therefore take
 copy's stored time and the stored time of everything it needed to read it: when it learned the
 address the copy came to, the day before the window that address names, when the signing device's
 certificate was stored, and when the key that opens it arrived. A removal that arrived under a key the
-phone did not hold yet gets no time at all. A member's devices pass these times to each other, and a
-device takes the earlier of its own and one from another of its member's devices that counts.
+phone did not hold yet gets no time at all, and so no note. A member's devices pass these times to
+each other.
 
-Every phone holds back from somebody it shows as out of a room their removal and anything written after
-it, in rounds and in answers to repair, and writes to the room's members before anybody else. What was
-written before still reaches them. The remover writes nothing to the removed person
-until every other member's space it can reach holds a copy its own device wrote. Each round it writes
-the removal again to any member still missing one, and then to the removed person. Which removals have
-been told is kept; the rest are worked out from the log, so a crash between writing the removal and
-saving loses nothing.
+**Telling.** The remover keeps the removal, and anything written after it, inside the room. It writes
+nothing at all to the removed person until another member's note of the removal arrives, or every
+other member's space holds a copy its own device wrote, and then it tells them. Each round it writes
+the removal again to any member still missing one. Which removals have been told is kept, and the rest
+are worked out from the log, so a crash between writing the removal and saving loses nothing. Every
+phone holds back from somebody it shows as out of a room their removal and anything written after it,
+in rounds and in answers to repair, notes aside. Every phone also writes to the room's members before
+anybody else. What was written before the removal still reaches them.
 
-**Cost:** while the removed person has not been told, the remover writes them nothing from any room. A
-member whose space cannot be written holds that up, and the removed person is not told. Somebody removed
-and invited back into a room of three or more gets what was said while they were out only through
-history repair. Two honest people who remove each other within seconds can each see themselves in on
-their own phone, and other phones can disagree about which was first
-([Open questions](open-questions.md#what-is-left-of-a-removal-race)).
-
-Griff accepted two of what is left, 2026-09-29: two honest removals seconds apart decided differently
-on different phones, "for now", and a member who sides with the removed person: "Bigger problems. And
-since people can leave if that's happening the other ppl can just leave."
+**Cost:** one note per member per removal, never shown. A phone can change its answer once, when a
+note arrives. While the removed person has not been told, the remover writes them nothing from any
+room; that ends when any one other member reads the removal. Somebody removed and invited back into a
+room of three or more gets what was said while they were out only through history repair. A member who
+lies in a note can tip a race, and Griff accepted that, 2026-09-29, as the case of a member who sides
+with the removed person: "Bigger problems. And since people can leave if that's happening the other
+ppl can just leave." In a room of two there is nobody to note anything, and each phone keeps its own
+member's removal first.
 
 **What would change it:** one order for the room that every phone can read and no member can write,
 which iCloud does not give across people's spaces.
 
-**Built** 2026-09-29, not yet run (`TellingTheRemovedLastTests`, `TheRoomChainTests`). It crosses the
-network, so it is unproven until the rig runs it.
+**Built** 2026-09-29, not yet run (`TellingTheRemovedLastTests`, `ASecondMembersNoteTests`,
+`TheRoomChainTests`). It crosses the network, so it is unproven until the rig runs it.
 
 <!-- COPY END fe38bc20 -->
 

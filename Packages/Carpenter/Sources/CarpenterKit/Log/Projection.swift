@@ -11,6 +11,7 @@ public struct Projection: Sendable {
     let outpostAuthorOrder: [ParticipantID]
     let chains: RoomChains
     let claimTimes: [EntryHash: Date]
+    public let removalNoteIDs: Set<EntryHash>
     public let members: [ParticipantID: Member]
     public let supporterBadges: Set<ParticipantID>
 
@@ -28,8 +29,10 @@ public struct Projection: Sendable {
         var profiles: [RoomID: RenderedEntry] = [:]
         var kinds: [RoomID: RoomKind] = [:]
         var lastPosted: [ParticipantID: Int] = [:]
+        var notes: Set<EntryHash> = []
         for (position, entry) in rendered.enumerated() {
             positionByID[entry.id] = position
+            if entry.type == .removalNoted { notes.insert(entry.id) }
             if let room = entry.room {
                 roomPositions[room, default: []].append(position)
                 if entry.type == .roomProfile {
@@ -42,6 +45,7 @@ public struct Projection: Sendable {
         }
         self.roomPositions = roomPositions
         self.positionByID = positionByID
+        removalNoteIDs = notes
         lastProfiles = profiles
         roomKinds = kinds
         namedRooms = Set(profiles.compactMap { room, profile in

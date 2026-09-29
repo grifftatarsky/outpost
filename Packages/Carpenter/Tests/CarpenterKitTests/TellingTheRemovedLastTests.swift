@@ -7,7 +7,7 @@ import Testing
 @MainActor
 @Suite("A removed person hears last, and an answer they write after hearing lands after the removal everywhere", .serialized)
 struct TellingTheRemovedLastTests {
-    @Test("The remover writes nothing to the removed person until every other member's space holds the removal")
+    @Test("The remover writes nothing to the removed person until another member has read the removal or every space holds it")
     func theRemovedHearLast() async throws {
         let t = try await RoomOfThree.make()
         let alicesLine = HookedMailbox(inner: t.mailbox)
@@ -157,6 +157,91 @@ struct TellingTheRemovedLastTests {
     }
 }
 
+@MainActor
+@Suite("Another member's note decides a removal race, and lets the removed person be told", .serialized)
+struct ASecondMembersNoteTests {
+    @Test("The removed person is told once another member has read the removal, though a member cannot be reached")
+    func toldOnceAnotherMemberHasReadIt() async throws {
+        let t = try await RoomOfThree.make()
+        let dave = try await t.bringInDave()
+        let alicesLine = HookedMailbox(inner: t.mailbox)
+        await alicesLine.cannotReach(try #require(dave.enrolment?.identity.id))
+
+        try await t.alice.remove(t.samID, from: t.room)
+        try await t.alice.sync(through: alicesLine, media: t.mailbox)
+        try await t.sam.sync(through: t.mailbox, media: t.mailbox)
+        try #require(
+            t.sam.roster(of: t.room).members.contains(t.samID),
+            "precondition: nobody else has read the removal and Dave's space does not hold it, so Sam is not told")
+
+        try await t.carol.sync(through: t.mailbox, media: t.mailbox)
+        try await t.alice.sync(through: alicesLine, media: t.mailbox)
+        try await t.sam.sync(through: t.mailbox, media: t.mailbox)
+        #expect(
+            !t.sam.roster(of: t.room).members.contains(t.samID),
+            "Carol had read the removal and noted it, and Sam was still waiting on a member nobody could reach")
+    }
+
+    @Test("A member whose copy of a removal came after the answer to it still counts the removal first, by another member's note")
+    func aNoteOutranksALateCopy() async throws {
+        let t = try await RoomOfThree.make()
+        let dave = try await t.bringInDave()
+        let daveID = try #require(dave.enrolment?.identity.id)
+        let seen = t.samSawBeforeTheRemoval()
+        let lines = (
+            alice: HookedMailbox(inner: t.mailbox), carol: HookedMailbox(inner: t.mailbox),
+            sam: HookedMailbox(inner: t.mailbox)
+        )
+        for line in [lines.alice, lines.carol, lines.sam] { await line.cannotReach(daveID) }
+
+        try await t.alice.remove(t.samID, from: t.room)
+        let removal = try #require(t.alice.roster(of: t.room).removal(of: t.samID)?.entry)
+        try await t.alice.sync(through: lines.alice, media: t.mailbox)
+        try await t.carol.sync(through: lines.carol, media: t.mailbox)
+        try await t.alice.sync(through: lines.alice, media: t.mailbox)
+        try await t.sam.sync(through: lines.sam, media: t.mailbox)
+        try #require(!t.sam.roster(of: t.room).members.contains(t.samID), "precondition: Sam has been told")
+
+        let answer = try t.samAnswers(as: seen)
+        _ = try t.sam.replica.integrate(answer)
+        await lines.sam.reachesEveryone()
+        try await t.sam.sync(through: lines.sam, media: t.mailbox)
+        try await dave.sync(through: t.mailbox, media: t.mailbox)
+        try #require(dave.entriesByHash[answer.hash] != nil, "precondition: Dave has Sam's answer")
+        try #require(dave.entriesByHash[removal] == nil, "precondition: Dave has no copy of the removal yet")
+
+        let carolsNote = try #require(t.carol.replica.allEntries.first { entry in
+            entry.author == t.carolID && t.carol.chain(sealing: entry).flatMap(entry.opened(using:))?.type == .removalNoted
+        })
+        for late in [try #require(t.alice.entriesByHash[removal]), carolsNote] { _ = try dave.replica.integrate(late) }
+        let members = dave.roster(of: t.room).members
+        #expect(
+            members.contains(t.aliceID),
+            """
+            Dave's copy of Alice's removal reached him after Sam's answer, and he put the answer first, \
+            although Carol had noted that her copy of the removal was stored before Sam could know of it.
+            """)
+        #expect(!members.contains(t.samID))
+    }
+
+    @Test("Two honest removals made at once end up decided the same way on all four phones")
+    func anHonestRaceIsDecidedTheSameEverywhere() async throws {
+        let t = try await RoomOfThree.make()
+        let dave = try await t.bringInDave()
+        try await t.alice.remove(t.samID, from: t.room)
+        try await t.sam.remove(t.aliceID, from: t.room)
+        for _ in 0..<6 {
+            for session in [t.alice, t.carol, dave, t.sam] { try await session.sync(through: t.mailbox, media: t.mailbox) }
+        }
+
+        let rosters = [t.alice, t.carol, dave, t.sam].map { $0.roster(of: t.room).members }
+        #expect(Set(rosters).count == 1, "the phones decided the race differently: \(rosters)")
+        #expect(
+            rosters.allSatisfy { $0.contains(t.aliceID) && !$0.contains(t.samID) },
+            "Alice's removal reached the other members' spaces first, and Sam's stood somewhere")
+    }
+}
+
 @Suite("When a phone could first read what it was sent")
 struct WhenAPhoneCouldReadItTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
@@ -215,6 +300,21 @@ extension RoomOfThree {
     fileprivate struct Seen {
         let heads: [EntryHash]
         let clock: VectorClock
+    }
+
+    fileprivate func bringInDave() async throws -> AppSession {
+        let dave = TestSession.make()
+        await dave.load()
+        try await dave.createIdentity(displayName: "Dave")
+        try await join(dave, into: room, of: alice, through: mailbox)
+        for _ in 0..<6 {
+            for session in [alice, carol, sam, dave] { try await session.sync(through: mailbox, media: mailbox) }
+        }
+        let daveID = try #require(dave.enrolment?.identity.id)
+        for session in [alice, carol, sam] {
+            try #require(session.roster(of: room).members.contains(daveID), "precondition: everybody has Dave in the room")
+        }
+        return dave
     }
 
     fileprivate func samSawBeforeTheRemoval() -> Seen {
