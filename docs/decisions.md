@@ -843,6 +843,10 @@ history repair. Two honest people who remove each other within seconds can each 
 their own phone, and other phones can disagree about which was first
 ([Open questions](open-questions.md#what-is-left-of-a-removal-race)).
 
+Griff accepted two of what is left, 2026-09-29: two honest removals seconds apart decided differently
+on different phones, "for now", and a member who sides with the removed person: "Bigger problems. And
+since people can leave if that's happening the other ppl can just leave."
+
 **What would change it:** one order for the room that every phone can read and no member can write,
 which iCloud does not give across people's spaces.
 

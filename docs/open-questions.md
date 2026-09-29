@@ -48,26 +48,43 @@ out is gone from the build. What is left is the next question.
 
 ### What is left of a removal race?
 
-Raised 2026-09-29 while building the answer to the last one. Each needs Griff's yes, or a different
-design.
+Raised 2026-09-29 while building the answer to the last one.
 
 1. **Two honest people remove each other within seconds.** Each phone goes by when it could read each
    removal, and every person's copy is stored separately, so phones can disagree about which came
-   first, and each of the two sees themselves in on their own phone. Recommendation: accept it until
-   the rig shows it. The fix would be for phones to compare when they read each removal and all take
-   the earliest. That settles on one answer, but any member could lie about a time.
+   first, and each of the two sees themselves in on their own phone. **Accepted for now.** Griff,
+   2026-09-29: "Yeah that's fine for now, log #1 on the roadmap." It is logged there, and the proposal
+   under 4 would settle it.
 2. **A removed person's modified app can work out the removal before it is told.** Phones that hold
-   the removal stop sending that person what is written after it, and the gap shows. Every phone writes to the room's
-   members first, so each member holds the removal before the gap can appear, unless every write to
-   one member fails at the same moment. Friends of friends outside the room pass entries on too, and
-   cannot hold anything back because they cannot read the room; that path is slower still.
-   Recommendation: accept it. The stronger fix is to lock the removal under the room's new key and
-   hand the key out only once every member holds the removal. That delays every removal for everybody,
-   and loses it if the remover's phone dies first.
-3. **A member who sides with the removed person can tell them early.** Nothing in the design stops a
-   member passing on what they read.
-4. **A member whose space can never be written holds the telling up for good.** Recommendation: after
-   the nine days a packet waits, tell the removed person anyway.
+   the removal stop sending that person what is written after it, and the gap shows. Griff,
+   2026-09-29: "I don't really understand the odds of 2 being possible. But fine if it's like,
+   extremely unlikely to work." The odds are not measured. The race needs a modified app, and a write
+   of the removal to one member failing. It also needs the removed person to hear before the
+   remover's next round writes that copy again. They could hear through a friend of a friend outside
+   the room, or through a member whose own write to that same member also failed. Even then only that
+   one member's phone counts the answer first. The proposal under 4 closes it.
+3. **A member who sides with the removed person can tell them early.** **Accepted.** Griff,
+   2026-09-29: "that's crazy for two people to have hacked devices in a chat and then be able still
+   will all the work we've done to prevent the removal. Bigger problems. And since people can leave if
+   that's happening the other ppl can just leave."
+4. **A member whose space can never be written holds the telling up for good.** A write to a member's
+   space creates it if it is not there yet, so this happens only while iCloud refuses the write.
+   Griff, 2026-09-29: "we don't want to wait 9 days for anyone getting kicked out of a groupchat. I'd
+   like you to figure out a proper algorithm for this". **Proposed, waiting on his yes:**
+   - Every member who reads a removal they are not part of writes a short note into the room. The note
+     says which removal it is, and when iCloud stored the copy they read.
+   - When two people remove each other, every phone goes by the earliest time any other member noted
+     for each removal. Until a note arrives, a phone goes by its own reading, and your own removal
+     comes first on your own phone.
+   - The remover keeps the removal, and what it writes after, inside the room, and writes nothing to
+     the removed person, until another member's note arrives or every other member's space holds the
+     removal. Then it tells them. In a room of two, it tells them at once.
+
+   What it would promise: the removed person is told as soon as one other member has read the
+   removal. Anything they write after they could know is stored after that member's copy was. Every
+   phone ends up going by that member's note, so every phone counts the removal first. Two honest
+   removals seconds apart end up decided the same way on every phone, except in a room of two. A
+   member who lies in a note can tip a race, which is 3.
 
 <!-- COPY END 7b287af7 -->
 
