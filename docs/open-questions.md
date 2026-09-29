@@ -72,6 +72,29 @@ second member were built on Griff's "yes" and settle the first two; not yet run
 
 <!-- COPY END 7b287af7 -->
 
+<!-- COPY BEGIN cd86ea13 [NEEDS HUMAN REVIEW] -->
+
+### What can still miss a key that lost a tie?
+
+Raised 2026-09-29, after the first run found that a member whose key lost a tie stopped handing it
+out. That is fixed, not yet re-run: a phone passes on the key it made for the newest number, or the
+one it writes under if it made none
+([Decisions](decisions.md#a-phone-writes-only-under-a-key-made-by-somebody-in-the-room)). Two gaps
+are left, and both need two members to have turned the key at once.
+
+1. **Somebody who joins during a tie can miss the key everybody writes under.** A new member takes
+   their first key for a room only from whoever invited them. A key from anybody else that is read
+   before the inviter's is refused, and its sender does not send it again until its app next starts.
+   If that was the key everybody writes under, the new member cannot read the room until then, or
+   until the next key change. **Recommendation:** keep a refused first key and try it again once the
+   inviter's key has arrived, under the usual check that its sender is in the room.
+2. **A second key change before the losing member syncs strands their key.** A phone passes on keys
+   only for the newest number, so what the losing member wrote during the tie stays unreadable to
+   everybody else. **Recommendation:** accept it. Passing on keys for older numbers too would resend
+   every key a phone ever made each time its app starts.
+
+<!-- COPY END cd86ea13 -->
+
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
 
 ### Who can send your device a room key it can't check yet?
