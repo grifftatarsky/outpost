@@ -101,7 +101,7 @@ extension AppSession {
         let earlier = times.filter { hash, time in persisted.claimTimes[hash].map { time < $0 } ?? true }
         guard !earlier.isEmpty else { return }
         persisted.claimTimes.merge(earlier) { _, sibling in sibling }
-        projectionInputsChanged()
+        logChanged()
     }
 
     func timeClaims(
@@ -118,7 +118,7 @@ extension AppSession {
             persisted.claimTimes[entry.hash] = max(read, keysArrivedAt ?? read)
             timed.append(entry)
         }
-        if !timed.isEmpty { projectionInputsChanged() }
+        if !timed.isEmpty { logChanged() }
         return (timed, sealed)
     }
 

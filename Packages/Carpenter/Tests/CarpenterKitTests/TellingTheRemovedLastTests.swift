@@ -293,6 +293,27 @@ struct WhenAPhoneCouldReadItTests {
         try #require(!found.packets.isEmpty, "precondition: Carol found Alice's packet")
         #expect(found.packets.allSatisfy { $0.storedAt == .distantFuture })
     }
+
+    @MainActor
+    @Test("A phone's member list changes as soon as it learns a removal could be read earlier")
+    func theMemberListFollowsAnEarlierTime() async throws {
+        let t = try await RoomOfThree.make()
+        try await t.alice.remove(t.samID, from: t.room)
+        try await t.sam.remove(t.aliceID, from: t.room)
+        let alices = try #require(t.alice.roster(of: t.room).removal(of: t.samID).flatMap { t.alice.entriesByHash[$0.entry] })
+        let sams = try #require(t.sam.roster(of: t.room).removal(of: t.aliceID).flatMap { t.sam.entriesByHash[$0.entry] })
+        for removal in [alices, sams] { _ = try t.carol.replica.integrate(removal) }
+
+        t.carol.takeClaimTimes([sams.hash: TestSession.now + 20, alices.hash: TestSession.now + 30])
+        try #require(t.carol.roster(of: t.room).members.contains(t.samID), "precondition: Sam's removal counts first")
+
+        t.carol.takeClaimTimes([alices.hash: TestSession.now + 10])
+        let members = t.carol.roster(of: t.room).members
+        #expect(
+            members.contains(t.aliceID),
+            "Carol learned that Alice's removal could be read first, and her phone kept the member list it had")
+        #expect(!members.contains(t.samID))
+    }
 }
 
 @MainActor

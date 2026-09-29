@@ -63,7 +63,10 @@ known.
 - Derived caches are `@ObservationIgnored` and sit behind one observed counter, `projectionGeneration`.
   `logChanged()` bumps it when the log changes, and `projectionInputsChanged()` when something the
   projection reads outside the log changes (a name, a nickname, the show-names choice, who you have
-  met). A per-room cache goes through `cached(_:_:_:)`, which reads the counter for you. A new cache
+  met). `projectionInputsChanged()` drops only the projection; the per-room caches (rosters, room
+  keys) are cleared by `logChanged()` alone, so anything that changes who is in a room, like the time
+  a phone could first read a removal, calls `logChanged()`. A per-room cache goes through
+  `cached(_:_:_:)`, which reads the counter for you. A new cache
   that does not go through it, or read the counter itself, serves a stale answer that looks like a
   message that never arrived.
 - Shared state is written only when it differs: `update(_:to:)`. Observation tells every screen that
