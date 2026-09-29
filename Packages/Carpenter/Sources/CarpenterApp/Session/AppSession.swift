@@ -108,7 +108,7 @@ public final class AppSession {
     @ObservationIgnored var cachedReadEvidence: [RoomID: ReadEvidence] = [:]
     @ObservationIgnored var cachedPositions: [RoomID: [MessageID: Int]] = [:]
     @ObservationIgnored var cachedReporting: [RoomID: Set<ParticipantID>] = [:]
-    @ObservationIgnored var cachedWritingKeys: [RoomID: WritingKey?] = [:]
+    @ObservationIgnored var cachedTrustedKeys: [RoomID: [TrustedKey]] = [:]
     @ObservationIgnored var cachedOutpostAccess: OutpostAccess?
     @ObservationIgnored var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
     @ObservationIgnored var cachedComparisonHalves: [ParticipantID: String] = [:]
@@ -151,7 +151,7 @@ public final class AppSession {
         cachedReadEvidence = [:]
         cachedPositions = [:]
         cachedReporting = [:]
-        cachedWritingKeys = [:]
+        cachedTrustedKeys = [:]
         cachedOutpostAccess = nil
         cachedDevicesAdded = [:]
         cachedLinksHeard = nil

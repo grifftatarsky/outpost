@@ -475,10 +475,12 @@ correct rather than only add to.
 - **Built, tests pass** (2026-09-29, package suite). A phone passes a room's new key on only once it holds everything
   the key's maker had seen, so a phone that got the key before the removal cannot hand it to the person
   removed (`PassingOnANewKeyTests`; ruled by Griff the same day).
-- **Built, not yet run** (2026-09-29). A phone writes only under a key made by somebody the room shows
-  as in, and holds every key it is given for a number, so a key a removed member made up stops being
-  used when the removal arrives and the real key is taken beside it (`AMadeUpKeyTests`; ruled by Griff
-  the same day).
+- **Built; the first run found a gap, fixed and not yet re-run** (2026-09-29). A phone writes only
+  under a key made by somebody the room shows as in, and holds every key it is given for a number, so a
+  key a removed member made up stops being used when the removal arrives and the real key is taken
+  beside it (`AMadeUpKeyTests`; ruled by Griff the same day). It passes on the key it made for a number,
+  or the one it writes under if it made none: the first run found a member whose key lost the tie
+  stopped handing it out.
 - **Built, not yet run** (2026-09-29). A removed person hears last: the remover writes them nothing
   until another member has read the removal and noted it, or every other member's space holds it.
   Every phone holds back the removal and anything written after it from the person removed. When two

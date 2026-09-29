@@ -787,7 +787,9 @@ refused beside it. Those phones kept writing under the made-up key, readable by 
 
 So a phone holds every key it is given for a number and opens with any of them. It writes under the
 newest key whose record of the change was written by somebody the room shows as in (for an Outpost,
-its owner), and passes that key on. A key whose record has not arrived counts only if it is the first
+its owner). It passes on the key it made for that number, or the key it writes under if it made none,
+so a member whose key lost the tie still hands out the one they wrote under. A key whose record has
+not arrived counts only if it is the first
 the phone holds for its number and whoever gave it is in, which covers the real key arriving a round
 before its record. Among several that count for one number, every phone takes the one with the lowest
 fingerprint, so two members who turn the key at once end up on the same key. One person can put only

@@ -94,8 +94,8 @@ extension AppSession {
         var owed: [(to: Peer, grant: EpochGrant, receipt: String)] = []
 
         for room in persisted.knownRooms {
-            guard let chain = chains[room], let writing = writingKey(of: room) else { continue }
-            let epoch = writing.epoch
+            guard let chain = chains[room], let passing = keyToPassOn(in: room) else { continue }
+            let epoch = passing.epoch
 
             if Self.withholdsKeys(
                 viewMayBeStale: viewMayBeStale, roomHasAbsences: !roster(of: room).absent.isEmpty)
@@ -104,7 +104,7 @@ extension AppSession {
                     "mailbox sync: holding this room's keys for a round — something did not verify and somebody here is out of the room")
                 continue
             }
-            let secret = writing.secret
+            let secret = passing.secret
 
             let isWall = room == outpostRoom(for: enrolment.identity.id)
             let floors = isWall
@@ -118,7 +118,7 @@ extension AppSession {
             var passesOn: Bool?
             for target in targets {
                 let floor = isWall ? (floors[target] ?? nil).map(EpochNumber.init(rawValue:)) : nil
-                let link = floor.map { epoch > $0 ? writing.link : nil } ?? writing.link
+                let link = floor.map { epoch > $0 ? passing.link : nil } ?? passing.link
                 let links = floor.map { ceiling in chain.everyLink.filter { $0.epoch > ceiling } }
                     ?? chain.everyLink
                 let devices = deviceRecipients(of: target)
@@ -158,39 +158,47 @@ extension AppSession {
         }
     }
 
-    func writingKey(of room: RoomID) -> WritingKey? {
-        cached(\.cachedWritingKeys, room) {
-            guard let chain = chains[room] else { return nil }
+    func writingKey(of room: RoomID) -> TrustedKey? {
+        trustedKeys(of: room).first
+    }
+
+    func keyToPassOn(in room: RoomID) -> TrustedKey? {
+        guard let me = enrolment?.identity.id else { return nil }
+        let trusted = trustedKeys(of: room)
+        return trusted.first { $0.maker == me } ?? trusted.first
+    }
+
+    private func trustedKeys(of room: RoomID) -> [TrustedKey] {
+        cached(\.cachedTrustedKeys, room) {
+            guard let chain = chains[room] else { return [] }
             let makers = outpostOwner(of: room).map { Set([$0]) } ?? roster(of: room).members
             let changes = projection.keyChanges(in: room, opening: payloadOpener())
             for epoch in chain.knownEpochs.sorted(by: >) {
                 let trusted = chain.heldSecrets(at: epoch).compactMap { secret in
                     trustedKey(secret, at: epoch, in: chain, makers: makers, changes: changes)
                 }
-                if let chosen = trusted.min(by: {
-                    $0.secret.fingerprint.lexicographicallyPrecedes($1.secret.fingerprint)
-                }) {
-                    return chosen
+                if !trusted.isEmpty {
+                    return trusted.sorted { $0.secret.fingerprint.lexicographicallyPrecedes($1.secret.fingerprint) }
                 }
             }
-            return nil
+            return []
         }
     }
 
     private func trustedKey(
         _ secret: EpochSecret, at epoch: EpochNumber, in chain: EpochChain, makers: Set<ParticipantID>,
         changes: [(author: ParticipantID, change: EpochChangeBody)]
-    ) -> WritingKey? {
-        guard epoch != .initial else { return WritingKey(epoch: epoch, secret: secret, link: nil) }
+    ) -> TrustedKey? {
+        guard epoch != .initial else { return TrustedKey(epoch: epoch, secret: secret, link: nil, maker: nil) }
         let records = changes.filter { $0.change.link.epoch == epoch && $0.change.isAuthentic(under: secret) }
         guard !records.isEmpty else {
             guard (try? chain.secret(for: epoch)) == secret, let giver = chain.giver(of: secret, at: epoch),
                 makers.contains(giver)
             else { return nil }
-            return WritingKey(epoch: epoch, secret: secret, link: chain.link(at: epoch))
+            return TrustedKey(epoch: epoch, secret: secret, link: chain.link(at: epoch), maker: nil)
         }
         return records.first { makers.contains($0.author) }.map {
-            WritingKey(epoch: epoch, secret: secret, link: $0.change.link)
+            TrustedKey(epoch: epoch, secret: secret, link: $0.change.link, maker: $0.author)
         }
     }
 
@@ -326,8 +334,9 @@ extension AppSession {
     }
 }
 
-struct WritingKey {
+struct TrustedKey {
     let epoch: EpochNumber
     let secret: EpochSecret
     let link: EpochLink?
+    let maker: ParticipantID?
 }

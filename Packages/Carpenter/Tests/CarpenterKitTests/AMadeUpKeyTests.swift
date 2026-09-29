@@ -107,11 +107,13 @@ extension RoomOfThree {
     fileprivate func turnTheKeyTogether() async throws {
         try await alice.advanceEpoch(of: room)
         try await carol.advanceEpoch(of: room)
-        try #require(
-            alice.writingKey(of: room)?.secret != carol.writingKey(of: room)?.secret,
-            "precondition: two keys for one number")
+        let alices = try #require(alice.writingKey(of: room)?.secret)
+        let carols = try #require(carol.writingKey(of: room)?.secret)
+        try #require(alices != carols, "precondition: two keys for one number")
         try await alice.send("under Alice's key", to: room)
         try await carol.send("under Carol's key", to: room)
+        let chosenFirst = alices.fingerprint.lexicographicallyPrecedes(carols.fingerprint) ? alice : carol
+        try await chosenFirst.sync(through: mailbox, media: mailbox)
         try await settle()
     }
 }
