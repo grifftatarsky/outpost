@@ -98,6 +98,8 @@ are left, and both need two members to have turned the key at once.
    removed. Nothing after that moment shoild be written tie or not." That covers two people removing
    each other, where the key that loses belongs to the one removed. Asked again the same day about two
    members who both remove somebody else at once, where the member whose key lost stays in the room.
+   Griff: "I guess but mark it as known in roadmap." **Accepted**, and marked as a known limit on the
+   [roadmap](roadmap.md).
 
 <!-- COPY END cd86ea13 -->
 
