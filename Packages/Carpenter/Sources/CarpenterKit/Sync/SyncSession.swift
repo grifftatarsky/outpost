@@ -275,7 +275,7 @@ public struct SyncSession: Sendable {
             }
         }
         if reached.isEmpty, let lastError { throw lastError }
-        if batches.count > 1 {
+        if forEveryone.count > 1 {
             Diagnostics.sync.notice(
                 """
                 mailbox: a round of \(entries.count, privacy: .public) entries went as \

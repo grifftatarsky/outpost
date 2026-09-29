@@ -88,11 +88,11 @@ extension Projection {
     }
 
     public func noters(of removal: EntryHash, in room: RoomID, opening: (RenderedEntry) -> Payload?) -> Set<ParticipantID> {
-        Set(
-            entries(in: room).filter { $0.type == .removalNoted }
-                .compactMap { note($0, opening($0)) }
-                .filter { $0.removal == removal }
-                .map(\.entry.author))
+        var noters: Set<ParticipantID> = []
+        for entry in entries(in: room) where entry.type == .removalNoted {
+            if note(entry, opening(entry))?.removal == removal { noters.insert(entry.author) }
+        }
+        return noters
     }
 
     private func note(_ entry: RenderedEntry, _ payload: Payload?) -> Note? {
