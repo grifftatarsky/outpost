@@ -80,8 +80,14 @@ What is still open, now narrower:
   them as in, so for that window it would take a key they made up. Closing it means checking a newer key
   against the room's own record of the change (every change writes one); to be built with care, because a
   key refused for want of its record is not sent again.
-- **A member can still make up a key.** Somebody in the room can read it anyway, so this is sabotage, not
-  a leak.
+- **A member can still make up a key, and it can outlast their removal.** Found by reading 2026-09-29,
+  not run. A key never replaces one already held (`EpochGrant.adopt`), so a member who sends some phones
+  a key of their own for the room's next number before being removed blocks the real key the remover
+  makes at that number. Those phones keep writing under the made-up key after the removal arrives, so
+  the removed member reads them, and they cannot read what the rest of the room writes. It lasts until
+  the room's key changes again. This is more than sabotage. Recommended: a phone writes only under a
+  key whose record of the change was written by somebody the room shows as in, and holds rival keys for
+  one number side by side rather than keeping whichever came first.
 - **Links for older keys** are taken from the inviter first; one the inviter did not have can still come
   from any member, as below.
 
