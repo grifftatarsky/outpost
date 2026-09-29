@@ -607,7 +607,7 @@ room, before any roster exists to name the inviter.
 origin, so a peer forwards whatever is above its own frontier to everybody it addresses — Bob's
 packets carry Alice's room-R entries to Carol whether or not Carol is in room R. Those entries are
 sealed and Carol cannot read a word of them, but an `Entry` keeps its room, author, device, sequence
-number, wall time and clock *outside* the seal, so a friend of a friend can see that a room exists
+number, wall time, clock and room link *outside* the seal, so a friend of a friend can see that a room exists
 and how much is being said in it. What the introduction changed is that Carol now *stores and
 forwards* those entries rather than refusing them as unverifiable. Narrowing this further means
 forwarding per recipient, and the sent frontier is deliberately one high-water mark per feed for
@@ -768,7 +768,8 @@ key the removed person made up; that is still [an open question](open-questions.
 **What would change it:** a maker naming an entry that others can never get. Today every entry a phone
 holds can be passed on, so the wait ends.
 
-**Built** 2026-09-29, not yet run (`PassingOnANewKeyTests`, `AKeyChangeRecordTests`).
+**Built** 2026-09-29, and its tests pass in the package suite the same day (`PassingOnANewKeyTests`,
+`AKeyChangeRecordTests`). The three-person proof over iCloud is owed.
 
 <!-- COPY END c709dc0f -->
 
@@ -3240,7 +3241,7 @@ others write. Every device has to take this build together. **What it does not c
 before chains can still take a number from below where the chain begins. The first is to be closed,
 on Griff's word to fix the gap. The second goes with every other form an older build wrote, because
 none has shipped ([Open questions](open-questions.md#raised-and-answered-2026-09-28)).
-**The member list follows the chain too**, built 2026-09-28 on Griff's "Fix this", not yet run:
+**The member list follows the chain too**, built 2026-09-28 on Griff's "Fix this", its tests passing in the package suite 2026-09-29:
 drawing and membership share one computation (`Projection.standing`), so nothing a removed person
 writes past the removal's chain counts for who is in the room either. **PROPOSED, needs Griff's yes:**
 when two people remove each other and neither removal had seen the other, both are out, and the
@@ -3284,7 +3285,7 @@ other's. Otherwise a relay that has seen both keys can try keys of its own until
 match; a commitment leaves it one guess per tap, which is why ZRTP commits
 ([RFC 6189](https://www.rfc-editor.org/rfc/rfc6189)). **RULED the same day:** "send the hash and only
 reveal then ... those are fine statistics to work with." Six digits: one guess in a million.
-**Built 2026-09-28, not yet run:** a phone's hello carries a hash of its key; it shows the key only to
+**Built 2026-09-28; its tests pass in the package suite (2026-09-29), not yet on a phone:** a phone's hello carries a hash of its key; it shows the key only to
 the phone it is touching, once that phone's hash has arrived, and only once per tap; both phones then
 show the same six digits, each told which three its person says, and Confirm appears only then.
 

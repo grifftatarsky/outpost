@@ -21,7 +21,7 @@ Settled decisions live in [Decisions](decisions.md).
 
 ### Does a removal decide who is in a room, or only what the room shows?
 
-Raised 2026-09-28, found by reading. Griff: "Fix this." Built the same day, not yet run: the member list
+Raised 2026-09-28, found by reading. Griff: "Fix this." Built the same day, and its tests pass in the package suite (2026-09-29): the member list
 follows the removal's chain the way the room already drew by, so nothing a removed person writes after
 it counts, whatever date or number it carries (`TheRoomChainTests`).
 
@@ -61,7 +61,7 @@ key it already has, and takes a key to somebody's Outpost only from that person.
 
 What was found on 2026-09-28, reading `AppSession.adopt` and `EpochChain`: the only check on who
 sends a key was that the room did not show them as gone, which somebody never in the room passes.
-Built the same day, not yet run: a device that holds a room's key takes a newer one only from somebody
+Built the same day, and its tests pass in the package suite (2026-09-29): a device that holds a room's key takes a newer one only from somebody
 the room shows as in it; a joining device takes its first key only from its inviter (Griff: "100% a
 joiner should only take the key from the inviter"); with no invitation to go by, as after a restore,
 only a key that opens something somebody else wrote there (`WhoCanSendYouAKeyTests`).
@@ -69,8 +69,8 @@ only a key that opens something somebody else wrote there (`WhoCanSendYouAKeyTes
 What was found on 2026-09-28, reading `SyncSession.send`: a round too big for one packet (700 KB) carries
 keys in its first packet, and the removal can be in a later one that has not arrived. That phone still
 showed the removed person as in, and a member passes its newest key to everybody it shows as in, so it
-sent them the key. Built 2026-09-29 at Griff's go-ahead ("that's a great idea ... So do that"), not yet
-run: whoever makes a key writes down the last entry they held from each person in the room, with a proof
+sent them the key. Built 2026-09-29 at Griff's go-ahead ("that's a great idea ... So do that"), and its
+tests pass in the package suite: whoever makes a key writes down the last entry they held from each person in the room, with a proof
 only the new key can make, and a phone passes the key on only once it holds every one of them
 (`PassingOnANewKeyTests`).
 

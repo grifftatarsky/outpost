@@ -414,8 +414,8 @@ that device counted in the sender's registry when iCloud stored the packet
 has not yet heard of the removal still takes a key the removed device signs; a removed device still
 signed in to the Apple Account can delay the news by deleting records.
 
-**A phone passes a key on only once it holds what the key's maker had seen** (built 2026-09-29, not
-yet run). Changing a room's key writes an entry into the room (`EpochChangeBody`, sealed under the old
+**A phone passes a key on only once it holds what the key's maker had seen** (built 2026-09-29; its tests
+pass in the package suite). Changing a room's key writes an entry into the room (`EpochChangeBody`, sealed under the old
 key) carrying the link, `heads` (the last entry of every feed in the room that the maker held) and
 `proof`: HMAC-SHA256 over the heads, keyed by HKDF-SHA256 from the *new* epoch secret with its own
 domain (`carpenter.epoch-change.v1`) and the room and epoch bound in. A member passes its newest key to
@@ -499,7 +499,7 @@ Ed25519 key. Since 2026-09-28 an entry in a room also signs a **room link**, app
 present (`"room-link" ‖ hash of this device's last entry in the room`, empty for its first), so an older
 entry signs exactly the bytes it always did. A removal or a departure names the last entry of each of
 the person's devices, and only the chains those reach are shown (`RoomChains`, `TheRoomChainTests`).
-Since 2026-09-28 the member list follows the same chains (`Projection.standing`, not yet run), and a
+Since 2026-09-28 the member list follows the same chains (`Projection.standing`; its tests pass in the package suite, 2026-09-29), and a
 room entry without its link is refused
 ([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)). Built
 2026-09-28, and the package suite passes; not yet run on the rig. Two things about this are worth stating precisely because they are the questions a
@@ -1135,7 +1135,7 @@ decide who they are talking to.
   Three readings in a row and one touching phone at a time make it harder; the characters are the
   check that holds.
 
-Griff ruled on 2026-09-28 to close both with a number, and it was built the same day (not yet run).
+Griff ruled on 2026-09-28 to close both with a number, and it was built the same day; its tests pass in the package suite (2026-09-29), not yet on a phone.
 Each phone's hello carries `SHA-256("carpenter.tap-commitment.v1" ‖ key)` instead of the key; a phone
 shows its key only to the phone it is touching, once that phone's commitment has arrived, and only once
 per tap. Both phones then derive six digits from the two keys (`carpenter.tap-number.v1`), each is told
