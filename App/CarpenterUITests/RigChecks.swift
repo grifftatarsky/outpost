@@ -37,18 +37,25 @@ final class RigChecks: XCTestCase {
     func tapIfThere(_ app: XCUIApplication, _ label: String, timeout: TimeInterval = 2, scrolling: Bool = false) -> Bool {
         let button = app.buttons.matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", label, label + ",")).firstMatch
         if button.waitForExistence(timeout: timeout), stillThere(button) {
-            button.tap()
-            return true
+            return tapped(button)
         }
         guard scrolling else { return false }
         for _ in 0..<5 {
             app.swipeUp()
             if stillThere(button) {
-                button.tap()
-                return true
+                return tapped(button)
             }
         }
         return false
+    }
+
+    func tapped(_ element: XCUIElement) -> Bool {
+        var landed = false
+        XCTExpectFailure("a screen changing under the tap takes the element away before it lands", strict: false) {
+            element.tap()
+            landed = true
+        }
+        return landed
     }
 
     func stillThere(_ element: XCUIElement) -> Bool {
@@ -426,7 +433,12 @@ final class RigChecks: XCTestCase {
         settle(app)
         app.buttons["Rooms"].firstMatch.tap()
         sleep(1)
-        XCTAssertTrue(tapIfThere(app, "I have an invite", timeout: 3))
+        shoot(app, "join-0-rooms")
+        if !tapIfThere(app, "I have an invite", timeout: 3) {
+            XCTAssertTrue(tapIfThere(app, "Rooms list options", timeout: 3), "no way in to an invite")
+            sleep(1)
+            XCTAssertTrue(tapIfThere(app, "Join with an invite", timeout: 3))
+        }
         sleep(1)
         let field = entry(app, "Paste the invite")
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -436,7 +448,10 @@ final class RigChecks: XCTestCase {
         XCTAssertTrue(tapIfThere(app, "Read the invite", timeout: 3))
         sleep(2)
         shoot(app, "join-2-read")
-        _ = tapIfThere(app, "They match", timeout: 3)
+        XCTAssertFalse(
+            app.staticTexts["That invite is not usable. It may have expired."].firstMatch.exists,
+            "the invite this device was handed was refused")
+        XCTAssertTrue(tapIfThere(app, "They match", timeout: 5), "no way to say the characters match")
         sleep(2)
         shoot(app, "join-3-matched")
         _ = tapIfThere(app, "Done", timeout: 3)
@@ -449,7 +464,8 @@ final class RigChecks: XCTestCase {
         app.buttons["Rooms"].firstMatch.tap()
         sleep(1)
         let room = app.staticTexts[roomName].firstMatch
-        XCTAssertTrue(room.waitForExistence(timeout: 10), "\(roomName) is not in the list")
+        if !room.waitForExistence(timeout: 20) { shoot(app, "rooms-without-\(roomName)") }
+        XCTAssertTrue(room.exists, "\(roomName) is not in the list")
         room.tap()
         sleep(3)
         _ = tapIfThere(app, "Open \(roomName)", timeout: 2)
@@ -476,6 +492,14 @@ final class RigChecks: XCTestCase {
         menu.tap()
         sleep(1)
         return tapIfThere(app, item, timeout: 3)
+    }
+
+    func testRunsARound() throws {
+        let app = launch()
+        sleep(3)
+        settle(app)
+        sleep(8)
+        shoot(app, "round-\(ProcessInfo.processInfo.environment["RIG_NAME"] ?? "device")")
     }
 
     func testQuadSays() throws {

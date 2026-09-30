@@ -297,6 +297,32 @@ devices is **proved above the mailbox** and has to be written down in those word
 
 <!-- COPY END fb141a22 -->
 
+<!-- COPY BEGIN b30668e4 [NEEDS HUMAN REVIEW] -->
+
+### The removal walk, 2026-09-30
+
+`Scripts/rig-walk-removals.sh` was run for the first time. It has **not finished**, and what it found
+so far is about the walk, not the product:
+
+- A joiner cannot reach the invite screen unless its room list is empty. "I have an invite" is only in
+  the empty state; on a phone that already has rooms the way in is *Rooms list options → Join with an
+  invite*. The step now tries both.
+- The walk went straight from the two joins to the first message, with no round in which the inviter
+  relays the confirmations and the joiners collect what they were admitted to. It now runs one round
+  on each phone in between (`testRunsARound`).
+- The joiner step ignored what came back from reading the invite, so a refused invite passed the step
+  and the walk failed three steps later on a room that was never joined. It now says so where it
+  happens, and a tap that lands on a screen already changing no longer fails the run outright.
+
+On devices carrying state from earlier runs the walk stopped with *"That invite is not usable. It may
+have expired."* on the second joiner, and one waiting invitation showed no characters to compare. That
+was not chased to the bottom. The three devices were erased and onboarded again, and the walk was
+stopped part-way through its first fresh run: **erasing three simulators at once leaves the Mac's load
+average in the hundreds for a long while**, and every `xcodebuild` step then takes twenty minutes
+instead of one. Erase them one at a time, or well before a walk.
+
+<!-- COPY END b30668e4 -->
+
 <!-- COPY BEGIN 9596e0ef [NEEDS HUMAN REVIEW] -->
 
 ### What these devices have shown
