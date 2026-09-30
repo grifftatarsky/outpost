@@ -54,7 +54,7 @@ extension AppSession {
             shared.insert(invitation.attestation.inviter)
         }
         if rooms.isEmpty {
-            shared.formUnion(persisted.knownKeys.map(\.participantID))
+            shared.formUnion(persisted.pairBook.keys)
         }
         shared.remove(me)
         return shared

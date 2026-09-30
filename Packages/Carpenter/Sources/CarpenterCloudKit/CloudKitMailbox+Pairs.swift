@@ -36,21 +36,39 @@ extension CloudKitMailbox {
     {
         let hint = try pairs.hint(for: peer)
         try await refresh()
-        let code = await codeZone(linkedBy: url)
-        if let existing = await index.mineFor(hint), existing != code {
-            if let code {
-                _ = try? await container.privateCloudDatabase.modifyRecordZones(saving: [], deleting: [code])
-                await index.dropMine(code)
-            }
+        guard let code = await codeZone(linkedBy: url) else {
             return try await space(for: peer, naming: reader, in: pairs)
         }
-        guard let code else { return try await space(for: peer, naming: reader, in: pairs) }
-        try await writeHint(hint, in: code)
-        await index.remember(url, for: code)
+        if let existing = await index.mineFor(hint), existing != code {
+            guard await isRead(existing) else {
+                try await drop(existing)
+                return try await claimed(code, hint: hint, at: url, naming: reader)
+            }
+            try await drop(code)
+            return try await space(for: peer, naming: reader, in: pairs)
+        }
+        return try await claimed(code, hint: hint, at: url, naming: reader)
+    }
+
+    private func claimed(
+        _ zone: CKRecordZone.ID, hint: PairHint, at url: URL, naming reader: String?
+    ) async throws -> URL {
+        try await writeHint(hint, in: zone)
+        await index.remember(url, for: zone)
         guard let reader else { return url }
-        try await name(reader, in: try await share(of: code))
-        await index.remember(reader: reader, of: code)
+        try await name(reader, in: try await share(of: zone))
+        await index.remember(reader: reader, of: zone)
         return url
+    }
+
+    private func drop(_ zone: CKRecordZone.ID) async throws {
+        _ = try? await container.privateCloudDatabase.modifyRecordZones(saving: [], deleting: [zone])
+        await index.dropMine(zone)
+    }
+
+    private func isRead(_ zone: CKRecordZone.ID) async -> Bool {
+        guard let share = try? await share(of: zone) else { return true }
+        return share.participants.contains { $0.role != .owner && $0.acceptanceStatus == .accepted }
     }
 
     private func codeZone(linkedBy url: URL) async -> CKRecordZone.ID? {

@@ -84,13 +84,16 @@ public struct LocalPairStore: Codable, Sendable {
         _ url: URL, for peer: ParticipantID, naming reader: String?, in pairs: Pairs, as account: String
     ) throws -> URL {
         let hint = try pairs.hint(for: peer)
-        if let existing = mine(for: peer, in: pairs, as: account), existing != url {
-            if spaces[url]?.account == account, spaces[url]?.hint == nil { spaces[url] = nil }
-            name(reader, in: existing)
-            return existing
-        }
-        guard spaces[url]?.account == account else {
+        guard spaces[url]?.account == account, spaces[url]?.hint == nil else {
             return try space(for: peer, naming: reader, in: pairs, as: account)
+        }
+        if let existing = mine(for: peer, in: pairs, as: account), existing != url {
+            guard spaces[existing]?.joined.isEmpty ?? true else {
+                discard(url)
+                name(reader, in: existing)
+                return existing
+            }
+            discard(existing)
         }
         spaces[url]?.hint = hint
         name(reader, in: url)
@@ -113,6 +116,10 @@ public struct LocalPairStore: Codable, Sendable {
 
     public mutating func close(_ peer: ParticipantID, in pairs: Pairs, as account: String) {
         guard let url = mine(for: peer, in: pairs, as: account) else { return }
+        discard(url)
+    }
+
+    private mutating func discard(_ url: URL) {
         for name in spaces[url]?.order ?? [] {
             if let id = UUID(uuidString: name) { packetOrder.removeAll { $0.rawValue == id } }
         }

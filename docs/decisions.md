@@ -3214,6 +3214,58 @@ accounts.
 
 <!-- COPY END cd3e5ba0 -->
 
+<!-- COPY BEGIN 6a65aac1 [NEEDS HUMAN REVIEW] -->
+
+### A phone keeps a space for the people it has met, not for everybody it has heard of
+
+**PROPOSED 2026-09-30 by Claude.** Griff has not been asked.
+
+Every packet carries the identities its sender knows, so a phone learns of people it has never met.
+A phone with no room of its own treated every identity it had learned as somebody to reach, because
+that was how a new member could still talk to whoever invited them. Measured 2026-09-30: a member
+joining their first room made a space in their iCloud for each of the three people in it, wrote
+packets addressed to two of them who had never heard of it, and those spaces stood empty because a
+link to them can only be passed on inside a room they share.
+
+A phone with no room now reaches the people whose link it has actually taken — its inviter, and
+anybody whose code it used — which is what the fallback was for. Everybody else waits until a room
+shows them.
+
+**Cost:** none found. Rooms, invitations, Outposts and repairs each name their own people, and those
+are unchanged.
+
+**Built** 2026-09-30, `BeingInvitedByAStrangerTests`. Proved above the mailbox only; what iCloud does
+with the zones this used to make has not been run.
+
+<!-- COPY END 6a65aac1 -->
+
+<!-- COPY BEGIN 3cad77d9 [NEEDS HUMAN REVIEW] -->
+
+### Claiming the space a code offered keeps the space the other side holds
+
+**PROPOSED 2026-09-30 by Claude.** Griff has not been asked.
+
+A code carries a space of its own. When somebody uses the code, the phone that made it turns that
+space into the pair's space and makes a fresh one for the next code. If the phone already had a space
+for that person it kept the old one and deleted the code's — and the code's was the only space the
+other side had ever been told about, so their app asked for a space that was gone, wrote that link
+off for good, and the invitation died with nothing on either screen to say so. The two sides can only
+pass a new link to each other inside a room they share, which is the room the invitation was for.
+
+So the claim keeps whichever space the other side can already read. If they have joined one, that one
+stands and the code's is let go. If they have not, the code's stands — they hold its link and nothing
+else — and the space nobody reads is let go, with the packets in it sent again, the way any packet
+that goes missing is.
+
+**Cost:** an unread space is deleted along with anything waiting in it. Nothing is lost: a sender
+re-sends any packet that is no longer in the mailbox.
+
+**Built** 2026-09-30 on both mailboxes, `ClaimingTheSpaceACodeOfferedTests`. The CloudKit half asks
+iCloud whether the share has been accepted, and **has not been run**: nothing below the mailbox is
+proved by the package suite.
+
+<!-- COPY END 3cad77d9 -->
+
 <!-- COPY BEGIN acacb9e8 [NEEDS HUMAN REVIEW] -->
 
 ### A photo is copied for each person it goes to, and each copy is sealed apart

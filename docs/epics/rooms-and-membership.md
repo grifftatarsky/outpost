@@ -485,6 +485,12 @@ correct rather than only add to.
   somebody the phone does not yet show as in the room, waits until it does, and is dropped if the phone
   shows them removed or gone, so somebody who joins while two keys are in play gets both
   (`AKeyThatWaitsTests`; ruled by Griff the same day).
+- **Built, tests pass** (2026-09-30, package suite). Somebody a phone has only heard of can invite it
+  into a room. A phone with no room of its own paired with every identity it had heard of, and claiming
+  the space a code offered deleted that space whenever such a pairing had already made one, leaving the
+  inviter holding a link to a space that was gone and the invitation dead with nothing on either screen
+  (`BeingInvitedByAStrangerTests`, `ClaimingTheSpaceACodeOfferedTests`). Found while re-running
+  `AKeyThatWaitsTests`, which could not pass while no second member's invitation could land.
 - **Built, not yet run** (2026-09-29). A removed person hears last: the remover writes them nothing
   until another member has read the removal and noted it, or every other member's space holds it.
   Every phone holds back the removal and anything written after it from the person removed. When two
