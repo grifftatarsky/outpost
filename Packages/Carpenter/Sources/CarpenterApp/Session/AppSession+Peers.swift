@@ -94,8 +94,7 @@ extension AppSession {
         var owed: [(to: Peer, grant: EpochGrant, receipt: String)] = []
 
         for room in persisted.knownRooms {
-            guard let chain = chains[room], let passing = keyToPassOn(in: room) else { continue }
-            let epoch = passing.epoch
+            guard let chain = chains[room] else { continue }
 
             if Self.withholdsKeys(
                 viewMayBeStale: viewMayBeStale, roomHasAbsences: !roster(of: room).absent.isEmpty)
@@ -104,7 +103,6 @@ extension AppSession {
                     "mailbox sync: holding this room's keys for a round — something did not verify and somebody here is out of the room")
                 continue
             }
-            let secret = passing.secret
 
             let isWall = room == outpostRoom(for: enrolment.identity.id)
             let floors = isWall
@@ -115,35 +113,39 @@ extension AppSession {
                 ? outpostReaders().sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
                 : Array(notShutOut(roster(of: room).rewrapTargets(of: enrolment.identity.id)))
 
-            var passesOn: Bool?
-            for target in targets {
-                let floor = isWall ? (floors[target] ?? nil).map(EpochNumber.init(rawValue:)) : nil
-                let link = floor.map { epoch > $0 ? passing.link : nil } ?? passing.link
-                let links = floor.map { ceiling in chain.everyLink.filter { $0.epoch > ceiling } }
-                    ?? chain.everyLink
-                let devices = deviceRecipients(of: target)
-                guard !devices.isEmpty else { continue }
-                let receipt = Self.grantReceipt(
-                    room: room, epoch: epoch, key: secret, target: target, floor: floor, devices: devices)
-                guard !issuedGrants.contains(receipt) else { continue }
+            for passing in keysToPassOn(in: room) {
+                let epoch = passing.epoch
+                let secret = passing.secret
+                var passesOn: Bool?
+                for target in targets {
+                    let floor = isWall ? (floors[target] ?? nil).map(EpochNumber.init(rawValue:)) : nil
+                    let link = floor.map { epoch > $0 ? passing.link : nil } ?? passing.link
+                    let links = floor.map { ceiling in chain.everyLink.filter { $0.epoch > ceiling } }
+                        ?? chain.everyLink
+                    let devices = deviceRecipients(of: target)
+                    guard !devices.isEmpty else { continue }
+                    let receipt = Self.grantReceipt(
+                        room: room, epoch: epoch, key: secret, target: target, floor: floor, devices: devices)
+                    guard !issuedGrants.contains(receipt) else { continue }
 
-                guard let pairwise = pairwiseSecret(with: target) else { continue }
-                if passesOn == nil { passesOn = holdsWhatItsMakerSaw(epoch, in: room, under: secret) }
-                guard passesOn == true else {
-                    Diagnostics.sync.notice(
-                        "mailbox sync: holding a room's newest key until everything its maker had seen has arrived")
-                    break
+                    guard let pairwise = pairwiseSecret(with: target) else { continue }
+                    if passesOn == nil { passesOn = holdsWhatItsMakerSaw(epoch, in: room, under: secret) }
+                    guard passesOn == true else {
+                        Diagnostics.sync.notice(
+                            "mailbox sync: holding a room's newest key until everything its maker had seen has arrived")
+                        break
+                    }
+
+                    owed.append(
+                        (
+                            to: Peer(secret: pairwise, them: target, me: enrolment.identity.id),
+                            grant: try EpochGrant.issue(
+                                secret, at: epoch, in: room, link: link, links: links, to: pairwise,
+                                devices: devices
+                            ).signed(by: enrolment.device, from: enrolment.identity.id, to: target),
+                            receipt: receipt
+                        ))
                 }
-
-                owed.append(
-                    (
-                        to: Peer(secret: pairwise, them: target, me: enrolment.identity.id),
-                        grant: try EpochGrant.issue(
-                            secret, at: epoch, in: room, link: link, links: links, to: pairwise,
-                            devices: devices
-                        ).signed(by: enrolment.device, from: enrolment.identity.id, to: target),
-                        receipt: receipt
-                    ))
             }
         }
         return owed
@@ -162,10 +164,34 @@ extension AppSession {
         trustedKeys(of: room).first
     }
 
-    func keyToPassOn(in room: RoomID) -> TrustedKey? {
-        guard let me = enrolment?.identity.id else { return nil }
-        let trusted = trustedKeys(of: room)
-        return trusted.first { $0.maker == me } ?? trusted.first
+    func keysToPassOn(in room: RoomID) -> [TrustedKey] {
+        cached(\.cachedKeysToPassOn, room) {
+            guard let me = enrolment?.identity.id else { return [] }
+            let newest = trustedKeys(of: room)
+            let heads = newest.filter { $0.maker == me } + newest.filter { $0.maker != me }
+            return heads + straysBelow(heads, in: room)
+        }
+    }
+
+    private func straysBelow(_ heads: [TrustedKey], in room: RoomID) -> [TrustedKey] {
+        guard var epoch = heads.first?.epoch, let chain = chains[room],
+            chain.heldKeyCount > chain.knownEpochs.count
+        else { return [] }
+        let makers = outpostOwner(of: room).map { Set([$0]) } ?? roster(of: room).members
+        let changes = projection.keyChanges(in: room, opening: payloadOpener())
+        var reachable = Set(heads.map(\.secret))
+        var strays: [TrustedKey] = []
+        while let below = epoch.previous {
+            reachable = Set(reachable.compactMap { chain.unwrapping(epoch, under: $0) })
+            epoch = below
+            for secret in chain.heldSecrets(at: epoch) where !reachable.contains(secret) {
+                guard let stray = trustedKey(secret, at: epoch, in: chain, makers: makers, changes: changes)
+                else { continue }
+                strays.append(stray)
+                reachable.insert(secret)
+            }
+        }
+        return strays
     }
 
     private func trustedKeys(of room: RoomID) -> [TrustedKey] {
@@ -221,10 +247,19 @@ extension AppSession {
             "\(room.rawValue.uuidString)|\(epoch.rawValue)|\(which)|\(target.rawValue.base64EncodedString())|\(since)|\(to)"
     }
 
+    private func invitersInto(_ room: RoomID) -> Set<ParticipantID> {
+        Set(persisted.acceptedInvitations.filter { $0.attestation.room == room }.map(\.attestation.inviter))
+    }
+
     private func mayGiveTheFirstKey(_ giver: ParticipantID, to room: RoomID, opening chain: EpochChain) -> Bool {
-        let inviters = persisted.acceptedInvitations.filter { $0.attestation.room == room }.map(\.attestation.inviter)
+        let inviters = invitersInto(room)
         guard inviters.isEmpty else { return inviters.contains(giver) }
         return replica.allEntries.contains { $0.room == room && $0.author != giver && $0.opened(using: chain) != nil }
+    }
+
+    private func mayGiveAKeyBeforeTheHistory(_ giver: ParticipantID, to room: RoomID) -> Bool {
+        let roster = roster(of: room)
+        return roster.members.isEmpty && !roster.absent.contains(giver) && invitersInto(room).contains(giver)
     }
 
     private func keepUntilShownIn(_ grant: EpochGrant, from giver: ParticipantID, storedAt: Date) -> Bool {
@@ -274,7 +309,9 @@ extension AppSession {
                 Diagnostics.sync.notice("adopt: refused a key to an Outpost from somebody who does not own it")
                 return
             }
-        } else if held != nil, !roster(of: grant.room).members.contains(peer.them) {
+        } else if held != nil, !roster(of: grant.room).members.contains(peer.them),
+            !mayGiveAKeyBeforeTheHistory(peer.them, to: grant.room)
+        {
             if !keepUntilShownIn(grant, from: peer.them, storedAt: storedAt) {
                 Diagnostics.sync.notice("adopt: refused a key from somebody the room does not show as in it")
             }

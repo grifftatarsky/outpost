@@ -166,7 +166,7 @@ What was found on 2026-09-29, reading `EpochGrant.adopt`: a key never replaced o
 member who sent some phones a key of their own for the room's next number before being removed blocked
 the real key the remover made at that number. Those phones kept writing under the made-up key after the
 removal arrived, so the removed member read them, and they could not read the rest of the room. Built
-the same day on Griff's "I think 1 is fine", not yet run: a phone holds every key it is given for a
+the same day on Griff's "I think 1 is fine", and passing in the package suite since 2026-09-30: a phone holds every key it is given for a
 number and opens with any of them, and writes only under a key whose record of the change was written
 by somebody the room shows as in. A key whose record has not arrived counts only as the first held for
 its number, and only while whoever gave it is in. Two members who turn the key at once end up writing

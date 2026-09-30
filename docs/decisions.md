@@ -787,8 +787,9 @@ refused beside it. Those phones kept writing under the made-up key, readable by 
 
 So a phone holds every key it is given for a number and opens with any of them. It writes under the
 newest key whose record of the change was written by somebody the room shows as in (for an Outpost,
-its owner). It passes on the key it made for that number, or the key it writes under if it made none,
-so a member whose key lost the tie still hands out the one they wrote under. A key whose record has
+its owner). It passes on every key that counts for that number, and every older key that a walk back
+from those cannot reach, so a member whose key lost the tie still hands out the one they wrote under,
+and somebody who joins afterwards can read what was written under either. A key whose record has
 not arrived counts only if it is the first
 the phone holds for its number and whoever gave it is in, which covers the real key arriving a round
 before its record. Among several that count for one number, every phone takes the one with the lowest
@@ -803,8 +804,10 @@ had.
 
 **What would change it:** a key that has to be written under before any record of it can exist.
 
-**Built** 2026-09-29. The first run found a member whose key lost the tie stopped handing it out;
-fixed, not yet re-run (`AMadeUpKeyTests`).
+**Built** 2026-09-29. The first run found a member whose key lost the tie stopped handing it out,
+and reading the second found that a phone joining after a tie never got the key that lost it, because
+the newest key only walks back down its own lineage. Both fixed 2026-09-30; `AMadeUpKeyTests` and
+`AStrandedKeyTests` pass in the package suite. Not run on the rig.
 
 <!-- COPY END 6264031c -->
 
@@ -823,12 +826,16 @@ read nothing until the next key change.
 
 So a phone that accepted an invitation to a room keeps such a key instead of refusing it. It takes the
 key once it shows whoever gave it as in the room, through the same checks as any other key, and drops
-it if it shows them removed or gone. One key waits per person per room.
+it if it shows them removed or gone. One key waits per person per room. The one key that never waits
+is the inviter's: a phone takes that one as long as the room does not show them removed or gone,
+because until the phone can read the room nothing can ever release what waits.
 
 **Cost:** a key from somebody who is never shown as in the room waits for good: one per person, for
 rooms this member accepted an invitation to.
 
-**Built** 2026-09-29, not yet run (`AKeyThatWaitsTests`).
+**Built** 2026-09-29. The first run found that a phone which already held a key held its own
+inviter's key back as well, so nothing could ever let it read the room and every later key waited
+behind it; fixed 2026-09-30, and `AKeyThatWaitsTests` passes in the package suite. Not run on the rig.
 
 <!-- COPY END 000ef40b -->
 

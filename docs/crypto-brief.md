@@ -437,7 +437,7 @@ links are in their chain, the answer is yes and cannot be withdrawn. **This is t
 line in the codebase to audit**, and the failure mode is silent: too many links is not an error
 anywhere, it is a reader who can see more than intended and no log line anywhere says so.
 
-**Several keys for one number** (built 2026-09-29; the first run found the gap below, fixed and not yet re-run). A phone holds every key it is given
+**Several keys for one number** (built 2026-09-29; two gaps found on the first and second runs, both fixed 2026-09-30, and `AMadeUpKeyTests`, `AStrandedKeyTests` and `AKeyThatWaitsTests` pass in the package suite; not run on the rig). A phone holds every key it is given
 for an epoch number and opens with any of them (`EpochChain.hold`, `sealingKeys`). It writes under the
 newest key whose record of the change was written by somebody the room shows as in, the record matched
 to the key by its proof; a key whose record has not arrived counts only as the first held for its number
@@ -445,11 +445,19 @@ and only while whoever gave it is in. Among several that count, every phone take
 fingerprint (SHA-256 under `carpenter.epoch-fingerprint.v1`). This closes two holes: a key a member made
 up before being removed is no longer written under once the removal arrives, and the real key is taken
 beside it; and two members advancing the epoch at the same moment no longer leave phones on different
-keys (`AMadeUpKeyTests`). Each phone passes on the key it made for the number, or the one it writes
-under if it made none. The first run found why: a member whose key lost the tie stopped handing it
-out, and nobody else could read what they had written under it. A key that reaches a phone still
-joining the room before its inviter's, or from somebody that phone does not yet show as in, waits until
-it does, and is dropped if the phone shows them removed or gone (`AKeyThatWaitsTests`, not yet run).
+keys (`AMadeUpKeyTests`). Each phone passes on every key that counts for the newest number, and every
+older key that a walk back from those cannot reach. The first run found the first half of why: a
+member whose key lost the tie stopped handing it out, and nobody else could read what they had written
+under it. The second found the other half: a link holds one number's key wrapped under the next
+number's, so a walk back from the newest key only ever recovers that key's own line, and the key that
+lost a tie was never handed to anybody who joined afterwards (`AStrandedKeyTests`). A walk back now tries
+each number's link under every key the phone holds for that number and keeps what it uncovers beside
+what is already there (`EpochChain.warm`); before that it followed one key per number and stopped dead
+at a number whose stored key was not the one that made the link. A key that
+reaches a phone still joining the room before its inviter's, or from somebody that phone does not yet
+show as in, waits until it does, and is dropped if the phone shows them removed or gone; the inviter's
+own key never waits, because until the phone can read the room nothing could ever release it
+(`AKeyThatWaitsTests`).
 One giver may add one key per number and no number holds more than sixteen.
 The two-advances case still needs three real accounts to prove over iCloud
 ([Proofs a rig cannot run](proofs-a-rig-cannot-run.md)).

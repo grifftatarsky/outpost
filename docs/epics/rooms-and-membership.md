@@ -475,16 +475,19 @@ correct rather than only add to.
 - **Built, tests pass** (2026-09-29, package suite). A phone passes a room's new key on only once it holds everything
   the key's maker had seen, so a phone that got the key before the removal cannot hand it to the person
   removed (`PassingOnANewKeyTests`; ruled by Griff the same day).
-- **Built; the first run found a gap, fixed and not yet re-run** (2026-09-29). A phone writes only
+- **Built, tests pass** (2026-09-29; two gaps found and fixed 2026-09-30, package suite). A phone writes only
   under a key made by somebody the room shows as in, and holds every key it is given for a number, so a
   key a removed member made up stops being used when the removal arrives and the real key is taken
-  beside it (`AMadeUpKeyTests`; ruled by Griff the same day). It passes on the key it made for a number,
-  or the one it writes under if it made none: the first run found a member whose key lost the tie
-  stopped handing it out.
-- **Built, not yet run** (2026-09-29). A key that reaches a joining phone before its inviter's, or from
+  beside it (`AMadeUpKeyTests`; ruled by Griff the same day). It passes on every key that counts for the
+  newest number and every older key a walk back from those cannot reach. The first run found a member
+  whose key lost the tie stopped handing it out; the second found that a walk back from the newest key
+  only recovers that key's own line, so the key that lost a tie never reached anybody who joined
+  afterwards, and a walk now keeps every key it uncovers (`AStrandedKeyTests`).
+- **Built, tests pass** (2026-09-29; a gap found and fixed 2026-09-30, package suite). A key that reaches a joining phone before its inviter's, or from
   somebody the phone does not yet show as in the room, waits until it does, and is dropped if the phone
   shows them removed or gone, so somebody who joins while two keys are in play gets both
-  (`AKeyThatWaitsTests`; ruled by Griff the same day).
+  (`AKeyThatWaitsTests`; ruled by Griff the same day). The inviter's own key never waits: the first run
+  found a phone holding it back along with everything else, so nothing could ever let it read the room.
 - **Built, tests pass** (2026-09-30, package suite). Somebody a phone has only heard of can invite it
   into a room. A phone with no room of its own paired with every identity it had heard of, and claiming
   the space a code offered deleted that space whenever such a pairing had already made one, leaving the

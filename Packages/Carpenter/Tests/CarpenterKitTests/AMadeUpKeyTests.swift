@@ -164,8 +164,8 @@ struct AKeyThatWaitsTests {
         try await t.turnTheKeyTogether()
         let dave = try await t.friend(of: t.alice, named: "Dave")
         try await t.invite(dave, by: t.carol)
-        let alices = try #require(t.alice.keyToPassOn(in: t.room))
-        let carols = try #require(t.carol.keyToPassOn(in: t.room))
+        let alices = try #require(t.alice.keysToPassOn(in: t.room).first)
+        let carols = try #require(t.carol.keysToPassOn(in: t.room).first)
         try await t.hand(alices, from: t.alice, to: dave)
         try #require(dave.chains[t.room] == nil, "precondition: Dave holds no key for the room yet")
 
@@ -182,8 +182,8 @@ struct AKeyThatWaitsTests {
         try await t.turnTheKeyTogether()
         let dave = try await t.friend(of: t.alice, named: "Dave")
         try await t.invite(dave, by: t.carol)
-        let alices = try #require(t.alice.keyToPassOn(in: t.room))
-        let carols = try #require(t.carol.keyToPassOn(in: t.room))
+        let alices = try #require(t.alice.keysToPassOn(in: t.room).first)
+        let carols = try #require(t.carol.keysToPassOn(in: t.room).first)
         try await t.hand(carols, from: t.carol, to: dave)
         try #require(dave.chains[t.room] != nil, "precondition: Dave took his inviter's key")
         try #require(
@@ -218,6 +218,66 @@ struct AKeyThatWaitsTests {
         let held = dave.chains[t.room]?.heldSecrets(at: number) ?? []
         #expect(madeUp.allSatisfy { !held.contains($0) }, "Dave took a key from somebody the room had removed")
         #expect(!dave.persisted.grantsWaiting.contains(where: { $0.from == t.samID }))
+    }
+
+    @Test("The key of the member who invited this phone is taken while the phone still cannot read the room")
+    func theInvitersKeyNeverWaits() async throws {
+        let t = try await RoomOfThree.make()
+        let dave = try await t.friend(of: t.alice, named: "Dave")
+        try await t.invite(dave, by: t.carol)
+        try await t.hand(try #require(t.carol.keysToPassOn(in: t.room).first), from: t.carol, to: dave)
+        try await t.alice.advanceEpoch(of: t.room)
+        try await t.settle()
+        let newest = try #require(t.carol.keysToPassOn(in: t.room).first)
+        try #require(dave.chains[t.room]?.knownEpochs.contains(newest.epoch) != true, "precondition: the room moved on without Dave")
+        try #require(dave.roster(of: t.room).members.isEmpty, "precondition: Dave's phone cannot read the room yet")
+
+        try await t.hand(newest, from: t.carol, to: dave)
+
+        #expect(
+            dave.chains[t.room]?.knownEpochs.contains(newest.epoch) == true,
+            "Dave held back the key of the one person who could let him read the room, so nothing could ever release it")
+        #expect(dave.persisted.grantsWaiting.isEmpty)
+    }
+}
+
+@MainActor
+@Suite("A key stranded when two members turn one at once still reaches a phone that joins later", .serialized)
+struct AStrandedKeyTests {
+    @Test("Somebody who joins after a tie reads what was written under the key that lost it")
+    func aJoinerReadsBothSidesOfATie() async throws {
+        let t = try await RoomOfThree.make()
+        try await t.turnTheKeyTogether()
+        let dave = try await t.friend(of: t.alice, named: "Dave")
+        try await t.invite(dave, by: t.carol)
+
+        for _ in 0..<6 {
+            for session in [t.alice, t.carol, t.sam, dave] {
+                try await session.sync(through: t.mailbox, media: t.mailbox)
+            }
+        }
+
+        try #require(dave.roster(of: t.room).members.contains(t.carolID), "precondition: Dave is in the room")
+        let bodies = dave.messages(in: t.room).map { $0.body }
+        #expect(
+            bodies.contains("under Alice's key") && bodies.contains("under Carol's key"),
+            "Dave cannot read what was written under the key that lost the tie before he joined")
+    }
+
+    @Test("A phone hands on the keys a walk back from its newest one cannot reach, and no others")
+    func onlyTheKeysAWalkCannotReach() async throws {
+        let t = try await RoomOfThree.make()
+        let before = try #require(t.carol.keysToPassOn(in: t.room))
+        #expect(before.count == 1, "a phone with one key for every number offered more than one")
+
+        try await t.turnTheKeyTogether()
+        try await t.alice.advanceEpoch(of: t.room)
+        try await t.settle()
+
+        let passing = t.carol.keysToPassOn(in: t.room)
+        let newest = try #require(passing.first?.epoch)
+        #expect(passing.count == 2, "the key stranded by the tie was not offered, or one was offered twice")
+        #expect(passing.dropFirst().allSatisfy { $0.epoch < newest }, "a key already reachable from the newest was offered again")
     }
 }
 

@@ -222,13 +222,25 @@ public struct EpochChain: Sendable {
         heldSecrets(at: epoch).map { Self.derivedKey(from: $0, room: room, epoch: epoch, domain: Domain.epochSealing) }
     }
 
+    public func unwrapping(_ epoch: EpochNumber, under secret: EpochSecret) -> EpochSecret? {
+        guard let link = links[epoch], let box = try? ChaChaPoly.SealedBox(combined: link.wrapped),
+            let opened = try? ChaChaPoly.open(
+                box, using: Self.wrappingKey(for: secret, room: room, epoch: epoch), authenticating: link.context)
+        else { return nil }
+        return EpochSecret(material: opened)
+    }
+
     public mutating func warm(downTo epoch: EpochNumber) throws {
         guard let highest = highestKnownEpoch, epoch <= highest else { return }
         var cursor = highest
-        while cursor >= epoch {
-            secrets[cursor] = try secret(for: cursor)
+        while cursor > epoch {
+            guard links[cursor] != nil else { throw CryptoError.unknownEpoch }
+            let opened = heldSecrets(at: cursor).compactMap { unwrapping(cursor, under: $0) }
+            guard let linked = opened.first else { throw CryptoError.openFailed }
             guard let step = cursor.previous else { break }
             cursor = step
+            if secrets[cursor] == nil { secrets[cursor] = linked }
+            for secret in opened { hold(secret, at: cursor) }
         }
     }
 
