@@ -3623,6 +3623,18 @@ values, so a key made from the code alone could be tried against a copied file, 
 phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
 the phone itself.
 
+**Built 2026-09-30.** What this phone keeps is sealed with a key it holds only while the app is open.
+That key is wrapped by two things at once: the code, stretched by PBKDF2, and a shared secret from a
+P-256 key the Secure Enclave made and will not give up. A copied file opens on no other phone, with
+or without the code, because the other phone cannot reach the enclave key; on this phone every guess
+still costs a PBKDF2. Face ID is a second wrapping under a second enclave key whose access control
+names the current set of faces, so a face releases key material rather than answering yes or no, and
+a face that will not pass leaves the code. Forgetting the code, or losing the enclave keys, loses
+this phone's copy and nothing anybody else holds (`Vault`, `SealedDocumentStore`,
+`OutpostsOwnLockSealsThisPhoneTests`). **The enclave half has never run**: a simulator has no Secure
+Enclave, so the package suite proves the composition against a fake and the real one is compiled
+only.
+
 **Built 2026-09-28 for the phone's lock: the package suite passes on Griff's Mac, the keychain half
 passes on the simulator, and on an iPhone files are written with the protection it names. Not yet tried
 with the phone locked.** iOS already ties its own keys to the passcode and the phone's hardware, so this choice asks

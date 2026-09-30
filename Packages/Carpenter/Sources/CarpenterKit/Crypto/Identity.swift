@@ -282,6 +282,8 @@ enum Domain {
     static let photoCopyName = "carpenter.photo-copy-name.v1"
     static let photoCopyLabel = "carpenter.photo-copy-label.v1"
     static let tapSwap = "carpenter.tap-swap.v1"
+    static let vaultKey = "carpenter.vault-key.v1"
+    static let vaultDocument = "carpenter.vault-document.v1"
     static let tapCommitment = "carpenter.tap-commitment.v1"
     static let tapNumber = "carpenter.tap-number.v1"
     static let pairwiseAddress = "carpenter.pairwise-address.v1"
