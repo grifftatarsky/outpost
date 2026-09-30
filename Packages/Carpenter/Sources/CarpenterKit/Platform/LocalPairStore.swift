@@ -285,6 +285,13 @@ extension LocalPairStore {
             .flatMap { AttachmentWire.sealedCopy(from: $0.record.fields) }
     }
 
+    public func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs, as account: String) -> Data? {
+        ownSpaces(in: pairs, as: account)
+            .compactMap { $0.space.records[copy.recordName] }
+            .compactMap { AttachmentWire.sealedCopy(from: $0.fields) }
+            .first
+    }
+
     public mutating func acknowledge(
         copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
         in pairs: Pairs, as account: String, at now: Date

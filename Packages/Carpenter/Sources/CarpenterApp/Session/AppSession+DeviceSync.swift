@@ -103,6 +103,8 @@ extension AppSession {
         persisted.siblingMail.shared(feed.epochs)
         persisted.siblingMail.shared(feed.entries)
         persisted.siblingMail.shared(feed.people)
+        notePhotosHeld(feed.photosHeld, by: writer)
+        for forwarded in feed.asks { takeAsks([forwarded.ask], from: forwarded.from) }
         if record.name.kind != .state {
             persisted.siblingMail.shared(feed.addresses)
             await keepAddresses(fromSibling: feed.addresses)
@@ -328,16 +330,22 @@ extension AppSession {
                 entries: replica.allEntries, held: held, people: people, preferences: preferencesDigest,
                 addresses: addresses, me: me, revoked: Set(persisted.revocations.map(\.device)), now: now)
 
+            let photosHeld = persisted.ownPhotosHeld.sorted { $0.rawValue.uuidString < $1.rawValue.uuidString }
+            let asks = persisted.photoAsks.map {
+                ForwardedAsk(from: $0.from, ask: PhotoAsk(entry: $0.entry, attachment: $0.attachment))
+            }
             let state = SiblingFeed(
                 entries: [], certificates: knownCertificates(), member: enrolment.identity.id,
-                collected: persisted.siblingMail.cursors, revocations: persisted.revocations, people: people)
+                collected: persisted.siblingMail.cursors, revocations: persisted.revocations, people: people,
+                photosHeld: photosHeld, asks: asks)
             let digest = try? SiblingMail.digest(of: state, on: now)
 
             var drafts: [(kind: SiblingRecord.Kind, feed: SiblingFeed)] = []
             if digest == nil || digest != persisted.siblingMail.lastState {
                 drafts.append((.state, SiblingFeed(
                     entries: [], certificates: state.certificates, member: state.member, writtenAt: now,
-                    collected: state.collected, revocations: state.revocations, people: people)))
+                    collected: state.collected, revocations: state.revocations, people: people,
+                    photosHeld: photosHeld, asks: asks)))
             }
             if let mail = plan.mail {
                 let carried = Set(mail.entries.map(\.hash))

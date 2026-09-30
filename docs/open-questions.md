@@ -103,30 +103,6 @@ are left, and both need two members to have turned the key at once.
 
 <!-- COPY END cd86ea13 -->
 
-<!-- COPY BEGIN a8b828db [NEEDS HUMAN REVIEW] -->
-
-### What must a photo reaching every device guarantee?
-
-Raised 2026-09-30, before building Griff's ruling that every device fetches a photo itself
-([Decisions](decisions.md#only-the-sender-clears-a-photo-and-keeps-its-own-copy)). The promises, for
-Griff to confirm before any code:
-
-1. Every current device of each person a photo is for, and the sender's other devices, fetch it
-   themselves, and the sender's copy stays in iCloud until each of them has signed for it, or nine days
-   have passed.
-2. A signature counts only if a current device of that person made it, checked against their
-   registry, and one device's signature never replaces another's.
-3. An ask for a photo reaches every device of the person asked.
-
-What reading the code found: each copy holds one receipt, named after the copy, so a second device
-signing overwrites the first; the sender counts a person once any one of their devices has signed; and
-the sender's own other devices cannot fetch at all, because a copy is sealed for a pair and there is no
-pair with yourself. The plan: a receipt named per device, the sender waiting for every current device,
-a sibling fetching from its own account's outbox and saying so in its device mail, and asks forwarded
-in device mail. Not built.
-
-<!-- COPY END a8b828db -->
-
 <!-- COPY BEGIN ced635d1 [NEEDS HUMAN REVIEW] -->
 
 ### Who can send your device a room key it can't check yet?

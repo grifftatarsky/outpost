@@ -64,7 +64,15 @@ struct SiblingFeedIsSealedTests {
                     owner: friend.participantID, salt: AddressSalt(number: 2, bytes: addressSalt),
                     since: Date(timeIntervalSince1970: 6_000), storedAt: Date(timeIntervalSince1970: 6_000))
             ],
-            claimTimes: [EntryHash(rawValue: Data(repeating: 0xC1, count: 32)): Date(timeIntervalSince1970: 7_000)])
+            claimTimes: [EntryHash(rawValue: Data(repeating: 0xC1, count: 32)): Date(timeIntervalSince1970: 7_000)],
+            photosHeld: [AttachmentID(rawValue: UUID(uuidString: "5C0E2C7A-71C4-4A10-9C2B-2E7B0F5B1D4E")!)],
+            asks: [
+                ForwardedAsk(
+                    from: ParticipantID(rawValue: Data(repeating: 0xD2, count: 32)),
+                    ask: PhotoAsk(
+                        entry: EntryHash(rawValue: Data(repeating: 0xD3, count: 32)),
+                        attachment: AttachmentID(rawValue: UUID(uuidString: "1B7E4D2F-90A6-4C31-8E5D-6F2A3C4B5D6E")!)))
+            ])
     }
 
     private static func sealed() throws -> SealedSiblingFeed {

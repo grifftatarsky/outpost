@@ -49,6 +49,7 @@ extension AppSession {
 
         if mode == .full, let media {
             await collectAttachments(from: report.integrated, through: media)
+            await collectOwnPhotos(through: media)
             await settleAttachmentsSent(through: media)
             await settleOutpostMediaOwed(through: media)
             await sweepAttachments(through: media)

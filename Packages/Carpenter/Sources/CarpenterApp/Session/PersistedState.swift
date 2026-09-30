@@ -79,6 +79,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var removalsTold: Set<EntryHash> = []
     var grantsWaiting: [ForwardedGrant] = []
     var photosOwed: Set<EntryHash> = []
+    var ownPhotosHeld: Set<AttachmentID> = []
 
     var preferences = MemberPreferences()
 
@@ -181,5 +182,6 @@ struct PersistedState: Codable, Equatable, Sendable {
         removalsTold = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .removalsTold) ?? []
         grantsWaiting = try container.decodeIfPresent([ForwardedGrant].self, forKey: .grantsWaiting) ?? []
         photosOwed = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .photosOwed) ?? []
+        ownPhotosHeld = try container.decodeIfPresent(Set<AttachmentID>.self, forKey: .ownPhotosHeld) ?? []
     }
 }

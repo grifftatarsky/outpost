@@ -75,6 +75,8 @@ public protocol MediaMailbox: Sendable {
         in pairs: Pairs
     ) async throws
 
+    func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) async throws -> Data?
+
     func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy]
 
     func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) async throws

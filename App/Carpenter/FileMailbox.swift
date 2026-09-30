@@ -99,6 +99,10 @@
             }
         }
 
+        func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) throws -> Data? {
+            try change { $0.ownCopy(copy, in: pairs, as: self.account(in: pairs)) }
+        }
+
         func storedCopies(in pairs: Pairs) throws -> [StoredPhotoCopy] {
             try change { $0.storedCopies(in: pairs, as: self.account(in: pairs)) }
         }

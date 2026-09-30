@@ -330,6 +330,10 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
             copy: copy, from: sender, with: receipt, by: device, in: pairs, as: seat(pairs), at: clock.now)
     }
 
+    public func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) -> Data? {
+        store.ownCopy(copy, in: pairs, as: seat(pairs))
+    }
+
     public func storedCopies(in pairs: Pairs) -> [StoredPhotoCopy] {
         store.storedCopies(in: pairs, as: seat(pairs))
     }
@@ -482,6 +486,7 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
         copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
         in pairs: Pairs
     ) async throws { throw Refused() }
+    public func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) async throws -> Data? { throw Refused() }
     public func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy] { throw Refused() }
     public func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) async throws { throw Refused() }
 }

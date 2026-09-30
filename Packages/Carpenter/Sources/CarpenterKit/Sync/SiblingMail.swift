@@ -23,6 +23,16 @@ public struct ForwardedGrant: Hashable, Sendable, Codable {
     }
 }
 
+public struct ForwardedAsk: Hashable, Sendable, Codable {
+    public let from: ParticipantID
+    public let ask: PhotoAsk
+
+    public init(from: ParticipantID, ask: PhotoAsk) {
+        self.from = from
+        self.ask = ask
+    }
+}
+
 public struct SiblingRecord: Hashable, Sendable {
     public enum Kind: Hashable, Sendable {
         case state

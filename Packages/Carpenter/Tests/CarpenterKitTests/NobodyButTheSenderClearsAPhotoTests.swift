@@ -304,16 +304,45 @@ struct APhotoAndTwoDevicesTests {
             "the photo stayed in iCloud after every device of the person it was for had signed for it")
     }
 
-    @Test("The sender having another device does not keep a photo in iCloud")
-    func theSendersOtherDeviceKeepsNothing() async throws {
+    @Test("An ask for a photo reaches every device of the person asked")
+    func anAskReachesBothDevices() async throws {
+        let rig = try await rig()
+        try await rig.phone.send(SendingPhotoTests.photo(), to: rig.room, through: rig.mailbox)
+        let message = try #require(rig.phone.messages(in: rig.room).last)
+        let sent = try #require(message.media?.id)
+        try await rig.round(3)
+        try #require(await rig.friend.holdsAttachment(sent), "precondition: the friend collected it")
+        try await rig.friend.storage.media.remove(sent)
+        let member = try #require(rig.phone.enrolment?.identity.id)
+        try #require(
+            await rig.friend.askAgain(for: sent, sentBy: member), "precondition: the friend could ask again")
+
+        try await rig.round(3)
+        #expect(
+            rig.phone.photoRequests(in: rig.room).contains { $0.id.attachment == sent },
+            "the ask never reached the device that sent the photo")
+        #expect(
+            rig.tablet.photoRequests(in: rig.room).contains { $0.id.attachment == sent },
+            "the ask stopped at whichever device collected it, so the other one could never answer")
+    }
+
+    @Test("A photo the member sent waits in iCloud until their own other device has it too")
+    func theSendersOtherDeviceGetsItFirst() async throws {
         let rig = try await rig()
         try await rig.phone.send(SendingPhotoTests.photo(), to: rig.room, through: rig.mailbox)
         let sent = try #require(rig.phone.messages(in: rig.room).last?.media?.id)
         try await rig.phone.sync(through: rig.mailbox, media: rig.mailbox)
         try await rig.friend.sync(through: rig.mailbox, media: rig.mailbox)
         try #require(await rig.friend.holdsAttachment(sent), "precondition: the friend collected it")
-
         try await rig.phone.sync(through: rig.mailbox, media: rig.mailbox)
-        #expect(!(await rig.mailbox.storedAttachmentIDs.contains(sent)), "the photo waited for the sender's tablet")
+        #expect(
+            await rig.mailbox.storedAttachmentIDs.contains(sent),
+            "the sender cleared a photo its own other device had never seen")
+
+        try await rig.round(3)
+        #expect(await rig.tablet.holdsAttachment(sent), "the member's tablet never got a photo its phone sent")
+        #expect(
+            !(await rig.mailbox.storedAttachmentIDs.contains(sent)),
+            "the photo stayed in iCloud after every device that was owed it had it")
     }
 }

@@ -148,7 +148,9 @@ extension AppSession {
     }
 
     func settleAttachmentsSent(through mailbox: any MediaMailbox) async {
-        guard enrolment != nil, !persisted.attachmentsSent.isEmpty else { return }
+        guard let enrolment, !persisted.attachmentsSent.isEmpty else { return }
+        let ownDevices =
+            (replica.registry(for: enrolment.identity.id)?.activeDevices ?? []).subtracting([enrolment.device.id])
         let stored: [AttachmentID: [StoredPhotoCopy]]
         do {
             stored = copiesByPhoto(try await mailbox.storedCopies(in: try currentPairs())).named
@@ -183,7 +185,7 @@ extension AppSession {
             }
             persisted.attachmentsSent[id] = record
 
-            let everybody = owed.isEmpty
+            let everybody = owed.isEmpty && ownDevices.isSubset(of: record.collectedBy)
             let expired = clock.now.timeIntervalSince(record.sentAt) > Self.attachmentKeptFor
             if everybody || expired {
                 if !copies.isEmpty {
@@ -236,10 +238,62 @@ extension AppSession {
         return SyncSession.recentTags(for: peer, at: clock.now)
     }
 
-    func notePhotosOwed(_ entries: [Entry]) {
-        for entry in entries where entry.author != enrolment?.identity.id {
-            persisted.photosOwed.insert(entry.hash)
+    func collectOwnPhotos(through mailbox: any MediaMailbox) async {
+        guard let me = enrolment?.identity.id else { return }
+        let held = entriesByHash
+        persisted.photosOwed.formIntersection(held.keys)
+        for entry in persisted.photosOwed.compactMap({ held[$0] }) where entry.author == me {
+            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain) else { continue }
+            guard payload.type == .media, let body = try? payload.decode(MediaBody.self) else {
+                persisted.photosOwed.remove(entry.hash)
+                continue
+            }
+            var everyPiece = true
+            for picture in body.all {
+                let reference = picture.attachment
+                let pieces = reference.parts.map { $0.map { ($0.id, $0.digest) } } ?? [(reference.id, reference.digest)]
+                for (id, digest) in pieces {
+                    if ((try? await storage.media.sealed(for: id)) ?? nil) != nil {
+                        persisted.ownPhotosHeld.insert(id)
+                        continue
+                    }
+                    await fetchOwnPiece(id, digest: digest, through: mailbox)
+                    if !persisted.ownPhotosHeld.contains(id) { everyPiece = false }
+                }
+            }
+            if everyPiece { persisted.photosOwed.remove(entry.hash) }
         }
+    }
+
+    private func fetchOwnPiece(_ id: AttachmentID, digest: Data, through mailbox: any MediaMailbox) async {
+        guard let pairs = try? currentPairs() else { return }
+        for peer in peers() {
+            guard let copy = photoCopyName(of: id, for: peer.them) else { continue }
+            guard let downloaded = try? await mailbox.ownCopy(copy, in: pairs) else { continue }
+            guard let bytes = try? PhotoCopy.open(downloaded, of: id, matching: digest, between: peer.secret) else {
+                continue
+            }
+            do {
+                try await storage.media.store(bytes, for: id)
+                persisted.ownPhotosHeld.insert(id)
+                Diagnostics.sync.notice(
+                    "media: took a photo this member sent out of its own outbox for another of its devices")
+            } catch {
+                Diagnostics.sync.error(
+                    "media: could not keep a photo taken from this member's own outbox (\(String(describing: error), privacy: .public))")
+            }
+            return
+        }
+    }
+
+    func notePhotosHeld(_ photos: [AttachmentID], by device: DeviceID) {
+        for photo in photos where persisted.attachmentsSent[photo] != nil {
+            persisted.attachmentsSent[photo]?.collectedBy.insert(device)
+        }
+    }
+
+    func notePhotosOwed(_ entries: [Entry]) {
+        for entry in entries { persisted.photosOwed.insert(entry.hash) }
     }
 
     func collectAttachments(
@@ -248,7 +302,7 @@ extension AppSession {
         notePhotosOwed(arrived)
         let held = entriesByHash
         persisted.photosOwed.formIntersection(held.keys)
-        for entry in persisted.photosOwed.compactMap({ held[$0] }) {
+        for entry in persisted.photosOwed.compactMap({ held[$0] }) where entry.author != enrolment?.identity.id {
             guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain) else { continue }
             guard payload.type == .media, let body = try? payload.decode(MediaBody.self),
                 !refusesToDraw(from: entry.author)

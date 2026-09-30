@@ -3013,7 +3013,18 @@ make a packet of long messages go past iCloud's one-megabyte record.
 **RULED 2026-09-28 by Griff, replacing the 2026-09-27 answer below on devices:** "On photos go with the
 fetch-for-device you rec." Every current device of the person a photo is for, and the sender's own
 other devices, fetch it themselves; the sender clears its copy once all of them have it, or after nine
-days. Nothing relies on one device passing a photo to another. Not built yet.
+days. Nothing relies on one device passing a photo to another.
+
+**Built 2026-09-30**, on the three promises Griff confirmed the same day: every current device of each
+person and the sender's own other devices fetch it, and the sender's copy waits for all of them; a
+signature counts only from a device that person's registry still shows, and one device's signature
+never replaces another's; and an ask reaches every device of the person asked. A receipt is named
+after the copy and the device that signed it. A device works through the photos it still owes itself
+every round, whichever way the message reached it. A device takes a photo its own member sent out of
+its own account's outbox, which it can open because it holds the identity the copies were sealed
+under, and tells its other devices it has it. Asks travel in device mail.
+`NobodyButTheSenderClearsAPhotoTests`, `APhotoAndTwoDevicesTests`. **Not run on the rig**, and the
+CloudKit read of a copy from one's own outbox has never run.
 
 **RULED 2026-09-27 by Griff.** "No user should be able to interfere with your own history or
 recipients." And: "your phone should have the file in case it's requested in a history check or
@@ -3027,8 +3038,8 @@ the others' addresses from it, before the others had it, and it was gone for the
 Now a photo is cleared the way a packet is taken back. A reader's device signs for what it collects
 with a receipt only the sender can open (`AttachmentReceipt`, its own signing domain, so a receipt
 for a packet never counts for a photo). The sender's device keeps its own record of who each photo
-was for, and on every round clears it once **one device** of each of those people has signed, or
-nine days have passed. A photo that leaves the outbox any other way is put back from
+was for, and on every round clears it once **every current device** of each of those people, and its
+member's own other devices, have signed, or nine days have passed. A photo that leaves the outbox any other way is put back from
 the copy the sender kept. The list of addresses on the record is only a hint now: the real mailbox
 never used it to keep anybody out, and emptying it changes nothing (`NobodyButTheSenderClearsAPhotoTests`).
 
@@ -3037,8 +3048,8 @@ The sender keeps its sealed copy of every photo and clip after the outbox copy i
 **RULED 2026-09-27 by Griff, on the devices question:** "Change the photo clear to just one device has
 retrieved - I would prefer the user themselves syncs the photo on their devices, rather than hold a
 pic in icloud until someone's fourth basement ipad retrieves it." Nine days is Claude's, the same
-time a packet waits, and Griff said it is fine (`APhotoAndTwoDevicesTests`). A member's other devices
-getting the photo from the device that has it is not built yet.
+time a packet waits, and Griff said it is fine (`APhotoAndTwoDevicesTests`). He replaced the
+one-device rule on 2026-09-28 with the fetch-for-device answer above.
 
 **What someone with the outbox link can still do:** delay. A photo they delete is back on the
 sender's next round. A photo whose bytes they replace fails its digest on the reader's side and is

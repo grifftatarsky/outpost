@@ -63,6 +63,23 @@ extension CloudKitMailbox {
         try await answer(copy.receiptName(by: device), with: receipt, to: sender, in: pairs)
     }
 
+    public func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) async throws -> Data? {
+        try await refresh()
+        for (_, hint) in pairs.hints {
+            guard let zone = await index.mineFor(hint), await index.mine[zone]?.records[copy.recordName] != nil
+            else { continue }
+            do {
+                let record = try await container.privateCloudDatabase.record(
+                    for: CKRecord.ID(recordName: copy.recordName, zoneID: zone))
+                guard let asset = record[AttachmentWire.blob] as? CKAsset, let url = asset.fileURL else { continue }
+                return try Data(contentsOf: url)
+            } catch let error as CKError where error.code == .unknownItem || error.code == .zoneNotFound {
+                continue
+            }
+        }
+        return nil
+    }
+
     public func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy] {
         try await refresh()
         var found: [StoredPhotoCopy] = []
