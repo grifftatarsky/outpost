@@ -36,19 +36,19 @@ public struct StoredPhotoCopy: Hashable, Sendable {
     public let to: ParticipantID
     public let label: Data?
     public let recipients: Set<RecipientTag>
-    public let receipt: SealedReceipt?
+    public let receipts: [SealedReceipt]
     public let storedAt: Date
     public let modifiedAt: Date
 
     public init(
-        name: PhotoCopyName, to: ParticipantID, label: Data?, recipients: Set<RecipientTag>, receipt: SealedReceipt?,
+        name: PhotoCopyName, to: ParticipantID, label: Data?, recipients: Set<RecipientTag>, receipts: [SealedReceipt],
         storedAt: Date, modifiedAt: Date
     ) {
         self.name = name
         self.to = to
         self.label = label
         self.recipients = recipients
-        self.receipt = receipt
+        self.receipts = receipts
         self.storedAt = storedAt
         self.modifiedAt = modifiedAt
     }
@@ -70,8 +70,10 @@ public protocol MediaMailbox: Sendable {
     func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs)
         async throws -> Data?
 
-    func acknowledge(copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs)
-        async throws
+    func acknowledge(
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+        in pairs: Pairs
+    ) async throws
 
     func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy]
 
@@ -105,11 +107,11 @@ public enum AttachmentWire {
 
     public static func stored(
         _ name: PhotoCopyName, fields: [String: PacketField], to peer: ParticipantID, storedAt: Date, modifiedAt: Date,
-        answeredBy answer: (fields: [String: PacketField], modifiedAt: Date)?
+        answeredBy answers: [(fields: [String: PacketField], modifiedAt: Date)]
     ) -> StoredPhotoCopy {
         StoredPhotoCopy(
             name: name, to: peer, label: sealedLabel(from: fields), recipients: recipients(in: fields),
-            receipt: answer.flatMap { $0.modifiedAt >= modifiedAt ? PacketWire.receipt(from: $0.fields) : nil },
+            receipts: answers.filter { $0.modifiedAt >= modifiedAt }.compactMap { PacketWire.receipt(from: $0.fields) },
             storedAt: storedAt, modifiedAt: modifiedAt)
     }
 }

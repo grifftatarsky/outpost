@@ -57,9 +57,10 @@ extension CloudKitMailbox {
     }
 
     public func acknowledge(
-        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+        in pairs: Pairs
     ) async throws {
-        try await answer(copy.receiptName, with: receipt, to: sender, in: pairs)
+        try await answer(copy.receiptName(by: device), with: receipt, to: sender, in: pairs)
     }
 
     public func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy] {
@@ -73,7 +74,9 @@ extension CloudKitMailbox {
                 found.append(
                     AttachmentWire.stored(
                         name, fields: cached.fields, to: peer, storedAt: cached.created, modifiedAt: cached.modified,
-                        answeredBy: answers[name.receiptName].map { (fields: $0.fields, modifiedAt: $0.modified) }))
+                        answeredBy: name.receiptsAmong(answers.keys).compactMap { answered in
+                            answers[answered].map { (fields: $0.fields, modifiedAt: $0.modified) }
+                        }))
             }
         }
         return found

@@ -498,7 +498,14 @@ final class RigChecks: XCTestCase {
         let app = launch()
         sleep(3)
         settle(app)
-        sleep(8)
+        let wanted = ProcessInfo.processInfo.environment["RIG_ROOM"] ?? ""
+        if wanted.isEmpty {
+            sleep(8)
+        } else {
+            app.buttons["Rooms"].firstMatch.tap()
+            _ = app.staticTexts[wanted].firstMatch.waitForExistence(timeout: 120)
+            sleep(4)
+        }
         shoot(app, "round-\(ProcessInfo.processInfo.environment["RIG_NAME"] ?? "device")")
     }
 

@@ -246,6 +246,7 @@ extension AppSession {
             return trust
         }
 
+        notePhotosOwed(taken)
         await persistOrReport("history from another of your devices") {
             try await storage.log.append(taken)
         }

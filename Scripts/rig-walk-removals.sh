@@ -62,9 +62,9 @@ together() {
     step "$room-2-quad-joins" "$quad" testQuadJoins
     step "$room-3-trig-invites-fifth" "$trig" testTrigMakesARoomAndInvitesQuad TEST_RUNNER_RIG_ROOM="$room" TEST_RUNNER_RIG_JOINER=Fifth
     step "$room-4-fifth-joins" "$fifth" testQuadJoins
-    step "$room-5-trig-lets-them-in" "$trig" testRunsARound TEST_RUNNER_RIG_NAME=Trig
-    step "$room-6-quad-catches-up" "$quad" testRunsARound TEST_RUNNER_RIG_NAME=Quad
-    step "$room-7-fifth-catches-up" "$fifth" testRunsARound TEST_RUNNER_RIG_NAME=Fifth
+    step "$room-5-trig-lets-them-in" "$trig" testRunsARound TEST_RUNNER_RIG_NAME=Trig TEST_RUNNER_RIG_ROOM="$room"
+    step "$room-6-quad-catches-up" "$quad" testRunsARound TEST_RUNNER_RIG_NAME=Quad TEST_RUNNER_RIG_ROOM="$room"
+    step "$room-7-fifth-catches-up" "$fifth" testRunsARound TEST_RUNNER_RIG_NAME=Fifth TEST_RUNNER_RIG_ROOM="$room"
     step "$room-8-quad-says" "$quad" testQuadSays TEST_RUNNER_RIG_ROOM="$room" TEST_RUNNER_RIG_SAY="hello in $room"
     step "$room-9-trig-sees" "$trig" testSees TEST_RUNNER_RIG_ROOM="$room" TEST_RUNNER_RIG_EXPECT="hello in $room"
     step "$room-10-fifth-sees" "$fifth" testSees TEST_RUNNER_RIG_ROOM="$room" TEST_RUNNER_RIG_EXPECT="hello in $room"

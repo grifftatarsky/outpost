@@ -159,6 +159,7 @@ extension ForwardCompatibilityTests {
         state.resend = [EntryHash(rawValue: Data(repeating: 0x61, count: 32))]
         state.claimTimes = [EntryHash(rawValue: Data(repeating: 0x62, count: 32)): stamp.at]
         state.removalsTold = [EntryHash(rawValue: Data(repeating: 0x63, count: 32))]
+        state.photosOwed = [EntryHash(rawValue: Data(repeating: 0x64, count: 32))]
         state.grantsWaiting = [
             ForwardedGrant(
                 from: ParticipantID(rawValue: WideID.of([9])),

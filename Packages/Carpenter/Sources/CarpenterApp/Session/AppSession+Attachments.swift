@@ -116,8 +116,11 @@ extension AppSession {
         through mailbox: any MediaMailbox
     ) async {
         do {
-            guard let copy = photoCopyName(of: id, for: sender) else { throw MailboxError.unknownPeer }
-            try await mailbox.acknowledge(copy: copy, from: sender, with: receipt, in: try currentPairs())
+            guard let copy = photoCopyName(of: id, for: sender), let device = enrolment?.device.id else {
+                throw MailboxError.unknownPeer
+            }
+            try await mailbox.acknowledge(
+                copy: copy, from: sender, with: receipt, by: device, in: try currentPairs())
             attachmentAcknowledgementsOwed[id] = nil
         } catch {
             attachmentAcknowledgementsOwed[id] = OwedPhotoReceipt(receipt: receipt, sender: sender)
@@ -167,7 +170,7 @@ extension AppSession {
                     continue
                 }
                 let ways = secrets(with: person)
-                for receipt in copies.filter({ $0.to == person }).compactMap(\.receipt) {
+                for receipt in copies.filter({ $0.to == person }).flatMap(\.receipts) {
                     for secret in ways {
                         guard let signed = AttachmentReceipt.open(
                             receipt, for: id, from: person, with: secret, by: registry)
@@ -176,7 +179,7 @@ extension AppSession {
                         break
                     }
                 }
-                if registry.deviceIDs.isDisjoint(with: record.collectedBy) { owed.insert(person) }
+                if !registry.activeDevices.isSubset(of: record.collectedBy) { owed.insert(person) }
             }
             persisted.attachmentsSent[id] = record
 
@@ -233,27 +236,44 @@ extension AppSession {
         return SyncSession.recentTags(for: peer, at: clock.now)
     }
 
+    func notePhotosOwed(_ entries: [Entry]) {
+        for entry in entries where entry.author != enrolment?.identity.id {
+            persisted.photosOwed.insert(entry.hash)
+        }
+    }
+
     func collectAttachments(
-        from entries: [Entry], through mailbox: any MediaMailbox
+        from arrived: [Entry], through mailbox: any MediaMailbox
     ) async {
-        for entry in entries {
-            guard let chain = chain(sealing: entry),
-                let payload = entry.opened(using: chain), payload.type == .media,
-                let body = try? payload.decode(MediaBody.self),
+        notePhotosOwed(arrived)
+        let held = entriesByHash
+        persisted.photosOwed.formIntersection(held.keys)
+        for entry in persisted.photosOwed.compactMap({ held[$0] }) {
+            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain) else { continue }
+            guard payload.type == .media, let body = try? payload.decode(MediaBody.self),
                 !refusesToDraw(from: entry.author)
-            else { continue }
+            else {
+                persisted.photosOwed.remove(entry.hash)
+                continue
+            }
+            var everyPiece = true
             for picture in body.all {
                 let reference = picture.attachment
                 let pieces = reference.parts.map { $0.map { ($0.id, $0.digest) } } ?? [(reference.id, reference.digest)]
                 for (id, digest) in pieces {
-                    guard !(attachmentRetryAfter[id].map { $0 > clock.now } ?? false) else { continue }
+                    guard !(attachmentRetryAfter[id].map { $0 > clock.now } ?? false) else {
+                        everyPiece = false
+                        continue
+                    }
                     do {
                         _ = try await sealedPiece(id, digest: digest, from: entry.author, through: mailbox)
                     } catch {
+                        everyPiece = false
                         break
                     }
                 }
             }
+            if everyPiece { persisted.photosOwed.remove(entry.hash) }
         }
         for (id, owed) in attachmentAcknowledgementsOwed {
             await acknowledge(attachment: id, from: owed.sender, with: owed.receipt, through: mailbox)

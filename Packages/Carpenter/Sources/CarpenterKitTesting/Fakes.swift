@@ -216,7 +216,7 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
             let before = found[photo]
             found[photo] = SentAttachment(
                 recipients: copy.recipients.union(before?.recipients ?? []),
-                receipts: (before?.receipts ?? []) + (copy.receipt.map { [$0] } ?? []))
+                receipts: (before?.receipts ?? []) + copy.receipts)
         }
         return found
     }
@@ -322,10 +322,12 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     }
 
     public func acknowledge(
-        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+        in pairs: Pairs
     ) throws {
         attachmentAcknowledgeCount += 1
-        try store.acknowledge(copy: copy, from: sender, with: receipt, in: pairs, as: seat(pairs), at: clock.now)
+        try store.acknowledge(
+            copy: copy, from: sender, with: receipt, by: device, in: pairs, as: seat(pairs), at: clock.now)
     }
 
     public func storedCopies(in pairs: Pairs) -> [StoredPhotoCopy] {
@@ -477,7 +479,8 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
         async throws -> Data?
     { throw Refused() }
     public func acknowledge(
-        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+        in pairs: Pairs
     ) async throws { throw Refused() }
     public func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy] { throw Refused() }
     public func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) async throws { throw Refused() }

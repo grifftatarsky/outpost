@@ -16,12 +16,20 @@ public struct PhotoCopyName: Hashable, Sendable {
     }
 
     public init?(receiptName: String) {
-        self.init(spelled: receiptName, after: Self.receiptPrefix)
+        guard receiptName.hasPrefix(Self.receiptPrefix) else { return nil }
+        let rest = receiptName.dropFirst(Self.receiptPrefix.count)
+        self.init(spelled: Self.receiptPrefix + (rest.split(separator: "-").first ?? ""), after: Self.receiptPrefix)
     }
 
     public var recordName: String { Self.recordPrefix + rawValue.lowercaseHex }
 
-    public var receiptName: String { Self.receiptPrefix + rawValue.lowercaseHex }
+    public func receiptName(by device: DeviceID) -> String {
+        Self.receiptPrefix + rawValue.lowercaseHex + "-" + device.rawValue.prefix(Self.width).lowercaseHex
+    }
+
+    public func receiptsAmong(_ names: some Sequence<String>) -> [String] {
+        names.filter { Self.init(receiptName: $0) == self }
+    }
 
     private static let width = 16
     private static let recordPrefix = "photo-"

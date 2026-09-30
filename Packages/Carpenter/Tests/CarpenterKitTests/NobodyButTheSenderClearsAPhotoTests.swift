@@ -130,7 +130,7 @@ struct NobodyButTheSenderClearsAPhotoTests {
         for receipt in [junk, forAPacket, forTheOtherPhoto] {
             try await pair.mailbox.acknowledge(
                 copy: copy, from: try #require(pair.alice.enrolment?.identity.id), with: receipt,
-                in: try pair.bob.currentPairs())
+                by: bob.device.id, in: try pair.bob.currentPairs())
         }
 
         try await pair.alice.sync(through: pair.mailbox, media: pair.mailbox)
@@ -283,20 +283,25 @@ struct APhotoAndTwoDevicesTests {
         return rig
     }
 
-    @Test("A photo is cleared once one device of the person it was for has it")
-    func oneDeviceIsEnough() async throws {
+    @Test("A photo waits in iCloud until every device of the person it was for has it")
+    func everyDeviceMustHaveIt() async throws {
         let rig = try await rig()
         try await rig.friend.send(SendingPhotoTests.photo(), to: rig.room, through: rig.mailbox)
         let sent = try #require(rig.friend.messages(in: rig.room).last?.media?.id)
         try await rig.friend.sync(through: rig.mailbox, media: rig.mailbox)
         try await rig.phone.sync(through: rig.mailbox, media: rig.mailbox)
         try #require(await rig.phone.holdsAttachment(sent), "precondition: the phone collected it")
-        #expect(await rig.mailbox.storedAttachmentIDs.contains(sent), "collecting it cleared it before the sender did")
+        try await rig.friend.sync(through: rig.mailbox, media: rig.mailbox)
+        #expect(
+            await rig.mailbox.storedAttachmentIDs.contains(sent),
+            "the sender cleared a photo the member's other device had never seen")
 
+        try await rig.tablet.sync(through: rig.mailbox, media: rig.mailbox)
+        try #require(await rig.tablet.holdsAttachment(sent), "precondition: the tablet collected it too")
         try await rig.friend.sync(through: rig.mailbox, media: rig.mailbox)
         #expect(
             !(await rig.mailbox.storedAttachmentIDs.contains(sent)),
-            "the photo stayed in iCloud waiting for the member's other device")
+            "the photo stayed in iCloud after every device of the person it was for had signed for it")
     }
 
     @Test("The sender having another device does not keep a photo in iCloud")

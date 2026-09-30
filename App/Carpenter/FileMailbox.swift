@@ -89,9 +89,14 @@
         }
 
         func acknowledge(
-            copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+            copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+            in pairs: Pairs
         ) throws {
-            try change { try $0.acknowledge(copy: copy, from: sender, with: receipt, in: pairs, as: self.account(in: pairs), at: Date()) }
+            try change {
+                try $0.acknowledge(
+                    copy: copy, from: sender, with: receipt, by: device, in: pairs, as: self.account(in: pairs),
+                    at: Date())
+            }
         }
 
         func storedCopies(in pairs: Pairs) throws -> [StoredPhotoCopy] {

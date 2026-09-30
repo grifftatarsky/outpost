@@ -52,7 +52,10 @@ struct PhotoCopiesAreSealedApartTests {
         let (bobs, carols) = (try #require(copies.copies[bob]), try #require(copies.copies[carol]))
 
         #expect(bobs.name != carols.name, "two copies carry the same name, so Apple can pair them")
-        #expect(bobs.name.receiptName != carols.name.receiptName, "two receipts carry the same name")
+        let signer = DeviceID(rawValue: Data(repeating: 7, count: DeviceID.width))
+        #expect(
+            bobs.name.receiptName(by: signer) != carols.name.receiptName(by: signer),
+            "two receipts carry the same name")
         #expect(bobs.label != carols.label)
         #expect(bobs.sealed != carols.sealed, "two copies are the same bytes, so Apple can pair them")
         for copy in [bobs, carols] {
@@ -118,9 +121,15 @@ struct PhotoCopiesAreSealedApartTests {
     @Test("A copy's name is read back only as it is written")
     func namesAreReadOneWay() throws {
         let name = PhotoCopyName(of: AttachmentID(), between: try pair())
+        let one = DeviceID(rawValue: Data(repeating: 1, count: DeviceID.width))
+        let two = DeviceID(rawValue: Data(repeating: 2, count: DeviceID.width))
         #expect(PhotoCopyName(recordName: name.recordName) == name)
-        #expect(PhotoCopyName(receiptName: name.receiptName) == name)
-        #expect(PhotoCopyName(recordName: name.receiptName) == nil, "a receipt was read as a copy")
+        #expect(PhotoCopyName(receiptName: name.receiptName(by: one)) == name)
+        #expect(PhotoCopyName(receiptName: name.receiptName(by: two)) == name)
+        #expect(
+            name.receiptName(by: one) != name.receiptName(by: two),
+            "two devices signed for one copy under one name, so the second overwrote the first")
+        #expect(PhotoCopyName(recordName: name.receiptName(by: one)) == nil, "a receipt was read as a copy")
         #expect(PhotoCopyName(receiptName: name.recordName) == nil, "a copy was read as a receipt")
         #expect(
             PhotoCopyName(recordName: "photo-" + UUID().uuidString) == nil,

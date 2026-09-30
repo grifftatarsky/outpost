@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git blame:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(sed -n:*)",
+      "Bash(wc:*)",
+      "Bash(swift test:*)",
+      "Bash(swift build:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(xcrun simctl list:*)",
+      "Bash(xcrun simctl boot:*)",
+      "Bash(xcrun simctl shutdown:*)",
+      "Bash(xcrun simctl install:*)",
+      "Bash(xcrun simctl terminate:*)",
+      "Bash(xcrun simctl launch:*)",
+      "Bash(xcrun simctl get_app_container:*)",
+      "Bash(./Scripts/lint-branding.sh:*)",
+      "Bash(./Scripts/check-all.sh:*)",
+      "Bash(./Scripts/check-release-leaves.sh:*)",
+      "Bash(./Scripts/check-state.sh:*)",
+      "Bash(./Scripts/rig-walk-removals.sh:*)",
+      "Bash(python3 Scripts/copy-review.py:*)",
+      "Bash(plutil:*)",
+      "Bash(uptime:*)",
+      "Bash(date:*)"
+    ],
+    "ask": [
+      "Bash(xcrun simctl erase:*)",
+      "Bash(xcrun simctl uninstall:*)",
+      "Bash(./Scripts/reset-device.sh:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)"
+    ]
+  }
+}

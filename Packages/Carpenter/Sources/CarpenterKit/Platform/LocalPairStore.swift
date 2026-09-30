@@ -286,10 +286,12 @@ extension LocalPairStore {
     }
 
     public mutating func acknowledge(
-        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs,
-        as account: String, at now: Date
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+        in pairs: Pairs, as account: String, at now: Date
     ) throws {
-        try write(copy.receiptName, PacketWire.receiptFields(receipt), to: sender, in: pairs, as: account, at: now)
+        try write(
+            copy.receiptName(by: device), PacketWire.receiptFields(receipt), to: sender, in: pairs, as: account,
+            at: now)
     }
 
     public func storedCopies(in pairs: Pairs, as account: String) -> [StoredPhotoCopy] {
@@ -305,7 +307,9 @@ extension LocalPairStore {
                 found.append(
                     AttachmentWire.stored(
                         name, fields: record.fields, to: peer, storedAt: record.storedAt, modifiedAt: record.modifiedAt,
-                        answeredBy: answers[name.receiptName].map { (fields: $0.fields, modifiedAt: $0.modifiedAt) }))
+                        answeredBy: name.receiptsAmong(answers.keys).compactMap { answered in
+                            answers[answered].map { (fields: $0.fields, modifiedAt: $0.modifiedAt) }
+                        }))
             }
         }
         return found
@@ -352,7 +356,9 @@ extension LocalPairStore {
                     AttachmentWire.stored(
                         name, fields: record.fields, to: other?.owner ?? space.owner, storedAt: record.storedAt,
                         modifiedAt: record.modifiedAt,
-                        answeredBy: other?.records[name.receiptName].map { (fields: $0.fields, modifiedAt: $0.modifiedAt) }))
+                        answeredBy: name.receiptsAmong(other?.records.keys ?? [:].keys).compactMap { answered in
+                            other?.records[answered].map { (fields: $0.fields, modifiedAt: $0.modifiedAt) }
+                        }))
             }
         }
         return found
