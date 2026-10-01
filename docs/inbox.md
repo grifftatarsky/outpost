@@ -22,6 +22,74 @@ is in `CLAUDE.md` under the traps, and what happened is in git. Checked against 
 
 <!-- COPY END 718b2f42 -->
 
+<!-- COPY BEGIN 6d1038e9 [NEEDS HUMAN REVIEW] -->
+
+## Where the app was changed away from a board without Griff seeing it
+
+**The list row names no sender.** Ruled on 2026-09-13: the board is overruled and Messages' row
+stands. See [Decisions](decisions.md#the-rooms-list-row-is-messages-and-board-53-is-overruled) for
+what that costs.
+
+**Search became a tab.** The first attempt was an inline field with
+`.searchToolbarBehavior(.minimize)`, chosen for the collapsed glass magnifier. On a 402pt phone that
+crams the clear and the dismiss into one capsule while a 440pt phone separates them — the same build,
+two devices. Apple's guidance turns on the scope of the search: a search covering a whole app is a
+tab, and the inline field under a title is for a search scoped to one section. Griff caught the first
+answer and quoted the page.
+
+**The notification defaults were Claude's and are now ruled.** New posts default to *By Outpost* —
+only the walls a member has turned on. Replies on posts you commented on and comments on your posts
+are on; replies on posts you *reacted to* and likes are off, and likes are the only kind that arrives
+quietly. Confirmed 2026-09-13: the two that are on are somebody answering you, and the two that are
+off are a tap and a thread you touched once.
+
+<!-- COPY END 6d1038e9 -->
+
+<!-- COPY BEGIN d254fcc5 [NEEDS HUMAN REVIEW] -->
+
+## What the set does not settle, and neither does the app
+
+**Nothing has been checked on a device at a real Dynamic Type size.** The boards are HTML
+approximations drawn at 1:1, and the app's own accessibility pass covers targets, Dynamic Type and
+contrast, and on 2026-09-16 every screen was walked at the largest type size on a simulator. A
+phone at that size has not been looked at, and the VoiceOver walk waits for TestFlight on Griff's
+ruling of 2026-09-17. A photo's reactions pill is not named in that pass and may not have been
+looked at the largest size.
+
+**Two platforms are undrawn, and the claim has changed rather than the app.** Ruled 2026-09-13: the
+product is an iPhone app until TestFlight. The Mac window keeps working because Griff uses it; it is
+not offered or described. Every Mac and iPad decision in it is still Claude's.
+
+**Light mode is not drawn.** Two boards define the values and four use them. Every color the app
+picks for itself was measured in both appearances on 2026-09-17, so light mode is measured rather than
+inferred, but it was never designed screen by screen.
+
+**Transitions are not drawn.** Sheets, tab switches and navigation use the system's motion. The one
+motion the app adds, the accent retint, was recorded frame by frame and kept on Griff's ruling of
+2026-09-16.
+
+<!-- COPY END d254fcc5 -->
+
+<!-- COPY BEGIN 182fa583 [NEEDS HUMAN REVIEW] -->
+
+## Things tried and abandoned, so they are not tried again
+
+**Swipe-to-remove, twice.** A swipe action is as wide as its content and the row slides by that much,
+so on a person row whose name is one short word the swipe pushed the row off its own leading edge. It
+left a member being asked to remove somebody whose name and face had scrolled out of view. A context
+menu replaced it and is better: it draws the row as its own preview, so the person stays on screen
+under the destructive verb.
+
+**`.submitLabel(.send)` on the composer.** It renames the return key, takes the newline away, and
+still does not submit — measured, then reverted. The arrow in the field sends; ↵ writes a second
+line.
+
+**The search glyph taking the app's accent.** `.tint()` does not reach `searchable()`, and
+`UISearchBar.appearance().tintColor` does not reach iOS 26's collapsed search button. Both were tried
+on device. The toolbar's menu glyph is drawn in the primary ink to match it instead.
+
+<!-- COPY END 182fa583 -->
+
 <!-- COPY BEGIN 9d913254 [NEEDS HUMAN REVIEW] -->
 
 ## Privacy, on the wire

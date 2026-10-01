@@ -225,7 +225,7 @@ removal arrives (`ARemovedDeviceStopsAtTheCutoffTests`). An entry under a number
 room used cannot be checked yet. The room chain Griff ruled for on 2026-09-28
 ([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)) closes it for a
 person removed from a room, not yet for a removed device, which Griff has asked to be closed
-([Open questions](open-questions.md#raised-and-answered-2026-09-28)).
+([Open questions](decisions.md)).
 
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
@@ -520,7 +520,7 @@ entry signs exactly the bytes it always did. A removal or a departure names the 
 the person's devices, and only the chains those reach are shown (`RoomChains`, `TheRoomChainTests`).
 Since 2026-09-28 the member list follows the same chains (`Projection.standing`; its tests pass in the package suite, 2026-09-29), and a
 room entry without its link is refused
-([Open questions](open-questions.md#does-a-removal-decide-who-is-in-a-room-or-only-what-the-room-shows)). When
+([Open questions](decisions.md#a-removed-person-hears-last-and-the-first-removal-stands)). When
 two people remove each other without either removal naming the other, the first stands. First is the
 earliest time noted by another member who read it. Each member notes when its copy was stored, which
 is the latest of the copy's stored time and the stored times of what the phone needed to read it:

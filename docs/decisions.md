@@ -267,7 +267,7 @@ no comments. The license covers copyright; it grants no right to the name *Outpo
   the same picture at 64pt with its own pencil and a *Name* row, and **never draws the badge**, so
   the pencil there is never hidden. A member who declines the badge keeps the pencil where it was.
 - **The App Store purchase is not built.** Nothing in a TestFlight build can reach it, so it waits
-  for the release; see [Open questions](open-questions.md#not-built).
+  for the release; see [Open questions](roadmap.md).
 
 <!-- COPY END 616952ec -->
 
@@ -1015,7 +1015,7 @@ code and is covered by tests. Nobody has tried it on the rig with a modified app
 This is how the app works now. Everything that says who is in a room is locked with the room key, and
 a joining device gets the room key only once it is admitted. It also means a joining device can't
 check who sent it a key; see
-[Open questions](open-questions.md#who-can-send-your-device-a-room-key-it-cant-check-yet).
+[Open questions](open-questions.md#nobody-signs-the-link-back-to-a-rooms-older-key).
 
 <!-- COPY END 328f81d7 -->
 
@@ -1083,7 +1083,7 @@ through iCloud Keychain, so somebody signed in to the member's Apple Account on 
 gets it: the app won't let that device in without an approval, but a reprogrammed app could use the
 identity the way the recovery key does. The member's devices would mark it, and it could then remove
 the member's other devices. See
-[Open questions](open-questions.md#should-adding-a-device-without-an-approval-need-a-key-no-device-keeps).
+[Open questions](decisions.md).
 
 Tested in the package (`DeviceApprovalTests`, `ApprovingADeviceTests`, `DeviceEnrolmentTests`) and
 the request and approval records on real CloudKit on one account (`LiveSiblingFeedTests`). Not yet
@@ -3086,7 +3086,7 @@ signed for it on every device or nine days have passed.
 about a conversation's settings; the one asking checks again once a minute; the sender keeps at most
 two hundred asks; and an ask is handled by whichever of the sender's devices collects it, because
 asks do not travel between a member's devices yet; Griff's answer of 2026-09-28 is that they will
-([open questions](open-questions.md#raised-and-answered-2026-09-28)).
+([open questions](decisions.md)).
 
 **Not verified:** the screens have not been seen on a device, and the ask has not crossed a real
 account.
@@ -3432,7 +3432,7 @@ others write. Every device has to take this build together. **What it does not c
 *device* (the member removes one of their own) still goes by its global cutoff, and an entry from
 before chains can still take a number from below where the chain begins. The first is to be closed,
 on Griff's word to fix the gap. The second goes with every other form an older build wrote, because
-none has shipped ([Open questions](open-questions.md#raised-and-answered-2026-09-28)).
+none has shipped ([Open questions](decisions.md)).
 **The member list follows the chain too**, built 2026-09-28 on Griff's "Fix this", its tests passing in the package suite 2026-09-29:
 drawing and membership share one computation (`Projection.standing`), so nothing a removed person
 writes past the removal's chain counts for who is in the room either. When two people remove each

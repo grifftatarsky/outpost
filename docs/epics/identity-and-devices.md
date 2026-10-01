@@ -169,7 +169,7 @@ is marked on my other devices. Removals are signed by the device that made them.
 have it count. Approvals and removals now count in the order iCloud first stored them, so nothing a
 removed device signs after its removal reached iCloud counts, whatever date it writes. It can still
 add a device as if restored with the recovery key, because it holds the identity key; that is an
-[open question](../open-questions.md#should-adding-a-device-without-an-approval-need-a-key-no-device-keeps).
+[open question](../decisions.md).
 [Decisions](../decisions.md#a-new-device-needs-approval-from-one-of-your-devices).
 
 **Testing.** `DeviceApprovalTests` (which certificates count), `ApprovingADeviceTests` and
