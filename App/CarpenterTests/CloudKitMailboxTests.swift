@@ -140,7 +140,7 @@ struct CloudKitMailboxTests {
         let stored = try await t.mailbox.storedCopies(in: pairs)
         #expect(Set(stored.map(\.name)) == Set(copies.copies.values.map(\.name)), "a copy is missing, or named twice")
         #expect(Set(stored.flatMap(\.recipients)) == [t.toThem.outgoingTag(window: 1), toOther.outgoingTag(window: 1)])
-        #expect(stored.allSatisfy { $0.receipt == nil })
+        #expect(stored.allSatisfy { $0.receipts.isEmpty })
 
         try await t.mailbox.delete(copies: Set(stored.map(\.name)), in: pairs)
         #expect(try await t.mailbox.storedCopies(in: pairs).isEmpty, "a deleted photo left a copy behind")
