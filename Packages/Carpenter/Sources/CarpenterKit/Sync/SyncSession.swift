@@ -9,6 +9,8 @@ public struct SyncReport: Hashable, Sendable {
 
     public var entriesRefusedForever: Int = 0
 
+    public var entriesTooLarge: Int = 0
+
     public var entriesDelivered: Int = 0
 
     public var entriesAlreadyPresent: Int = 0
@@ -128,6 +130,7 @@ public struct SyncReport: Hashable, Sendable {
         merged.entriesReceived += other.entriesReceived
         merged.entriesRejected += other.entriesRejected
         merged.entriesRefusedForever += other.entriesRefusedForever
+        merged.entriesTooLarge += other.entriesTooLarge
         merged.entriesDelivered += other.entriesDelivered
         merged.entriesAlreadyPresent += other.entriesAlreadyPresent
         merged.credentialsRejected += other.credentialsRejected
@@ -212,6 +215,7 @@ public struct SyncSession: Sendable {
         withholding withheld: @Sendable (Entry, ParticipantID) -> Bool = { _, _ in false }
     ) async throws -> SyncReport {
         var report = SyncReport()
+        let entries = Self.fitting(entries)
         let carriesMoreThanEntries =
             !requests.isEmpty || !answers.isEmpty || notifyWalls != nil || !confirming.isEmpty || !asking.isEmpty
             || announcing
@@ -288,26 +292,32 @@ public struct SyncSession: Sendable {
     }
 
     public static func fitsAPacket(_ entry: Entry) -> Bool {
-        cost(of: entry, encoder: JSONEncoder()) <= packetByteBudget
+        entry.encodedBytesAtMost <= packetByteBudget
+            || cost(of: entry, encoder: JSONEncoder()) <= packetByteBudget
+    }
+
+    private static func fitting(_ entries: [Entry]) -> [Entry] {
+        entries.filter { entry in
+            guard fitsAPacket(entry) else {
+                Diagnostics.sync.error("mailbox: left out an entry too big for any packet")
+                return false
+            }
+            return true
+        }
     }
 
     private static func cost(of entry: Entry, encoder: JSONEncoder) -> Int {
         ((try? encoder.encode(entry).count) ?? 0) + 2
     }
 
-    static func batches(of entries: [Entry], budget: Int = packetByteBudget) -> [[Entry]] {
+    static func batches(of entries: [Entry]) -> [[Entry]] {
         var batches: [[Entry]] = []
         var current: [Entry] = []
         var size = 0
         let encoder = JSONEncoder()
         for entry in entries {
             let cost = cost(of: entry, encoder: encoder)
-            guard cost <= budget else {
-                Diagnostics.sync.error(
-                    "mailbox: left out an entry of \(cost, privacy: .public) bytes, too big for any packet")
-                continue
-            }
-            if !current.isEmpty, size + cost > budget {
+            if !current.isEmpty, size + cost > packetByteBudget {
                 batches.append(current)
                 current = []
                 size = 0
@@ -482,8 +492,9 @@ public struct SyncSession: Sendable {
                     case .accepted: report.entriesReceived += 1
                     case .alreadyPresent: report.entriesAlreadyPresent += 1
                     case .forked: report.forksFound += 1
+                    case .tooLarge: report.entriesTooLarge += 1
                     }
-                    if result != .alreadyPresent {
+                    if result != .alreadyPresent, result != .tooLarge {
                         let published = replica.registry(for: entry.author)?.publishedAt(entry.device)
                         report.took(entry, readableFrom: max(packet.storedAt, published ?? .distantPast))
                     }

@@ -435,6 +435,10 @@ public final class AppSession {
             if case .forked(let fork) = outcome {
                 forks.append(fork)
             }
+            if outcome == .tooLarge {
+                integrity.rejectedFromPeers += 1
+                continue
+            }
             if entry.feedKey == ownFeed {
                 head = entry.link
                 if let room = entry.room { noteOwn(entry.link, in: room) }

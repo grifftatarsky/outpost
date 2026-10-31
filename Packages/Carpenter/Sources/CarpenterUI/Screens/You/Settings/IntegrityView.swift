@@ -172,7 +172,7 @@ public struct IntegrityView: View {
 
             // COPY BEGIN 3f4510af [NEEDS HUMAN REVIEW]
             Text(
-                "\(report.rejectedFromPeers) messages arrived that did not verify and were discarded. Nothing you can see is affected.",
+                "\(report.rejectedFromPeers) messages arrived that this app would not accept and were discarded. Nothing you can see is affected.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)

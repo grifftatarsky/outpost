@@ -45,6 +45,10 @@ public struct Entry: Hashable, Sendable, Codable {
     public let signature: Data
     public let hash: EntryHash
 
+    let signedBytes: Int
+
+    var encodedBytesAtMost: Int { signedBytes * 8 + 1024 }
+
     public var feedKey: FeedKey { FeedKey(author: author, device: device) }
 
     private static func hash(signing: Data, signature: Data) -> EntryHash {
@@ -185,7 +189,9 @@ public struct Entry: Hashable, Sendable, Codable {
         payload = entry.payload
         roomLink = entry.roomLink
         self.signature = signature
-        hash = Self.hash(signing: entry.signingPayload, signature: signature)
+        let signing = entry.signingPayload
+        signedBytes = signing.count + signature.count
+        hash = Self.hash(signing: signing, signature: signature)
     }
 
     public init(
@@ -210,11 +216,11 @@ public struct Entry: Hashable, Sendable, Codable {
         self.payload = payload
         self.roomLink = roomLink
         self.signature = signature
-        hash = Self.hash(
-            signing: Self.signingPayload(
-                author: author, device: device, seq: seq, previous: previous, clock: clock,
-                wallTime: wallTime, room: room, payload: payload, roomLink: roomLink),
-            signature: signature)
+        let signing = Self.signingPayload(
+            author: author, device: device, seq: seq, previous: previous, clock: clock,
+            wallTime: wallTime, room: room, payload: payload, roomLink: roomLink)
+        signedBytes = signing.count + signature.count
+        hash = Self.hash(signing: signing, signature: signature)
     }
 
     private enum CodingKeys: String, CodingKey {

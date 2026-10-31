@@ -393,7 +393,7 @@
     "%lld messages already on this device failed their signature check and were not shown. Something has altered them." : {
 
     },
-    "%lld messages arrived that did not verify and were discarded. Nothing you can see is affected." : {
+    "%lld messages arrived that this app would not accept and were discarded. Nothing you can see is affected." : {
 
     },
     "%lld more did not fit: a post carries %lld." : {

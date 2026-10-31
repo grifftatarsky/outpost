@@ -159,6 +159,7 @@ extension AppSession {
         let (received, settled) = SyncSession.integrate(collected, into: &working, checked: checked)
         if working.revision != replica.revision { replica = working }
         report = report.adding(received)
+        integrity.rejectedFromPeers += received.entriesTooLarge
 
         for request in received.repairRequests
         where !persisted.repairDuties.contains(where: { $0.request.id == request.id }) {

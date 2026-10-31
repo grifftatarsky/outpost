@@ -89,8 +89,10 @@ nothing in it is trusted because the app would never have written it.
   in the room.
 - A room key never replaces one already held, and one from somebody the room shows as removed or
   departed is refused.
-- `ClaimedHistoryTests`, `DatesPastTheEndOfTimeTests`, `WhoCanAddPeopleToARoomTests` and
-  `WhoCanSendYouAKeyTests` show the shape of a test for each.
+- An entry over `SyncSession.fitsAPacket` is refused at `Replica.integrate` and its number is spent.
+  Nothing the replica holds can be too big to send, to write down or to read back.
+- `ClaimedHistoryTests`, `DatesPastTheEndOfTimeTests`, `WhoCanAddPeopleToARoomTests`,
+  `WhoCanSendYouAKeyTests` and `OversizedEntryFromAContactTests` show the shape of a test for each.
 
 ## State that persists
 

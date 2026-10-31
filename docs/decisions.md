@@ -1190,6 +1190,34 @@ rewrite, so a record from a newer build is lost if damage elsewhere forces one.
 
 <!-- COPY END 084ff3b8 -->
 
+<!-- COPY BEGIN fa5c76c6 [NEEDS HUMAN REVIEW] -->
+
+### An entry too big to send is refused for good, and its number is spent
+
+**PROPOSED** — Claude chose this on 2026-10-31.
+
+The limit is `SyncSession.fitsAPacket`, the one the composer already used, and `Replica.integrate`
+applies it to everything that arrives, from a contact, from another of the member's devices, or from
+the log on disk. A contact on a modified app could otherwise write one entry the phone kept and could
+not read back.
+
+A validly signed entry over the limit is not kept. Its number goes into the spent list, as a deleted
+room's numbers do, so repair never asks for it, a second copy is `alreadyPresent`, and the next entry
+in that feed lands with no gap. The packet that carried it counts as settled and is acknowledged,
+because nothing about it will change; this is the one case besides `refusesForever` where a packet
+that did not fully integrate is taken back. An entry that fails its signature spends nothing, so
+nobody can spend another person's number. It is counted on the History check.
+
+`integrate` runs on every entry at every launch, and encoding one to weigh it took longer than
+integrating it (131 against 94 microseconds, measured in a release build on this Mac, with the
+signature checked). So `fitsAPacket` first asks `Entry.encodedBytesAtMost`, a bound worked out from
+the signed bytes kept when the entry is made, and only encodes an entry within a factor of eight of
+the limit. `theShortcutIsNeverWrong` holds the bound against the worst clock and ciphertext.
+
+**Cost:** a member never sees a message a contact made too large, and that contact gets no error.
+
+<!-- COPY END fa5c76c6 -->
+
 <!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
 ## Cryptography

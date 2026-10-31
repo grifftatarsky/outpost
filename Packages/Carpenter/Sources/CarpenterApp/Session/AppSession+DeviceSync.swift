@@ -226,14 +226,16 @@ extension AppSession {
         var taken: [Entry] = []
         for entry in fromSiblings {
             do {
-                _ = try replica.integrate(entry, checked: checked)
+                switch try replica.integrate(entry, checked: checked) {
+                case .accepted, .forked: taken.append(entry)
+                case .alreadyPresent: break
+                case .tooLarge: integrity.rejectedFromPeers += 1
+                }
             } catch {
                 integrity.unverifiableFromOwnDevices += 1
                 Diagnostics.sync.error(
                     "device sync: an entry from one of your own devices did not verify — usually a certificate that has not arrived (\(String(describing: error), privacy: .public))")
-                continue
             }
-            taken.append(entry)
         }
 
         persisted.spentEntries = replica.spentEntries
