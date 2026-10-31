@@ -807,6 +807,28 @@ check a jump against the log alone.
 
 <!-- COPY END da0e2cb6 -->
 
+<!-- COPY BEGIN 2d3706ee [NEEDS HUMAN REVIEW] -->
+
+### A refusal holds a room's keys once, and only something new does
+
+**PROPOSED 2026-10-31.** A phone that refused something this round may have an old view of who is in a
+room, so a room with somebody out of it keeps its keys for that round. The rule had no end: a packet
+that keeps being refused is never acknowledged, so it comes back every round, and one bad packet from
+any contact stopped a member passing on keys in every such room for as long as it stayed.
+
+Now only a refusal this phone did not see last round starts a hold (`RefusalWatch`), and the hold lasts
+that one round. Each person can start one at most once an hour, so writing a new bad packet every
+round does not keep it going. The wait is in the round that refused, before anything is sent; it used
+to fall a round late, after that round's keys had gone. A read-only round uses up nothing.
+
+**Cost:** a removal that stays refused past one round does not hold keys any longer, so the removed
+person could be handed one. Somebody who refuses twice in an hour from one person gets no second wait.
+
+**What would change it:** a refusal that names which room it touches, so a hold could last as long as
+that room's removal stays unread without a stranger being able to cause it.
+
+<!-- COPY END 2d3706ee -->
+
 <!-- COPY BEGIN c709dc0f [NEEDS HUMAN REVIEW] -->
 
 ### A key is passed on only by a phone that holds what its maker had seen

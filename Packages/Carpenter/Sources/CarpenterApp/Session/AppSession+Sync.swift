@@ -29,6 +29,7 @@ extension AppSession {
         }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
         if mode == .full {
+            update(\.viewMayBeStale, to: refusalWatch.holdsKeys(after: report.refusals, at: clock.now))
             await pairUp(through: mailbox)
             if let sent = try? await mailbox.sentPackets(in: pairs) {
                 await settleWhatWasSent(sent, through: mailbox, in: pairs)
@@ -44,8 +45,6 @@ extension AppSession {
             report = report.adding(sent)
             report = report.adding(await tellTheRemoved(after: sent, through: session))
         }
-
-        update(\.viewMayBeStale, to: report.entriesRejected > 0 || report.credentialsRejected > 0)
 
         if mode == .full, let media {
             await collectAttachments(from: report.integrated, through: media)

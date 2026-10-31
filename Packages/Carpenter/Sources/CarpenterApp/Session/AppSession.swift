@@ -161,6 +161,7 @@ public final class AppSession {
         cachedLinksHeard = nil
     }
     var viewMayBeStale = false
+    @ObservationIgnored var refusalWatch = RefusalWatch()
 
     var entriesNotWrittenDown: [Entry] = []
 

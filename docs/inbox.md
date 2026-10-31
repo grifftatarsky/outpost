@@ -137,9 +137,10 @@ app talks about what somebody with the phone can see, saying that iOS does the l
 **A grant can reach somebody just removed.** If a removal entry fails to verify in a round (a device
 certificate not yet arrived), that device holds the new epoch with a stale roster, and the next
 outbound round could hand the removed member the new key. `AppSession.withholdsKeys` holds a room's
-keys for one round when the last round refused something and somebody has been removed from that room.
-The rule is tested; the round is not, because building a real mid-round refusal on top of a real
-removal needs a third participant.
+keys for the round that first refused something, when somebody has been removed from that room, and
+the next round passes them on whether or not the refusal has cleared. `ARefusedPacketHoldsKeysOnceTests`
+holds the round. A removal that stays refused past that one round does not hold keys any longer,
+because a hold that lasts as long as a refusal is one any contact can leave in place for good.
 
 **A reader whose access was stopped can still comment.** Stopping somebody rotates the Outpost's key,
 but they keep the older keys, and a comment written under one still opens for the owner and every

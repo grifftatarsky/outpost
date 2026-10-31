@@ -31,10 +31,11 @@ public struct SyncReport: Hashable, Sendable {
         public let feed: FeedKey?
         public let seq: UInt64?
         public let isFinal: Bool
+        public let from: ParticipantID?
 
         public init(
             packet: PacketID, what: What, author: ParticipantID?, reason: String,
-            feed: FeedKey? = nil, seq: UInt64? = nil, isFinal: Bool = false
+            feed: FeedKey? = nil, seq: UInt64? = nil, isFinal: Bool = false, from: ParticipantID? = nil
         ) {
             self.packet = packet
             self.what = what
@@ -43,6 +44,7 @@ public struct SyncReport: Hashable, Sendable {
             self.feed = feed
             self.seq = seq
             self.isFinal = isFinal
+            self.from = from
         }
 
         public var summary: String {
@@ -491,7 +493,7 @@ public struct SyncSession: Sendable {
                     report.refusals.append(
                         SyncReport.Refusal(
                             packet: packet.id, what: .credential, author: certificate.participant,
-                            reason: String(describing: error)))
+                            reason: String(describing: error), from: packet.from))
                 }
             }
             for revocation in delivery.revocations.prefix(mostCredentialsInAPacket)
@@ -501,7 +503,7 @@ public struct SyncSession: Sendable {
                     report.refusals.append(
                         SyncReport.Refusal(
                             packet: packet.id, what: .credential, author: revocation.participant,
-                            reason: String(describing: error)))
+                            reason: String(describing: error), from: packet.from))
                 }
             }
             report.credentialsRejected += rejected
@@ -528,7 +530,7 @@ public struct SyncSession: Sendable {
                         SyncReport.Refusal(
                             packet: packet.id, what: .entry, author: entry.author,
                             reason: String(describing: error), feed: entry.feedKey, seq: entry.seq,
-                            isFinal: isFinal))
+                            isFinal: isFinal, from: packet.from))
                 }
             }
             report.entriesRejected += entriesRejected
