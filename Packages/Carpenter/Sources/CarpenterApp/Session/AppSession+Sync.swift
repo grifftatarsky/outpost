@@ -27,6 +27,7 @@ extension AppSession {
         for peer in everyPeer() {
             try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
         }
+        try await writeDownOrReport()
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
         if mode == .full {
             await pairUp(through: mailbox)
@@ -158,6 +159,7 @@ extension AppSession {
         var working = replica
         let (received, settled) = SyncSession.integrate(collected, into: &working, checked: checked)
         if working.revision != replica.revision { replica = working }
+        entriesNotWrittenDown += received.integrated
         report = report.adding(received)
         integrity.rejectedFromPeers += received.entriesTooLarge
 
@@ -218,24 +220,7 @@ extension AppSession {
         }
         await noteRemovals(timed)
 
-        let owed = entriesNotWrittenDown + received.integrated
-        if !owed.isEmpty {
-            do {
-                try await storage.log.append(owed)
-                entriesNotWrittenDown = []
-                sendOwnEntries()
-            } catch {
-                entriesNotWrittenDown = owed
-                if !storageIsSealed { integrity.writesFailed += 1 }
-                Diagnostics.sync.error(
-                    """
-                    storage: could not write \(owed.count, privacy: .public) arriving \
-                    entr(ies) — not acknowledging them, so they are offered again \
-                    (\(String(describing: error), privacy: .public))
-                    """)
-                throw error
-            }
-        }
+        try await writeDownOrReport()
 
         if mode == .full, let enrolment {
             let (member, device, secret) = (enrolment.identity.id, enrolment.device, peer.secret)
@@ -262,6 +247,47 @@ extension AppSession {
                 entries refused \(entries, privacy: .public): \
                 \(distinct.joined(separator: "; "), privacy: .public)
                 """)
+        }
+    }
+
+    private func writeDownOrReport() async throws {
+        do {
+            try await writeDownWhatIsOwed()
+        } catch {
+            if !storageIsSealed { integrity.writesFailed += 1 }
+            Diagnostics.sync.error(
+                """
+                storage: still holding \(self.entriesNotWrittenDown.count, privacy: .public) entr(ies) and \
+                \(self.epochsNotSaved.count, privacy: .public) key(s) that are not on disk — not \
+                acknowledging them, so they are offered again \
+                (\(String(describing: error), privacy: .public))
+                """)
+            throw error
+        }
+    }
+
+    var everythingHeldIsOnDisk: Bool { entriesNotWrittenDown.isEmpty && epochsNotSaved.isEmpty }
+
+    func writeDownWhatIsOwed() async throws {
+        guard !everythingHeldIsOnDisk else { return }
+        try await saveKeysStillOwed()
+        try await oneWriteAtATime { [self] in
+            let owed = entriesNotWrittenDown
+            guard !owed.isEmpty else { return }
+            try await storage.log.append(owed)
+            entriesNotWrittenDown.removeFirst(owed.count)
+        }
+        sendOwnEntries()
+    }
+
+    private func saveKeysStillOwed() async throws {
+        for owed in epochsNotSaved {
+            guard let secret = chains[owed.room]?.heldSecrets(at: owed.epoch).first else {
+                epochsNotSaved.remove(owed)
+                continue
+            }
+            try await persistEpoch(secret, at: owed.epoch, for: owed.room)
+            try await unwindEpochs(in: owed.room, bounded: walkStopsShort(in: owed.room))
         }
     }
 

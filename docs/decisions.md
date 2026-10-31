@@ -1246,6 +1246,35 @@ second send made in that time waits for the first. `work` passed to `oneWriteAtA
 
 <!-- COPY END 16dad4ae -->
 
+<!-- COPY BEGIN 977b4dcb [NEEDS HUMAN REVIEW] -->
+
+### What is held in memory and not on disk is owed, and nothing is acknowledged while it is
+
+**PROPOSED** — Claude chose this on 2026-10-31.
+
+A round puts arriving entries in the replica before it writes them, and adopts the keys it was given
+in between. A key write that threw used to end the round with the entries in memory and in no list.
+The next round found the same packet `alreadyPresent`, had nothing to write, and acknowledged it, so
+the sender took it back and a relaunch lost the message on both ends. The key had the same hole: it
+went into the chain before it reached the keychain, the replay found it already held and did not save
+it, and the packet was acknowledged with the key in memory only.
+
+`entriesNotWrittenDown` now takes the entries the moment `integrate` returns, and `epochsNotSaved`
+holds a key from before the keychain write until it lands. `writeDownWhatIsOwed` saves both, runs
+before every acknowledgement and at the end of a round's collection, so it also runs for a member
+with nobody to collect from. A failure throws, which leaves every packet in that round unacknowledged
+and offered again. If the process dies with something owed, nothing was acknowledged, so it comes
+back.
+
+Mail from a member's other device follows the same rule. Its entries and keys go through the same
+lists, and while anything is owed the mail is not marked collected, so the sending device keeps it and
+in time writes a catch-up.
+
+**Cost:** one key that will not save stops every round at that point until it does, which is what a
+failed log write already did. Sending stops with it.
+
+<!-- COPY END 977b4dcb -->
+
 <!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
 ## Cryptography

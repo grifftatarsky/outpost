@@ -93,11 +93,11 @@ extension AppSession {
         case .state:
             persisted.siblingMail.noteState(
                 from: writer, cursors: feed.collected, at: feed.writtenAt ?? clock.now, me: me)
-        case .mail(let number):
+        case .mail(let number) where everythingHeldIsOnDisk:
             persisted.siblingMail.took(mail: number, from: writer)
-        case .catchUp:
+        case .catchUp where everythingHeldIsOnDisk:
             persisted.siblingMail.took(catchUpThrough: feed.through ?? 0, from: writer)
-        case .request, .approval, .authority:
+        case .mail, .catchUp, .request, .approval, .authority:
             break
         }
         persisted.siblingMail.shared(feed.epochs)
@@ -224,13 +224,12 @@ extension AppSession {
         let fromSiblings = feed.entries.filter { $0.device != enrolment.device.id }
         let checked = await replica.signatureChecks(for: fromSiblings)
         var taken: [Entry] = []
-        var fresh: [Entry] = []
         for entry in fromSiblings {
             do {
                 switch try replica.integrate(entry, checked: checked) {
                 case .accepted, .forked:
                     taken.append(entry)
-                    fresh.append(entry)
+                    entriesNotWrittenDown.append(entry)
                 case .alreadyPresent: taken.append(entry)
                 case .tooLarge: integrity.rejectedFromPeers += 1
                 }
@@ -255,7 +254,7 @@ extension AppSession {
 
         notePhotosOwed(taken)
         await persistOrReport("history from another of your devices") {
-            try await storage.log.append(fresh)
+            try await writeDownWhatIsOwed()
         }
 
         persisted.certificates = knownCertificates()

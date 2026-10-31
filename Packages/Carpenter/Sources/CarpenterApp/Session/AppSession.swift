@@ -162,6 +162,13 @@ public final class AppSession {
 
     var entriesNotWrittenDown: [Entry] = []
 
+    struct UnsavedEpoch: Hashable {
+        let room: RoomID
+        let epoch: EpochNumber
+    }
+
+    var epochsNotSaved: Set<UnsavedEpoch> = []
+
     var lastWriteToTheLog: Task<Void, Never>?
 
     var head: EntryLink?
@@ -550,9 +557,12 @@ public final class AppSession {
     func persistEpoch(
         _ secret: EpochSecret, at epoch: EpochNumber, for room: RoomID
     ) async throws {
+        let unsaved = UnsavedEpoch(room: room, epoch: epoch)
+        epochsNotSaved.insert(unsaved)
         var keys = chains[room]?.heldSecrets(at: epoch) ?? []
         if !keys.contains(secret) { keys.insert(secret, at: 0) }
         try await storage.keychain.set(Self.keychainForm(of: keys), for: Self.epochKey(room, epoch), scope: .device)
+        epochsNotSaved.remove(unsaved)
 
         if !persisted.knownRooms.contains(room) { persisted.knownRooms.append(room) }
         var held = persisted.epochs[room] ?? []
