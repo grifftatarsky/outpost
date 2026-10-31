@@ -1218,6 +1218,34 @@ the limit. `theShortcutIsNeverWrong` holds the bound against the worst clock and
 
 <!-- COPY END fa5c76c6 -->
 
+<!-- COPY BEGIN 16dad4ae [NEEDS HUMAN REVIEW] -->
+
+### A member's own entry is on disk before anything else knows about it
+
+**PROPOSED** — Claude chose this on 2026-10-31.
+
+An own entry used to go into the replica first, with `head` advanced, and to the log last, so that
+two sends racing each other could not take the same number. When the disk write failed the entry
+stayed in memory, was mailed to the member's other devices and offered to the next round, and after
+a relaunch `head` came back lower and the next entry reused its number with different contents. That
+is a fork of the member's own feed, made by their own phone, and it needed only a full disk.
+
+`AppSession.append` now writes first. Everything from reading `head` to advancing it runs inside
+`oneWriteAtATime`, which runs writes to the log one after another in the order they asked, so a second
+send waits instead of reading the same `head`. A write that fails leaves nothing: no entry, no number
+used, nothing to publish, and the error goes to the composer. A process that dies after the write and
+before the replica hears finds the entry in the log at the next launch, and sends it then.
+
+A change a member made is therefore not on screen until it is on disk. A revocation the disk refused
+reports the failure and leaves the reader as they were, where it used to show the reader gone until
+the next launch put them back.
+
+**Cost:** a send takes as long as the disk, with the drive flush, before the message appears. A
+second send made in that time waits for the first. `work` passed to `oneWriteAtATime` must not call
+`append`, or it waits for itself.
+
+<!-- COPY END 16dad4ae -->
+
 <!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
 ## Cryptography

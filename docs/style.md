@@ -106,6 +106,9 @@ nothing in it is trusted because the app would never have written it.
   absent. Pin the old layout by writing it out by hand in a test.
 - A write that keeps history, a key, a certificate or anything a flow needs after a relaunch goes
   through `persistOrReport`, never `try?`.
+- A member's own entry reaches the disk before the replica hears of it. `oneWriteAtATime` holds the
+  stretch from reading `head` to advancing it, so a failed write leaves nothing and two sends never
+  share a number.
 - `saveState()` skips a state equal to the last one that landed, so call it freely; do not guard call
   sites. A launch writes nothing it already kept (`WhatALaunchWritesTests`), and an idle round writes
   nothing at all (`WhatARoundWritesTests`).

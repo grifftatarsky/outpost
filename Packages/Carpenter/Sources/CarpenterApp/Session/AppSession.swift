@@ -162,6 +162,8 @@ public final class AppSession {
 
     var entriesNotWrittenDown: [Entry] = []
 
+    var lastWriteToTheLog: Task<Void, Never>?
+
     var head: EntryLink?
     var roomHeads: [RoomID: EntryLink] = [:]
     var accountRegistry: (any AccountRegistry)?
@@ -366,29 +368,44 @@ public final class AppSession {
             try await persistEpoch(secret, at: .initial, for: chainRoom)
         }
         if persisted.rekeyBeforeWriting.contains(chainRoom) { try await rekeyBeforeWriting(chainRoom) }
-        guard let chain = chains[chainRoom] else { throw AppSessionError.noIdentity }
-        let writing = writingKey(of: chainRoom)
 
-        let entry = try Entry.append(
-            after: head,
-            author: enrolment.identity.id,
-            device: enrolment.device,
-            clock: replica.frontier,
-            wallTime: clock.now,
-            room: room,
-            payload: payload,
-            at: readable ?? writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
-            sealedWith: readable == nil ? (writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain) : chain,
-            alsoFor: extra,
-            roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
-        )
-        guard SyncSession.fitsAPacket(entry) else { throw AppSessionError.tooBigToSend }
+        try await oneWriteAtATime { [self] in
+            guard let enrolment = self.enrolment, let chain = chains[chainRoom] else {
+                throw AppSessionError.noIdentity
+            }
+            let writing = writingKey(of: chainRoom)
 
-        if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
-        head = entry.link
-        if let room { roomHeads[room] = entry.link }
-        try await storage.log.append([entry])
+            let entry = try Entry.append(
+                after: head,
+                author: enrolment.identity.id,
+                device: enrolment.device,
+                clock: replica.frontier,
+                wallTime: clock.now,
+                room: room,
+                payload: payload,
+                at: readable ?? writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
+                sealedWith: readable == nil ? (writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain) : chain,
+                alsoFor: extra,
+                roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
+            )
+            guard SyncSession.fitsAPacket(entry) else { throw AppSessionError.tooBigToSend }
+
+            try await storage.log.append([entry])
+            head = entry.link
+            if let room { roomHeads[room] = entry.link }
+            if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
+        }
         refresh()
+    }
+
+    func oneWriteAtATime(_ work: @escaping @MainActor () async throws -> Void) async throws {
+        let previous = lastWriteToTheLog
+        let write = Task { @MainActor in
+            await previous?.value
+            try await work()
+        }
+        lastWriteToTheLog = Task { _ = await write.result }
+        try await write.value
     }
 
     func restoreLog(identity: Identity) async throws {
