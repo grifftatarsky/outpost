@@ -45,7 +45,9 @@ known.
   recomputed on every access, and each was the slowest thing on a screen.
 - Group once, then look up. `Projection` indexes its entries by room when it is built; a question
   about one room walks that room, never the whole log.
-- A key agreement goes through `pairwiseSecret(with:)`, which caches it. Never derive one in a loop.
+- A key agreement goes through `pairwiseSecret(with:)` or `legacySecret(with:)`, which cache it. Never
+  derive one in a loop, and walk `peopleInTouch()`, never `replica.knownParticipants`: a packet decides
+  how long that second list is.
 - Find an entry by its hash through the projection's index (`entry(_:)`), never with
   `first { $0.id == … }` over the log: what is still editable is always at the end of it.
 - Work over the whole log that is pure — checking every signature, decoding the log, sealing the
@@ -87,6 +89,8 @@ nothing in it is trusted because the app would never have written it.
 - Only members can change who is in a room. An entry type that changes who is in a room checks that
   its author is in the room at that point in the log, and a vote counts only while its author is still
   in the room.
+- A packet's contents are trusted only as far as the packet needs them: an identity is kept for the
+  author of an entry in that packet, and every list has a cap in `SyncSession`.
 - A room key never replaces one already held, and one from somebody the room shows as removed or
   departed is refused. A key's number is checked against the chain before it is held, and a walk
   over a chain visits `heldNumbers`, never a countdown.

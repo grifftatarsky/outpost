@@ -121,8 +121,8 @@ extension AppSession {
         }
 
         if report.packetsWritten > 0 {
-            let reached = Set(report.written.compactMap(\.to))
-            for owed in owedGrants where reached.contains(owed.to.them) { issuedGrants.insert(owed.receipt) }
+            let landed = Set(report.written.flatMap(\.grants))
+            for owed in owedGrants where landed.contains(owed.grant) { issuedGrants.insert(owed.receipt) }
             if announcing {
                 persisted.authorityAnnounced = authority
                 Diagnostics.sync.notice("round: told every peer about a change to this member's devices")

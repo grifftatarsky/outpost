@@ -28,14 +28,28 @@ extension AppSession {
     }
 
     private func addressable() -> Set<ParticipantID> {
-        guard let me = enrolment?.identity.id else { return [] }
         let shared = sharedParticipants()
-        var reachable = shared
-        for room in projection.namedRoomIDs() { reachable.formUnion(roster(of: room).absent) }
-        for repair in persisted.repairs { reachable.formUnion(repair.asked) }
-        for duty in persisted.repairDuties { reachable.insert(duty.from) }
-        reachable.remove(me)
-        return reachable.subtracting(quiet(besides: shared))
+        return peopleSomethingIsOwedTo(besides: shared).subtracting(quiet(besides: shared))
+    }
+
+    private func peopleSomethingIsOwedTo(besides shared: Set<ParticipantID>) -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id else { return [] }
+        var people = shared
+        for room in projection.namedRoomIDs() { people.formUnion(roster(of: room).absent) }
+        for repair in persisted.repairs { people.formUnion(repair.asked) }
+        for duty in persisted.repairDuties { people.insert(duty.from) }
+        people.remove(me)
+        return people
+    }
+
+    func peopleInTouch() -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id else { return [] }
+        var people = peopleSomethingIsOwedTo(besides: sharedParticipants())
+        people.formUnion(persisted.pairBook.keys)
+        people.formUnion(persisted.preferences.blockedPeople)
+        people.formUnion(persisted.codeClaims.map(\.peer))
+        people.remove(me)
+        return people
     }
 
     func sharedParticipants() -> Set<ParticipantID> {

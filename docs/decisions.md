@@ -355,15 +355,17 @@ owner's storage.
 
 A packet used to be a round: every unsent entry, however many, in one record. CloudKit refuses a
 record over a megabyte, and photos made that reachable — a hundred and seventy previews in one
-round. A round is now batched under `SyncSession.packetByteBudget` (seven hundred kilobytes),
-grants and credentials riding the first packet.
+round. A round is now batched under `SyncSession.packetByteBudget` (seven hundred kilobytes), and
+everything a packet carries counts against it: requests, answers, keys, and the identities and
+certificates of its entries' authors. Keys go ahead of entries and spill into further packets.
 
 **What a partial round does.** A packet that fails after another has landed does not fail the
 round: what landed is reported in `written`, the frontier advances only over those entries, the
 outstanding-packet record gains only those packets, no bell rings, and the rest goes next round.
 Throwing would have lost the record of the packets that did land — and the delivery-mark rule
 "an entry in no outstanding packet has been collected" would then have read every message in
-them as collected. The first packet failing still throws, because nothing was written.
+them as collected. If nothing landed for anybody the round throws, because nothing was written,
+except when a record was too large: that fails the one packet, and the round carries on.
 
 **Cost:** several writes per round when a round is large, which is exactly the traffic the size
 represents; and a round that stops short leaves its later messages unannounced until the next.
@@ -570,9 +572,15 @@ packet. See [the next entry](#a-keys-number-costs-its-sender-a-link).
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
 
-A sync packet passes on every device certificate this member holds, so somebody who has met Alice
-can vouch for her devices to somebody who has not. It now passes on the identity keys those
-certificates name, and a receiving replica introduces them before admitting anything.
+A sync packet carries the identity keys and every device certificate of its sender and of each author
+of an entry in it, so somebody who has met Alice can vouch for her devices to somebody who has not. A
+receiving replica introduces only the authors of entries in that packet, at most
+`SyncSession.mostIdentitiesInAPacket` new ones, before admitting anything. A certificate or a removal
+for anybody else in the packet is skipped and holds nothing up. Until 2026-10-31 a packet carried
+everybody the sender knew and a replica kept all of it, so one contact's packet of made-up identities
+went into every message its receiver sent, past the size of a record, and on to their contacts. A
+person's devices are capped at `DeviceRegistry.mostDevices`, so a person's own certificates cannot do
+the same.
 
 **Why it had to.** A replica refuses a certificate for a participant it has never been introduced
 to, so vouching for Alice's devices to a member who has never met Alice achieved nothing: the
@@ -588,9 +596,9 @@ its author by id — so a forged introduction introduces a stranger nobody's his
 rather than impersonating anyone. Nothing else about verification changes: an entry still needs its
 device's certificate and a valid signature.
 
-**What it costs.** Two 32-byte keys per member this device has met, on the first packet of a round.
-A member who has met a hundred people carries about six kilobytes; the packet budget is seven
-hundred.
+**What it costs.** A few hundred bytes for each author in a packet, in every packet that carries
+them. A person who shares a room with nobody who is writing is learned from the room's entries when
+they arrive, and a person named by an invitation is read from the invitation.
 
 <!-- COPY END 61d93524 -->
 
@@ -779,7 +787,7 @@ check a jump against the log alone.
 
 Every member passes its newest room key to everybody its member list shows as in, so that somebody the
 key's maker could not reach still gets it. A phone can hold a new key before the removal that caused
-it: a round too big for one packet carries keys in its first packet, and a member's other device hands
+it: a round too big for one packet carries keys ahead of its entries, and a member's other device hands
 keys over in a record of its own. That phone still shows the removed person as in, and passed them the
 key.
 
@@ -3271,8 +3279,8 @@ accounts.
 
 **PROPOSED 2026-09-30 by Claude.** Griff has not been asked.
 
-Every packet carries the identities its sender knows, so a phone learns of people it has never met.
-A phone with no room of its own treated every identity it had learned as somebody to reach, because
+A packet carries the identities of the people who wrote what is in it, so a phone learns of people it
+has never met. A phone with no room of its own treated every identity it had learned as somebody to reach, because
 that was how a new member could still talk to whoever invited them. Measured 2026-09-30: a member
 joining their first room made a space in their iCloud for each of the three people in it, wrote
 packets addressed to two of them who had never heard of it, and those spaces stood empty because a

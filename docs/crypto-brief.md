@@ -421,7 +421,7 @@ key) carrying the link, `heads` (the last entry of every feed in the room that t
 domain (`carpenter.epoch-change.v1`) and the room and epoch bound in. A member passes its newest key to
 everybody its member list shows as in (`grantsOwed`), and now only once it holds that entry, with a
 proof that checks under the key, and every entry the entry names. A phone that got the key before the
-removal that caused it (a round split across packets carries keys in its first packet; a member's
+removal that caused it (a round split across packets carries keys ahead of its entries; a member's
 other device hands keys over in a record of its own) keeps it until the removal arrives. A removed
 member can open the entry, since it is sealed under the old key, and copy it, but cannot write one
 that names less, because the proof takes the new key. The room's first key has no such entry and is

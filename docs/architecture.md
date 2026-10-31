@@ -306,7 +306,7 @@ line by line on 2026-09-14. This is what each ordering assumes and what checks i
 
 | The step | What it assumes already ran | Checked by |
 |---|---|---|
-| `issuedGrants.insert` when `packetsWritten > 0` | the grants rode the first packet, and a failure there threw before this line | `grantsAreOnlyMarkedIssuedIfTheyWent` |
+| `issuedGrants.insert` for the grants in `report.written` | a grant counts as sent only if the packet carrying it landed | `grantsAreOnlyMarkedIssuedIfTheyWent`, `aKeyThatFailedIsNotMarkedSent` |
 | `roomsWithUnsentMessages.subtract` only when `sendFailure == nil` | a batch that failed still owes its bell | `partialFailureIsNotLoss` |
 | `storage.log.append(owed)` before `session.acknowledge` | a failed write throws, so nothing is acknowledged | `aRefusedWriteLeavesThePacketOutstanding` |
 | `entriesNotWrittenDown` carried into the next round | `integrate` already put them in the replica, so the next round has nothing to write and would acknowledge an entry no disk holds | the same test |

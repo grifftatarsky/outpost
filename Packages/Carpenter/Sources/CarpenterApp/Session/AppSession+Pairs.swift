@@ -43,7 +43,7 @@ extension AppSession {
         guard let me = enrolment?.identity.id else { return nil }
         var hints: [ParticipantID: PairHint] = [:]
         var accounts: [ParticipantID: Set<String>] = [:]
-        for person in replica.knownParticipants where person != me {
+        for person in peopleInTouch() {
             guard let secret = legacySecret(with: person) else { continue }
             hints[person] = secret.pairHint
             accounts[person] = readable(from: person)

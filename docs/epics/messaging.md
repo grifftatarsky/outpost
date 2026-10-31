@@ -169,7 +169,8 @@ refuse does not lose everything in it.
 - **Done.** A round is batched under seven hundred kilobytes per packet.
 - **Done.** The frontier advances only over entries in packets that landed.
 - **Done.** A packet failing after another succeeded keeps what was written, rings nobody, and sends the
-  rest next round. The first packet failing fails the round, because nothing was written.
+  rest next round. Nothing landing for anybody fails the round, because nothing was written, unless a
+  record was too large, which fails only that packet.
 
 **Testing**
 
