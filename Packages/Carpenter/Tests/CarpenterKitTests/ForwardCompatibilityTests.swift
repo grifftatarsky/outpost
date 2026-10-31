@@ -94,6 +94,8 @@ extension ForwardCompatibilityTests {
         state.repairs = [repair]
         state.repairDuties = [RepairDuty(request: request, from: ParticipantID(rawValue: WideID.of([9])))]
         state.unverifiable = [FeedGap(feed: feed, spans: [SequenceSpan(7, 7)])]
+        state.elsewhere = [FeedGap(feed: feed, spans: [SequenceSpan(8, 8)])]
+        state.repairSpend = [ParticipantID(rawValue: WideID.of([9])): RepairSpend(day: 3, bytes: 4)]
         state.spentEntries = [SpentEntry(feed: feed, seq: 3, hash: entry, room: room)]
         state.uploadsLeftForOthers = [AttachmentID()]
         state.attachmentsSent = [

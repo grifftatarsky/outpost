@@ -8,7 +8,11 @@ extension AppSession {
     // MARK: History repair
 
     public func missingHistory(in room: RoomID) -> [FeedGap] {
-        replica.gaps(from: membersToCheck(in: room)).subtracting(persisted.unverifiable)
+        holes(from: membersToCheck(in: room))
+    }
+
+    private func holes(from authors: Set<ParticipantID>) -> [FeedGap] {
+        replica.gaps(from: authors).subtracting(persisted.unverifiable).subtracting(persisted.elsewhere)
     }
 
     private func membersToCheck(in room: RoomID) -> Set<ParticipantID> {
@@ -36,7 +40,7 @@ extension AppSession {
         let request = RepairRequest(
             authors: authors.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
             heads: replica.heads(of: authors),
-            gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable),
+            gaps: holes(from: authors),
             room: room, reason: reason)
         persisted.repairs.removeAll { $0.room == room }
         persisted.repairs.append(
@@ -165,14 +169,14 @@ extension AppSession {
         guard let repair = persisted.repairs.first(where: { $0.room == room && !$0.quiet })
         else { return nil }
         let authors = Set(repair.request.authors)
-        let open = replica.gaps(from: authors).subtracting(persisted.unverifiable)
-        let named = open.intersecting(repair.request.gaps)
+        let named = holes(from: authors).intersecting(repair.request.gaps)
         let refused = persisted.unverifiable.stillMissing(of: repair.request.gaps)
+        let notForThisMember = persisted.elsewhere.stillMissing(of: repair.request.gaps)
         let answered = repair.asked.filter { repair.answers[$0] != nil }
         let waiting = repair.asked.filter { repair.answers[$0] == nil }
         let answers = answered.compactMap { repair.answers[$0] }
 
-        let recovered = repair.request.namedCount - named.total - refused
+        let recovered = repair.request.namedCount - named.total - refused - notForThisMember
 
         var shortfall: UInt64 = 0
         var furthest = VectorClock()
@@ -212,7 +216,7 @@ extension AppSession {
             let request = RepairRequest(
                 id: repair.request.id, authors: repair.request.authors,
                 heads: replica.heads(of: authors),
-                gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable),
+                gaps: holes(from: authors),
                 room: repair.request.room, wallOf: repair.request.wallOf,
                 reason: repair.request.reason)
             do {
@@ -237,27 +241,38 @@ extension AppSession {
         var answered: Set<RepairDuty> = []
         let withheld = heldBack()
         for duty in persisted.repairDuties {
-            if duty.request.reason == .recovery, isHoldingBack(duty.from) { continue }
-            guard let peer = byID[duty.from] else {
+            let hold = restoreHold(on: duty.from)
+            if hold == .held { continue }
+            guard hold != .refused, let peer = byID[duty.from] else {
                 answered.insert(duty)
                 Diagnostics.sync.notice("repair: dropped a request from a peer this device cannot address")
                 continue
             }
-            let (held, unheld) = replica.fill(duty.request)
-            let entries = held.filter {
+            let allowance = repairBytesLeft(for: duty.from)
+            guard allowance > 0 else { continue }
+            let fill = replica.fill(duty.request, allowing: mayBeHanded(to: duty.from))
+            let entries = fill.entries.filter {
                 $0.seq <= persisted.syncedFrontier[$0.feedKey] && !justSent.contains($0.hash)
             }
+            let (fitting, bytes) = Self.prefix(of: entries, within: allowance)
             let answer = RepairAnswer(
-                request: duty.request.id, unheld: unheld,
-                heads: replica.heads(of: Set(duty.request.authors)))
+                request: duty.request.id, unheld: fill.unheld,
+                heads: replica.heads(of: Set(duty.request.authors)), elsewhere: fill.elsewhere)
             do {
                 let sent = try await session.send(
-                    entries, to: [peer], certificates: knownCertificates(),
+                    fitting, to: [peer], certificates: knownCertificates(),
                     revocations: persisted.revocations, at: clock.now, answers: [answer],
                     identities: knownIdentities(), withholding: withheld)
                 noteWritten(sent)
                 report = report.adding(sent)
-                if sent.sendFailure == nil { answered.insert(duty) }
+                spendRepairBytes(bytes, on: duty.from)
+                guard sent.sendFailure == nil else { continue }
+                if fitting.count < entries.count {
+                    carryOn(duty, past: fitting)
+                } else {
+                    answered.insert(duty)
+                    repairsAnswered.insert(duty.request.id)
+                }
             } catch {
                 Diagnostics.sync.error(
                     "repair: could not answer a peer: \(String(describing: error), privacy: .public)")
@@ -281,6 +296,94 @@ extension AppSession {
                 \(answered.count, privacy: .public) request(s) answered
                 """)
         }
+    }
+
+    func takeRepairRequests(_ requests: [RepairRequest], from person: ParticipantID) {
+        for asked in requests where !repairsAnswered.contains(asked.id) {
+            let request = asked.bounded
+            guard mayAsk(request, from: person) else {
+                Diagnostics.sync.notice("repair: ignored a request for a room its asker is not in")
+                continue
+            }
+            noteRestore(asking: request, from: person)
+            persisted.repairDuties.removeAll { $0.from == person && $0.request.scope == request.scope }
+            persisted.repairDuties.append(RepairDuty(request: request, from: person))
+        }
+    }
+
+    private func mayAsk(_ request: RepairRequest, from person: ParticipantID) -> Bool {
+        if let owner = request.wallOf {
+            return owner == enrolment?.identity.id && outpostReaders().contains(person)
+        }
+        return request.room.map { membersToCheck(in: $0).contains(person) } ?? false
+    }
+
+    private func noteRestore(asking request: RepairRequest, from person: ParticipantID) {
+        let restored = replica.registry(for: person)?.lastRestoredDevice
+        let unseen = restored.map { device in
+            !persisted.restoreAsks.contains { $0.from == person && $0.device == device }
+        } ?? false
+        guard request.reason == .recovery || unseen else { return }
+        let holding = persisted.preferences.isHoldingHistoryForRestores && !refusesToDraw(from: person)
+        persisted.restoreAsks.removeAll { $0.from == person && $0.room == request.room }
+        persisted.restoreAsks.append(
+            RestoreAskRecord(
+                request: request.id, from: person, room: request.room, at: clock.now,
+                hold: holding ? .held : .allowed, device: restored))
+        while persisted.restoreAsks.count > RestoreAskRecord.kept {
+            let oldest = persisted.restoreAsks.firstIndex { $0.hold == .allowed } ?? 0
+            persisted.restoreAsks.remove(at: oldest)
+        }
+        Diagnostics.sync.notice(
+            """
+            recovery: \(Diagnostics.fingerprint(person.rawValue), privacy: .public) \
+            came back and asked for history\
+            \(holding ? "; held until this device's member checks" : "", privacy: .public)
+            """)
+    }
+
+    private func mayBeHanded(to person: ParticipantID) -> (Entry) -> Bool {
+        let me = enrolment?.identity.id
+        let rooms = projection.namedRoomIDs().filter { membersToCheck(in: $0).contains(person) }
+        let readsMyOutpost = outpostReaders().contains(person)
+        let myOutpost = me.map(outpostRoom(for:))
+        return { entry in
+            guard let room = entry.room else { return readsMyOutpost && entry.author == me }
+            return rooms.contains(room) || (readsMyOutpost && room == myOutpost)
+        }
+    }
+
+    public static let repairBytesPerPersonPerDay = 16 * 1024 * 1024
+
+    public static let leastAnAnswerCosts = 4 * 1024
+
+    private func repairBytesLeft(for person: ParticipantID) -> Int {
+        guard let spent = persisted.repairSpend[person], spent.day == SyncSession.window(at: clock.now) else {
+            return Self.repairBytesPerPersonPerDay
+        }
+        return Self.repairBytesPerPersonPerDay - spent.bytes
+    }
+
+    private func spendRepairBytes(_ bytes: Int, on person: ParticipantID) {
+        let day = SyncSession.window(at: clock.now)
+        let before = persisted.repairSpend[person].flatMap { $0.day == day ? $0.bytes : nil } ?? 0
+        persisted.repairSpend[person] = RepairSpend(day: day, bytes: before + max(bytes, Self.leastAnAnswerCosts))
+    }
+
+    private static func prefix(of entries: [Entry], within allowance: Int) -> (entries: [Entry], bytes: Int) {
+        var total = 0
+        var count = 0
+        for bytes in SyncSession.bytes(of: entries) {
+            guard total + bytes <= allowance else { break }
+            total += bytes
+            count += 1
+        }
+        return (Array(entries.prefix(count)), total)
+    }
+
+    private func carryOn(_ duty: RepairDuty, past sent: [Entry]) {
+        guard let index = persisted.repairDuties.firstIndex(of: duty) else { return }
+        persisted.repairDuties[index].request = duty.request.resumed(past: sent)
     }
 
     func undeliveredEntries() -> Set<EntryHash> {

@@ -94,8 +94,11 @@ nothing in it is trusted because the app would never have written it.
 - A room key never replaces one already held, and one from somebody the room shows as removed or
   departed is refused. A key's number is checked against the chain before it is held, and a walk
   over a chain visits `heldNumbers`, never a countdown.
+- Work somebody else can ask for is bounded per person: one open duty per room, a byte allowance per
+  day, and a request is cut to size before it is kept.
 - `ClaimedHistoryTests`, `DatesPastTheEndOfTimeTests`, `WhoCanAddPeopleToARoomTests`,
-  `WhoCanSendYouAKeyTests` and `AKeysNumberIsNotALoopBoundTests` show the shape of a test for each.
+  `WhoCanSendYouAKeyTests`, `AKeysNumberIsNotALoopBoundTests` and `WhatARepairRequestCanCostTests` show
+  the shape of a test for each.
 
 ## State that persists
 

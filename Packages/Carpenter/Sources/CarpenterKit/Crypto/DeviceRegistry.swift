@@ -36,6 +36,15 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public var knownRevocations: [DeviceRevocation] { Array(revocations) }
 
+    public var lastRestoredDevice: DeviceID? {
+        let roots = submitted.values.filter(\.isRecovery)
+        guard roots.count > 1 else { return nil }
+        return roots.max {
+            $0.issuedAt != $1.issuedAt
+                ? $0.issuedAt < $1.issuedAt : $0.digest.lexicographicallyPrecedes($1.digest)
+        }?.device
+    }
+
     public var storedTimes: [Data: Date] { stored }
 
     public func storedAt(_ digest: Data) -> Date? { stored[digest] }

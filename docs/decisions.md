@@ -542,6 +542,34 @@ quiet room should make.
 
 <!-- COPY END 52a7b44a -->
 
+<!-- COPY BEGIN a9232fe9 [NEEDS HUMAN REVIEW] -->
+
+### A request for history costs its asker's allowance and reaches only their rooms
+
+**PROPOSED 2026-10-31.** A repair packet bills whoever writes it, and the person answering writes it. A
+few bytes of request used to make a member upload their whole history, in every room, once per
+request. Now a device keeps one open duty per person per room and a newer request replaces it. It
+keeps a request only for a room whose list shows the asker as in or being let in, or for this member's
+own Outpost if the asker reads it. An answer carries only entries from rooms the asker is in. Authors,
+gaps and spans past `RepairRequest.mostAuthors`, `mostGaps` and `mostSpans` are dropped, and a request
+is answered at most once however often its packet is collected. Each person has
+`AppSession.repairBytesPerPersonPerDay` (16 MB) a day, every answer costs at least four kilobytes, and an
+answer that runs out stops there, keeps its duty, and carries on from where it stopped the next day.
+
+A feed runs across all of an author's rooms, so an asker can name a position in a room they are not in.
+The answer names those back in `elsewhere`, and the asker stops counting them as missing
+(`persisted.elsewhere`), or a late joiner would ask about them every hour for ever.
+
+**Cost:** a long history takes days to come back from one person. A contact can fill up to about 144
+MB of a member's iCloud, sixteen a day for the nine days a packet waits. A contact can also claim a
+position is `elsewhere` when it is not; the asker then stops asking about it, though anything another
+person sends still lands. An invited person who has not been let in can be sent the room's sealed
+history, which they cannot open without a key.
+
+**What would change it:** a feed per room, so a position always belongs to one room.
+
+<!-- COPY END a9232fe9 -->
+
 <!-- COPY BEGIN f6dc7e37 [NEEDS HUMAN REVIEW] -->
 
 ### A grant carries every link the granter holds
@@ -3736,6 +3764,22 @@ such thing today — a restored device is a new device key signing as a known id
 exactly the shape worth telling somebody about.
 
 <!-- COPY END 8aab962a -->
+
+<!-- COPY BEGIN 2ffb443c [NEEDS HUMAN REVIEW] -->
+
+### A restore hold follows the person, not the reason they give
+
+**PROPOSED 2026-10-31**, to keep [the ruling above](#recovery-is-announced-and-both-sides-of-it-have-settings)
+true. The asker chooses a request's `reason`, so a modified app could write `.gap` and the hold never
+applied. A request now counts as a restore if it says so or if the person's registry shows a device
+that came back through a recovery key which this phone has not yet asked about
+(`DeviceRegistry.lastRestoredDevice`). While the newest ask for a person is held, none of their
+requests are answered, and after a refusal none of them are kept.
+
+Somebody who restored and turned off asking their peers is announced to a peer the first time any
+request of theirs arrives, because the certificate is already there for that peer to see.
+
+<!-- COPY END 2ffb443c -->
 
 <!-- COPY BEGIN ed40492b [NEEDS HUMAN REVIEW] -->
 

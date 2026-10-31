@@ -125,7 +125,7 @@ struct ClaimedHistoryTests {
             gaps: [FeedGap(feed: alice.feedKey, spans: [SequenceSpan(1, .max)])])
 
         let started = Date()
-        let (entries, unheld) = replica.fill(request)
+        let (entries, unheld, _) = replica.fill(request)
 
         #expect(Date().timeIntervalSince(started) < 1)
         #expect(entries == held)
@@ -141,7 +141,7 @@ struct ClaimedHistoryTests {
         var heads = VectorClock()
         heads.observe(alice.feedKey, seq: .max)
 
-        let (entries, unheld) = replica.fill(
+        let (entries, unheld, _) = replica.fill(
             RepairRequest(authors: [alice.identity.id], heads: heads, gaps: []))
 
         #expect(entries.isEmpty)

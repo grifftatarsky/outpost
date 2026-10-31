@@ -324,6 +324,11 @@ public struct SyncSession: Sendable {
         cost(of: entry, encoder: JSONEncoder()) <= packetByteBudget
     }
 
+    public static func bytes(of entries: [Entry]) -> [Int] {
+        let encoder = JSONEncoder()
+        return entries.map { cost(of: $0, encoder: encoder) }
+    }
+
     private static func cost(of entry: Entry, encoder: JSONEncoder) -> Int {
         ((try? encoder.encode(entry).count) ?? 0) + 2
     }
