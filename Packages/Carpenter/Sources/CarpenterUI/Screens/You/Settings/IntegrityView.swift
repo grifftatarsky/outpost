@@ -30,7 +30,7 @@ public struct IntegrityView: View {
 
                 // COPY BEGIN 33f91dec [NEEDS HUMAN REVIEW]
                 Text(
-                    "Nothing here is repaired automatically. Two versions of the same message are both kept, because there is no honest way to choose between them.",
+                    "A torn or oversized record is cleared from the log at the next write. Nothing else here is repaired automatically. Two versions of the same message are both kept, because there is no honest way to choose between them.",
                     bundle: .module
                 )
                 .font(CarpenterFont.caption)
@@ -113,7 +113,7 @@ public struct IntegrityView: View {
         card {
             // COPY BEGIN bf1e96ea [NEEDS HUMAN REVIEW]
             Label {
-                Text("The end of the log was unreadable", bundle: .module)
+                Text("Part of the log was unreadable", bundle: .module)
                     .font(CarpenterFont.rowTitle)
             } icon: {
                 Image(systemName: "externaldrive.badge.exclamationmark")

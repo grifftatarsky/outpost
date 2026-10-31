@@ -419,7 +419,7 @@ public final class AppSession {
         lastLoad = loaded.termination
         integrity = IntegrityReport()
         integrity.lastLoad = loaded.termination
-        integrity.discardedBytes = loaded.discardedTrailingBytes
+        integrity.discardedBytes = loaded.discardedBytes
 
         let checked = await replica.signatureChecks(for: loaded.entries)
         let ownFeed = enrolment.map { FeedKey(author: $0.identity.id, device: $0.device.id) }

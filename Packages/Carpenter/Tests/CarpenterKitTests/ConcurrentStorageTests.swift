@@ -40,7 +40,7 @@ struct ConcurrentStorageTests {
 
         #expect(
             loaded.termination == .complete,
-            "the log tore: \(loaded.termination), \(loaded.discardedTrailingBytes) bytes discarded")
+            "the log tore: \(loaded.termination), \(loaded.discardedBytes) bytes discarded")
         #expect(
             loaded.entries.count == writers * perWriter,
             "\(writers * perWriter - loaded.entries.count) entries were lost to interleaved appends")

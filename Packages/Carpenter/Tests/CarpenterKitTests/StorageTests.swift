@@ -26,7 +26,7 @@ struct LogStoreTests {
         let loaded = try await FileLogStore(url: url).loadAll()
 
         #expect(loaded.entries == entries)
-        #expect(!loaded.wasTruncated)
+        #expect(!loaded.isDamaged)
         try await FileLogStore(url: url).removeAll()
     }
 
@@ -35,7 +35,7 @@ struct LogStoreTests {
         let loaded = try await FileLogStore(url: scratch()).loadAll()
 
         #expect(loaded.entries.isEmpty)
-        #expect(!loaded.wasTruncated)
+        #expect(!loaded.isDamaged)
     }
 
     @Test("Appending adds to what is there rather than replacing it")
@@ -128,7 +128,7 @@ struct LogStoreTests {
 
         #expect(loaded.entries.count == 1)
         #expect(loaded.termination == .recordTooLarge)
-        #expect(loaded.discardedTrailingBytes == 2_004)
+        #expect(loaded.discardedBytes == 2_004)
         try await store.removeAll()
     }
 
@@ -305,12 +305,12 @@ struct LongLogStoreTests {
 
         #expect(loaded.entries == entries)
         #expect(loaded.termination == .complete)
-        #expect(loaded.discardedTrailingBytes == 0)
+        #expect(loaded.discardedBytes == 0)
         try await store.removeAll()
     }
 
-    @Test("A garbled record keeps everything before it and reports the rest as discarded")
-    func aGarbledRecordStopsTheLoad() async throws {
+    @Test("A garbled record costs that record alone, and it is counted as discarded")
+    func aGarbledRecordCostsOnlyItself() async throws {
         let (store, url, entries) = try await written(600)
         var data = try Data(contentsOf: url)
         let offsets = recordOffsets(in: data)
@@ -320,9 +320,9 @@ struct LongLogStoreTests {
 
         let loaded = try await store.loadAll()
 
-        #expect(loaded.entries == Array(entries.prefix(400)))
+        #expect(loaded.entries == Array(entries.prefix(400) + entries.suffix(199)))
         #expect(loaded.termination == .undecodableRecord)
-        #expect(loaded.discardedTrailingBytes == data.count - garbled)
+        #expect(loaded.discardedBytes == offsets[401] - garbled)
         try await store.removeAll()
     }
 
@@ -336,7 +336,7 @@ struct LongLogStoreTests {
 
         #expect(loaded.entries == Array(entries.prefix(599)))
         #expect(loaded.termination == .tornTail)
-        #expect(loaded.discardedTrailingBytes == data.count - 40 - recordOffsets(in: data)[599])
+        #expect(loaded.discardedBytes == data.count - 40 - recordOffsets(in: data)[599])
         try await store.removeAll()
     }
 
@@ -351,7 +351,7 @@ struct LongLogStoreTests {
 
         #expect(loaded.entries == entries)
         #expect(loaded.termination == .tornTail)
-        #expect(loaded.discardedTrailingBytes == 2)
+        #expect(loaded.discardedBytes == 2)
         try await store.removeAll()
     }
 }

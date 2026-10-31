@@ -2155,7 +2155,7 @@
     "Nothing here is a fault. A message reaches somebody when their app next opens and collects it, so waiting on somebody who has not opened theirs is the ordinary case. Last heard is the newest thing of theirs this phone holds, and the time is the one their device wrote on it." : {
 
     },
-    "Nothing here is repaired automatically. Two versions of the same message are both kept, because there is no honest way to choose between them." : {
+    "A torn or oversized record is cleared from the log at the next write. Nothing else here is repaired automatically. Two versions of the same message are both kept, because there is no honest way to choose between them." : {
 
     },
     "Nothing here yet" : {
@@ -3241,7 +3241,7 @@
     "The characters under a name are the ones read aloud when that person was invited. Open anybody to compare codes with them, whenever you like — including people you never met through an invitation." : {
 
     },
-    "The end of the log was unreadable" : {
+    "Part of the log was unreadable" : {
 
     },
     "The file" : {
