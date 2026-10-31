@@ -448,7 +448,9 @@ Read these before touching sync. Every one cost real time.
   number somebody chose too: `CanonicalBytes.timestamp` converted it to `Int64` with a trapping
   initialiser, and it runs while an entry decodes, so one entry dated `1e300` crashed every recipient
   on every fetch until somebody deleted the packet by hand. It clamps now, and every date a clock can
-  produce keeps its bytes; `DatesPastTheEndOfTimeTests` holds it.
+  produce keeps its bytes; `DatesPastTheEndOfTimeTests` holds it. An epoch number is one too: passing
+  on keys counted down from the newest number, so a key at 2^62 froze the app on every launch. Walks
+  use `EpochChain.heldNumbers`, and a jump costs a link per number (`AKeysNumberIsNotALoopBoundTests`).
 - **CloudKit's query index is eventually consistent.** "Write it, then read it" is not a guarantee
   it makes. Read a zone's change feed, or fetch a record by ID. A query cost a week once.
 - **Rotating tags rotate.** Anything keyed by a `RecipientTag` is keyed by *today's* address. A

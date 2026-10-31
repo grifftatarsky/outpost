@@ -107,7 +107,7 @@ public struct EpochGrant: Hashable, Sendable, Codable {
             room: room,
             epoch: epoch,
             link: link,
-            links: links.filter { $0.room == room && $0.epoch != link?.epoch },
+            links: Array(links.filter { $0.room == room && $0.epoch != link?.epoch }.suffix(EpochChain.mostLinksInAGrant)),
             wrapped: devices.isEmpty ? wrapped : Data(),
             sealedFor: try devices.map { try DeviceSeal.seal(wrapped, to: $0, context: context) }
         )
@@ -134,8 +134,23 @@ extension EpochChain {
     ) throws {
         guard grant.room == room else { throw CryptoError.wrongRoom }
         let secret = try grant.open(with: peer, as: device)
+        let carried = grant.carriedLinks
+        guard grant.links.count <= Self.mostLinksInAGrant, reaches(grant.epoch, carrying: carried) else {
+            throw CryptoError.keyTooFarAhead
+        }
         hold(secret, at: grant.epoch, from: giver)
-        if let link = grant.link { try record(link) }
-        try record(grant.links)
+        try record(carried)
+    }
+
+    private func reaches(_ epoch: EpochNumber, carrying links: [EpochLink]) -> Bool {
+        guard let top = highestKnownEpoch, epoch > top else { return true }
+        let filled = Set(links.map(\.epoch).filter { $0 > top }).count
+        return epoch.rawValue - top.rawValue <= Self.mostNumbersSkipped.addingSaturated(UInt64(filled))
+    }
+}
+
+extension EpochGrant {
+    fileprivate var carriedLinks: [EpochLink] {
+        ([link].compactMap { $0 } + links).filter { $0.epoch <= epoch }
     }
 }

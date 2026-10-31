@@ -559,6 +559,9 @@ epochs back still cannot use — the walk stalls where it always did until the i
 **What would change it:** sealing each `epochChange` under the epoch it announces instead, which
 would let the log carry the walk on its own and is a format change for every existing room.
 
+A grant stops at the newest `EpochChain.mostLinksInAGrant` links (2,048), which keeps it inside a
+packet. See [the next entry](#a-keys-number-costs-its-sender-a-link).
+
 <!-- COPY END f6dc7e37 -->
 
 <!-- COPY BEGIN 61d93524 [NEEDS HUMAN REVIEW] -->
@@ -737,6 +740,36 @@ secrets rather than to stop rebuilding them.
 absent — and then, once `adopt` was made to say so, `link absent`.
 
 <!-- COPY END 1b5a47c5 -->
+
+<!-- COPY BEGIN da0e2cb6 [NEEDS HUMAN REVIEW] -->
+
+### A key's number costs its sender a link
+
+**PROPOSED 2026-10-31.** An epoch number is whatever the giver wrote. Every walk over a chain now
+visits only the numbers it holds (`EpochChain.heldNumbers`), so a key at 2^62 is one number held, not
+2^62 steps. Two limits sit on top of that, because a number nobody walks can still fill a keychain.
+
+A phone that holds a chain takes a key at most `mostNumbersSkipped` (8) above the top of it, plus one
+for every distinct number between the two that the grant carries a link for. A grant carries at most
+`mostLinksInAGrant` links, and a link above the grant's own number is dropped. So a jump costs its
+sender bytes, and a device that sat out twenty rotations still catches up, because a real grant
+carries a link for each. A first key has nothing to be measured against and is taken at any number,
+which an Outpost reader let in at a floor needs. A chain may not hold more than
+`mostNumbersTheLogHasNotShown` (4,096) numbers beyond the rotations its room's log shows, so past that
+each number costs a signed entry on this device.
+
+Numbers are compared, not walked cryptographically, because a giver's links can break at a key held
+beside another for the same number, and that must not strand the phone taking its key.
+
+**Cost:** a phone more than 2,056 rotations behind in one stretch is refused the key until a later
+grant comes within reach, and a room needs that many rotations during one absence for this to happen.
+A joiner to a room with more than 2,048 rotations cannot read what came before the oldest link it was
+given.
+
+**What would change it:** sealing each `epochChange` under the key it announces, so a phone could
+check a jump against the log alone.
+
+<!-- COPY END da0e2cb6 -->
 
 <!-- COPY BEGIN c709dc0f [NEEDS HUMAN REVIEW] -->
 

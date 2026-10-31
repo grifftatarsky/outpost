@@ -88,6 +88,12 @@ public struct EpochChain: Sendable {
 
     public static let mostRivals = 16
 
+    public static let mostNumbersSkipped: UInt64 = 8
+
+    public static let mostLinksInAGrant = 2_048
+
+    public static let mostNumbersTheLogHasNotShown = 4_096
+
     public init(room: RoomID) {
         self.room = room
     }
@@ -108,6 +114,15 @@ public struct EpochChain: Sendable {
     public var everyLink: [EpochLink] { links.values.sorted { $0.epoch < $1.epoch } }
 
     public var highestKnownEpoch: EpochNumber? { secrets.keys.max() }
+
+    public var heldNumbers: [EpochNumber] {
+        var numbers = Set(secrets.keys).union(rivals.keys)
+        for epoch in links.keys {
+            numbers.insert(epoch)
+            if let below = epoch.previous { numbers.insert(below) }
+        }
+        return numbers.sorted(by: >)
+    }
 
     public var heldKeyCount: Int { secrets.count + rivals.values.reduce(0) { $0 + $1.count } }
 
