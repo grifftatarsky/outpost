@@ -224,11 +224,14 @@ extension AppSession {
         let fromSiblings = feed.entries.filter { $0.device != enrolment.device.id }
         let checked = await replica.signatureChecks(for: fromSiblings)
         var taken: [Entry] = []
+        var fresh: [Entry] = []
         for entry in fromSiblings {
             do {
                 switch try replica.integrate(entry, checked: checked) {
-                case .accepted, .forked: taken.append(entry)
-                case .alreadyPresent: break
+                case .accepted, .forked:
+                    taken.append(entry)
+                    fresh.append(entry)
+                case .alreadyPresent: taken.append(entry)
                 case .tooLarge: integrity.rejectedFromPeers += 1
                 }
             } catch {
@@ -252,7 +255,7 @@ extension AppSession {
 
         notePhotosOwed(taken)
         await persistOrReport("history from another of your devices") {
-            try await storage.log.append(taken)
+            try await storage.log.append(fresh)
         }
 
         persisted.certificates = knownCertificates()
