@@ -80,6 +80,10 @@ in a fresh `-derivedDataPath`. And a `URL` keeps the resource values it has read
 reads a file's protection, changes it and reads again gets the first answer; the test reads through
 `FileManager.attributesOfItem`, which goes to the file every time.
 
+The report `sync` returns stops before the repairs a round runs. A test that counts what a repair wrote
+reads the mailbox as the other person would (`WhatARepairRequestCanCostTests`); one that reads the
+report sees zero and passes.
+
 <!-- COPY END 64f99f8f -->
 
 <!-- COPY BEGIN 43897dc9 [NEEDS HUMAN REVIEW] -->
