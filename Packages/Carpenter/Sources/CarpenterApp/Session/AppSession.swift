@@ -162,6 +162,15 @@ public final class AppSession {
 
     var entriesNotWrittenDown: [Entry] = []
 
+    struct UnsavedEpoch: Hashable {
+        let room: RoomID
+        let epoch: EpochNumber
+    }
+
+    var epochsNotSaved: Set<UnsavedEpoch> = []
+
+    var lastWriteToTheLog: Task<Void, Never>?
+
     var head: EntryLink?
     var roomHeads: [RoomID: EntryLink] = [:]
     var accountRegistry: (any AccountRegistry)?
@@ -366,29 +375,44 @@ public final class AppSession {
             try await persistEpoch(secret, at: .initial, for: chainRoom)
         }
         if persisted.rekeyBeforeWriting.contains(chainRoom) { try await rekeyBeforeWriting(chainRoom) }
-        guard let chain = chains[chainRoom] else { throw AppSessionError.noIdentity }
-        let writing = writingKey(of: chainRoom)
 
-        let entry = try Entry.append(
-            after: head,
-            author: enrolment.identity.id,
-            device: enrolment.device,
-            clock: replica.frontier,
-            wallTime: clock.now,
-            room: room,
-            payload: payload,
-            at: readable ?? writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
-            sealedWith: readable == nil ? (writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain) : chain,
-            alsoFor: extra,
-            roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
-        )
-        guard SyncSession.fitsAPacket(entry) else { throw AppSessionError.tooBigToSend }
+        try await oneWriteAtATime { [self] in
+            guard let enrolment = self.enrolment, let chain = chains[chainRoom] else {
+                throw AppSessionError.noIdentity
+            }
+            let writing = writingKey(of: chainRoom)
 
-        if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
-        head = entry.link
-        if let room { roomHeads[room] = entry.link }
-        try await storage.log.append([entry])
+            let entry = try Entry.append(
+                after: head,
+                author: enrolment.identity.id,
+                device: enrolment.device,
+                clock: replica.frontier,
+                wallTime: clock.now,
+                room: room,
+                payload: payload,
+                at: readable ?? writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
+                sealedWith: readable == nil ? (writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain) : chain,
+                alsoFor: extra,
+                roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
+            )
+            guard SyncSession.fitsAPacket(entry) else { throw AppSessionError.tooBigToSend }
+
+            try await storage.log.append([entry])
+            head = entry.link
+            if let room { roomHeads[room] = entry.link }
+            if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
+        }
         refresh()
+    }
+
+    func oneWriteAtATime(_ work: @escaping @MainActor () async throws -> Void) async throws {
+        let previous = lastWriteToTheLog
+        let write = Task { @MainActor in
+            await previous?.value
+            try await work()
+        }
+        lastWriteToTheLog = Task { _ = await write.result }
+        try await write.value
     }
 
     func restoreLog(identity: Identity) async throws {
@@ -419,7 +443,7 @@ public final class AppSession {
         lastLoad = loaded.termination
         integrity = IntegrityReport()
         integrity.lastLoad = loaded.termination
-        integrity.discardedBytes = loaded.discardedTrailingBytes
+        integrity.discardedBytes = loaded.discardedBytes
 
         let checked = await replica.signatureChecks(for: loaded.entries)
         let ownFeed = enrolment.map { FeedKey(author: $0.identity.id, device: $0.device.id) }
@@ -434,6 +458,10 @@ public final class AppSession {
             }
             if case .forked(let fork) = outcome {
                 forks.append(fork)
+            }
+            if outcome == .tooLarge {
+                integrity.rejectedFromPeers += 1
+                continue
             }
             if entry.feedKey == ownFeed {
                 head = entry.link
@@ -529,9 +557,12 @@ public final class AppSession {
     func persistEpoch(
         _ secret: EpochSecret, at epoch: EpochNumber, for room: RoomID
     ) async throws {
+        let unsaved = UnsavedEpoch(room: room, epoch: epoch)
+        epochsNotSaved.insert(unsaved)
         var keys = chains[room]?.heldSecrets(at: epoch) ?? []
         if !keys.contains(secret) { keys.insert(secret, at: 0) }
         try await storage.keychain.set(Self.keychainForm(of: keys), for: Self.epochKey(room, epoch), scope: .device)
+        epochsNotSaved.remove(unsaved)
 
         if !persisted.knownRooms.contains(room) { persisted.knownRooms.append(room) }
         var held = persisted.epochs[room] ?? []

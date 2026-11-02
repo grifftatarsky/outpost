@@ -561,7 +561,7 @@ public actor MemoryLogStore: LogStore {
         for entry in entries {
             let record = try encoder.encode(entry)
             guard record.count <= maximumRecordBytes else {
-                throw StorageError.unreadable
+                throw StorageError.recordTooLarge
             }
             written.append(record)
         }
@@ -571,15 +571,17 @@ public actor MemoryLogStore: LogStore {
     public func loadAll() async throws -> LoadedLog {
         let decoder = JSONDecoder()
         var entries: [Entry] = []
+        var discarded = 0
         for record in records {
-            guard let entry = try? decoder.decode(Entry.self, from: record) else {
-                return LoadedLog(
-                    entries: entries, discardedTrailingBytes: record.count,
-                    termination: .undecodableRecord)
+            if let entry = try? decoder.decode(Entry.self, from: record) {
+                entries.append(entry)
+            } else {
+                discarded += record.count
             }
-            entries.append(entry)
         }
-        return LoadedLog(entries: entries, discardedTrailingBytes: 0, termination: .complete)
+        return LoadedLog(
+            entries: entries, discardedBytes: discarded,
+            termination: discarded > 0 ? .undecodableRecord : .complete)
     }
 
     public func removeAll() async throws { records = [] }

@@ -93,11 +93,11 @@ extension AppSession {
         case .state:
             persisted.siblingMail.noteState(
                 from: writer, cursors: feed.collected, at: feed.writtenAt ?? clock.now, me: me)
-        case .mail(let number):
+        case .mail(let number) where everythingHeldIsOnDisk:
             persisted.siblingMail.took(mail: number, from: writer)
-        case .catchUp:
+        case .catchUp where everythingHeldIsOnDisk:
             persisted.siblingMail.took(catchUpThrough: feed.through ?? 0, from: writer)
-        case .request, .approval, .authority:
+        case .mail, .catchUp, .request, .approval, .authority:
             break
         }
         persisted.siblingMail.shared(feed.epochs)
@@ -226,14 +226,18 @@ extension AppSession {
         var taken: [Entry] = []
         for entry in fromSiblings {
             do {
-                _ = try replica.integrate(entry, checked: checked)
+                switch try replica.integrate(entry, checked: checked) {
+                case .accepted, .forked:
+                    taken.append(entry)
+                    entriesNotWrittenDown.append(entry)
+                case .alreadyPresent: taken.append(entry)
+                case .tooLarge: integrity.rejectedFromPeers += 1
+                }
             } catch {
                 integrity.unverifiableFromOwnDevices += 1
                 Diagnostics.sync.error(
                     "device sync: an entry from one of your own devices did not verify — usually a certificate that has not arrived (\(String(describing: error), privacy: .public))")
-                continue
             }
-            taken.append(entry)
         }
 
         persisted.spentEntries = replica.spentEntries
@@ -250,7 +254,7 @@ extension AppSession {
 
         notePhotosOwed(taken)
         await persistOrReport("history from another of your devices") {
-            try await storage.log.append(taken)
+            try await writeDownWhatIsOwed()
         }
 
         persisted.certificates = knownCertificates()

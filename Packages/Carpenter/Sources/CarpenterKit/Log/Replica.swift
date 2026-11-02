@@ -16,6 +16,7 @@ public enum IntegrationResult: Hashable, Sendable {
     case accepted
     case alreadyPresent
     case forked(Fork)
+    case tooLarge
 }
 
 public enum LogError: Error, Hashable, Sendable {
@@ -174,6 +175,11 @@ public struct Replica: Sendable {
         let anchored = removed && isAnchored(entry, to: standing)
         if removed, !existingAtSeq.isEmpty, !anchored { throw LogError.unauthorizedDevice }
         try validateLink(of: entry, anchored: anchored)
+
+        guard SyncSession.fitsAPacket(entry) else {
+            if existingAtSeq.isEmpty { spend(SpentEntry(entry)) }
+            return .tooLarge
+        }
 
         if let room = entry.room, closedRooms.contains(room) {
             if existingAtSeq.isEmpty { spend(SpentEntry(entry)) }

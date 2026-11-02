@@ -1156,6 +1156,125 @@ search screen shows before a query appears under the keyboard.
 
 <!-- COPY END 2a36739f -->
 
+<!-- COPY BEGIN 084ff3b8 [NEEDS HUMAN REVIEW] -->
+
+### The log is repaired at the next write, and a reader steps over what it cannot use
+
+**PROPOSED** — Claude chose this on 2026-10-31.
+
+The log file is a run of records, each a four-byte length and an entry as JSON. A reader that stopped
+at the first bad record lost everything after it, and every later write landed where no reader went.
+A torn tail after a power cut, or one record past the ceiling, cost all later history at the next
+launch, after the senders had been told it was on disk.
+
+`FileLogStore` now reads past damage. When the records stop lining up, or one will not decode, it
+looks for the next place a length header is followed by JSON that decodes to an entry. JSON text
+never holds a zero byte and a length under 16 MiB starts with one, so nothing inside a record looks
+like a header. What it stepped over is counted in `discardedBytes`, and `termination` names the first
+damage it met.
+
+`append` walks the length headers before its first write in a process and whenever the file's size is
+not the size it left. If they do not reach the end of the file, it rewrites the log from what can be
+read: into a scratch file, flushed to the drive, then swapped in, so a process that dies at any point
+leaves the old file whole. `compact()` and `removeEntries` use the same rewrite. A write that fails is
+cut back off, so an entry the caller was told failed is not on disk.
+
+`append` returns after `F_FULLFSYNC`, because `fsync` alone leaves the data in the drive's cache
+(`man 2 fsync`). An acknowledgement sent after it means the entry survives a power cut.
+
+**Cost:** a drive flush on every write, not measured on a phone; on this Mac it took the test suite
+from 67 to 84 seconds. One extra read of the whole log on the first write of each launch. A rewrite
+needs room for a second copy, so on a full disk the repair fails and the write fails with it, and
+the entries stay owed. A whole record that does not decode is left alone by `append` but dropped by a
+rewrite, so a record from a newer build is lost if damage elsewhere forces one.
+
+<!-- COPY END 084ff3b8 -->
+
+<!-- COPY BEGIN fa5c76c6 [NEEDS HUMAN REVIEW] -->
+
+### An entry too big to send is refused for good, and its number is spent
+
+**PROPOSED** — Claude chose this on 2026-10-31.
+
+The limit is `SyncSession.fitsAPacket`, the one the composer already used, and `Replica.integrate`
+applies it to everything that arrives, from a contact, from another of the member's devices, or from
+the log on disk. A contact on a modified app could otherwise write one entry the phone kept and could
+not read back.
+
+A validly signed entry over the limit is not kept. Its number goes into the spent list, as a deleted
+room's numbers do, so repair never asks for it, a second copy is `alreadyPresent`, and the next entry
+in that feed lands with no gap. The packet that carried it counts as settled and is acknowledged,
+because nothing about it will change; this is the one case besides `refusesForever` where a packet
+that did not fully integrate is taken back. An entry that fails its signature spends nothing, so
+nobody can spend another person's number. It is counted on the History check.
+
+`integrate` runs on every entry at every launch, and encoding one to weigh it took longer than
+integrating it (131 against 94 microseconds, measured in a release build on this Mac, with the
+signature checked). So `fitsAPacket` first asks `Entry.encodedBytesAtMost`, a bound worked out from
+the signed bytes kept when the entry is made, and only encodes an entry within a factor of eight of
+the limit. `theShortcutIsNeverWrong` holds the bound against the worst clock and ciphertext.
+
+**Cost:** a member never sees a message a contact made too large, and that contact gets no error.
+
+<!-- COPY END fa5c76c6 -->
+
+<!-- COPY BEGIN 16dad4ae [NEEDS HUMAN REVIEW] -->
+
+### A member's own entry is on disk before anything else knows about it
+
+**PROPOSED** — Claude chose this on 2026-10-31.
+
+An own entry used to go into the replica first, with `head` advanced, and to the log last, so that
+two sends racing each other could not take the same number. When the disk write failed the entry
+stayed in memory, was mailed to the member's other devices and offered to the next round, and after
+a relaunch `head` came back lower and the next entry reused its number with different contents. That
+is a fork of the member's own feed, made by their own phone, and it needed only a full disk.
+
+`AppSession.append` now writes first. Everything from reading `head` to advancing it runs inside
+`oneWriteAtATime`, which runs writes to the log one after another in the order they asked, so a second
+send waits instead of reading the same `head`. A write that fails leaves nothing: no entry, no number
+used, nothing to publish, and the error goes to the composer. A process that dies after the write and
+before the replica hears finds the entry in the log at the next launch, and sends it then.
+
+A change a member made is therefore not on screen until it is on disk. A revocation the disk refused
+reports the failure and leaves the reader as they were, where it used to show the reader gone until
+the next launch put them back.
+
+**Cost:** a send takes as long as the disk, with the drive flush, before the message appears. A
+second send made in that time waits for the first. `work` passed to `oneWriteAtATime` must not call
+`append`, or it waits for itself.
+
+<!-- COPY END 16dad4ae -->
+
+<!-- COPY BEGIN 977b4dcb [NEEDS HUMAN REVIEW] -->
+
+### What is held in memory and not on disk is owed, and nothing is acknowledged while it is
+
+**PROPOSED** — Claude chose this on 2026-10-31.
+
+A round puts arriving entries in the replica before it writes them, and adopts the keys it was given
+in between. A key write that threw used to end the round with the entries in memory and in no list.
+The next round found the same packet `alreadyPresent`, had nothing to write, and acknowledged it, so
+the sender took it back and a relaunch lost the message on both ends. The key had the same hole: it
+went into the chain before it reached the keychain, the replay found it already held and did not save
+it, and the packet was acknowledged with the key in memory only.
+
+`entriesNotWrittenDown` now takes the entries the moment `integrate` returns, and `epochsNotSaved`
+holds a key from before the keychain write until it lands. `writeDownWhatIsOwed` saves both, runs
+before every acknowledgement and at the end of a round's collection, so it also runs for a member
+with nobody to collect from. A failure throws, which leaves every packet in that round unacknowledged
+and offered again. If the process dies with something owed, nothing was acknowledged, so it comes
+back.
+
+Mail from a member's other device follows the same rule. Its entries and keys go through the same
+lists, and while anything is owed the mail is not marked collected, so the sending device keeps it and
+in time writes a catch-up.
+
+**Cost:** one key that will not save stops every round at that point until it does, which is what a
+failed log write already did. Sending stops with it.
+
+<!-- COPY END 977b4dcb -->
+
 <!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
 ## Cryptography
@@ -1355,7 +1474,7 @@ each was checked in the source rather than assumed:
   drawn by every device. That is a trust-and-safety regression traded for a privacy property.
 - **`FeedKey` has synthesised `Codable` inside `VectorClock`.** Changing its shape changes the JSON
   of every entry ever written and every packet from an un-updated peer, and `FileLogStore.loadAll`
-  stops at the first record it cannot decode. The designs that promised no migration would have
+  discards every record it cannot decode. The designs that promised no migration would have
   delivered a total silent loss.
 
 **What was done instead.** A stranger reading the same wall as you was not merely holding your

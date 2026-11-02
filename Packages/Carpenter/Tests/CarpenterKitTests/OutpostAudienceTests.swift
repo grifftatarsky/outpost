@@ -281,7 +281,7 @@ struct OutpostKeyRotationTests {
         try await settle([alice, bob], through: mailbox)
         #expect(bob.feed().map(\.body).contains("while Bob could read"))
 
-        await log.refuseTheNextAppend()
+        await log.refuseAppend(afterLetting: 1)
         await #expect(throws: (any Error).self) { try await alice.revokeOutpost(bobID) }
         #expect(alice.outpostReaders().isEmpty, "the list moved him out, as it always did")
         #expect(
@@ -297,6 +297,50 @@ struct OutpostKeyRotationTests {
         let read = bob.feed().map(\.body)
         #expect(read.contains("while Bob could read"), "revocation reached backwards")
         #expect(!read.contains("after the door shut"), "a revoked reader went on reading")
+    }
+
+    @Test("A revocation the disk refused is reported, leaves the reader as they were, and can be repeated")
+    @MainActor
+    func aRefusedRevocationChangesNothing() async throws {
+        let mailbox = InMemoryMailbox()
+        let directory = TestScratch.root.appending(path: "carpenter-rotation-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let log = RefusingLogStore(url: directory.appending(path: "log.carpenter"))
+
+        let alice = AppSession(
+            storage: SessionStorage(
+                keychain: InMemoryKeychainStore(), log: log,
+                documents: FileDocumentStore(url: directory.appending(path: "state.json")),
+                media: MemoryMediaStore()),
+            clock: TestClock(now: TestSession.now))
+        let bob = TestSession.make()
+        for one in [alice, bob] { await one.load() }
+        try await alice.createIdentity(displayName: "Alice")
+        try await bob.createIdentity(displayName: "Bob")
+
+        let room = try await alice.createRoom(named: "Lanterns")
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
+        try await bob.redeem(inviteCode: try invite.encoded())
+        try await alice.sync(through: mailbox)
+        try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
+        try await settle([alice, bob], through: mailbox)
+
+        let bobID = try #require(bob.enrolment?.identity.id)
+        try await alice.allowOutpost(bobID, everything: true)
+        try await settle([alice, bob], through: mailbox)
+
+        await log.refuseTheNextAppend()
+        await #expect(throws: (any Error).self) { try await alice.revokeOutpost(bobID) }
+        #expect(
+            alice.outpostReaders() == [bobID],
+            "the list showed a change the disk never took, and a relaunch would have put him back")
+
+        try await alice.revokeOutpost(bobID)
+        #expect(alice.outpostReaders().isEmpty)
+
+        try await alice.send("after the door shut", to: nil)
+        try await settle([alice, bob], through: mailbox)
+        #expect(!bob.feed().map(\.body).contains("after the door shut"), "a revoked reader went on reading")
     }
 }
 

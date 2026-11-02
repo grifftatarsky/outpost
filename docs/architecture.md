@@ -308,8 +308,9 @@ line by line on 2026-09-14. This is what each ordering assumes and what checks i
 |---|---|---|
 | `issuedGrants.insert` when `packetsWritten > 0` | the grants rode the first packet, and a failure there threw before this line | `grantsAreOnlyMarkedIssuedIfTheyWent` |
 | `roomsWithUnsentMessages.subtract` only when `sendFailure == nil` | a batch that failed still owes its bell | `partialFailureIsNotLoss` |
-| `storage.log.append(owed)` before `session.acknowledge` | a failed write throws, so nothing is acknowledged | `aRefusedWriteLeavesThePacketOutstanding` |
-| `entriesNotWrittenDown` carried into the next round | `integrate` already put them in the replica, so the next round has nothing to write and would acknowledge an entry no disk holds | the same test |
+| `writeDownWhatIsOwed` before `session.acknowledge` | a failed write throws, so nothing is acknowledged | `aRefusedWriteLeavesThePacketOutstanding` |
+| `entriesNotWrittenDown` filled the moment `integrate` returns | `integrate` already put them in the replica, so a round that stops short for any reason, and the next round, would otherwise acknowledge an entry no disk holds | `aKeyThatWillNotSaveLeavesTheMessagesOwed` |
+| `epochsNotSaved` set before the keychain write | a replay finds the key already in the chain and does not save it | `aKeyThatWillNotSaveLeavesTheMessagesOwed` |
 | `syncedFrontier.observe` only for `report.written` | an entry counts as sent only if its packet landed | `partialFailureIsNotLoss` |
 | `outstandingPackets` filtered by `pendingDeliveries`, then this round's added | a collected packet stops counting as undelivered before new ones go in | `collectionIsReportedWhenItHappens` |
 | `viewMayBeStale` set after the peer loop | the next round's `withholdsKeys` reads what this round refused | `RemovalTests` |
