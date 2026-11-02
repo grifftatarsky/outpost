@@ -355,15 +355,17 @@ owner's storage.
 
 A packet used to be a round: every unsent entry, however many, in one record. CloudKit refuses a
 record over a megabyte, and photos made that reachable — a hundred and seventy previews in one
-round. A round is now batched under `SyncSession.packetByteBudget` (seven hundred kilobytes),
-grants and credentials riding the first packet.
+round. A round is now batched under `SyncSession.packetByteBudget` (seven hundred kilobytes), and
+everything a packet carries counts against it: requests, answers, keys, and the identities and
+certificates of its entries' authors. Keys go ahead of entries and spill into further packets.
 
 **What a partial round does.** A packet that fails after another has landed does not fail the
 round: what landed is reported in `written`, the frontier advances only over those entries, the
 outstanding-packet record gains only those packets, no bell rings, and the rest goes next round.
 Throwing would have lost the record of the packets that did land — and the delivery-mark rule
 "an entry in no outstanding packet has been collected" would then have read every message in
-them as collected. The first packet failing still throws, because nothing was written.
+them as collected. If nothing landed for anybody the round throws, because nothing was written,
+except when a record was too large: that fails the one packet, and the round carries on.
 
 **Cost:** several writes per round when a round is large, which is exactly the traffic the size
 represents; and a round that stops short leaves its later messages unannounced until the next.
@@ -540,6 +542,34 @@ quiet room should make.
 
 <!-- COPY END 52a7b44a -->
 
+<!-- COPY BEGIN a9232fe9 [NEEDS HUMAN REVIEW] -->
+
+### A request for history costs its asker's allowance and reaches only their rooms
+
+**PROPOSED 2026-10-31.** A repair packet bills whoever writes it, and the person answering writes it. A
+few bytes of request used to make a member upload their whole history, in every room, once per
+request. Now a device keeps one open duty per person per room and a newer request replaces it. It
+keeps a request only for a room whose list shows the asker as in or being let in, or for this member's
+own Outpost if the asker reads it. An answer carries only entries from rooms the asker is in. Authors,
+gaps and spans past `RepairRequest.mostAuthors`, `mostGaps` and `mostSpans` are dropped, and a request
+is answered at most once however often its packet is collected. Each person has
+`AppSession.repairBytesPerPersonPerDay` (16 MB) a day, every answer costs at least four kilobytes, and an
+answer that runs out stops there, keeps its duty, and carries on from where it stopped the next day.
+
+A feed runs across all of an author's rooms, so an asker can name a position in a room they are not in.
+The answer names those back in `elsewhere`, and the asker stops counting them as missing
+(`persisted.elsewhere`), or a late joiner would ask about them every hour for ever.
+
+**Cost:** a long history takes days to come back from one person. A contact can fill up to about 144
+MB of a member's iCloud, sixteen a day for the nine days a packet waits. A contact can also claim a
+position is `elsewhere` when it is not; the asker then stops asking about it, though anything another
+person sends still lands. An invited person who has not been let in can be sent the room's sealed
+history, which they cannot open without a key.
+
+**What would change it:** a feed per room, so a position always belongs to one room.
+
+<!-- COPY END a9232fe9 -->
+
 <!-- COPY BEGIN f6dc7e37 [NEEDS HUMAN REVIEW] -->
 
 ### A grant carries every link the granter holds
@@ -559,6 +589,9 @@ epochs back still cannot use — the walk stalls where it always did until the i
 **What would change it:** sealing each `epochChange` under the epoch it announces instead, which
 would let the log carry the walk on its own and is a format change for every existing room.
 
+A grant stops at the newest `EpochChain.mostLinksInAGrant` links (2,048), which keeps it inside a
+packet. See [the next entry](#a-keys-number-costs-its-sender-a-link).
+
 <!-- COPY END f6dc7e37 -->
 
 <!-- COPY BEGIN 61d93524 [NEEDS HUMAN REVIEW] -->
@@ -567,9 +600,15 @@ would let the log carry the walk on its own and is a format change for every exi
 
 **FACT** — a property of the platform or the protocol, not a choice anybody made.
 
-A sync packet passes on every device certificate this member holds, so somebody who has met Alice
-can vouch for her devices to somebody who has not. It now passes on the identity keys those
-certificates name, and a receiving replica introduces them before admitting anything.
+A sync packet carries the identity keys and every device certificate of its sender and of each author
+of an entry in it, so somebody who has met Alice can vouch for her devices to somebody who has not. A
+receiving replica introduces only the authors of entries in that packet, at most
+`SyncSession.mostIdentitiesInAPacket` new ones, before admitting anything. A certificate or a removal
+for anybody else in the packet is skipped and holds nothing up. Until 2026-10-31 a packet carried
+everybody the sender knew and a replica kept all of it, so one contact's packet of made-up identities
+went into every message its receiver sent, past the size of a record, and on to their contacts. A
+person's devices are capped at `DeviceRegistry.mostDevices`, so a person's own certificates cannot do
+the same.
 
 **Why it had to.** A replica refuses a certificate for a participant it has never been introduced
 to, so vouching for Alice's devices to a member who has never met Alice achieved nothing: the
@@ -585,9 +624,9 @@ its author by id — so a forged introduction introduces a stranger nobody's his
 rather than impersonating anyone. Nothing else about verification changes: an entry still needs its
 device's certificate and a valid signature.
 
-**What it costs.** Two 32-byte keys per member this device has met, on the first packet of a round.
-A member who has met a hundred people carries about six kilobytes; the packet budget is seven
-hundred.
+**What it costs.** A few hundred bytes for each author in a packet, in every packet that carries
+them. A person who shares a room with nobody who is writing is learned from the room's entries when
+they arrive, and a person named by an invitation is read from the invitation.
 
 <!-- COPY END 61d93524 -->
 
@@ -738,6 +777,58 @@ absent — and then, once `adopt` was made to say so, `link absent`.
 
 <!-- COPY END 1b5a47c5 -->
 
+<!-- COPY BEGIN da0e2cb6 [NEEDS HUMAN REVIEW] -->
+
+### A key's number costs its sender a link
+
+**PROPOSED 2026-10-31.** An epoch number is whatever the giver wrote. Every walk over a chain now
+visits only the numbers it holds (`EpochChain.heldNumbers`), so a key at 2^62 is one number held, not
+2^62 steps. Two limits sit on top of that, because a number nobody walks can still fill a keychain.
+
+A phone that holds a chain takes a key at most `mostNumbersSkipped` (8) above the top of it, plus one
+for every distinct number between the two that the grant carries a link for. A grant carries at most
+`mostLinksInAGrant` links, and a link above the grant's own number is dropped. So a jump costs its
+sender bytes, and a device that sat out twenty rotations still catches up, because a real grant
+carries a link for each. A first key has nothing to be measured against and is taken at any number,
+which an Outpost reader let in at a floor needs. A chain may not hold more than
+`mostNumbersTheLogHasNotShown` (4,096) numbers beyond the rotations its room's log shows, so past that
+each number costs a signed entry on this device.
+
+Numbers are compared, not walked cryptographically, because a giver's links can break at a key held
+beside another for the same number, and that must not strand the phone taking its key.
+
+**Cost:** a phone more than 2,056 rotations behind in one stretch is refused the key until a later
+grant comes within reach, and a room needs that many rotations during one absence for this to happen.
+A joiner to a room with more than 2,048 rotations cannot read what came before the oldest link it was
+given.
+
+**What would change it:** sealing each `epochChange` under the key it announces, so a phone could
+check a jump against the log alone.
+
+<!-- COPY END da0e2cb6 -->
+
+<!-- COPY BEGIN 2d3706ee [NEEDS HUMAN REVIEW] -->
+
+### A refusal holds a room's keys once, and only something new does
+
+**PROPOSED 2026-10-31.** A phone that refused something this round may have an old view of who is in a
+room, so a room with somebody out of it keeps its keys for that round. The rule had no end: a packet
+that keeps being refused is never acknowledged, so it comes back every round, and one bad packet from
+any contact stopped a member passing on keys in every such room for as long as it stayed.
+
+Now only a refusal this phone did not see last round starts a hold (`RefusalWatch`), and the hold lasts
+that one round. Each person can start one at most once an hour, so writing a new bad packet every
+round does not keep it going. The wait is in the round that refused, before anything is sent; it used
+to fall a round late, after that round's keys had gone. A read-only round uses up nothing.
+
+**Cost:** a removal that stays refused past one round does not hold keys any longer, so the removed
+person could be handed one. Somebody who refuses twice in an hour from one person gets no second wait.
+
+**What would change it:** a refusal that names which room it touches, so a hold could last as long as
+that room's removal stays unread without a stranger being able to cause it.
+
+<!-- COPY END 2d3706ee -->
+
 <!-- COPY BEGIN c709dc0f [NEEDS HUMAN REVIEW] -->
 
 ### A key is passed on only by a phone that holds what its maker had seen
@@ -746,7 +837,7 @@ absent — and then, once `adopt` was made to say so, `link absent`.
 
 Every member passes its newest room key to everybody its member list shows as in, so that somebody the
 key's maker could not reach still gets it. A phone can hold a new key before the removal that caused
-it: a round too big for one packet carries keys in its first packet, and a member's other device hands
+it: a round too big for one packet carries keys ahead of its entries, and a member's other device hands
 keys over in a record of its own. That phone still shows the removed person as in, and passed them the
 key.
 
@@ -3357,8 +3448,8 @@ accounts.
 
 **PROPOSED 2026-09-30 by Claude.** Griff has not been asked.
 
-Every packet carries the identities its sender knows, so a phone learns of people it has never met.
-A phone with no room of its own treated every identity it had learned as somebody to reach, because
+A packet carries the identities of the people who wrote what is in it, so a phone learns of people it
+has never met. A phone with no room of its own treated every identity it had learned as somebody to reach, because
 that was how a new member could still talk to whoever invited them. Measured 2026-09-30: a member
 joining their first room made a space in their iCloud for each of the three people in it, wrote
 packets addressed to two of them who had never heard of it, and those spaces stood empty because a
@@ -3814,6 +3905,22 @@ such thing today — a restored device is a new device key signing as a known id
 exactly the shape worth telling somebody about.
 
 <!-- COPY END 8aab962a -->
+
+<!-- COPY BEGIN 2ffb443c [NEEDS HUMAN REVIEW] -->
+
+### A restore hold follows the person, not the reason they give
+
+**PROPOSED 2026-10-31**, to keep [the ruling above](#recovery-is-announced-and-both-sides-of-it-have-settings)
+true. The asker chooses a request's `reason`, so a modified app could write `.gap` and the hold never
+applied. A request now counts as a restore if it says so or if the person's registry shows a device
+that came back through a recovery key which this phone has not yet asked about
+(`DeviceRegistry.lastRestoredDevice`). While the newest ask for a person is held, none of their
+requests are answered, and after a refusal none of them are kept.
+
+Somebody who restored and turned off asking their peers is announced to a peer the first time any
+request of theirs arrives, because the certificate is already there for that peer to see.
+
+<!-- COPY END 2ffb443c -->
 
 <!-- COPY BEGIN ed40492b [NEEDS HUMAN REVIEW] -->
 

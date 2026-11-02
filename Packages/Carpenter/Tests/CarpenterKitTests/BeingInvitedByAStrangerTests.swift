@@ -21,6 +21,7 @@ struct BeingInvitedByAStrangerTests {
             try await dave.createIdentity(displayName: "Dave")
             let kitchen = try await three.alice.createRoom(named: "Kitchen")
             try await join(dave, into: kitchen, of: three.alice, through: three.mailbox)
+            for session in [three.carol, three.sam] { try await session.send("Hello", to: three.room) }
             for _ in 0..<3 {
                 for session in [three.alice, three.carol, three.sam, dave] {
                     try await session.sync(through: three.mailbox, media: three.mailbox)

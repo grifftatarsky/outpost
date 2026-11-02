@@ -73,24 +73,31 @@ public enum RestoreHold: String, Hashable, Sendable, Codable {
     case refused
 }
 
+struct RepairSpend: Hashable, Sendable, Codable {
+    var day: UInt64
+    var bytes: Int
+}
+
 struct RestoreAskRecord: Hashable, Sendable, Codable {
     var request: RepairID
     var from: ParticipantID
     var room: RoomID?
     var at: Date
     var hold: RestoreHold
+    var device: DeviceID?
 
     static let kept = 20
 
-    init(request: RepairID, from: ParticipantID, room: RoomID?, at: Date, hold: RestoreHold) {
+    init(request: RepairID, from: ParticipantID, room: RoomID?, at: Date, hold: RestoreHold, device: DeviceID? = nil) {
         self.request = request
         self.from = from
         self.room = room
         self.at = at
         self.hold = hold
+        self.device = device
     }
 
-    private enum CodingKeys: String, CodingKey { case request, from, room, at, hold }
+    private enum CodingKeys: String, CodingKey { case request, from, room, at, hold, device }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -99,5 +106,6 @@ struct RestoreAskRecord: Hashable, Sendable, Codable {
         room = try container.decodeIfPresent(RoomID.self, forKey: .room)
         at = try container.decodeIfPresent(Date.self, forKey: .at) ?? .distantPast
         hold = try container.decodeIfPresent(RestoreHold.self, forKey: .hold) ?? .allowed
+        device = try container.decodeIfPresent(DeviceID.self, forKey: .device)
     }
 }

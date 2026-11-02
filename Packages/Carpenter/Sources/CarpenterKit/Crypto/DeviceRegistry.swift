@@ -12,6 +12,8 @@ public struct DeviceRegistry: Hashable, Sendable {
         public fileprivate(set) var head: EntryHash?
     }
 
+    public static let mostDevices = 256
+
     public let identity: IdentityPublicKeys
 
     private var submitted: [DeviceID: DeviceCertificate] = [:]
@@ -34,6 +36,15 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public var knownRevocations: [DeviceRevocation] { Array(revocations) }
 
+    public var lastRestoredDevice: DeviceID? {
+        let roots = submitted.values.filter(\.isRecovery)
+        guard roots.count > 1 else { return nil }
+        return roots.max {
+            $0.issuedAt != $1.issuedAt
+                ? $0.issuedAt < $1.issuedAt : $0.digest.lexicographicallyPrecedes($1.digest)
+        }?.device
+    }
+
     public var storedTimes: [Data: Date] { stored }
 
     public func storedAt(_ digest: Data) -> Date? { stored[digest] }
@@ -50,6 +61,7 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public mutating func admit(_ certificate: DeviceCertificate, storedAt: Date) throws {
         try certificate.verify(against: identity)
+        guard submitted[certificate.device] != nil || submitted.count < Self.mostDevices else { return }
         note(certificate.digest, storedAt)
 
         if let existing = submitted[certificate.device] {
@@ -77,6 +89,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         try revocation.verify(against: identity)
         guard revocation.revokedBy != nil else { throw CryptoError.notAuthorized }
         guard submitted[revocation.device] != nil else { throw CryptoError.unknownDevice }
+        guard revocations.contains(revocation) || revocations.count < Self.mostDevices else { return }
         note(revocation.digest, storedAt)
         revocations.insert(revocation)
         recompute()

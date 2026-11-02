@@ -184,8 +184,9 @@ struct AcknowledgementTests {
             at: .initial, sealedWith: chain.chain, roomLink: RoomLink(previous: nil))
 
         let stranger = Identity.generate()
-        let strangerCertificate = try DeviceCertificate.recovered(
+        var strangerCertificate = try DeviceCertificate.recovered(
             for: DeviceKeys.generate().publicKey, by: stranger, at: .distantPast)
+        strangerCertificate.participant = known.id
 
         let packet = SyncSession.CollectedPackets(
             tags: [RecipientTag(rawValue: Data([1]))],

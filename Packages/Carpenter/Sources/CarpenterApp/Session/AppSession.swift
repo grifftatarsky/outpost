@@ -114,6 +114,8 @@ public final class AppSession {
     @ObservationIgnored var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
     @ObservationIgnored var cachedComparisonHalves: [ParticipantID: String] = [:]
     @ObservationIgnored var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
+    @ObservationIgnored var cachedLegacySecrets: [[ParticipantID]: PairwiseSecret] = [:]
+    @ObservationIgnored var repairsAnswered: Set<RepairID> = []
     @ObservationIgnored var cachedLinksHeard: [ParticipantID: [PairLink]]?
     @ObservationIgnored var pairingUp: Task<Void, Never>?
     @ObservationIgnored var addressBook = AddressBook()
@@ -159,6 +161,7 @@ public final class AppSession {
         cachedLinksHeard = nil
     }
     var viewMayBeStale = false
+    @ObservationIgnored var refusalWatch = RefusalWatch()
 
     var entriesNotWrittenDown: [Entry] = []
 

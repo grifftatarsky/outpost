@@ -33,10 +33,11 @@ public struct SyncReport: Hashable, Sendable {
         public let feed: FeedKey?
         public let seq: UInt64?
         public let isFinal: Bool
+        public let from: ParticipantID?
 
         public init(
             packet: PacketID, what: What, author: ParticipantID?, reason: String,
-            feed: FeedKey? = nil, seq: UInt64? = nil, isFinal: Bool = false
+            feed: FeedKey? = nil, seq: UInt64? = nil, isFinal: Bool = false, from: ParticipantID? = nil
         ) {
             self.packet = packet
             self.what = what
@@ -45,6 +46,7 @@ public struct SyncReport: Hashable, Sendable {
             self.feed = feed
             self.seq = seq
             self.isFinal = isFinal
+            self.from = from
         }
 
         public var summary: String {
@@ -68,16 +70,18 @@ public struct SyncReport: Hashable, Sendable {
         public let recipients: Set<RecipientTag>
         public let digest: Data?
         public let to: ParticipantID?
+        public let grants: Set<EpochGrant>
 
         public init(
             packet: PacketID, entries: Set<EntryHash>, recipients: Set<RecipientTag> = [], digest: Data? = nil,
-            to: ParticipantID? = nil
+            to: ParticipantID? = nil, grants: Set<EpochGrant> = []
         ) {
             self.packet = packet
             self.entries = entries
             self.recipients = recipients
             self.digest = digest
             self.to = to
+            self.grants = grants
         }
     }
 
@@ -196,6 +200,10 @@ public struct SyncSession: Sendable {
 
     public static let packetByteBudget = 700 * 1024
 
+    public static let mostIdentitiesInAPacket = 256
+
+    public static let mostCredentialsInAPacket = 1_024
+
     public func send(
         _ entries: [Entry],
         to peers: [Peer],
@@ -225,37 +233,64 @@ public struct SyncSession: Sendable {
 
         let now = instant ?? clock.now
         let window = Self.window(at: now)
-        let forEveryone = entries.isEmpty ? [[]] : Self.batches(of: entries)
+        let encoder = JSONEncoder()
+        let weighed = Self.weighed(entries, encoder: encoder)
+        var introductions = Introductions(identities: identities, certificates: certificates, revocations: revocations)
+        let extras = Self.bytes(of: requests, encoder) + Self.bytes(of: answers, encoder)
+            + Self.bytes(of: notifyWalls, encoder) + Self.bytes(of: confirming, encoder) + Self.bytes(of: asking, encoder)
         var reached: Set<ParticipantID> = []
         var cutShort: Set<ParticipantID> = []
         var lastError: (any Error)?
 
         for peer in peers {
-            var batches = forEveryone
+            var theirs = weighed
             if entries.contains(where: { withheld($0, peer.them) }) {
-                let theirs = entries.filter { !withheld($0, peer.them) }
+                theirs = weighed.filter { !withheld($0.entry, peer.them) }
                 let owedThem =
                     granting.contains { $0.to.them == peer.them } || addresses.contains { $0.recipient == peer.them }
                 guard !theirs.isEmpty || owedThem || carriesMoreThanEntries else { continue }
-                batches = theirs.isEmpty ? [[]] : Self.batches(of: theirs)
             }
-            for (index, batch) in batches.enumerated() {
+            let announcements = addresses.filter { $0.recipient == peer.them }
+            var plan = PacketPlan(
+                budget: Self.packetByteBudget, sender: introductions.of(peer.me, encoder: encoder), me: peer.me,
+                firstPacketAlsoCarries: extras + Self.bytes(of: announcements, encoder))
+            for owed in granting where owed.to.them == peer.them {
+                plan.add(owed, bytes: Self.bytes(of: owed.grant, encoder) + Self.grantEnvelopeBytes)
+            }
+            for (entry, bytes) in theirs {
+                plan.add(entry, bytes: bytes, by: introductions.of(entry.author, encoder: encoder))
+            }
+            if plan.leftOut > 0 {
+                Diagnostics.sync.error(
+                    "mailbox: left out \(plan.leftOut, privacy: .public) key(s) too big for any packet")
+            }
+            let packets = plan.finished()
+            for (index, planned) in packets.enumerated() {
                 let first = index == 0
                 let packet = try SyncEngine.pack(
-                    batch, for: [peer],
-                    certificates: first ? certificates : [],
-                    revocations: first ? revocations : [],
-                    granting: first ? granting.filter { $0.to.them == peer.them } : [],
+                    planned.entries, for: [peer],
+                    certificates: planned.certificates,
+                    revocations: planned.revocations,
+                    granting: planned.grants,
                     window: window,
                     requests: first ? requests : [],
                     answers: first ? answers : [],
-                    identities: first ? identities : [],
+                    identities: planned.identities,
                     notifyWalls: first ? notifyWalls : nil,
                     confirmations: first ? confirming : [],
                     asks: first ? asking : [],
-                    addresses: first ? addresses.filter { $0.recipient == peer.them } : [])
+                    addresses: first ? announcements : [])
                 do {
                     try await mailbox.put(packet, to: peer.them, in: pairs)
+                } catch MailboxError.recordTooLarge(let bytes, let ceiling) {
+                    cutShort.insert(peer.them)
+                    report.sendFailure = "a packet of \(bytes) bytes would not fit a record of \(ceiling)"
+                    Diagnostics.sync.error(
+                        """
+                        mailbox: packet \(index + 1, privacy: .public) of \(packets.count, privacy: .public) \
+                        for one person was \(bytes, privacy: .public) bytes, too big to write; left out
+                        """)
+                    continue
                 } catch {
                     lastError = error
                     cutShort.insert(peer.them)
@@ -263,7 +298,7 @@ public struct SyncSession: Sendable {
                     report.sendFailure = String(describing: error)
                     Diagnostics.sync.error(
                         """
-                        mailbox: packet \(index + 1, privacy: .public) of \(batches.count, privacy: .public) \
+                        mailbox: packet \(index + 1, privacy: .public) of \(packets.count, privacy: .public) \
                         for one person would not write; the rest for them waits for the next round \
                         (\(String(describing: error), privacy: .public))
                         """)
@@ -271,15 +306,15 @@ public struct SyncSession: Sendable {
                 }
                 reached.insert(peer.them)
                 report.packetsWritten += 1
-                report.entriesSent += batch.count
+                report.entriesSent += planned.entries.count
                 report.written.append(
                     SyncReport.WrittenPacket(
-                        packet: packet.id, entries: Set(batch.map(\.hash)), recipients: packet.recipients,
-                        digest: packet.contentDigest, to: peer.them))
+                        packet: packet.id, entries: Set(planned.entries.map(\.hash)), recipients: packet.recipients,
+                        digest: packet.contentDigest, to: peer.them, grants: Set(planned.grants.map(\.grant))))
             }
         }
         if reached.isEmpty, let lastError { throw lastError }
-        if forEveryone.count > 1 {
+        if report.packetsWritten > reached.count {
             Diagnostics.sync.notice(
                 """
                 mailbox: a round of \(entries.count, privacy: .public) entries went as \
@@ -306,27 +341,23 @@ public struct SyncSession: Sendable {
         }
     }
 
+    public static func bytes(of entries: [Entry]) -> [Int] {
+        let encoder = JSONEncoder()
+        return entries.map { cost(of: $0, encoder: encoder) }
+    }
+
     private static func cost(of entry: Entry, encoder: JSONEncoder) -> Int {
         ((try? encoder.encode(entry).count) ?? 0) + 2
     }
 
-    static func batches(of entries: [Entry]) -> [[Entry]] {
-        var batches: [[Entry]] = []
-        var current: [Entry] = []
-        var size = 0
-        let encoder = JSONEncoder()
-        for entry in entries {
-            let cost = cost(of: entry, encoder: encoder)
-            if !current.isEmpty, size + cost > packetByteBudget {
-                batches.append(current)
-                current = []
-                size = 0
-            }
-            current.append(entry)
-            size += cost
-        }
-        if !current.isEmpty { batches.append(current) }
-        return batches
+    private static func bytes(of value: some Encodable, _ encoder: JSONEncoder) -> Int {
+        (try? encoder.encode(value).count) ?? 0
+    }
+
+    private static let grantEnvelopeBytes = 64
+
+    private static func weighed(_ entries: [Entry], encoder: JSONEncoder) -> [(entry: Entry, bytes: Int)] {
+        entries.map { ($0, cost(of: $0, encoder: encoder)) }
     }
 
     private func ring(to peers: [Peer]) async -> Int {
@@ -459,25 +490,27 @@ public struct SyncSession: Sendable {
             report.addresses.append(
                 contentsOf: delivery.addresses.map { SyncReport.ReceivedAddress(announcement: $0, storedAt: packet.storedAt) })
 
-            for identity in delivery.identities { replica.introduce(identity) }
+            introduceTheAuthors(of: delivery, into: &replica)
 
             var rejected = 0
-            for certificate in delivery.certificates {
+            for certificate in delivery.certificates.prefix(mostCredentialsInAPacket)
+            where replica.registry(for: certificate.participant) != nil {
                 do { try replica.admit(certificate, storedAt: packet.storedAt) } catch {
                     rejected += 1
                     report.refusals.append(
                         SyncReport.Refusal(
                             packet: packet.id, what: .credential, author: certificate.participant,
-                            reason: String(describing: error)))
+                            reason: String(describing: error), from: packet.from))
                 }
             }
-            for revocation in delivery.revocations {
+            for revocation in delivery.revocations.prefix(mostCredentialsInAPacket)
+            where replica.registry(for: revocation.participant) != nil {
                 do { try replica.revoke(revocation, storedAt: packet.storedAt) } catch {
                     rejected += 1
                     report.refusals.append(
                         SyncReport.Refusal(
                             packet: packet.id, what: .credential, author: revocation.participant,
-                            reason: String(describing: error)))
+                            reason: String(describing: error), from: packet.from))
                 }
             }
             report.credentialsRejected += rejected
@@ -505,7 +538,7 @@ public struct SyncSession: Sendable {
                         SyncReport.Refusal(
                             packet: packet.id, what: .entry, author: entry.author,
                             reason: String(describing: error), feed: entry.feedKey, seq: entry.seq,
-                            isFinal: isFinal))
+                            isFinal: isFinal, from: packet.from))
                 }
             }
             report.entriesRejected += entriesRejected
@@ -516,6 +549,17 @@ public struct SyncSession: Sendable {
         }
 
         return (report, settled)
+    }
+
+    private static func introduceTheAuthors(of delivery: SyncEngine.Delivery, into replica: inout Replica) {
+        let authors = Set(delivery.entries.map(\.author))
+        var met = 0
+        for identity in delivery.identities where met < mostIdentitiesInAPacket {
+            let person = identity.participantID
+            guard authors.contains(person), replica.registry(for: person) == nil else { continue }
+            replica.introduce(identity)
+            met += 1
+        }
     }
 
     public func acknowledge(

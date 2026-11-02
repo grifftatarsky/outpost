@@ -54,6 +54,7 @@ public enum CryptoError: Error, Hashable, Sendable {
     case deviceMismatch
     case unknownDevice
     case unknownEpoch
+    case keyTooFarAhead
     case wrongRoom
     case openFailed
     case notAuthorized

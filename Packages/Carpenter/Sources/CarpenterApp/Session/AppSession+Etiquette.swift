@@ -122,8 +122,8 @@ extension AppSession {
         refresh()
     }
 
-    func isHoldingBack(_ person: ParticipantID) -> Bool {
-        persisted.restoreAsks.last { $0.from == person }?.hold == .held
+    func restoreHold(on person: ParticipantID) -> RestoreHold? {
+        persisted.restoreAsks.last { $0.from == person }?.hold
     }
 
     public func heldRestores() -> [HeldRestore] {
@@ -180,9 +180,7 @@ extension AppSession {
         guard changed else { return }
 
         if hold == .refused {
-            persisted.repairDuties.removeAll {
-                $0.from == person && $0.request.reason == .recovery
-            }
+            persisted.repairDuties.removeAll { $0.from == person }
         }
         Diagnostics.sync.notice(
             """

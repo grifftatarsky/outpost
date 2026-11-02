@@ -40,6 +40,8 @@ struct PersistedState: Codable, Equatable, Sendable {
     var packetsWritten: [PacketID: WrittenPacketRecord] = [:]
     var repairs: [HistoryRepair] = []
     var repairDuties: [RepairDuty] = []
+    var repairSpend: [ParticipantID: RepairSpend] = [:]
+    var elsewhere: [FeedGap] = []
     var restoreAsks: [RestoreAskRecord] = []
     var holesNoticed: [RoomID: Date] = [:]
     var askedAutomatically: [RoomID: Date] = [:]
@@ -122,6 +124,8 @@ struct PersistedState: Codable, Equatable, Sendable {
         knownSiblings = try container.decodeIfPresent([DeviceID].self, forKey: .knownSiblings) ?? []
         repairs = try container.decodeIfPresent([HistoryRepair].self, forKey: .repairs) ?? []
         repairDuties = try container.decodeIfPresent([RepairDuty].self, forKey: .repairDuties) ?? []
+        repairSpend = try container.decodeIfPresent([ParticipantID: RepairSpend].self, forKey: .repairSpend) ?? [:]
+        elsewhere = try container.decodeIfPresent([FeedGap].self, forKey: .elsewhere) ?? []
         restoreAsks =
             try container.decodeIfPresent([RestoreAskRecord].self, forKey: .restoreAsks) ?? []
         unverifiable = try container.decodeIfPresent([FeedGap].self, forKey: .unverifiable) ?? []

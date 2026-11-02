@@ -55,8 +55,13 @@ extension AppSession {
     // MARK: The secrets a round writes under and listens under
 
     func legacySecret(with person: ParticipantID) -> PairwiseSecret? {
-        guard let identity = enrolment?.identity, let keys = replica.registry(for: person)?.identity else { return nil }
-        return try? PairwiseSecret.derive(mine: identity, theirs: keys)
+        guard let identity = enrolment?.identity else { return nil }
+        if let known = cachedLegacySecrets[[identity.id, person]] { return known }
+        guard let keys = replica.registry(for: person)?.identity,
+            let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)
+        else { return nil }
+        cachedLegacySecrets[[identity.id, person]] = secret
+        return secret
     }
 
     func alternateSecrets(with person: ParticipantID) -> [PairwiseSecret] {

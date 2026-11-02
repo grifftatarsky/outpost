@@ -122,6 +122,7 @@ extension RoomOfThree {
         await friend.load()
         try await friend.createIdentity(displayName: name)
         try await join(friend, into: try await host.createRoom(named: "Kitchen"), of: host, through: mailbox)
+        for session in [alice, carol, sam] { try? await session.send("Hello", to: room) }
         for _ in 0..<3 {
             for session in [alice, carol, sam, friend] { try await session.sync(through: mailbox, media: mailbox) }
         }

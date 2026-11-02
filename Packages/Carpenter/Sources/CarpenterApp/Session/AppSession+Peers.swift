@@ -28,14 +28,28 @@ extension AppSession {
     }
 
     private func addressable() -> Set<ParticipantID> {
-        guard let me = enrolment?.identity.id else { return [] }
         let shared = sharedParticipants()
-        var reachable = shared
-        for room in projection.namedRoomIDs() { reachable.formUnion(roster(of: room).absent) }
-        for repair in persisted.repairs { reachable.formUnion(repair.asked) }
-        for duty in persisted.repairDuties { reachable.insert(duty.from) }
-        reachable.remove(me)
-        return reachable.subtracting(quiet(besides: shared))
+        return peopleSomethingIsOwedTo(besides: shared).subtracting(quiet(besides: shared))
+    }
+
+    private func peopleSomethingIsOwedTo(besides shared: Set<ParticipantID>) -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id else { return [] }
+        var people = shared
+        for room in projection.namedRoomIDs() { people.formUnion(roster(of: room).absent) }
+        for repair in persisted.repairs { people.formUnion(repair.asked) }
+        for duty in persisted.repairDuties { people.insert(duty.from) }
+        people.remove(me)
+        return people
+    }
+
+    func peopleInTouch() -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id else { return [] }
+        var people = peopleSomethingIsOwedTo(besides: sharedParticipants())
+        people.formUnion(persisted.pairBook.keys)
+        people.formUnion(persisted.preferences.blockedPeople)
+        people.formUnion(persisted.codeClaims.map(\.peer))
+        people.remove(me)
+        return people
     }
 
     func sharedParticipants() -> Set<ParticipantID> {
@@ -174,16 +188,16 @@ extension AppSession {
     }
 
     private func straysBelow(_ heads: [TrustedKey], in room: RoomID) -> [TrustedKey] {
-        guard var epoch = heads.first?.epoch, let chain = chains[room],
+        guard var above = heads.first?.epoch, let chain = chains[room],
             chain.heldKeyCount > chain.knownEpochs.count
         else { return [] }
         let makers = outpostOwner(of: room).map { Set([$0]) } ?? roster(of: room).members
         let changes = projection.keyChanges(in: room, opening: payloadOpener())
         var reachable = Set(heads.map(\.secret))
         var strays: [TrustedKey] = []
-        while let below = epoch.previous {
-            reachable = Set(reachable.compactMap { chain.unwrapping(epoch, under: $0) })
-            epoch = below
+        for epoch in chain.heldNumbers where epoch < above {
+            reachable = above.previous == epoch ? Set(reachable.compactMap { chain.unwrapping(above, under: $0) }) : []
+            above = epoch
             for secret in chain.heldSecrets(at: epoch) where !reachable.contains(secret) {
                 guard let stray = trustedKey(secret, at: epoch, in: chain, makers: makers, changes: changes)
                 else { continue }
@@ -284,6 +298,13 @@ extension AppSession {
         }
     }
 
+    private func outgrowsTheLog(_ chain: EpochChain) -> Bool {
+        let held = chain.heldNumbers.count
+        guard held > EpochChain.mostNumbersTheLogHasNotShown else { return false }
+        let shown = Set(projection.keyChanges(in: chain.room, opening: payloadOpener()).map(\.change.link.epoch))
+        return held > shown.count + EpochChain.mostNumbersTheLogHasNotShown
+    }
+
     private func outpostOwner(of room: RoomID) -> ParticipantID? {
         guard let me = enrolment?.identity.id else { return nil }
         if room == outpostRoom(for: me) { return me }
@@ -348,6 +369,10 @@ extension AppSession {
             if !keepUntilShownIn(grant, from: peer.them, storedAt: storedAt) {
                 Diagnostics.sync.notice("adopt: refused a first key for a room from somebody who did not invite this member to it")
             }
+            return
+        }
+        guard !outgrowsTheLog(chain) else {
+            Diagnostics.sync.error("adopt: refused a key that would put this room's chain too far beyond what its log shows")
             return
         }
         let taughtSomething =

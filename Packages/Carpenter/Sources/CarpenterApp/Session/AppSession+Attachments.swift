@@ -427,8 +427,7 @@ extension AppSession {
     }
 
     func deleteEveryCopy(of photos: [AttachmentID], through mailbox: any MediaMailbox) async throws {
-        let me = enrolment?.identity.id
-        let pairs = replica.knownParticipants.filter { $0 != me }.compactMap { legacySecret(with: $0) }
+        let pairs = peopleInTouch().compactMap { legacySecret(with: $0) }
         let copies = Set(photos.flatMap { photo in pairs.map { PhotoCopyName(of: photo, between: $0) } })
         guard !copies.isEmpty else { return }
         try await mailbox.delete(copies: copies, in: try currentPairs())

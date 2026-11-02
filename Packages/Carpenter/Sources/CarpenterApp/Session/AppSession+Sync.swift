@@ -30,6 +30,7 @@ extension AppSession {
         try await writeDownOrReport()
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
         if mode == .full {
+            update(\.viewMayBeStale, to: refusalWatch.holdsKeys(after: report.refusals, at: clock.now))
             await pairUp(through: mailbox)
             if let sent = try? await mailbox.sentPackets(in: pairs) {
                 await settleWhatWasSent(sent, through: mailbox, in: pairs)
@@ -45,8 +46,6 @@ extension AppSession {
             report = report.adding(sent)
             report = report.adding(await tellTheRemoved(after: sent, through: session))
         }
-
-        update(\.viewMayBeStale, to: report.entriesRejected > 0 || report.credentialsRejected > 0)
 
         if mode == .full, let media {
             await collectAttachments(from: report.integrated, through: media)
@@ -122,8 +121,8 @@ extension AppSession {
         }
 
         if report.packetsWritten > 0 {
-            let reached = Set(report.written.compactMap(\.to))
-            for owed in owedGrants where reached.contains(owed.to.them) { issuedGrants.insert(owed.receipt) }
+            let landed = Set(report.written.flatMap(\.grants))
+            for owed in owedGrants where landed.contains(owed.grant) { issuedGrants.insert(owed.receipt) }
             if announcing {
                 persisted.authorityAnnounced = authority
                 Diagnostics.sync.notice("round: told every peer about a change to this member's devices")
@@ -163,35 +162,15 @@ extension AppSession {
         report = report.adding(received)
         integrity.rejectedFromPeers += received.entriesTooLarge
 
-        for request in received.repairRequests
-        where !persisted.repairDuties.contains(where: { $0.request.id == request.id }) {
-            persisted.repairDuties.append(RepairDuty(request: request, from: peer.them))
-            if request.reason == .recovery,
-                !persisted.restoreAsks.contains(where: { $0.request == request.id })
-            {
-                let holding =
-                    persisted.preferences.isHoldingHistoryForRestores
-                    && !refusesToDraw(from: peer.them)
-                persisted.restoreAsks.append(
-                    RestoreAskRecord(
-                        request: request.id, from: peer.them, room: request.room,
-                        at: clock.now, hold: holding ? .held : .allowed))
-                persisted.restoreAsks.removeFirst(
-                    max(0, persisted.restoreAsks.count - RestoreAskRecord.kept))
-                Diagnostics.sync.notice(
-                    """
-                    recovery: \(Diagnostics.fingerprint(peer.them.rawValue), privacy: .public) \
-                    came back and asked for history\
-                    \(holding ? "; held until this device's member checks" : "", privacy: .public)
-                    """)
-            }
-        }
+        takeRepairRequests(received.repairRequests, from: peer.them)
         takeAsks(received.photoAsks, from: peer.them)
         noticeOldAddresses(collected, from: peer)
         await takeAddresses(received.addresses, from: peer)
         for answer in received.repairAnswers {
             if let index = persisted.repairs.firstIndex(where: { $0.id == answer.request }) {
                 persisted.repairs[index].answers[peer.them] = answer
+                let named = answer.elsewhere.intersecting(persisted.repairs[index].request.gaps)
+                if !named.isEmpty { persisted.elsewhere = persisted.elsewhere.merging(named) }
             }
         }
 
