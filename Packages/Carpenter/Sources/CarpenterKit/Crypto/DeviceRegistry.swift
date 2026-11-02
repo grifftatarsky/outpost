@@ -216,7 +216,26 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     private struct Removal {
         let order: Date
-        let revocation: DeviceRevocation
+        let revokedAt: Date
+        let revokedBy: DeviceID?
+        let cutoff: UInt64?
+        let head: EntryHash?
+
+        init(order: Date, revocation: DeviceRevocation) {
+            self.order = order
+            revokedAt = revocation.revokedAt
+            revokedBy = revocation.revokedBy
+            cutoff = revocation.cutoff
+            head = revocation.head
+        }
+
+        init(order: Date, leftOutOf revocation: DeviceRevocation) {
+            self.order = order
+            revokedAt = revocation.revokedAt
+            revokedBy = revocation.revokedBy
+            cutoff = 0
+            head = nil
+        }
     }
 
     private mutating func recompute() {
@@ -270,17 +289,36 @@ public struct DeviceRegistry: Hashable, Sendable {
                 authority[target] = power
             }
             if var standing = result[target] {
-                let revocation = removal.revocation
-                if standing.revokedAt.map({ revocation.revokedAt < $0 }) ?? true {
-                    standing.revokedAt = revocation.revokedAt
-                    standing.revokedBy = revocation.revokedBy
+                if standing.revokedAt.map({ removal.revokedAt < $0 }) ?? true {
+                    standing.revokedAt = removal.revokedAt
+                    standing.revokedBy = removal.revokedBy
                 }
                 standing.limits.append(
                     Limit(
-                        cutoff: revocation.cutoff, head: revocation.head, before: revocation.revokedAt,
-                        remover: revocation.revokedBy))
+                        cutoff: removal.cutoff, head: removal.head, before: removal.revokedAt,
+                        remover: removal.revokedBy))
                 result[target] = standing
             }
+        }
+
+        func descends(_ device: DeviceID, from ancestor: DeviceID) -> Bool {
+            var approver = result[device]?.approvedBy
+            var steps = 0
+            while let current = approver, steps < result.count {
+                if current == ancestor { return true }
+                approver = result[current]?.approvedBy
+                steps += 1
+            }
+            return false
+        }
+
+        func leaveOut(everyDeviceApprovedThrough revocation: DeviceRevocation, at instant: Date) {
+            guard let remaining = revocation.remaining.map(Set.init) else { return }
+            let unnamed = result.keys.filter {
+                !remaining.contains($0) && authority[$0].map { $0.until == nil } == true
+                    && descends($0, from: revocation.device)
+            }
+            for device in unnamed { apply(Removal(order: instant, leftOutOf: revocation), to: device) }
         }
 
         let added = submitted.values.filter { !$0.isRecovery }.compactMap { certificate in
@@ -324,6 +362,7 @@ public struct DeviceRegistry: Hashable, Sendable {
                 let removal = Removal(order: instant, revocation: revocation)
                 if authority[revocation.device] != nil {
                     apply(removal, to: revocation.device)
+                    leaveOut(everyDeviceApprovedThrough: revocation, at: instant)
                 } else if removedFirst[revocation.device].map({ instant < $0.order }) ?? true {
                     removedFirst[revocation.device] = removal
                 }

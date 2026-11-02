@@ -242,6 +242,13 @@ cannot vouch for the first once it is removed too. Entries that arrive before wh
 are tried again in the same batch (`Replica.integrate(_:)` over a list), so the order a packet or the
 log on disk holds them in does not matter (`ARemovalCannotEraseWhatWasSeenTests`).
 
+**A removal names the devices that stay** (since 2026-10-31). A stolen phone that still counts can
+approve a device and show it only to friends, so the member's own phones never list it. The app's
+removal now signs `remaining`, the member's devices that stay, appended under its own label and count
+only when present. A contact removes, at the removal's stored time, every device the removed one
+approved, directly or through others, that the list leaves out and that still counts
+(`ADeviceTheRemovedOneApprovedTests`).
+
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
 removal (erasing it with Find My signs it out). A removed device can no longer add a device of its

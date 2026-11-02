@@ -3686,6 +3686,35 @@ iCloud.
 
 <!-- COPY END 050f54e6 -->
 
+<!-- COPY BEGIN 719b3a40 [NEEDS HUMAN REVIEW] -->
+
+### A device removal names the devices that stay, and takes the ones the removed device added unseen
+
+**PROPOSED 2026-10-31.** Every phone judges an approval by when it saw it stored, so a thief on a stolen
+phone could approve a second device and show its certificate only to friends, never to the member's own
+zone. The friends counted it, because the stolen phone still counted when it was stored; the member's
+phones never did, so it was not on their device list and could not be removed. Removing the stolen
+phone left that device counting at every friend: room keys were sealed to it, and it could announce a
+new address for the member.
+
+Now the app's removal signs the list of the member's devices that stay (`DeviceRevocation.remaining`,
+appended to the signed bytes under its own label and count, only when present, so every older removal
+keeps its bytes). A contact applying it removes, at the same stored time, every device that the removed
+one approved, directly or through others, that is not on the list and still counts. A device the list
+leaves out is cut off the way any removed device is: nothing it writes counts past what the member's
+devices had seen of it, which for a device they never knew is nothing. Devices approved through another
+of the member's devices, and devices already removed, are not touched.
+
+**Cost:** a device the removed one approved shortly before, that the removing device had not heard of
+yet, is cut off with it, and erases itself when it hears. It shows as removed on the member's list and
+has to be approved again.
+
+**Built** 2026-10-31; `ADeviceTheRemovedOneApprovedTests` passes in the package suite. Not run over
+iCloud. This changes the removal's wire form: a build without the field still reads the removal, and
+ignores the list.
+
+<!-- COPY END 719b3a40 -->
+
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 
 ### Tapping two phones swaps codes

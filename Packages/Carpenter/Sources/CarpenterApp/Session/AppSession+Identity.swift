@@ -562,11 +562,13 @@ extension AppSession {
         }
         guard !wanted.isEmpty else { return }
 
+        let remaining = (replica.registry(for: enrolment.identity.id)?.activeDevices ?? [])
+            .subtracting(wanted).union([enrolment.device.id])
         for device in wanted {
             let top = replica.link(atTopOf: FeedKey(author: enrolment.identity.id, device: device))
             let revocation = try DeviceRevocation.issue(
                 for: device, by: enrolment.identity, at: clock.now, from: enrolment.device,
-                cutoff: top?.seq ?? 0, head: top?.hash)
+                cutoff: top?.seq ?? 0, head: top?.hash, remaining: remaining)
             try replica.revoke(revocation, storedAt: authorityNow())
         }
         recordAuthority()
