@@ -10,6 +10,29 @@ public struct DeviceRegistry: Hashable, Sendable {
         public fileprivate(set) var removedByRecovery: Bool = false
         public fileprivate(set) var cutoff: UInt64?
         public fileprivate(set) var head: EntryHash?
+        public fileprivate(set) var line: UInt64?
+        fileprivate var limits: [Limit] = []
+    }
+
+    fileprivate struct Limit: Hashable, Sendable {
+        let cutoff: UInt64?
+        let head: EntryHash?
+        let before: Date
+        let remover: DeviceID?
+        var seen: UInt64 = 0
+
+        var isContradicted: Bool { cutoff.map { seen > $0 } ?? false }
+
+        var bound: UInt64? { cutoff.map { Swift.max($0, seen) } }
+
+        func admits(seq: UInt64, hash: EntryHash?, at instant: Date) -> Bool {
+            if let cutoff, !isContradicted {
+                if seq == cutoff, let head, let hash, hash != head { return false }
+                return seq <= cutoff
+            }
+            if seq <= seen { return true }
+            return cutoff == nil && instant < before
+        }
     }
 
     public static let mostDevices = 256
@@ -21,6 +44,7 @@ public struct DeviceRegistry: Hashable, Sendable {
     private var stored: [Data: Date] = [:]
     private var standings: [DeviceID: Standing] = [:]
     private var windows: [DeviceID: Authority] = [:]
+    private var witnessed: [DeviceID: [DeviceID: UInt64]] = [:]
 
     public init(identity: IdentityPublicKeys) {
         self.identity = identity
@@ -126,11 +150,46 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public func isAuthorized(_ device: DeviceID, at instant: Date, seq: UInt64? = nil, hash: EntryHash? = nil) -> Bool {
         guard let standing = standings[device] else { return false }
-        if standing.revokedAt != nil, let cutoff = standing.cutoff, let seq {
-            if seq == cutoff, let head = standing.head, let hash, hash != head { return false }
-            return instant >= standing.addedAt && seq <= cutoff
+        guard standing.revokedAt != nil, let seq else { return Self.covers(standing, instant) }
+        return instant >= standing.addedAt
+            && standing.limits.allSatisfy { $0.admits(seq: seq, hash: hash, at: instant) }
+    }
+
+    public func line(of device: DeviceID) -> UInt64? {
+        standings[device]?.line
+    }
+
+    public mutating func noteWhatWasSeen(by witness: DeviceID, in clock: VectorClock) {
+        guard standings[witness] != nil else { return }
+        var raised: Set<DeviceID> = []
+        for (feed, seq) in clock.positions
+        where feed.author == identity.participantID && feed.device != witness && standings[feed.device] != nil {
+            guard seq > witnessed[feed.device]?[witness] ?? 0 else { continue }
+            witnessed[feed.device, default: [:]][witness] = seq
+            raised.insert(feed.device)
         }
-        return Self.covers(standing, instant)
+        for device in raised where standings[device]?.limits.isEmpty == false { weighEvidence(for: device) }
+    }
+
+    private func statement(of witness: DeviceID, about device: DeviceID, in standing: Standing) -> UInt64 {
+        let removed = standing.limits.filter { $0.remover == witness }.compactMap(\.cutoff).max() ?? 0
+        return Swift.max(witnessed[device]?[witness] ?? 0, removed)
+    }
+
+    private mutating func weighEvidence(for device: DeviceID) {
+        guard var standing = standings[device], !standing.limits.isEmpty else { return }
+        let counting = standings.filter { $0.key != device && $0.value.revokedAt == nil }.keys
+        let fromCounting = counting.map { statement(of: $0, about: device, in: standing) }.max() ?? 0
+        for index in standing.limits.indices {
+            let fromRemover = standing.limits[index].remover.map { statement(of: $0, about: device, in: standing) } ?? 0
+            standing.limits[index].seen = Swift.max(fromCounting, fromRemover)
+        }
+        standing.line = standing.limits.compactMap(\.bound).min()
+        let anchor = standing.limits.filter { $0.cutoff != nil && !$0.isContradicted }
+            .min { ($0.cutoff ?? .max) < ($1.cutoff ?? .max) }
+        standing.cutoff = anchor?.cutoff
+        standing.head = anchor?.head
+        standings[device] = standing
     }
 
     private mutating func note(_ digest: Data, _ instant: Date) {
@@ -176,6 +235,7 @@ public struct DeviceRegistry: Hashable, Sendable {
                     capped.revokedAt = next.issuedAt
                     capped.revokedBy = next.device
                     capped.removedByRecovery = true
+                    capped.limits.append(Limit(cutoff: nil, head: nil, before: next.issuedAt, remover: next.device))
                 }
                 combined[device] = capped
             }
@@ -183,6 +243,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         }
         standings = combined
         windows = current
+        for device in standings.keys { weighEvidence(for: device) }
     }
 
     private func replay(from root: DeviceCertificate) -> ([DeviceID: Standing], [DeviceID: Authority]) {
@@ -209,14 +270,15 @@ public struct DeviceRegistry: Hashable, Sendable {
                 authority[target] = power
             }
             if var standing = result[target] {
-                if standing.revokedAt.map({ removal.revocation.revokedAt < $0 }) ?? true {
-                    standing.revokedAt = removal.revocation.revokedAt
-                    standing.revokedBy = removal.revocation.revokedBy
+                let revocation = removal.revocation
+                if standing.revokedAt.map({ revocation.revokedAt < $0 }) ?? true {
+                    standing.revokedAt = revocation.revokedAt
+                    standing.revokedBy = revocation.revokedBy
                 }
-                if let cutoff = removal.revocation.cutoff, cutoff < standing.cutoff ?? .max {
-                    standing.cutoff = cutoff
-                    standing.head = removal.revocation.head
-                }
+                standing.limits.append(
+                    Limit(
+                        cutoff: revocation.cutoff, head: revocation.head, before: revocation.revokedAt,
+                        remover: revocation.revokedBy))
                 result[target] = standing
             }
         }

@@ -153,10 +153,10 @@ public func isAuthorized(_ device: DeviceID, at instant: Date) -> Bool {
 
 Three properties are worth naming because each is a decision:
 
-- **Authority is an interval, not a flag.** An entry is checked against the registry *at the entry's
-  own `wallTime`*, in `Replica.integrate`. Revoking a device does not retroactively invalidate what
-  it said before the revocation, which is what stops a lost phone from erasing a year of
-  conversation.
+- **Authority is an interval, not a flag.** An entry is checked against the registry in
+  `Replica.integrate`, by its number when the removal names a cutoff and by its `wallTime` when it
+  does not. Removing a device does not take back what the member's devices had already seen it say:
+  see *What a removed device wrote*, below.
 - **Revocation only ever moves earlier.** `revoke` takes `min(existing, new)`, so a second
   revocation cannot be used to *widen* a device's window.
 - **A certificate cannot be swapped.** `admit` refuses a certificate for a `DeviceID` already known
@@ -226,6 +226,21 @@ room used cannot be checked yet. The room chain Griff ruled for on 2026-09-28
 ([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)) closes it for a
 person removed from a room, not yet for a removed device, which Griff has asked to be closed
 ([Open questions](decisions.md)).
+
+**A removal cannot erase what the member's devices had seen** (since 2026-10-31). The device that
+signs a removal chooses its cutoff, so a stolen phone could sign one with a cutoff of 0, or with no
+cutoff and a date before everything, and take every entry of the member's real phone off every
+friend's phone. So each contact checks a removal against what the member's devices had already
+shown. An entry's vector clock is its device's signed statement of how far it had read every feed,
+and a removal's cutoff is its remover's. `DeviceRegistry.noteWhatWasSeen` keeps, for each of the
+member's feeds, the furthest position each of their other devices has stated. A removal whose cutoff
+is below what its own remover, or any of the member's devices that still counts, had stated is
+contradicted: its cutoff and head are ignored, and the line is the furthest position stated. A
+removal that agrees with the evidence keeps its cutoff and head exactly as before. A removed
+device's statements stop counting as evidence for anybody else's removal, so a second stolen phone
+cannot vouch for the first once it is removed too. Entries that arrive before what vouches for them
+are tried again in the same batch (`Replica.integrate(_:)` over a list), so the order a packet or the
+log on disk holds them in does not matter (`ARemovalCannotEraseWhatWasSeenTests`).
 
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a

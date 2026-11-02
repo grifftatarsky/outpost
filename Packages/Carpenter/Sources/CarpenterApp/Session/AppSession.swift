@@ -451,10 +451,10 @@ public final class AppSession {
         let checked = await replica.signatureChecks(for: loaded.entries)
         let ownFeed = enrolment.map { FeedKey(author: $0.identity.id, device: $0.device.id) }
         var stillOnDisk: [Entry] = []
-        for entry in loaded.entries {
+        for (entry, result) in replica.integrate(loaded.entries, checked: checked) {
             let outcome: IntegrationResult
             do {
-                outcome = try replica.integrate(entry, checked: checked)
+                outcome = try result.get()
             } catch {
                 integrity.unverifiableOnDisk += 1
                 continue

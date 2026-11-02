@@ -87,6 +87,7 @@ public struct Replica: Sendable {
         guard registry != registries[certificate.participant] else { return }
         registries[certificate.participant] = registry
         revision = UUID()
+        enforceStanding(of: certificate.participant)
     }
 
     mutating func admit(_ certificate: DeviceCertificate) throws {
@@ -195,9 +196,9 @@ public struct Replica: Sendable {
         if removed {
             enforceStanding(of: entry.author)
             guard feeds[entry.feedKey]?[entry.seq]?[entry.hash] != nil else { throw LogError.unauthorizedDevice }
-            return .accepted
         }
-        guard !existingAtSeq.isEmpty else { return .accepted }
+        registries[entry.author]?.noteWhatWasSeen(by: entry.device, in: entry.clock)
+        guard !removed, !existingAtSeq.isEmpty else { return .accepted }
 
         let fork = Fork(
             feed: entry.feedKey,
@@ -208,6 +209,31 @@ public struct Replica: Sendable {
         forks.append(fork)
         return .forked(fork)
     }
+
+    public mutating func integrate(
+        _ entries: [Entry], checked: SignatureChecks = SignatureChecks()
+    ) -> [(entry: Entry, outcome: Result<IntegrationResult, any Error>)] {
+        var outcomes: [Result<IntegrationResult, any Error>?] = Array(repeating: nil, count: entries.count)
+        var waiting = Array(entries.indices)
+        var passes = 0
+        while !waiting.isEmpty, passes < Self.mostPasses {
+            passes += 1
+            var refused: [Int] = []
+            for index in waiting {
+                do {
+                    outcomes[index] = .success(try integrate(entries[index], checked: checked))
+                } catch {
+                    outcomes[index] = .failure(error)
+                    refused.append(index)
+                }
+            }
+            guard refused.count < waiting.count else { break }
+            waiting = refused.sorted { entries[$0].seq > entries[$1].seq }
+        }
+        return entries.indices.map { (entries[$0], outcomes[$0] ?? .failure(LogError.unauthorizedDevice)) }
+    }
+
+    static let mostPasses = 4
 
     private mutating func occupy(_ seq: UInt64, in feed: FeedKey) {
         highest[feed] = Swift.max(highest[feed] ?? 0, seq)
@@ -459,7 +485,7 @@ public struct Replica: Sendable {
         for key in keys.sorted(by: { $0.canonicalBytes.lexicographicallyPrecedes($1.canonicalBytes) }) {
             let run = contiguous[key] ?? 0
             var top = Swift.max(highest[key] ?? 0, claimed[key])
-            if let cutoff = registries[key.author]?.standing(of: key.device)?.cutoff { top = Swift.min(top, cutoff) }
+            if let line = registries[key.author]?.line(of: key.device) { top = Swift.min(top, line) }
             guard top > run else { continue }
             let held = FeedGap.spans(of: (scattered[key] ?? []).sorted())
             let missing = [SequenceSpan(run + 1, top)].subtracting(held)

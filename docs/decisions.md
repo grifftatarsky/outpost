@@ -3654,6 +3654,38 @@ room without its link, and a removal or departure that names no heads.
 
 <!-- COPY END d920b620 -->
 
+<!-- COPY BEGIN 050f54e6 [NEEDS HUMAN REVIEW] -->
+
+### A device removal cannot claim to have seen less than the member's devices showed
+
+**PROPOSED 2026-10-31**, to keep [the ruling above](#a-removed-persons-words-stop-where-the-removal-saw-them)
+true against a remover who lies about what it had received. The device that signs a removal writes
+its own cutoff, so a stolen phone could remove the member's real phone with a cutoff of 0, or with no
+cutoff and a date before everything, and every friend's phone dropped everything the real phone had
+ever written. Nothing brought it back: the friends were the ones who held it.
+
+Now a contact checks a removal against what the member's devices had stated they had received: the
+vector clock on every entry they signed, and the cutoff on every removal they signed. If the remover
+itself, or any of the member's devices that still counts, had stated a position past the removal's
+cutoff, the cutoff is a lie; it and its head are ignored, and everything up to the furthest stated
+position stays. A removal that agrees with the evidence works exactly as before. When two of the
+member's devices remove the same one, the line is the furthest either had seen, so a new phone that
+had not caught up does not erase what the old tablet had read.
+
+**Cost:** past a contradicted cutoff there is no head, so between the lying cutoff and the furthest
+stated position the first entry a contact receives at each number is the one it keeps. Somebody who
+holds a device that still counts can keep a removed device's later entries counting, for as long as
+that device counts. An honest phone removing another when no device of the member had stated more
+than it had received still drops the rest, as ruled.
+
+**What would change it:** a statement that names entries by hash rather than by number, which would
+give the contradicted range a head.
+
+**Built** 2026-10-31; `ARemovalCannotEraseWhatWasSeenTests` passes in the package suite. Not run over
+iCloud.
+
+<!-- COPY END 050f54e6 -->
+
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 
 ### Tapping two phones swaps codes

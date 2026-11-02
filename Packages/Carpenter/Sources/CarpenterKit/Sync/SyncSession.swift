@@ -518,9 +518,9 @@ public struct SyncSession: Sendable {
             var entriesRejected = 0
             var refusedForever = 0
             report.entriesDelivered += delivery.entries.count
-            for entry in delivery.entries {
+            for (entry, outcome) in replica.integrate(delivery.entries, checked: checked) {
                 do {
-                    let result = try replica.integrate(entry, checked: checked)
+                    let result = try outcome.get()
                     switch result {
                     case .accepted: report.entriesReceived += 1
                     case .alreadyPresent: report.entriesAlreadyPresent += 1

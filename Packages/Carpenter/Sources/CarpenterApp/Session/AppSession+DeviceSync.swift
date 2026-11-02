@@ -224,9 +224,9 @@ extension AppSession {
         let fromSiblings = feed.entries.filter { $0.device != enrolment.device.id }
         let checked = await replica.signatureChecks(for: fromSiblings)
         var taken: [Entry] = []
-        for entry in fromSiblings {
+        for (entry, outcome) in replica.integrate(fromSiblings, checked: checked) {
             do {
-                switch try replica.integrate(entry, checked: checked) {
+                switch try outcome.get() {
                 case .accepted, .forked:
                     taken.append(entry)
                     entriesNotWrittenDown.append(entry)
