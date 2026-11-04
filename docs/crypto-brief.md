@@ -875,7 +875,10 @@ which is exactly right — a device restored from the recovery key can reopen it
 nothing else can.
 
 Mail and catch-ups, which carry room keys, are sealed a second time around that: a random content
-key, sealed to each of the member's devices that is not removed with `DeviceSeal`. The small state
+key, sealed to each of the member's devices that is not removed with `DeviceSeal`. A device with no
+receiving key is left out, the way a grant leaves it out, and a record with no device left to seal to
+is not sent; until 2026-10-31 one such device made the whole record fall back to the identity alone,
+which a removed device holds (`MailBetweenDevicesIsSealedPerDeviceTests`). The small state
 record, which carries certificates, revocations and the member's people, is sealed under the identity
 only, so a new device can be read before anybody knows its receiving key.
 

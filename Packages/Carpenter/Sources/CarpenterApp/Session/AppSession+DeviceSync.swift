@@ -291,10 +291,9 @@ extension AppSession {
         case .mail: devices = active
         case .catchUp(let target): devices = [target]
         }
-        let recipients = devices.compactMap { device in
+        return devices.compactMap { device in
             registry.agreementKey(for: device).map { DeviceRecipient(device: device, agreementKey: $0) }
         }
-        return recipients.count == devices.count ? recipients : []
     }
 
     func heldEpochs() -> [HeldEpoch] {
@@ -379,11 +378,16 @@ extension AppSession {
             do {
                 var records: [SiblingRecord] = []
                 for draft in drafts {
+                    let recipients = siblingRecipients(for: draft.kind, among: plan.recipients)
+                    guard !recipients.isEmpty || !draft.kind.carriesKeys else {
+                        Diagnostics.sync.error(
+                            "device sync: no device this record was for has a receiving key; room keys are never sealed under the identity alone, so it was not sent")
+                        continue
+                    }
                     records.append(SiblingRecord(
                         name: SiblingRecord.Name(writer: me, kind: draft.kind),
                         sealed: try await SealedSiblingFeed.sealInBackground(
-                            draft.feed, for: enrolment.identity, on: me, as: draft.kind,
-                            to: siblingRecipients(for: draft.kind, among: plan.recipients),
+                            draft.feed, for: enrolment.identity, on: me, as: draft.kind, to: recipients,
                             signedBy: enrolment.device)))
                 }
                 if !records.isEmpty || !deleting.isEmpty {
