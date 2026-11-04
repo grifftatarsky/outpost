@@ -487,11 +487,20 @@ the key* and to *build the associated data*, so an altered epoch yields the wron
 authentication failure rather than a decryption. Likewise the author and device are bound in, so a
 ciphertext cannot be replayed as if written by somebody else.
 
+The reader holds up its side the same way. An entry is opened only with the chain of the room it
+names, or of its author's Outpost when it names none (`Entry.sealingRoom`), and `Entry.opened(using:)`
+refuses any other chain before it tries a key. Until 2026-10-31 the phone also tried every other
+chain it held and the pair secret with the author, so a contact who shared one room with you could
+write in another room of yours without its key (`AnEntryOpensOnlyInItsOwnRoomTests`).
+
 **Two readers, two ciphertexts.** `alsoFor` seals the *same plaintext a second time* under a
-pairwise secret. It is used for one case in the app: commenting on somebody's Outpost when you are
-not inside that wall's epoch. Your own devices read the room-key copy, the wall's owner reads the
-pairwise copy, and the two ciphertexts share no key. This is the safe way to do it — no key is used
-twice, no nonce is reused — and the small cost is that the message travels twice.
+pairwise secret. It is used for one case in the app: commenting on or reacting in somebody's Outpost
+when you are not inside that wall's epoch. The entry names no room and is sealed in your own
+Outpost's chain. Your own devices read the room-key copy, the wall's owner reads the pairwise copy,
+and the two ciphertexts share no key. This is the safe way to do it — no key is used twice, no nonce
+is reused — and the small cost is that the message travels twice. The owner's phone opens the
+pairwise copy only on an entry that names no room and only when it holds a comment or a reaction
+(`Entry.openedByTheWallsOwner`), so the copy cannot carry anything else.
 
 **Assumption named.** Every message in an epoch is sealed under **the same key** with a **random
 96-bit nonce**, which CryptoKit generates per seal. Random nonces under a fixed key are safe up to

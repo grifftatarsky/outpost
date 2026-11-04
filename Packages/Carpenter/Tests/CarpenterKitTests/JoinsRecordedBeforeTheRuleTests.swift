@@ -77,7 +77,7 @@ struct JoinsRecordedBeforeTheRuleTests {
         let joiner = Identity.generate()
         let (_, invitation) = try asTheOldBuildWroteIt(founder: founder, joiner: joiner)
 
-        var author = Author()
+        var author = Author(chain: EpochChain.create(room: room).chain)
         let entries = [
             try author.append(try Payload.roomProfile(name: "Hangar 7"), at: start, room: room),
             try author.append(

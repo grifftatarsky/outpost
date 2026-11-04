@@ -8,23 +8,30 @@ struct Author {
     let device: DeviceKeys
     let certificate: DeviceCertificate
     let chain: EpochChain
+    let writesIn: RoomID?
     private(set) var head: Entry?
     private(set) var roomHeads: [RoomID: EntryHash] = [:]
 
-    init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil) {
+    init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil, writingIn room: RoomID? = nil) {
         identity = Identity.generate()
         device = DeviceKeys.generate()
         certificate = try! DeviceCertificate.recovered(
             for: device.publicKey, by: identity, at: issuedAt)
-        self.chain = chain ?? EpochChain.create(room: RoomID()).chain
+        self.chain = chain ?? EpochChain.create(room: RoomID.outpost(of: identity.id)).chain
+        writesIn = room
+    }
+
+    init(onTheWallOf owner: Author) {
+        self.init(chain: owner.chain, writingIn: owner.chain.room)
     }
 
     var feedKey: FeedKey { FeedKey(author: identity.id, device: device.id) }
 
     mutating func append(
         _ payload: Payload, clock: VectorClock = VectorClock(), at wallTime: Date,
-        room: RoomID? = nil
+        room given: RoomID? = nil
     ) throws -> Entry {
+        let room = given ?? writesIn
         let entry = try Entry.append(
             to: head, author: identity.id, device: device,
             clock: clock.merging(head?.clock ?? VectorClock()),

@@ -52,7 +52,7 @@ struct LogRendererTests {
     @Test("Nobody can edit someone else's words")
     func editsAreAuthorOnly() throws {
         var alice = Author()
-        var mallory = Author(chain: alice.chain)
+        var mallory = Author(onTheWallOf: alice)
         let post = try alice.post("what she said", at: start)
         let forgery = try mallory.append(
             Payload.edit(post.hash, to: "what he wishes she said"), at: start.addingTimeInterval(1))
@@ -75,7 +75,7 @@ struct LogRendererTests {
     @Test("Nobody can withdraw someone else's entry")
     func tombstonesAreAuthorOnly() throws {
         var alice = Author()
-        var mallory = Author(chain: alice.chain)
+        var mallory = Author(onTheWallOf: alice)
         let post = try alice.post("inconvenient", at: start)
         let forgery = try mallory.append(
             Payload.tombstone(post.hash), at: start.addingTimeInterval(1))
@@ -97,8 +97,8 @@ struct LogRendererTests {
     @Test("Anyone may react, and reactions collect by emoji")
     func reactions() throws {
         var alice = Author()
-        var bob = Author(chain: alice.chain)
-        var carol = Author(chain: alice.chain)
+        var bob = Author(onTheWallOf: alice)
+        var carol = Author(onTheWallOf: alice)
         let post = try alice.post("dirigible means steerable", at: start)
 
         let one = try bob.append(
@@ -114,7 +114,7 @@ struct LogRendererTests {
     @Test("A member's second reaction replaces their first")
     func oneReactionPerMember() throws {
         var alice = Author()
-        var bob = Author(chain: alice.chain)
+        var bob = Author(onTheWallOf: alice)
         let post = try alice.post("hydrogen, obviously", at: start)
 
         let first = try bob.append(
@@ -131,7 +131,7 @@ struct LogRendererTests {
     @Test("A reaction with no emoji removes it and leaves no empty bucket")
     func reactionRemoval() throws {
         var alice = Author()
-        var bob = Author(chain: alice.chain)
+        var bob = Author(onTheWallOf: alice)
         let post = try alice.post("helium coward", at: start)
 
         let added = try bob.append(
@@ -184,7 +184,7 @@ struct LogRendererTests {
     @Test("An unknown entry can still be reacted to")
     func reactionsOnUnknownEntries() throws {
         var alice = Author()
-        var bob = Author(chain: alice.chain)
+        var bob = Author(onTheWallOf: alice)
         let poll = Payload(
             type: PayloadType(rawValue: 4_242), version: 1, body: Data([9]), fallbackText: "a poll")
         let entry = try alice.append(poll, at: start)

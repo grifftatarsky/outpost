@@ -155,7 +155,7 @@ struct RoomNoticeTests {
     @Test("The room says who took the invitation back, not who offered it")
     func aWithdrawalNamesWhoeverDidIt() throws {
         let room = RoomID()
-        var alice = Author()
+        var alice = Author(chain: EpochChain.create(room: room).chain)
         var bob = Author(chain: alice.chain)
         let joiner = Identity.generate()
 

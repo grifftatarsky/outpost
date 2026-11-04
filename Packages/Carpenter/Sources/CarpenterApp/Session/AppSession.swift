@@ -625,7 +625,7 @@ public final class AppSession {
     }
 
     func chain(sealing entry: Entry) -> EpochChain? {
-        chains[entry.room ?? outpostRoom(for: entry.author)]
+        chains[entry.sealingRoom]
     }
 
 }

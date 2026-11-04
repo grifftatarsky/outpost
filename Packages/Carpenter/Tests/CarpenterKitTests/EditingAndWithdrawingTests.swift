@@ -8,7 +8,7 @@ import Testing
 struct EditingAndWithdrawingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
-    private func author() -> Author { Author(chain: EpochChain.create(room: RoomID()).chain) }
+    private func author() -> Author { Author() }
 
     private func rendered(_ entries: [Entry], _ chain: EpochChain) -> [RenderedEntry] {
         LogRenderer.render(entries, using: chain)
@@ -109,7 +109,7 @@ struct EditingAndWithdrawingTests {
     @Test("Only the author may rewrite or withdraw their own words")
     func onlyTheAuthor() throws {
         var alice = author()
-        var mallory = Author(chain: alice.chain)
+        var mallory = Author(onTheWallOf: alice)
         let post = try alice.post("alice said this", at: start)
 
         let forgedEdit = try mallory.append(
