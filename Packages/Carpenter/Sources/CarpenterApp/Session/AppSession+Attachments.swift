@@ -296,10 +296,7 @@ extension AppSession {
         for entry in entries { persisted.photosOwed.insert(entry.hash) }
     }
 
-    func collectAttachments(
-        from arrived: [Entry], through mailbox: any MediaMailbox
-    ) async {
-        notePhotosOwed(arrived)
+    func collectAttachments(through mailbox: any MediaMailbox) async {
         let held = entriesByHash
         persisted.photosOwed.formIntersection(held.keys)
         for entry in persisted.photosOwed.compactMap({ held[$0] }) where entry.author != enrolment?.identity.id {

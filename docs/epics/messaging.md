@@ -453,6 +453,13 @@ feels like a messaging app rather than a form.
   room's.
 - **Done.** The reason a send is refused reaches the conversation: the `cannotSend` sentence is shown above
   the composer, with an iCloud symbol, and leads the explanation sheet too.
+- **Built 2026-10-31, not run on the rig.** **A message nobody collected in nine days says so.** When a
+  member of the room did not sign for their copy before it was taken back, the message is
+  `DeliveryState.notCollected`: the plane stays unfilled, the orange circle is raised by the same two
+  signals, and its sheet says the copy was taken back and that their phone asks for it once something
+  newer from this member shows it is missing, in place of "it keeps trying". The message detail lists
+  that person as not collected, and the waiting-on list counts it. A later copy signed for moves it on
+  to collected (`AMessageNobodyCollectedTests`).
 
 <!-- COPY END e9a5dd66 -->
 

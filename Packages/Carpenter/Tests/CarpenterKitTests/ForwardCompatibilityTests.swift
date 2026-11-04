@@ -163,6 +163,9 @@ extension ForwardCompatibilityTests {
         state.restoredWithTheRecoveryKey = true
         state.rekeyBeforeWriting = [RoomID()]
         state.resend = [EntryHash(rawValue: Data(repeating: 0x61, count: 32))]
+        state.entriesOwed = [ParticipantID(rawValue: WideID.of([11])): [EntryHash(rawValue: Data(repeating: 0x65, count: 32))]]
+        state.authorityOwed = [ParticipantID(rawValue: WideID.of([10]))]
+        state.notCollected = [ParticipantID(rawValue: WideID.of([12])): [EntryHash(rawValue: Data(repeating: 0x66, count: 32))]]
         state.claimTimes = [EntryHash(rawValue: Data(repeating: 0x62, count: 32)): stamp.at]
         state.removalsTold = [EntryHash(rawValue: Data(repeating: 0x63, count: 32))]
         state.photosOwed = [EntryHash(rawValue: Data(repeating: 0x64, count: 32))]

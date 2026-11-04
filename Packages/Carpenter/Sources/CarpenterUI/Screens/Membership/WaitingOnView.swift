@@ -54,8 +54,17 @@ public struct WaitingOnView: View {
         // COPY END a5491637
     }
 
+    // COPY BEGIN aa5a62f8 [NEEDS HUMAN REVIEW]
+    private func withTakenBack(_ person: WaitingOnPerson, after holding: Text) -> Text {
+        guard person.takenBack > 0 else { return holding }
+        return Text(
+            "\(holding) Of those, ^[\(person.takenBack) message](inflect: true) went uncollected for ^[\(NotGone.takenBackAfterDays) day](inflect: true), so what was waiting was taken back from your iCloud.",
+            bundle: .module)
+    }
+    // COPY END aa5a62f8
+
     private func detail(_ person: WaitingOnPerson) -> Text {
-        let holding: Text
+        var holding: Text
         // COPY BEGIN f8ad89a0 [NEEDS HUMAN REVIEW]
         switch person.holding {
         case .everything:
@@ -67,6 +76,7 @@ public struct WaitingOnView: View {
         case .notCheckedYet:
             holding = Text("Not checked since the app opened.", bundle: .module)
         }
+        holding = withTakenBack(person, after: holding)
         guard let heard = person.lastHeard else {
             return Text("\(holding) Nothing heard from them yet.", bundle: .module)
         }

@@ -30,6 +30,18 @@ public struct RoomNotGoneChoice: Sendable {
     }
 }
 
+// COPY BEGIN cf606016 [NEEDS HUMAN REVIEW]
+extension NotGone {
+    var takenBackTitle: Text { Text("Not collected", bundle: .module) }
+
+    var takenBackExplanation: Text {
+        Text(
+            "Somebody in this room did not collect it within ^[\(Self.takenBackAfterDays) day](inflect: true), so the copy waiting for them was taken back from your iCloud. Their phone asks for it once something newer from you reaches them and shows this one is missing.",
+            bundle: .module)
+    }
+}
+// COPY END cf606016
+
 struct NotGoneMark: View {
     @Environment(\.palette) private var palette
     @Environment(\.notGoneHelp) private var help
@@ -53,7 +65,7 @@ struct NotGoneMark: View {
         .tappable()
         .padding(-max(0, CarpenterMetrics.hitTarget - box - 2) / 2)
         // COPY BEGIN 019f5faa [NEEDS HUMAN REVIEW]
-        .accessibilityLabel(Text("Not sent yet", bundle: .module))
+        .accessibilityLabel(notGone.wasTakenBack ? notGone.takenBackTitle : Text("Not sent yet", bundle: .module))
         .accessibilityHint(Text("Says why.", bundle: .module))
         // COPY END 019f5faa
         .sheet(
@@ -106,7 +118,7 @@ struct NotGoneExplanation: View {
                             .foregroundStyle(palette.primaryText)
                     }
 
-                    whatHappened
+                    (notGone.wasTakenBack ? notGone.takenBackExplanation : whatHappened)
                         .font(CarpenterFont.bubble)
                         .foregroundStyle(palette.primaryText)
 
@@ -115,12 +127,14 @@ struct NotGoneExplanation: View {
                         .font(CarpenterFont.footnote)
                         .foregroundStyle(palette.secondaryText)
 
-                    Text(
-                        "It keeps trying on its own, every time this app syncs. Nothing you wrote is lost.",
-                        bundle: .module
-                    )
-                    .font(CarpenterFont.footnote)
-                    .foregroundStyle(palette.secondaryText)
+                    if !notGone.wasTakenBack {
+                        Text(
+                            "It keeps trying on its own, every time this app syncs. Nothing you wrote is lost.",
+                            bundle: .module
+                        )
+                        .font(CarpenterFont.footnote)
+                        .foregroundStyle(palette.secondaryText)
+                    }
                     // COPY END cff45cfb
 
                     // COPY BEGIN 938a66e7 [NEEDS HUMAN REVIEW]
@@ -152,7 +166,7 @@ struct NotGoneExplanation: View {
             }
             .background(palette.background)
             // COPY BEGIN a0d648bf [NEEDS HUMAN REVIEW]
-            .navigationTitle(Text("Not sent yet", bundle: .module))
+            .navigationTitle(notGone.wasTakenBack ? notGone.takenBackTitle : Text("Not sent yet", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
