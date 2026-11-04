@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Erasing everything reaches every device the member had", .serialized)
+@Suite("Erasing everything reaches every device the member had", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct DeathmarkTests {
     private struct Household {

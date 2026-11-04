@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Somebody you talk to adding a device is said in the conversation, with its date", .serialized)
+@Suite("Somebody you talk to adding a device is said in the conversation, with its date", .serialized, .timeLimit(.minutes(10)))
 struct DeviceAddedNoticeTests {
     private func addedDevices(_ session: AppSession, _ room: RoomID) -> [(ParticipantID, Date)] {
         session.transcript(in: room).compactMap { item in
@@ -44,7 +44,7 @@ struct DeviceAddedNoticeTests {
         bobsSecond.syncDevices(through: InMemoryEntrySync(relay: relay))
         await bobsSecond.load()
         try await bob.approveNewDevice(bobsSecond)
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while bob.devices.count < 2, Date() < deadline {
             await bob.refreshDeviceSync()
             await bobsSecond.refreshDeviceSync()

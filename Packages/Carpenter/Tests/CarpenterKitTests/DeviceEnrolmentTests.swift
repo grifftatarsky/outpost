@@ -5,11 +5,11 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Device enrolment", .serialized)
+@Suite("Device enrolment", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct DeviceEnrolmentTests {
     private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while Date() < deadline {
             if condition() { return }
             await session.refreshDeviceSync()
@@ -225,7 +225,7 @@ struct DeviceEnrolmentTests {
 
         var relaunched = TestSession.make(keychain: secondKeychain, at: directory)
         await relaunched.load()
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = TestDeadline.fromNow
         while !arrived(relaunched), Date() < deadline {
             try? await Task.sleep(for: .milliseconds(50))
             relaunched = TestSession.make(keychain: secondKeychain, at: directory)

@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What a repair request says is held to a size")
+@Suite("What a repair request says is held to a size", .timeLimit(.minutes(10)))
 struct ARepairRequestIsBoundedTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -100,7 +100,7 @@ struct ARepairRequestIsBoundedTests {
 }
 
 @MainActor
-@Suite("A request for history costs what the person asking is owed", .serialized)
+@Suite("A request for history costs what the person asking is owed", .serialized, .timeLimit(.minutes(10)))
 struct WhatARepairRequestCanCostTests {
     private func ask(
         _ requests: [RepairRequest], from sender: AppSession, to receiver: AppSession,
@@ -337,7 +337,7 @@ struct WhatARepairRequestCanCostTests {
 }
 
 @MainActor
-@Suite("A hold follows the person, not the reason they give", .serialized)
+@Suite("A hold follows the person, not the reason they give", .serialized, .timeLimit(.minutes(10)))
 struct AHoldFollowsThePersonTests {
     private struct Restored {
         let peer: AppSession

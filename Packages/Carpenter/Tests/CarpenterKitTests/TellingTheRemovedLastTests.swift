@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A removed person hears last, and an answer they write after hearing lands after the removal everywhere", .serialized)
+@Suite("A removed person hears last, and an answer they write after hearing lands after the removal everywhere", .serialized, .timeLimit(.minutes(10)))
 struct TellingTheRemovedLastTests {
     @Test("The remover writes nothing to the removed person until another member has read the removal or every space holds it")
     func theRemovedHearLast() async throws {
@@ -158,7 +158,7 @@ struct TellingTheRemovedLastTests {
 }
 
 @MainActor
-@Suite("Another member's note decides a removal race, and lets the removed person be told", .serialized)
+@Suite("Another member's note decides a removal race, and lets the removed person be told", .serialized, .timeLimit(.minutes(10)))
 struct ASecondMembersNoteTests {
     @Test("The removed person is told once another member has read the removal, though a member cannot be reached")
     func toldOnceAnotherMemberHasReadIt() async throws {
@@ -242,7 +242,7 @@ struct ASecondMembersNoteTests {
     }
 }
 
-@Suite("When a phone could first read what it was sent")
+@Suite("When a phone could first read what it was sent", .timeLimit(.minutes(10)))
 struct WhenAPhoneCouldReadItTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Who can tell your phone where to read somebody", .serialized)
+@Suite("Who can tell your phone where to read somebody", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct WhoCanTellYouWhereToReadSomebodyTests {
     @MainActor
@@ -56,7 +56,7 @@ struct WhoCanTellYouWhereToReadSomebodyTests {
         thief.syncDevices(through: InMemoryEntrySync(relay: relay))
         await thief.load()
         try await phone.approveNewDevice(thief)
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while thief.rooms.isEmpty, Date() < deadline {
             await phone.refreshDeviceSync()
             await phone.settleDeviceSync()

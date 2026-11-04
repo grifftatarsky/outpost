@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Settings changed on another of your devices", .serialized)
+@Suite("Settings changed on another of your devices", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct SettingsFromAnotherDeviceTests {
     private func twoDevices() async throws -> (first: AppSession, second: AppSession, clock: TestClock) {

@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("The device list tells the truth", .serialized)
+@Suite("The device list tells the truth", .serialized, .timeLimit(.minutes(10)))
 struct TheDeviceListTellsTheTruthTests {
     @Test("The founding device says when it was made, not that it was always here")
     func theFoundingDeviceSaysWhenItWasMade() async throws {
@@ -110,7 +110,7 @@ struct TheDeviceListTellsTheTruthTests {
         try await first.approveNewDevice(second)
         let sibling = try #require(second.enrolment?.device.id)
 
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while first.devices.count < 2 || second.devices.count < 2, Date() < deadline {
             await first.refreshDeviceSync()
             await second.refreshDeviceSync()

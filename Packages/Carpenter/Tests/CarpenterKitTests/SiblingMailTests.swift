@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("What goes to iCloud for your other devices", .serialized)
+@Suite("What goes to iCloud for your other devices", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct SiblingMailTests {
     private struct Devices {
@@ -162,7 +162,7 @@ struct SiblingMailTests {
             await relay.names(from: device).allSatisfy { $0.isKeptForGood },
             "mail nobody collected for a month is still in iCloud")
 
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while Date() < deadline, away.messages(in: room).count < 4 {
             await away.refreshDeviceSync()
             await away.settleDeviceSync()

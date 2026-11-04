@@ -102,7 +102,9 @@ The suites that a search for clocks, sleeps and concurrent code found, 34 suites
 including all six, then ran alone ten times at load averages from 230 down to 15, and passed every
 time. So none of them is flaky by interleaving that ten runs could find. They are flaky under load,
 and the cost tests measure the machine as much as the code. A cost test that counts something
-(`projectionBuilds`, decryptions) does not have this problem; one that times something does.
+(`projectionBuilds`, decryptions) does not have this problem; one that times something does. The
+tests that time themselves carry the tag `timing`, and the device-sync deadlines are a minute now;
+see [waiting in a test](#waiting-in-a-test).
 
 <!-- COPY END 8a4d142d -->
 
@@ -244,6 +246,21 @@ seconds for the plain suite, on eight cores; a standard hosted macOS runner has 
 too slow to wait for on every push, and affordable once a week.
 
 <!-- COPY END a322ce24 -->
+
+<!-- COPY BEGIN 894dca3c [NEEDS HUMAN REVIEW] -->
+
+## Waiting in a test
+
+A test that waits for device sync or a background task waits for a condition, up to
+`TestDeadline.seconds`, which is a minute. It was five seconds in most places until 2026-11-04, and
+under load the five seconds ran out before the work did. A test that passes stops waiting the moment
+its condition holds, so the longer deadline costs nothing then: after the change no test in a full
+run took longer than it had in proportion to the others, so none sits out the minute. The 33 suites
+that wait carry `.timeLimit(.minutes(10))`, so a test that hangs fails instead of holding the run.
+Ten minutes is generous on purpose: at a load average near 1,000 the slowest test took five, almost
+all of it waiting for its turn on the main actor, and a time limit counts that too.
+
+<!-- COPY END 894dca3c -->
 
 <!-- COPY BEGIN 64f99f8f [NEEDS HUMAN REVIEW] -->
 

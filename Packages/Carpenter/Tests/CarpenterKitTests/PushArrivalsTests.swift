@@ -4,7 +4,7 @@ import UserNotifications
 
 @testable import CarpenterApp
 
-@Suite("A push sets off a sync")
+@Suite("A push sets off a sync", .timeLimit(.minutes(10)))
 @MainActor
 struct PushArrivalsTests {
     @Test("An arriving push runs the registered sync")

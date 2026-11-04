@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterApp
 
 extension AppSession {
-    func approveNewDevice(_ newDevice: AppSession, timeout: TimeInterval = 5) async throws {
+    func approveNewDevice(_ newDevice: AppSession, timeout: TimeInterval = TestDeadline.seconds) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         if newDevice.state == .checkingForRegistration {
             newDevice.checkAccount(with: StubAccountRegistry(hasMember: true))

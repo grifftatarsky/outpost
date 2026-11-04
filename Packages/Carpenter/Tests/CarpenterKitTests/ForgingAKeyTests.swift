@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("A room key counts only when a device that counted signed it")
+@Suite("A room key counts only when a device that counted signed it", .timeLimit(.minutes(10)))
 struct SigningARoomKeyTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let member = Identity.generate()
@@ -67,7 +67,7 @@ struct SigningARoomKeyTests {
     }
 }
 
-@Suite("A removed device cannot hand a friend a room key", .serialized)
+@Suite("A removed device cannot hand a friend a room key", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct ARemovedDeviceCannotHandOutKeysTests {
     @Test("A key a removed device writes for a friend after its removal is refused, and the friend keeps writing under the real one")
@@ -133,7 +133,7 @@ struct ARemovedDeviceCannotHandOutKeysTests {
     }
 }
 
-@Suite("A removed device cannot pass anything to the member's other devices", .serialized)
+@Suite("A removed device cannot pass anything to the member's other devices", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct ARemovedDeviceCannotWriteToSiblingsTests {
     @Test("A record in another device's name, or in its own after its removal, carries no room key or setting in")

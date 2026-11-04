@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterApp
 @testable import CarpenterKit
 
-@Suite("Which devices count as the member's")
+@Suite("Which devices count as the member's", .timeLimit(.minutes(10)))
 struct DeviceApprovalTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let identity = Identity.generate()
@@ -187,7 +187,7 @@ struct DeviceApprovalTests {
     }
 }
 
-@Suite("Approving a device, across two of the member's devices", .serialized)
+@Suite("Approving a device, across two of the member's devices", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct ApprovingADeviceTests {
     @Test("Restoring with the recovery key on a new device removes the member's other devices, and they erase themselves")

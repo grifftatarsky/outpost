@@ -486,9 +486,10 @@ on 2026-09-26 and none remain, but nothing stops one coming back.
 **Six tests hold a wall-clock bound and fail when the machine is busy.** `WhatIsUnsentTests` failed
 once under a full run on 2026-09-28, and on 2026-11-04, at a load average near 1,000, it failed with
 two `ProjectionCostTests`, `WhatALaunchWritesTests`, and two device-sync tests whose five-second
-deadline ran out. All six passed ten runs out of ten once the load fell. A timing bound measured while
-2,000 other tests run is a guess about the machine's load; see
-[how the suite holds up](testing.md#how-the-package-suite-holds-up-measured-2026-11-04).
+deadline ran out. All six passed ten runs out of ten once the load fell. The device-sync deadlines are
+a minute now. The fifteen tests that time themselves are tagged `timing` and still hold their bounds
+in wall-clock time; a timing bound measured while 2,000 other tests run is a guess about the
+machine's load. See [how the suite holds up](testing.md#how-the-package-suite-holds-up-measured-2026-11-04).
 
 <!-- COPY END 12295e6f -->
 

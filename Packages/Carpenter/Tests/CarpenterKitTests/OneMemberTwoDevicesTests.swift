@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("A member with two devices", .serialized)
+@Suite("A member with two devices", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct OneMemberTwoDevicesTests {
     @Test("A message from somebody else reaches both of the member's devices")

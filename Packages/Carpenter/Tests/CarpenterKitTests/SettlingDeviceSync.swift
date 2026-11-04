@@ -4,7 +4,7 @@ import Foundation
 
 extension AppSession {
     func settleDeviceSync(until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while !condition(), Date() < deadline {
             await refreshDeviceSync()
             try? await Task.sleep(for: .milliseconds(25))
@@ -12,7 +12,7 @@ extension AppSession {
     }
 
     func settleDeviceSync() async {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         var quiet = 0
         while quiet < 4, Date() < deadline {
             await refreshDeviceSync()

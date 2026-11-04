@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Being told that somebody came back", .serialized)
+@Suite("Being told that somebody came back", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct BeingToldAboutARestoreTests {
     private struct Rig {
@@ -222,7 +222,7 @@ struct BeingToldAboutARestoreTests {
     }
 }
 
-@Suite("Holding history until the person asked has checked", .serialized)
+@Suite("Holding history until the person asked has checked", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct HoldingHistoryForARestoreTests {
     private struct Rig {
@@ -408,7 +408,7 @@ struct HoldingHistoryForARestoreTests {
     }
 }
 
-@Suite("Choosing not to ask anybody for your history", .serialized)
+@Suite("Choosing not to ask anybody for your history", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct NotAskingForHistoryTests {
     private struct Rig {

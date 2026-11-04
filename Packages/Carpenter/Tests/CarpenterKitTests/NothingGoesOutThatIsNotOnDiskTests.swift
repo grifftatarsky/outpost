@@ -34,7 +34,7 @@ private actor HeldLogStore: LogStore {
     }
 }
 
-@Suite("A member's own entry exists only once it is on disk", .serialized)
+@Suite("A member's own entry exists only once it is on disk", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct OwnEntriesReachTheDiskFirstTests {
     private func directory() -> URL {
@@ -67,7 +67,7 @@ struct OwnEntriesReachTheDiskFirstTests {
     }
 
     private func waitUntil(_ condition: () async -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while !(await condition()), Date() < deadline { await Task.yield() }
     }
 
@@ -219,7 +219,7 @@ struct OwnEntriesReachTheDiskFirstTests {
     }
 }
 
-@Suite("Nothing is acknowledged that is not on disk", .serialized)
+@Suite("Nothing is acknowledged that is not on disk", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct AcknowledgedMeansOnDiskTests {
     private struct Room {

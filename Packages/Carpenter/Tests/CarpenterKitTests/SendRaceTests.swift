@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("A message typed mid-sync", .serialized)
+@Suite("A message typed mid-sync", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct SendRaceTests {
     private func scratch() -> URL {
