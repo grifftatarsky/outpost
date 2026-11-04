@@ -50,10 +50,22 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public static let mostDevices = 256
 
+    public static let mostApprovalsByOneDevice = 16
+
+    public static let mostRemovalsByOneDevice = 16
+
+    private enum Place: Hashable, Sendable {
+        case root
+        case signed(by: DeviceID, lineage: DeviceID?)
+        case unproven
+    }
+
     public let identity: IdentityPublicKeys
 
     private var submitted: [DeviceID: DeviceCertificate] = [:]
     private var revocations: Set<DeviceRevocation> = []
+    private var certificatePlaces: [DeviceID: Place] = [:]
+    private var removalPlaces: [Data: Place] = [:]
     private var stored: [Data: Date] = [:]
     private var standings: [DeviceID: Standing] = [:]
     private var windows: [DeviceID: Authority] = [:]
@@ -112,7 +124,10 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public mutating func admit(_ certificate: DeviceCertificate, storedAt: Date) throws {
         try certificate.verify(against: identity)
-        guard submitted[certificate.device] != nil || submitted.count < Self.mostDevices else { return }
+        if submitted[certificate.device] == nil {
+            guard let place = place(for: certificate, storedAt: storedAt) else { return }
+            certificatePlaces[certificate.device] = place
+        }
         note(certificate.digest, storedAt)
 
         if let existing = submitted[certificate.device] {
@@ -138,9 +153,12 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public mutating func revoke(_ revocation: DeviceRevocation, storedAt: Date) throws {
         try revocation.verify(against: identity)
-        guard revocation.revokedBy != nil else { throw CryptoError.notAuthorized }
+        guard let remover = revocation.revokedBy else { throw CryptoError.notAuthorized }
         guard submitted[revocation.device] != nil else { throw CryptoError.unknownDevice }
-        guard revocations.contains(revocation) || revocations.count < Self.mostDevices else { return }
+        if !revocations.contains(revocation) {
+            guard let place = place(for: revocation, by: remover, storedAt: storedAt) else { return }
+            removalPlaces[revocation.digest] = place
+        }
         note(revocation.digest, storedAt)
         revocations.insert(revocation)
         recompute()
@@ -148,6 +166,48 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     mutating func revoke(_ revocation: DeviceRevocation) throws {
         try revoke(revocation, storedAt: revocation.revokedAt)
+    }
+
+    private var newestRoot: DeviceID? {
+        submitted.values.filter(\.isRecovery).max {
+            $0.issuedAt != $1.issuedAt
+                ? $0.issuedAt < $1.issuedAt : $0.digest.lexicographicallyPrecedes($1.digest)
+        }?.device
+    }
+
+    private func place(for certificate: DeviceCertificate, storedAt: Date) -> Place? {
+        if certificate.isRecovery {
+            return certificatePlaces.values.count(where: { $0 == .root }) < Self.mostDevices ? .root : nil
+        }
+        if let approver = certificate.approvedBy, counts(approver, storedAt: storedAt),
+            let key = submitted[approver]?.devicePublicKey, certificate.isApproved(byKey: key)
+        {
+            let lineage = newestRoot
+            let byApprover = certificatePlaces.values.count {
+                if case .signed(by: approver, _) = $0 { return true }
+                return false
+            }
+            let inLineage = certificatePlaces.values.count {
+                if case .signed(_, lineage: lineage) = $0 { return true }
+                return false
+            }
+            guard byApprover < Self.mostApprovalsByOneDevice, inLineage < Self.mostDevices else { return nil }
+            return .signed(by: approver, lineage: lineage)
+        }
+        return certificatePlaces.values.count(where: { $0 == .unproven }) < Self.mostDevices ? .unproven : nil
+    }
+
+    private func place(for revocation: DeviceRevocation, by remover: DeviceID, storedAt: Date) -> Place? {
+        if counts(remover, storedAt: storedAt), let key = submitted[remover]?.devicePublicKey,
+            revocation.isSigned(byKey: key)
+        {
+            let byRemover = removalPlaces.values.count {
+                if case .signed(by: remover, _) = $0 { return true }
+                return false
+            }
+            return byRemover < Self.mostRemovalsByOneDevice ? .signed(by: remover, lineage: nil) : nil
+        }
+        return removalPlaces.values.count(where: { $0 == .unproven }) < Self.mostDevices ? .unproven : nil
     }
 
     public func standing(of device: DeviceID) -> Standing? {

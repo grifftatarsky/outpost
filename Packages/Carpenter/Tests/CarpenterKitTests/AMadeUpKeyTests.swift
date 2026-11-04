@@ -145,12 +145,18 @@ extension RoomOfThree {
     fileprivate func hand(_ key: TrustedKey, from giver: AppSession, to receiver: AppSession) async throws {
         let giverID = try #require(giver.enrolment?.identity.id)
         let receiverID = try #require(receiver.enrolment?.identity.id)
+        for certificate in receiver.replica.registry(for: receiverID)?.certificates ?? [] {
+            try giver.replica.admit(certificate, storedAt: giver.clock.now)
+        }
         let devices = giver.deviceRecipients(of: receiverID)
         try #require(!devices.isEmpty, "precondition: the giver can seal a key to the receiver's phone")
         let grant = try EpochGrant.issue(
             key.secret, at: key.epoch, in: room, link: key.link,
             to: try #require(giver.pairwiseSecret(with: receiverID)), devices: devices
         ).signed(by: try #require(giver.enrolment?.device), from: giverID, to: receiverID)
+        for certificate in giver.replica.registry(for: giverID)?.certificates ?? [] {
+            try receiver.replica.admit(certificate, storedAt: receiver.clock.now)
+        }
         let secret = try #require(receiver.pairwiseSecret(with: giverID))
         try await receiver.adopt(grant, from: Peer(secret: secret, them: giverID, me: receiverID), storedAt: .distantFuture)
     }

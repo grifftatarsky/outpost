@@ -101,7 +101,8 @@ struct APacketOfStrangersTests {
                     from: ParticipantID(rawValue: Data()))
             ])
 
-        SyncSession.integrate(collected, into: &replica)
+        let everybody = WhoToMeet(known: Set(identities.map(\.participantID)), rooms: [], newcomers: 0)
+        SyncSession.integrate(collected, into: &replica, meeting: everybody)
 
         #expect(replica.knownParticipants.count == SyncSession.mostIdentitiesInAPacket)
     }

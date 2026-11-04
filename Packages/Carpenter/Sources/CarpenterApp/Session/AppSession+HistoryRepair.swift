@@ -8,11 +8,21 @@ extension AppSession {
     // MARK: History repair
 
     public func missingHistory(in room: RoomID) -> [FeedGap] {
-        holes(from: membersToCheck(in: room))
+        holes(from: membersToCheck(in: room), in: room)
     }
 
-    private func holes(from authors: Set<ParticipantID>) -> [FeedGap] {
-        replica.gaps(from: authors).subtracting(persisted.unverifiable).subtracting(persisted.elsewhere)
+    private func holes(from authors: Set<ParticipantID>, in room: RoomID) -> [FeedGap] {
+        replica.gaps(from: authors).subtracting(persisted.unverifiable)
+            .subtracting(saidElsewhereByEverybody(in: room))
+    }
+
+    private func saidElsewhereByEverybody(in room: RoomID) -> [FeedGap] {
+        let others = roster(of: room).members.subtracting([enrolment?.identity.id].compactMap(\.self))
+        guard !others.isEmpty else { return [] }
+        return others.reduce(nil) { (agreed: [FeedGap]?, person) in
+            let said = persisted.saidElsewhere[person] ?? []
+            return agreed.map { said.intersecting($0) } ?? said
+        } ?? []
     }
 
     private func membersToCheck(in room: RoomID) -> Set<ParticipantID> {
@@ -40,7 +50,7 @@ extension AppSession {
         let request = RepairRequest(
             authors: authors.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
             heads: replica.heads(of: authors),
-            gaps: holes(from: authors),
+            gaps: holes(from: authors, in: room),
             room: room, reason: reason)
         persisted.repairs.removeAll { $0.room == room }
         persisted.repairs.append(
@@ -169,9 +179,9 @@ extension AppSession {
         guard let repair = persisted.repairs.first(where: { $0.room == room && !$0.quiet })
         else { return nil }
         let authors = Set(repair.request.authors)
-        let named = holes(from: authors).intersecting(repair.request.gaps)
+        let named = holes(from: authors, in: room).intersecting(repair.request.gaps)
         let refused = persisted.unverifiable.stillMissing(of: repair.request.gaps)
-        let notForThisMember = persisted.elsewhere.stillMissing(of: repair.request.gaps)
+        let notForThisMember = saidElsewhereByEverybody(in: room).stillMissing(of: repair.request.gaps)
         let answered = repair.asked.filter { repair.answers[$0] != nil }
         let waiting = repair.asked.filter { repair.answers[$0] == nil }
         let answers = answered.compactMap { repair.answers[$0] }
@@ -216,7 +226,7 @@ extension AppSession {
             let request = RepairRequest(
                 id: repair.request.id, authors: repair.request.authors,
                 heads: replica.heads(of: authors),
-                gaps: holes(from: authors),
+                gaps: holes(from: authors, in: repair.room),
                 room: repair.request.room, wallOf: repair.request.wallOf,
                 reason: repair.request.reason)
             do {
@@ -254,7 +264,7 @@ extension AppSession {
             let entries = fill.entries.filter {
                 $0.seq <= persisted.syncedFrontier[$0.feedKey] && !justSent.contains($0.hash)
             }
-            let (fitting, bytes) = Self.prefix(of: entries, within: allowance)
+            let fitting = Self.prefix(of: entries, within: allowance)
             let answer = RepairAnswer(
                 request: duty.request.id, unheld: fill.unheld,
                 heads: replica.heads(of: Set(duty.request.authors)), elsewhere: fill.elsewhere)
@@ -265,7 +275,7 @@ extension AppSession {
                     identities: knownIdentities(), withholding: withheld)
                 noteWritten(sent)
                 report = report.adding(sent)
-                spendRepairBytes(bytes, on: duty.from)
+                spendRepairBytes(sent.bytesWritten, on: duty.from)
                 guard sent.sendFailure == nil else { continue }
                 if fitting.count < entries.count {
                     carryOn(duty, past: fitting)
@@ -370,7 +380,7 @@ extension AppSession {
         persisted.repairSpend[person] = RepairSpend(day: day, bytes: before + max(bytes, Self.leastAnAnswerCosts))
     }
 
-    private static func prefix(of entries: [Entry], within allowance: Int) -> (entries: [Entry], bytes: Int) {
+    private static func prefix(of entries: [Entry], within allowance: Int) -> [Entry] {
         var total = 0
         var count = 0
         for bytes in SyncSession.bytes(of: entries) {
@@ -378,7 +388,7 @@ extension AppSession {
             total += bytes
             count += 1
         }
-        return (Array(entries.prefix(count)), total)
+        return Array(entries.prefix(count))
     }
 
     private func carryOn(_ duty: RepairDuty, past sent: [Entry]) {

@@ -2,6 +2,7 @@ import Foundation
 
 public struct SyncReport: Hashable, Sendable {
     public var packetsWritten: Int = 0
+    public var bytesWritten: Int = 0
     public var packetsFetched: Int = 0
     public var entriesSent: Int = 0
     public var entriesReceived: Int = 0
@@ -17,6 +18,8 @@ public struct SyncReport: Hashable, Sendable {
     public var forksFound: Int = 0
 
     public var credentialsRejected: Int = 0
+
+    public var newcomersMet: Int = 0
 
     public var refusals: [Refusal] = []
 
@@ -129,6 +132,7 @@ public struct SyncReport: Hashable, Sendable {
     public func adding(_ other: SyncReport) -> SyncReport {
         var merged = self
         merged.packetsWritten += other.packetsWritten
+        merged.bytesWritten += other.bytesWritten
         merged.packetsFetched += other.packetsFetched
         merged.entriesSent += other.entriesSent
         merged.entriesReceived += other.entriesReceived
@@ -138,6 +142,7 @@ public struct SyncReport: Hashable, Sendable {
         merged.entriesDelivered += other.entriesDelivered
         merged.entriesAlreadyPresent += other.entriesAlreadyPresent
         merged.credentialsRejected += other.credentialsRejected
+        merged.newcomersMet += other.newcomersMet
         merged.refusals.append(contentsOf: other.refusals)
         merged.forksFound += other.forksFound
         merged.bellsRung += other.bellsRung
@@ -161,6 +166,20 @@ public struct SyncReport: Hashable, Sendable {
             || !repairRequests.isEmpty || !repairAnswers.isEmpty || !confirmations.isEmpty || !photoAsks.isEmpty
             || !addresses.isEmpty
     }
+}
+
+public struct WhoToMeet: Hashable, Sendable {
+    public let known: Set<ParticipantID>
+    public let rooms: Set<RoomID>
+    public let newcomers: Int
+
+    public init(known: Set<ParticipantID>, rooms: Set<RoomID>, newcomers: Int) {
+        self.known = known
+        self.rooms = rooms
+        self.newcomers = Swift.max(0, newcomers)
+    }
+
+    public static let nobody = WhoToMeet(known: [], rooms: [], newcomers: 0)
 }
 
 public struct SyncSession: Sendable {
@@ -306,6 +325,7 @@ public struct SyncSession: Sendable {
                 }
                 reached.insert(peer.them)
                 report.packetsWritten += 1
+                report.bytesWritten += MailboxRules.weigh(PacketWire.fields(of: packet))
                 report.entriesSent += planned.entries.count
                 report.written.append(
                     SyncReport.WrittenPacket(
@@ -472,7 +492,8 @@ public struct SyncSession: Sendable {
     @discardableResult
     public static func integrate(
         _ collected: CollectedPackets, into replica: inout Replica,
-        checked: SignatureChecks = SignatureChecks(), sparing member: ParticipantID? = nil
+        checked: SignatureChecks = SignatureChecks(), sparing member: ParticipantID? = nil,
+        meeting: WhoToMeet = .nobody
     ) -> (report: SyncReport, settled: Set<PacketID>) {
         var report = SyncReport()
         report.packetsFetched = collected.packets.count
@@ -490,10 +511,10 @@ public struct SyncSession: Sendable {
             report.addresses.append(
                 contentsOf: delivery.addresses.map { SyncReport.ReceivedAddress(announcement: $0, storedAt: packet.storedAt) })
 
-            introduceTheAuthors(of: delivery, into: &replica)
+            introduce(meeting, writingIn: delivery, into: &replica, newcomers: &report.newcomersMet)
 
             var rejected = 0
-            for certificate in delivery.certificates.prefix(mostCredentialsInAPacket)
+            for certificate in Array(delivery.certificates.prefix(mostCredentialsInAPacket)).approversFirst
             where replica.registry(for: certificate.participant) != nil {
                 do { try replica.admit(certificate, storedAt: packet.storedAt) } catch {
                     rejected += 1
@@ -519,7 +540,10 @@ public struct SyncSession: Sendable {
             var entriesRejected = 0
             var refusedForever = 0
             report.entriesDelivered += delivery.entries.count
-            for (entry, outcome) in replica.integrate(delivery.entries, checked: checked) {
+            let wanted = delivery.entries.filter {
+                replica.registry(for: $0.author) != nil || $0.room.map(meeting.rooms.contains) == true
+            }
+            for (entry, outcome) in replica.integrate(wanted, checked: checked) {
                 do {
                     let result = try outcome.get()
                     switch result {
@@ -552,12 +576,20 @@ public struct SyncSession: Sendable {
         return (report, settled)
     }
 
-    private static func introduceTheAuthors(of delivery: SyncEngine.Delivery, into replica: inout Replica) {
+    private static func introduce(
+        _ meeting: WhoToMeet, writingIn delivery: SyncEngine.Delivery, into replica: inout Replica,
+        newcomers: inout Int
+    ) {
         let authors = Set(delivery.entries.map(\.author))
+        let inOurRooms = Set(delivery.entries.filter { $0.room.map(meeting.rooms.contains) ?? false }.map(\.author))
         var met = 0
         for identity in delivery.identities where met < mostIdentitiesInAPacket {
             let person = identity.participantID
             guard authors.contains(person), replica.registry(for: person) == nil else { continue }
+            if !meeting.known.contains(person) {
+                guard inOurRooms.contains(person), newcomers < meeting.newcomers else { continue }
+                newcomers += 1
+            }
             replica.introduce(identity)
             met += 1
         }
@@ -585,14 +617,15 @@ public struct SyncSession: Sendable {
     }
 
     public func receive(
-        as peer: Peer, into replica: inout Replica, at instant: Date? = nil,
+        as peer: Peer, into replica: inout Replica, meeting: WhoToMeet = .nobody, at instant: Date? = nil,
         signing receipt: (@Sendable (PacketID, RecipientTag) throws -> SealedReceipt)? = nil,
         alreadyTaken: @Sendable (SyncPacket) -> Bool = { _ in false }
     ) async throws -> SyncReport {
         let collected = try await collect(as: peer, at: instant, alreadyTaken: alreadyTaken)
         let checked = await replica.signatureChecks(
             for: collected.entries, alsoTrusting: collected.certificates)
-        let (report, settled) = Self.integrate(collected, into: &replica, checked: checked, sparing: peer.me)
+        let (report, settled) = Self.integrate(
+            collected, into: &replica, checked: checked, sparing: peer.me, meeting: meeting)
         if let receipt { try await acknowledge(collected, settled, signing: receipt) }
         return report
     }

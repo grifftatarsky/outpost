@@ -240,3 +240,33 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
             revokerSignature, for: signingPayload, publicKey: revokerPublicKey)) == true
     }
 }
+
+extension Array where Element == DeviceCertificate {
+    public var approversFirst: [DeviceCertificate] {
+        let approverOf = Dictionary(map { ($0.device, $0.approvedBy) }, uniquingKeysWith: { first, _ in first })
+        var depth: [DeviceID: Int] = [:]
+        func depthOf(_ device: DeviceID) -> Int {
+            if let known = depth[device] { return known }
+            var chain: [DeviceID] = []
+            var seen: Set<DeviceID> = []
+            var current = device
+            while depth[current] == nil, seen.insert(current).inserted,
+                let approver = approverOf[current] ?? nil, approverOf[approver] != nil
+            {
+                chain.append(current)
+                current = approver
+            }
+            var reached = depth[current] ?? 0
+            depth[current] = reached
+            for link in chain.reversed() {
+                reached += 1
+                depth[link] = reached
+            }
+            return depth[device] ?? 0
+        }
+        return enumerated()
+            .map { (index: $0.offset, depth: depthOf($0.element.device), certificate: $0.element) }
+            .sorted { $0.depth != $1.depth ? $0.depth < $1.depth : $0.index < $1.index }
+            .map(\.certificate)
+    }
+}

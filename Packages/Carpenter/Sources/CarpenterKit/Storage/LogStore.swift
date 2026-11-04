@@ -130,8 +130,10 @@ public actor FileLogStore: LogStore {
         let size = try fileManager.attributesOfItem(atPath: url.path)[.size] as? UInt64
         guard size != wholeThrough, let data = try contents() else { return }
 
-        if Framing(of: data, maximumRecordBytes: maximumRecordBytes).isWhole(data) {
-            wholeThrough = size
+        let known = wholeThrough.flatMap { $0 < data.count ? Int($0) : nil } ?? 0
+        let tail = Framing(of: data, from: known, maximumRecordBytes: maximumRecordBytes)
+        if tail.isWhole(data), !Self.decoded(tail.records[...], of: data).contains(nil) {
+            wholeThrough = UInt64(data.count)
         } else {
             try rewrite(keeping: try readAll().entries)
         }
@@ -140,7 +142,10 @@ public actor FileLogStore: LogStore {
     public func loadAll() async throws -> LoadedLog {
         guard let data = try contents() else { return .empty }
         let framing = Framing(of: data, maximumRecordBytes: maximumRecordBytes)
-        return framing.loaded(await framing.records.inParallel { lane in Self.decoded(lane, of: data) }, from: data)
+        let loaded = framing.loaded(
+            await framing.records.inParallel { lane in Self.decoded(lane, of: data) }, from: data)
+        if !loaded.isDamaged, loaded.termination == .complete { wholeThrough = UInt64(data.count) }
+        return loaded
     }
 
     private func readAll() throws -> LoadedLog {
@@ -166,8 +171,9 @@ public actor FileLogStore: LogStore {
         private var end = 0
         private let maximumRecordBytes: Int
 
-        init(of data: Data, maximumRecordBytes: Int) {
+        init(of data: Data, from start: Int = 0, maximumRecordBytes: Int) {
             self.maximumRecordBytes = maximumRecordBytes
+            end = start
             while let record = record(at: end, in: data) {
                 records.append(record)
                 end = record.upperBound

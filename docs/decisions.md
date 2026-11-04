@@ -560,17 +560,28 @@ keeps a request only for a room whose list shows the asker as in or being let in
 own Outpost if the asker reads it. An answer carries only entries from rooms the asker is in. Authors,
 gaps and spans past `RepairRequest.mostAuthors`, `mostGaps` and `mostSpans` are dropped, and a request
 is answered at most once however often its packet is collected. Each person has
-`AppSession.repairBytesPerPersonPerDay` (16 MB) a day, every answer costs at least four kilobytes, and an
-answer that runs out stops there, keeps its duty, and carries on from where it stopped the next day.
+`AppSession.repairBytesPerPersonPerDay` (16 MB) a day, and an answer that runs out stops there, keeps its
+duty, and carries on from where it stopped the next day. An answer costs what its packets wrote
+(`SyncReport.bytesWritten`, weighed as the mailbox weighs a record), and at least four kilobytes. Until
+2026-11-04 it cost only the entries it carried, so an answer that named back every made-up span of a
+request, with its certificates and keys, wrote 74 KB and was charged 4 KB, and the daily limit was
+really about 300 MB. The entries are chosen to fit what is left before the answer is written, so the
+last answer of a day can go over by what it carries besides entries; the next one waits for the next
+day.
 
 A feed runs across all of an author's rooms, so an asker can name a position in a room they are not in.
-The answer names those back in `elsewhere`, and the asker stops counting them as missing
-(`persisted.elsewhere`), or a late joiner would ask about them every hour for ever.
+The answer names those back in `elsewhere`, and the asker keeps what each person said
+(`persisted.saidElsewhere`, keyed by who answered). A position stops counting as missing in a room only
+when every other member of that room has said it is elsewhere, or a late joiner would ask about it every
+hour for ever. Until 2026-11-04 one answer from anybody settled it for every room: a person outside a
+room, answering a repair for another room, made the asker stop looking for that room's missing
+message, and a member running a modified app could hide any hole.
 
 **Cost:** a long history takes days to come back from one person. A contact can fill up to about 144
-MB of a member's iCloud, sixteen a day for the nine days a packet waits. A contact can also claim a
-position is `elsewhere` when it is not; the asker then stops asking about it, though anything another
-person sends still lands. An invited person who has not been let in can be sent the room's sealed
+MB of a member's iCloud, sixteen a day for the nine days a packet waits. A position every member of a
+room calls `elsewhere` is not asked about again, which is only wrong if every one of them is lying. A
+member who has not answered keeps a position counted as missing, so the history check can show a
+hole for a room the member is not in until everybody has answered. An invited person who has not been let in can be sent the room's sealed
 history, which they cannot open without a key.
 
 **What would change it:** a feed per room, so a position always belongs to one room.
@@ -614,8 +625,9 @@ receiving replica introduces only the authors of entries in that packet, at most
 for anybody else in the packet is skipped and holds nothing up. Until 2026-10-31 a packet carried
 everybody the sender knew and a replica kept all of it, so one contact's packet of made-up identities
 went into every message its receiver sent, past the size of a record, and on to their contacts. A
-person's devices are capped at `DeviceRegistry.mostDevices`, so a person's own certificates cannot do
-the same.
+person's certificates and removals are kept within allowances per signer in `DeviceRegistry`, so a
+person's own certificates cannot do the same: see
+[the allowances](#each-device-that-signs-has-its-own-allowance-in-a-registry).
 
 **Why it had to.** A replica refuses a certificate for a participant it has never been introduced
 to, so vouching for Alice's devices to a member who has never met Alice achieved nothing: the
@@ -633,9 +645,71 @@ device's certificate and a valid signature.
 
 **What it costs.** A few hundred bytes for each author in a packet, in every packet that carries
 them. A person who shares a room with nobody who is writing is learned from the room's entries when
-they arrive, and a person named by an invitation is read from the invitation.
+they arrive, and a person named by an invitation is read from the invitation. Who a packet may
+introduce is narrower since 2026-11-04: see the next entry.
 
 <!-- COPY END 61d93524 -->
+
+<!-- COPY BEGIN cc18c5ad [NEEDS HUMAN REVIEW] -->
+
+### Each device that signs has its own allowance in a registry
+
+**PROPOSED 2026-11-04.** A registry kept the first 256 certificates and the first 256 removals it was
+given and dropped the rest. Anybody holding the identity key, which a removed device and a thief both
+do, could mint that many from a device that still counted, and then every contact silently dropped
+the member's removal of the stolen phone, her next approved phone and her restore with the recovery
+key. So the places now belong to whoever signed. A certificate signed by the recovery key, which only
+the member holds, has a place among `mostDevices` recovery certificates. A certificate whose approver
+counted when it was stored, with a valid approval from that approver, takes one of the approver's
+`mostApprovalsByOneDevice` (16) places, and one of `mostDevices` in the newest restore's lineage. A
+removal whose remover counted when it was stored, signed by the remover, takes one of the remover's
+`mostRemovalsByOneDevice` (16) places. Anything else (an approver nobody has seen yet, an approval that
+does not verify, a certificate signed by the identity alone) shares `mostDevices` places that count
+for nothing. A batch of certificates is admitted approvers first (`approversFirst`), so the order a
+packet or a saved file holds them in does not move a certificate into the shared places.
+
+So nothing the thief signs takes a place of the member's phone, and the member's removal and her
+restore are never refused for want of room. A restore also starts a lineage with its own 256 places.
+
+**Cost:** a device that approves more than 16 devices, or removes more than 16, has the rest refused.
+What a thief can still do by approving through devices of its own is
+[an open question](open-questions.md#a-thief-can-still-fill-the-places-a-members-new-devices-need).
+Measured in tests, not on the rig.
+
+**What would change it:** a removal that names the devices that stay letting go of every device it
+leaves out that has written nothing this phone holds.
+
+<!-- COPY END cc18c5ad -->
+
+<!-- COPY BEGIN 8e6b24ba [NEEDS HUMAN REVIEW] -->
+
+### A packet introduces only people this phone's rooms name, and a few newcomers a day
+
+**PROPOSED 2026-11-04.** A packet used to introduce the author of every entry in it, up to 256, so a
+contact running a modified app could make up people, sign one post as each, and add 1,024 of them to
+a member's phone in a round, and the member's phone then passed them on. Now
+`SyncSession.integrate` takes a `WhoToMeet`. The people the member's rooms name (members, people being
+let in, people who were removed or left), the readers and authors of Outposts, and everybody this
+phone is in touch with are introduced as before. Anybody else is introduced only for an entry in one
+of this phone's rooms (a room it holds, a room an invitation it accepted is for, or an Outpost of
+somebody it knows), and at most `AppSession.mostNewcomersFromOnePersonADay` (32) a day through any one
+contact (`persisted.newcomersFrom`). An entry by anybody else is skipped without holding its packet
+up, the way a certificate for a stranger already was.
+
+The newcomers are what lets a late joiner in: until the founder's entries arrive, the joiner's rooms
+name only the person who invited them, so the founder and the first people the founder let in come
+through as newcomers. Once their entries are held the rooms name everybody else.
+
+**Cost:** a contact can still introduce 32 made-up people a day by writing them into a room the member
+is in; nothing they write is drawn, because the room did not let them in. A joiner of a big room
+whose first answer names more than 32 people the room cannot name yet meets the rest a round later,
+when the entries already taken name them. An entry by somebody this phone will not meet, relayed in a
+room it is not in, is not kept, so it is not passed on and comes back only through a repair if this
+phone joins that room.
+
+**What would change it:** a feed per room, so a relay never carries a room to somebody outside it.
+
+<!-- COPY END 8e6b24ba -->
 
 <!-- COPY BEGIN 36884ab0 [NEEDS HUMAN REVIEW] -->
 
@@ -654,8 +728,9 @@ origin, so a peer forwards whatever is above its own frontier to everybody it ad
 packets carry Alice's room-R entries to Carol whether or not Carol is in room R. Those entries are
 sealed and Carol cannot read a word of them, but an `Entry` keeps its room, author, device, sequence
 number, wall time, clock and room link *outside* the seal, so a friend of a friend can see that a room exists
-and how much is being said in it. What the introduction changed is that Carol now *stores and
-forwards* those entries rather than refusing them as unverifiable. Narrowing this further means
+and how much is being said in it. What the introduction changed is that Carol *stores and forwards*
+those entries rather than refusing them as unverifiable, when she has met their author; since
+2026-11-04 she skips them when she has not. Narrowing this further means
 forwarding per recipient, and the sent frontier is deliberately one high-water mark per feed for
 every peer, so it is a change to that model rather than a filter. It is noted in the inbox rather than
 done here.
@@ -1275,7 +1350,7 @@ search screen shows before a query appears under the keyboard.
 
 ### The log is repaired at the next write, and a reader steps over what it cannot use
 
-**PROPOSED** — Claude chose this on 2026-10-31.
+**PROPOSED** — Claude chose this on 2026-10-31, and changed what `append` checks on 2026-11-04.
 
 The log file is a run of records, each a four-byte length and an entry as JSON. A reader that stopped
 at the first bad record lost everything after it, and every later write landed where no reader went.
@@ -1288,9 +1363,13 @@ never holds a zero byte and a length under 16 MiB starts with one, so nothing in
 like a header. What it stepped over is counted in `discardedBytes`, and `termination` names the first
 damage it met.
 
-`append` walks the length headers before its first write in a process and whenever the file's size is
-not the size it left. If they do not reach the end of the file, it rewrites the log from what can be
-read: into a scratch file, flushed to the drive, then swapped in, so a process that dies at any point
+`append` checks the file before its first write in a process and whenever the file's size is not the
+size it left: every record past the point it last knew to be whole has to line up and decode. A
+`loadAll` that read the whole file without damage sets that point, so the first write after a launch
+checks nothing it has just read. Until 2026-11-04 the check only walked the length headers, so a
+record whose bytes were garbled but whose length still lined up was never repaired, and the History
+check reported the same damage on every launch. If the check fails, `append` rewrites the log from
+what can be read: into a scratch file, flushed to the drive, then swapped in, so a process that dies at any point
 leaves the old file whole. `compact()` and `removeEntries` use the same rewrite. A write that fails is
 cut back off, so an entry the caller was told failed is not on disk.
 
@@ -1298,10 +1377,11 @@ cut back off, so an entry the caller was told failed is not on disk.
 (`man 2 fsync`). An acknowledgement sent after it means the entry survives a power cut.
 
 **Cost:** a drive flush on every write, not measured on a phone; on this Mac it took the test suite
-from 67 to 84 seconds. One extra read of the whole log on the first write of each launch. A rewrite
-needs room for a second copy, so on a full disk the repair fails and the write fails with it, and
-the entries stay owed. A whole record that does not decode is left alone by `append` but dropped by a
-rewrite, so a record from a newer build is lost if damage elsewhere forces one.
+from 67 to 84 seconds. A write after another process has written decodes what that process added,
+and a write by a process that never loaded the log decodes all of it. A rewrite needs room for a
+second copy, so on a full disk the repair fails and the write fails with it, and the entries stay
+owed. A record this build cannot decode is dropped at the next write, so a record written by a newer
+build is lost if an older build writes after it.
 
 <!-- COPY END 084ff3b8 -->
 

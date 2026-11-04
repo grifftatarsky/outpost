@@ -136,7 +136,8 @@ struct AcknowledgementTests {
             ])
 
         var replica = Replica()
-        let (report, settled) = SyncSession.integrate(packet, into: &replica)
+        let ours = WhoToMeet(known: [], rooms: [chain.chain.room], newcomers: 0)
+        let (report, settled) = SyncSession.integrate(packet, into: &replica, meeting: ours)
 
         #expect(report.entriesRejected == 1)
         #expect(settled.isEmpty, "a packet was acknowledged after refusing what was in it")

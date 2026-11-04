@@ -207,7 +207,9 @@ extension AppSession {
             for: collected.entries, alsoTrusting: collected.certificates)
         var working = replica
         let (received, settled) = SyncSession.integrate(
-            collected, into: &working, checked: checked, sparing: enrolment?.identity.id)
+            collected, into: &working, checked: checked, sparing: enrolment?.identity.id,
+            meeting: whoToMeet(through: peer.them))
+        noteNewcomers(received.newcomersMet, from: peer.them)
         let wallKeyOwed = readerLostADevice(from: replica, to: working)
         if working.revision != replica.revision { replica = working }
         if wallKeyOwed, let me = enrolment?.identity.id {
@@ -228,7 +230,9 @@ extension AppSession {
             if let index = persisted.repairs.firstIndex(where: { $0.id == answer.request }) {
                 persisted.repairs[index].answers[peer.them] = answer
                 let named = answer.elsewhere.intersecting(persisted.repairs[index].request.gaps)
-                if !named.isEmpty { persisted.elsewhere = persisted.elsewhere.merging(named) }
+                if !named.isEmpty {
+                    persisted.saidElsewhere[peer.them] = (persisted.saidElsewhere[peer.them] ?? []).merging(named)
+                }
             }
         }
 
