@@ -464,6 +464,34 @@ extension AppSession {
         }
     }
 
+    static let packetIsOrphanedAfter = SyncSession.packetWaitsFor + SyncSession.tagWindow
+
+    private func withdrawWhatNobodyTracks(
+        in sent: [PacketID: SentPacket], besides mine: [PacketID: Set<EntryHash>], through mailbox: any Mailbox,
+        in pairs: Pairs
+    ) async {
+        guard let newest = sent.values.compactMap(\.createdAt).max() else { return }
+        let now = min(clock.now, newest)
+        let orphaned = sent.filter { packet, record in
+            guard mine[packet] == nil, let created = record.createdAt else { return false }
+            return now.timeIntervalSince(created) > Self.packetIsOrphanedAfter
+        }
+        var withdrawn = 0
+        for packet in orphaned.keys {
+            do {
+                try await mailbox.withdraw(packet, in: pairs)
+                withdrawn += 1
+            } catch {
+                Diagnostics.sync.error(
+                    "mailbox: could not withdraw a packet no device tracks (\(String(describing: error), privacy: .public))")
+            }
+        }
+        if withdrawn > 0 {
+            Diagnostics.sync.notice(
+                "mailbox: withdrew \(withdrawn, privacy: .public) packet(s) that no device was tracking and nobody can find")
+        }
+    }
+
     private func noteWhetherCollected(_ entries: Set<EntryHash>, by person: ParticipantID, collected: Bool) {
         if collected {
             guard persisted.notCollected[person]?.isDisjoint(with: entries) == false else { return }
@@ -562,6 +590,7 @@ extension AppSession {
             persisted.outstandingPackets[packet] = nil
             persisted.packetsWritten[packet] = nil
         }
+        await withdrawWhatNobodyTracks(in: sent, besides: mine, through: mailbox, in: pairs)
         if !vanished.isEmpty {
             issuedGrants.removeAll()
             Diagnostics.sync.error(

@@ -4024,6 +4024,35 @@ What would change it: a per-person frontier, if the owed lists grow large enough
 
 <!-- COPY END 43cd7bf5 -->
 
+<!-- COPY BEGIN d87d228e [NEEDS HUMAN REVIEW] -->
+
+### A packet no device tracks is withdrawn a day after the wait
+
+`PROPOSED` — Claude, 2026-10-31. Built.
+
+A device withdraws only the packets it recorded writing. A process ended between writing a packet
+and saving that record, a reinstall, a wiped device or a delete that failed all left a packet no
+device would ever withdraw, and every reader downloaded it on every round. So in each full round,
+when it settles what it sent, any of the member's devices withdraws a packet in the member's own iCloud that it is not
+tracking itself once it was created more than nine days and one more day before the newest packet
+iCloud holds for the member, and before this device's clock.
+
+Nine days is the wait: after it no recipient looks under the address the packet was written to, so
+nobody can collect it. The extra day is for the device that wrote it. If that device is still in use,
+it settles its own packet at nine days, sees whether it was signed for, and records a message that was
+not collected. Another device that withdrew the packet first would leave the writer seeing only that
+it had gone, and it would send what it held again (`aSiblingLeavesAPacketItsWriterStillNeeds`).
+
+What it costs: if the writing device has not run for that extra day, another device withdraws the
+packet, the writer later finds it gone and sends its entries again, and a receipt the recipient wrote
+for it is never seen, so that message shows as sent until the second copy is signed for. The age is
+measured against iCloud's own creation times, so a device whose clock is days fast withdraws nothing
+early (`aFastClockWithdrawsNothingFindable`); the price is that a lost packet with nothing newer
+beside it stays until the member writes something new at least ten days after it, and goes in the
+round after that.
+
+<!-- COPY END d87d228e -->
+
 <!-- COPY BEGIN f75fc044 [NEEDS HUMAN REVIEW] -->
 
 ### A restore says so, and the person asked is told what was observed
