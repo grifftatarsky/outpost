@@ -644,9 +644,40 @@ device's certificate and a valid signature.
 
 **What it costs.** A few hundred bytes for each author in a packet, in every packet that carries
 them. A person who shares a room with nobody who is writing is learned from the room's entries when
-they arrive, and a person named by an invitation is read from the invitation.
+they arrive, and a person named by an invitation is read from the invitation. Who a packet may
+introduce is narrower since 2026-11-04: see the next entry.
 
 <!-- COPY END 61d93524 -->
+
+<!-- COPY BEGIN 8e6b24ba [NEEDS HUMAN REVIEW] -->
+
+### A packet introduces only people this phone's rooms name, and a few newcomers a day
+
+**PROPOSED 2026-11-04.** A packet used to introduce the author of every entry in it, up to 256, so a
+contact running a modified app could make up people, sign one post as each, and add 1,024 of them to
+a member's phone in a round, and the member's phone then passed them on. Now
+`SyncSession.integrate` takes a `WhoToMeet`. The people the member's rooms name (members, people being
+let in, people who were removed or left), the readers and authors of Outposts, and everybody this
+phone is in touch with are introduced as before. Anybody else is introduced only for an entry in one
+of this phone's rooms (a room it holds, a room an invitation it accepted is for, or an Outpost of
+somebody it knows), and at most `AppSession.mostNewcomersFromOnePersonADay` (32) a day through any one
+contact (`persisted.newcomersFrom`). An entry by anybody else is skipped without holding its packet
+up, the way a certificate for a stranger already was.
+
+The newcomers are what lets a late joiner in: until the founder's entries arrive, the joiner's rooms
+name only the person who invited them, so the founder and the first people the founder let in come
+through as newcomers. Once their entries are held the rooms name everybody else.
+
+**Cost:** a contact can still introduce 32 made-up people a day by writing them into a room the member
+is in; nothing they write is drawn, because the room did not let them in. A joiner of a big room
+whose first answer names more than 32 people the room cannot name yet meets the rest a round later,
+when the entries already taken name them. An entry by somebody this phone will not meet, relayed in a
+room it is not in, is not kept, so it is not passed on and comes back only through a repair if this
+phone joins that room.
+
+**What would change it:** a feed per room, so a relay never carries a room to somebody outside it.
+
+<!-- COPY END 8e6b24ba -->
 
 <!-- COPY BEGIN 36884ab0 [NEEDS HUMAN REVIEW] -->
 
@@ -665,8 +696,9 @@ origin, so a peer forwards whatever is above its own frontier to everybody it ad
 packets carry Alice's room-R entries to Carol whether or not Carol is in room R. Those entries are
 sealed and Carol cannot read a word of them, but an `Entry` keeps its room, author, device, sequence
 number, wall time, clock and room link *outside* the seal, so a friend of a friend can see that a room exists
-and how much is being said in it. What the introduction changed is that Carol now *stores and
-forwards* those entries rather than refusing them as unverifiable. Narrowing this further means
+and how much is being said in it. What the introduction changed is that Carol *stores and forwards*
+those entries rather than refusing them as unverifiable, when she has met their author; since
+2026-11-04 she skips them when she has not. Narrowing this further means
 forwarding per recipient, and the sent frontier is deliberately one high-water mark per feed for
 every peer, so it is a change to that model rather than a filter. It is noted in the inbox rather than
 done here.

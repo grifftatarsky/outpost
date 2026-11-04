@@ -207,7 +207,9 @@ extension AppSession {
             for: collected.entries, alsoTrusting: collected.certificates)
         var working = replica
         let (received, settled) = SyncSession.integrate(
-            collected, into: &working, checked: checked, sparing: enrolment?.identity.id)
+            collected, into: &working, checked: checked, sparing: enrolment?.identity.id,
+            meeting: whoToMeet(through: peer.them))
+        noteNewcomers(received.newcomersMet, from: peer.them)
         let wallKeyOwed = readerLostADevice(from: replica, to: working)
         if working.revision != replica.revision { replica = working }
         if wallKeyOwed, let me = enrolment?.identity.id {

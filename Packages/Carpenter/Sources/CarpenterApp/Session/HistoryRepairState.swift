@@ -78,6 +78,11 @@ struct RepairSpend: Hashable, Sendable, Codable {
     var bytes: Int
 }
 
+struct DailyCount: Hashable, Sendable, Codable {
+    var day: UInt64
+    var count: Int
+}
+
 struct RestoreAskRecord: Hashable, Sendable, Codable {
     var request: RepairID
     var from: ParticipantID

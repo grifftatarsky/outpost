@@ -90,7 +90,8 @@ nothing in it is trusted because the app would never have written it.
   its author is in the room at that point in the log, and a vote counts only while its author is still
   in the room.
 - A packet's contents are trusted only as far as the packet needs them: an identity is kept for the
-  author of an entry in that packet, and every list has a cap in `SyncSession`.
+  author of an entry in that packet whom this phone's rooms name (`WhoToMeet`), a newcomer only for an
+  entry in one of its rooms and a few a day per contact, and every list has a cap in `SyncSession`.
 - A room key never replaces one already held, and one from somebody the room shows as removed or
   departed is refused. A key's number is checked against the chain before it is held, and a walk
   over a chain visits `heldNumbers`, never a countdown.

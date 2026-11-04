@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Somebody a phone has only heard of can still invite it into a room", .serialized, .tags(.membership))
+@Suite("Somebody a phone has never met can still invite it into a room", .serialized, .tags(.membership))
 struct BeingInvitedByAStrangerTests {
     @MainActor
     private struct FriendOfAFriend {
@@ -27,7 +27,9 @@ struct BeingInvitedByAStrangerTests {
                     try await session.sync(through: three.mailbox, media: three.mailbox)
                 }
             }
-            try #require(dave.replica.registry(for: three.carolID) != nil, "precondition: Dave's phone has heard of Carol")
+            try #require(
+                dave.replica.registry(for: three.carolID) == nil,
+                "precondition: Dave's phone did not take Carol from a room it is not in")
             try #require(dave.roster(of: three.room).members.isEmpty, "precondition: Dave is not in the Lanterns room")
             return FriendOfAFriend(three: three, dave: dave)
         }
@@ -50,7 +52,6 @@ struct BeingInvitedByAStrangerTests {
     func aSpaceOnlyForWhoItHasMet() async throws {
         let t = try await FriendOfAFriend.make()
 
-        try #require(t.dave.replica.registry(for: t.three.samID) != nil, "precondition: Dave's phone has heard of Sam")
         let spaces = await t.three.mailbox.spaceCount(of: t.daveID)
         #expect(spaces == 2, "Dave's phone made a space in his iCloud for somebody he has never met")
     }

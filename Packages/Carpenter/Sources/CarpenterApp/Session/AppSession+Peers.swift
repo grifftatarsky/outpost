@@ -52,6 +52,26 @@ extension AppSession {
         return people
     }
 
+    public static let mostNewcomersFromOnePersonADay = 32
+
+    func whoToMeet(through person: ParticipantID) -> WhoToMeet {
+        var known = sharedParticipants().union(peopleInTouch())
+        let named = projection.namedRoomIDs()
+        for room in named { known.formUnion(roster(of: room).absent) }
+        let ours = Set(rooms.map(\.id)).union(named).union(persisted.knownRooms)
+            .union(persisted.acceptedInvitations.map(\.attestation.room)).union(known.map(RoomID.outpost(of:)))
+        let day = SyncSession.window(at: clock.now)
+        let spent = persisted.newcomersFrom[person].flatMap { $0.day == day ? $0.count : nil } ?? 0
+        return WhoToMeet(known: known, rooms: ours, newcomers: Self.mostNewcomersFromOnePersonADay - spent)
+    }
+
+    func noteNewcomers(_ count: Int, from person: ParticipantID) {
+        guard count > 0 else { return }
+        let day = SyncSession.window(at: clock.now)
+        let before = persisted.newcomersFrom[person].flatMap { $0.day == day ? $0.count : nil } ?? 0
+        persisted.newcomersFrom[person] = DailyCount(day: day, count: before + count)
+    }
+
     func sharedParticipants() -> Set<ParticipantID> {
         guard let me = enrolment?.identity.id else { return [] }
         let projected = projection
