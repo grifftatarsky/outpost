@@ -304,8 +304,11 @@ struct AcknowledgedMeansOnDiskTests {
         await #expect(throws: (any Error).self) { try await room.bob.sync(through: room.mailbox) }
 
         #expect(await receipts().allSatisfy { !$0 }, "a packet was signed for in a round that stopped short")
-        #expect(!room.bob.entriesNotWrittenDown.isEmpty, "the entries are in memory and nothing owes them")
-        #expect(!room.bob.epochsNotSaved.isEmpty, "the key is in memory and nothing owes it")
+        let message = try #require(room.bob.messages(in: room.id).first { $0.body == "after she left" }?.id.entry)
+        let onDisk = await room.log.stored.contains { $0.hash == message }
+        #expect(
+            onDisk || room.bob.entriesNotWrittenDown.contains { $0.hash == message },
+            "the entry is in memory, on no disk, and nothing owes it")
 
         try await room.bob.sync(through: room.mailbox)
 

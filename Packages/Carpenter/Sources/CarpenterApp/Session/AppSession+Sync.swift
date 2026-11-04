@@ -23,10 +23,15 @@ extension AppSession {
         if mode == .full { await pairUp(through: mailbox) }
 
         var report = SyncReport()
+        var firstFailure: (any Error)?
         for peer in everyPeer() {
-            try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
+            do {
+                try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
+            } catch {
+                firstFailure = firstFailure ?? error
+            }
         }
-        try await writeDownOrReport()
+        do { try await writeDownOrReport() } catch { firstFailure = firstFailure ?? error }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
         if mode == .full {
             update(\.viewMayBeStale, to: refusalWatch.holdsKeys(after: report.refusals, at: clock.now))
@@ -40,13 +45,19 @@ extension AppSession {
             if addressBook.hasExpired(at: now) { await changeAddressBook { $0.forgetExpired(at: now) } }
             await rotateIfARemovalNeverChangedIt()
             await announceAddresses(through: session)
-            let sent = try await sendWhatIsOwed(through: session)
+            var sent = SyncReport()
+            do {
+                sent = try await sendWhatIsOwed(through: session)
+            } catch {
+                firstFailure = firstFailure ?? error
+                sent.cannotSend = error as? MailboxFailure
+            }
             report = report.adding(sent)
             report = report.adding(await tellTheRemoved(after: sent, through: session))
         }
 
         if mode == .full, let media {
-            await collectAttachments(from: report.integrated, through: media)
+            await collectAttachments(through: media)
             await collectOwnPhotos(through: media)
             await settleAttachmentsSent(through: media)
             await settleOutpostMediaOwed(through: media)
@@ -54,7 +65,7 @@ extension AppSession {
             await settlePhotosAsked(through: session, media: media)
         }
 
-        try await recordWhatArrived(report)
+        do { try await recordWhatArrived(report) } catch { firstFailure = firstFailure ?? error }
         recordWhatWasSent(report)
         if mode == .full {
             await doWhatIsOwed(after: report, through: session)
@@ -67,6 +78,7 @@ extension AppSession {
 
         try await saveState()
         refresh()
+        if let firstFailure { throw firstFailure }
         return report
     }
 
@@ -199,6 +211,7 @@ extension AppSession {
         entriesNotWrittenDown += received.integrated
         report = report.adding(received)
         integrity.rejectedFromPeers += received.entriesTooLarge
+        noteRefusedForever(received.refusals)
 
         takeRepairRequests(received.repairRequests, from: peer.them)
         takeAsks(received.photoAsks, from: peer.them)
@@ -267,6 +280,13 @@ extension AppSession {
         }
     }
 
+    private func noteRefusedForever(_ refusals: [SyncReport.Refusal]) {
+        for refusal in refusals where refusal.isFinal {
+            guard let feed = refusal.feed, let seq = refusal.seq else { continue }
+            persisted.unverifiable.insert(feed, seq)
+        }
+    }
+
     private func writeDownOrReport() async throws {
         do {
             try await writeDownWhatIsOwed()
@@ -293,6 +313,7 @@ extension AppSession {
             guard !owed.isEmpty else { return }
             try await storage.log.append(owed)
             entriesNotWrittenDown.removeFirst(owed.count)
+            notePhotosOwed(owed)
         }
         sendOwnEntries()
     }
@@ -336,10 +357,6 @@ extension AppSession {
                 """)
         }
 
-        for refusal in report.refusals where refusal.isFinal {
-            guard let feed = refusal.feed, let seq = refusal.seq else { continue }
-            persisted.unverifiable.insert(feed, seq)
-        }
         if report.entriesRefusedForever > 0 {
             Diagnostics.sync.notice(
                 """
