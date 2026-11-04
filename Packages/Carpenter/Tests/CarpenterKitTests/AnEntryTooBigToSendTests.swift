@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterApp
 @testable import CarpenterKit
 
-@Suite("An entry too big to send is refused for good")
+@Suite("An entry too big to send is refused for good", .timeLimit(.minutes(10)), .tags(.sync))
 struct RefusingAnEntryTooBigToSendTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -129,7 +129,7 @@ struct RefusingAnEntryTooBigToSendTests {
     }
 }
 
-@Suite("A contact sends an entry too big to send", .serialized)
+@Suite("A contact sends an entry too big to send", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct OversizedEntryFromAContactTests {
     private struct Pair {

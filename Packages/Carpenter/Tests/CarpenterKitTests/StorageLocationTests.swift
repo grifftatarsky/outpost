@@ -2,7 +2,7 @@ import CarpenterKit
 import Foundation
 import Testing
 
-@Suite("App Group storage migration")
+@Suite("App Group storage migration", .tags(.storage))
 struct StorageLocationTests {
     private func temp() -> URL {
         TestScratch.root.appending(
@@ -45,7 +45,7 @@ struct StorageLocationTests {
     }
 }
 
-@Suite("What the app keeps stays out of backups")
+@Suite("What the app keeps stays out of backups", .tags(.storage))
 struct StoreLeftOutOfBackupsTests {
     @Test("The store's directory is marked for leaving out of backups, and a folder beside it is not")
     func theStoreIsLeftOut() throws {

@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Spans of missing history")
+@Suite("Spans of missing history", .tags(.sync))
 struct MissingHistorySpanTests {
     private func spans(_ random: inout Seeded) -> [SequenceSpan] {
         (0..<Int.random(in: 0...5, using: &random)).map { _ in
@@ -78,7 +78,7 @@ struct MissingHistorySpanTests {
     }
 }
 
-@Suite("History somebody else can claim")
+@Suite("History somebody else can claim", .tags(.sync))
 struct ClaimedHistoryTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -94,7 +94,7 @@ struct ClaimedHistoryTests {
             signature: try author.device.sign(unsigned.signingPayload))
     }
 
-    @Test("An entry signed at a sequence number no feed will reach does not stop the gaps being found")
+    @Test("An entry signed at a sequence number no feed will reach does not stop the gaps being found", .tags(.timing))
     func aFarEntryLeavesGapsCheap() throws {
         var replica = Replica()
         var alice = Author()
@@ -109,7 +109,7 @@ struct ClaimedHistoryTests {
         #expect(gaps == [FeedGap(feed: alice.feedKey, spans: [SequenceSpan(4, (1 << 50) - 1)])])
     }
 
-    @Test("A request for every sequence number is answered from what is held")
+    @Test("A request for every sequence number is answered from what is held", .tags(.timing))
     func askingForEverythingIsCheap() throws {
         var replica = Replica()
         var alice = Author()

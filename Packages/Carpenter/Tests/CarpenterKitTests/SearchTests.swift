@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("Searching what was said", .serialized)
+@Suite("Searching what was said", .serialized, .tags(.ui))
 struct SearchTests {
     private func pair(named name: String = "Lanterns") async throws -> (
         mine: AppSession, theirs: AppSession, room: RoomID, mailbox: InMemoryMailbox

@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("A packet whose address has rotated", .serialized)
+@Suite("A packet whose address has rotated", .serialized, .tags(.sync))
 @MainActor
 struct StrandedPacketTests {
     private func scratch() -> URL {

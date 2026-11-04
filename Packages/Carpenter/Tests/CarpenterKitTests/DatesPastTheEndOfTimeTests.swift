@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A date nobody could have meant")
+@Suite("A date nobody could have meant", .tags(.crypto))
 struct DatesPastTheEndOfTimeTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

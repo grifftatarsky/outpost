@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("What the badge should say")
+@Suite("What the badge should say", .tags(.ui))
 struct BadgeCountTests {
     private func room(unread: Bool) -> RoomSummary {
         RoomSummary(

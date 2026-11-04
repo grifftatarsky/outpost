@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A round bigger than a packet", .serialized)
+@Suite("A round bigger than a packet", .serialized, .tags(.sync))
 struct PacketCapTests {
     private static let longMessage = String(repeating: "lantern ", count: 1_000)
         .trimmingCharacters(in: .whitespaces)

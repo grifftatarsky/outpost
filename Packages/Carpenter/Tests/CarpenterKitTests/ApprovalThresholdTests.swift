@@ -3,7 +3,7 @@ import Foundation
 import Testing
 import CarpenterKitTesting
 
-@Suite("A room that asks for more approvals than it has members")
+@Suite("A room that asks for more approvals than it has members", .tags(.membership))
 struct ApprovalThresholdTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()

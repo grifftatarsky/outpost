@@ -28,7 +28,7 @@ actor RefusingEpochKeychainStore: KeychainStore {
 }
 
 @MainActor
-@Suite("A removal that is cut off halfway is finished after a relaunch", .serialized)
+@Suite("A removal that is cut off halfway is finished after a relaunch", .serialized, .tags(.membership, .storage))
 struct RemovalSurvivesACrashTests {
     private func session(
         in directory: URL, keychain: any KeychainStore, log: (any LogStore)? = nil

@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Packet wire mapping")
+@Suite("Packet wire mapping", .tags(.sync))
 struct PacketWireTests {
     private func peers() throws -> (mine: Peer, theirs: Peer) {
         let a = Identity.generate()

@@ -6,7 +6,7 @@ import Synchronization
 import Testing
 
 @MainActor
-@Suite("With Advanced On Device Security on, what this phone keeps is sealed while it is locked", .serialized)
+@Suite("With Advanced On Device Security on, what this phone keeps is sealed while it is locked", .serialized, .tags(.crypto))
 struct SealedWhileLockedTests {
     @MainActor
     private struct Rig {

@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Identifiers are a fixed width")
+@Suite("Identifiers are a fixed width", .tags(.crypto))
 struct IdentifierWidthTests {
 
     private func encoded(_ raw: Data) -> Data {
@@ -53,21 +53,17 @@ struct IdentifierWidthTests {
         #expect(try decodeDevice(device.id.rawValue) == device.id)
     }
 
-    @Test("A participant of the wrong width is refused rather than decoded")
-    func shortParticipantRefused() {
-        for count in [0, 1, 16, 31, 33, 64] {
-            #expect(throws: DecodingError.self) {
-                try decodeParticipant(Data(repeating: 0xAB, count: count))
-            }
+    @Test("A participant of the wrong width is refused rather than decoded", arguments: [0, 1, 16, 31, 33, 64])
+    func shortParticipantRefused(count: Int) {
+        #expect(throws: DecodingError.self) {
+            try decodeParticipant(Data(repeating: 0xAB, count: count))
         }
     }
 
-    @Test("A device of the wrong width is refused rather than decoded")
-    func shortDeviceRefused() {
-        for count in [0, 1, 16, 31, 33, 64] {
-            #expect(throws: DecodingError.self) {
-                try decodeDevice(Data(repeating: 0xCD, count: count))
-            }
+    @Test("A device of the wrong width is refused rather than decoded", arguments: [0, 1, 16, 31, 33, 64])
+    func shortDeviceRefused(count: Int) {
+        #expect(throws: DecodingError.self) {
+            try decodeDevice(Data(repeating: 0xCD, count: count))
         }
     }
 

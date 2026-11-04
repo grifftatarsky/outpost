@@ -5,11 +5,11 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Failures that used to be silent")
+@Suite("Failures that used to be silent", .timeLimit(.minutes(10)), .tags(.storage))
 struct SilentFailureTests {}
 
 @MainActor
-@Suite("Asking a Keychain that will not answer", .serialized)
+@Suite("Asking a Keychain that will not answer", .serialized, .timeLimit(.minutes(10)), .tags(.storage))
 struct UnreadableKeychainTests {
     private func session(
         _ keychain: any KeychainStore, hasMember: Bool
@@ -84,7 +84,7 @@ struct UnreadableKeychainTests {
 }
 
 @MainActor
-@Suite("Revoking a device that cannot rotate the key", .serialized)
+@Suite("Revoking a device that cannot rotate the key", .serialized, .timeLimit(.minutes(10)), .tags(.storage))
 struct RevocationReportingTests {
     private func pair(
         keychain: any KeychainStore
@@ -107,7 +107,7 @@ struct RevocationReportingTests {
 
         try await second.setDisplayName("Griff")
 
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while first.devices.count < 2, Date() < deadline {
             await second.refreshDeviceSync()
             await first.refreshDeviceSync()

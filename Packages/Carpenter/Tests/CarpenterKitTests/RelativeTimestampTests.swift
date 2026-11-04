@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Relative timestamps")
+@Suite("Relative timestamps", .tags(.ui))
 struct RelativeTimestampTests {
     private let calendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)

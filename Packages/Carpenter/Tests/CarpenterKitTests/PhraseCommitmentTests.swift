@@ -6,7 +6,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("The verification phrase is committed before it is signed")
+@Suite("The verification phrase is committed before it is signed", .tags(.crypto))
 struct PhraseCommitmentTests {
 
     private func pair() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox) {
@@ -212,7 +212,7 @@ struct PhraseCommitmentTests {
 }
 
 @MainActor
-@Suite("Showing your code does not mint a new one")
+@Suite("Showing your code does not mint a new one", .tags(.crypto))
 struct CodeForSharingTests {
 
     @Test("Reading the code to show it is free, however often a screen draws")

@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Device certificates")
+@Suite("Device certificates", .tags(.membership))
 struct DeviceCertificateTests {
     private let issuedAt = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -104,7 +104,7 @@ struct DeviceCertificateTests {
     }
 }
 
-@Suite("Device registry")
+@Suite("Device registry", .tags(.membership))
 struct DeviceRegistryTests {
     private let issuedAt = Date(timeIntervalSince1970: 1_786_635_000)
 

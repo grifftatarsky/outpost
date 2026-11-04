@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("An invitation is an offer")
+@Suite("An invitation is an offer", .tags(.membership))
 struct InvitationIsAnOfferTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()

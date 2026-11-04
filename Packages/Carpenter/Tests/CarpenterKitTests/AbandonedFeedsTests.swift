@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite struct AbandonedFeedsTests {
+@Suite(.tags(.sync)) struct AbandonedFeedsTests {
     private func device(_ byte: UInt8) -> DeviceID { DeviceID(rawValue: Data([byte])) }
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private func longAgo() -> Date { now.addingTimeInterval(-60 * 86_400) }

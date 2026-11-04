@@ -173,7 +173,8 @@ nothing in it is trusted because the app would never have written it.
   return and passed against the slow code; an emoji-order test whose `try? #require` found nothing
   compared nothing.
 - Wait for a condition, with a cap; never sleep for a fixed time. `settleDeviceSync()` waits until
-  nothing is publishing.
+  nothing is publishing. The cap is `TestDeadline.seconds`, and a suite that waits carries
+  `.timeLimit(.minutes(10))`.
 - A measured gap that needs a design decision is recorded with `withKnownIssue`, so the suite stays
   green and flags the day it is fixed.
 - A test that fakes time advances the clock between changes a last-writer-wins merge has to order.

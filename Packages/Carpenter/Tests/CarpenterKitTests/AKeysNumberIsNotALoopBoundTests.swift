@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What a chain walks is what it holds")
+@Suite("What a chain walks is what it holds", .tags(.crypto, .sync))
 struct WhatAChainWalksTests {
     private let room = RoomID(rawValue: UUID())
 
@@ -36,7 +36,7 @@ struct WhatAChainWalksTests {
 }
 
 @MainActor
-@Suite("A key's number is not a loop bound", .serialized)
+@Suite("A key's number is not a loop bound", .serialized, .tags(.crypto, .sync))
 struct AKeysNumberIsNotALoopBoundTests {
     private func grant(
         at epoch: EpochNumber, links: [EpochLink] = [], from giver: AppSession, to taker: AppSession, in room: RoomID
@@ -81,7 +81,7 @@ struct AKeysNumberIsNotALoopBoundTests {
         return number
     }
 
-    @Test("A key far above a room's others costs no more to pass on than the keys a phone holds")
+    @Test("A key far above a room's others costs no more to pass on than the keys a phone holds", .tags(.timing))
     func aFarKeyCostsNothingToWalk() async throws {
         let t = try await RoomOfThree.make()
         try await t.alice.advanceEpoch(of: t.room)
@@ -91,7 +91,7 @@ struct AKeysNumberIsNotALoopBoundTests {
         #expect(walkOf(t.carol, t.room) < .milliseconds(100), "the walk counted down from a number Sam chose")
     }
 
-    @Test("A chain already holding a key at two to the sixty-two still passes on keys after a relaunch")
+    @Test("A chain already holding a key at two to the sixty-two still passes on keys after a relaunch", .tags(.timing))
     func aPoisonedChainSurvivesARelaunch() async throws {
         let t = try await RoomOfThree.make()
         try await t.alice.advanceEpoch(of: t.room)

@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("A room that grows", .serialized)
+@Suite("A room that grows", .serialized, .tags(.membership))
 struct MembersOverTimeTests {
     private func member(_ name: String, at directory: URL? = nil, keychain: InMemoryKeychainStore = InMemoryKeychainStore(), media: MemoryMediaStore = MemoryMediaStore()) async throws -> AppSession {
         let session = TestSession.make(keychain: keychain, at: directory, media: media)
@@ -214,7 +214,7 @@ struct MembersOverTimeTests {
 }
 
 @MainActor
-@Suite("Who a device writes to", .serialized)
+@Suite("Who a device writes to", .serialized, .tags(.membership))
 struct AddressedPeersTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6

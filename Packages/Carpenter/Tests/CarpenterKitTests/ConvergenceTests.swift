@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Convergence")
+@Suite("Convergence", .tags(.sync))
 struct ConvergenceTests {
     private static let seeds: [UInt64] = Array(1...20)
 

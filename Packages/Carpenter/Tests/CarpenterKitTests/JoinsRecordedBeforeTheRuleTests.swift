@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("A join recorded before the rule existed")
+@Suite("A join recorded before the rule existed", .tags(.membership))
 struct JoinsRecordedBeforeTheRuleTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()

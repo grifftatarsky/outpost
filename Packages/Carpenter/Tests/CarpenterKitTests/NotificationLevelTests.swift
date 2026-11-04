@@ -2,7 +2,7 @@ import CarpenterKit
 import Foundation
 import Testing
 
-@Suite("Notification levels")
+@Suite("Notification levels", .tags(.ui))
 struct NotificationLevelTests {
     private let room = RoomID()
 
@@ -70,7 +70,7 @@ extension NotificationCopy {
     fileprivate var groupsByRoomThread: Bool { !threadID.isEmpty }
 }
 
-@Suite struct SilencingTests {
+@Suite(.tags(.ui)) struct SilencingTests {
     private func room() -> RoomID { RoomID() }
     private func stamp(_ at: TimeInterval, device: UInt8 = 1) -> OrganisationStamp {
         OrganisationStamp(

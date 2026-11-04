@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Sync from the app", .serialized)
+@Suite("Sync from the app", .serialized, .tags(.sync))
 @MainActor
 struct SyncFromTheAppTests {
     private func scratch() -> URL {

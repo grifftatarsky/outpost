@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("Tapping a banner", .serialized)
+@Suite("Tapping a banner", .serialized, .tags(.ui))
 struct TappingThroughTests {
     private func member() async throws -> AppSession {
         let session = TestSession.make()

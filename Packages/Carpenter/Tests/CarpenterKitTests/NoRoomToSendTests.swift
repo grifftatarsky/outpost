@@ -8,7 +8,7 @@ import Testing
 private typealias RefusingMailbox = HookedMailbox
 
 @MainActor
-@Suite("An account with no room to send", .serialized)
+@Suite("An account with no room to send", .serialized, .tags(.sync))
 struct NoRoomToSendTests {
     private func pair() async throws -> (
         mine: AppSession, room: RoomID, mailbox: RefusingMailbox

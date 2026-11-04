@@ -6,7 +6,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("The privacy check-up", .serialized)
+@Suite("The privacy check-up", .serialized, .tags(.ui))
 struct PrivacyCheckupTests {
     @Test("A new member is asked once, and not again after a relaunch")
     func askedOnce() async throws {

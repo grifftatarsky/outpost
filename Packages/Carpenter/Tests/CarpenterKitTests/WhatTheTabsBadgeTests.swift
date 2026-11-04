@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("What the tabs badge", .serialized)
+@Suite("What the tabs badge", .serialized, .tags(.ui))
 @MainActor
 struct WhatTheTabsBadgeTests {
     private func scratch() -> URL {

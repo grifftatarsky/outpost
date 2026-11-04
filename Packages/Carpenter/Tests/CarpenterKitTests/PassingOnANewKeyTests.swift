@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A phone passes a room's new key on only once it holds everything the key's maker had seen", .serialized)
+@Suite("A phone passes a room's new key on only once it holds everything the key's maker had seen", .serialized, .tags(.crypto))
 struct PassingOnANewKeyTests {
     @Test("A phone that takes a room's new key before it hears of the removal does not hand it to the one removed")
     func theKeyWaitsForTheRemoval() async throws {
@@ -88,7 +88,7 @@ extension RoomOfThree {
     }
 }
 
-@Suite("What a key's maker writes down about the room")
+@Suite("What a key's maker writes down about the room", .tags(.crypto))
 struct AKeyChangeRecordTests {
     @Test("Nobody without the new key can write down what its maker saw, or take anything out of it")
     func theRecordNeedsTheKey() throws {

@@ -3,7 +3,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Claiming the space a code offered")
+@Suite("Claiming the space a code offered", .tags(.membership))
 struct ClaimingTheSpaceACodeOfferedTests {
     private struct Two {
         let mailbox = InMemoryMailbox()

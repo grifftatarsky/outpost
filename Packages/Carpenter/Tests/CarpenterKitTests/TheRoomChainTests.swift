@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Each entry names its author's last entry in the room, and a removal counts only that chain")
+@Suite("Each entry names its author's last entry in the room, and a removal counts only that chain", .tags(.crypto))
 struct TheRoomChainTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -435,7 +435,7 @@ struct TheRoomChainTests {
 }
 
 @MainActor
-@Suite("The app links each entry it writes to its last one in the room, across a relaunch", .serialized)
+@Suite("The app links each entry it writes to its last one in the room, across a relaunch", .serialized, .tags(.crypto))
 struct TheAppWritesTheRoomChainTests {
     @Test("Each entry names this device's last one in the room, and the first names none")
     func eachEntryNamesTheLastOne() async throws {

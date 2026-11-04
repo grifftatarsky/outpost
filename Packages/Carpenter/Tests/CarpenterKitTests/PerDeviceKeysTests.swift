@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterApp
 @testable import CarpenterKit
 
-@Suite("Each device has its own key")
+@Suite("Each device has its own key", .tags(.crypto))
 struct PerDeviceKeysTests {
     private let issued = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -114,7 +114,7 @@ struct PerDeviceKeysTests {
     }
 }
 
-@Suite("A removed device", .serialized)
+@Suite("A removed device", .serialized, .tags(.crypto))
 @MainActor
 struct ARemovedDeviceTests {
     @Test("A removed device stays removed after a relaunch, and the recovery key brings it back")

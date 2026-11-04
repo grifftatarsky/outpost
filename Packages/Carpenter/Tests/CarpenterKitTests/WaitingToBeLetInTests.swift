@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Waiting to be let in", .serialized)
+@Suite("Waiting to be let in", .serialized, .tags(.membership))
 struct WaitingToBeLetInTests {
     private func pair() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -113,7 +113,7 @@ struct WaitingToBeLetInTests {
 }
 
 @MainActor
-@Suite("The phrase outlives everything", .serialized)
+@Suite("The phrase outlives everything", .serialized, .tags(.membership))
 struct PhraseSurvivesEverythingTests {
     @Test("The phrase survives the invitation lapsing")
     func survivesTheLapse() async throws {

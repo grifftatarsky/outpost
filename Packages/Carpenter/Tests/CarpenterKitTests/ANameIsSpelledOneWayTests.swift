@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A name written in hex is spelled one way, and read back only that way")
+@Suite("A name written in hex is spelled one way, and read back only that way", .tags(.ui))
 struct ANameIsSpelledOneWayTests {
     private func random(_ count: Int) -> Data {
         Data((0..<count).map { _ in UInt8.random(in: .min ... .max) })

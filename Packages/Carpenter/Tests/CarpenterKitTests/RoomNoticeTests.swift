@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Room notices", .serialized)
+@Suite("Room notices", .serialized, .tags(.ui))
 @MainActor
 struct RoomNoticeTests {
     private func pair(_ mailbox: any Mailbox) async throws

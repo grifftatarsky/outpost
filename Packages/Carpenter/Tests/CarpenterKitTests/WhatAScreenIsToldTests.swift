@@ -7,7 +7,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("What a screen is told to redraw for")
+@Suite("What a screen is told to redraw for", .tags(.ui))
 @MainActor
 struct WhatAScreenIsToldTests {
     private func twoRooms() async throws -> (AppSession, RoomID, RoomID) {

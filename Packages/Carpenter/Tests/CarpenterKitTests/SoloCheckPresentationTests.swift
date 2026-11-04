@@ -5,7 +5,7 @@ import Foundation
 import Testing
 import CarpenterKitTesting
 
-@Suite("What a solo shows about its check")
+@Suite("What a solo shows about its check", .tags(.membership, .ui))
 struct SoloCheckPresentationTests {
     private let me = ParticipantID(rawValue: WideID.of([1]))
     private let them = ParticipantID(rawValue: WideID.of([2]))

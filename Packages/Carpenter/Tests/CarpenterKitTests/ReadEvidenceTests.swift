@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("When a seen mark says it was seen")
+@Suite("When a seen mark says it was seen", .tags(.sync))
 struct ReadEvidenceTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private func at(_ minutes: Double) -> Date { start.addingTimeInterval(minutes * 60) }
@@ -87,7 +87,7 @@ struct ReadEvidenceTests {
 }
 
 @MainActor
-@Suite("A seen mark from the log", .serialized)
+@Suite("A seen mark from the log", .serialized, .tags(.sync))
 struct SeenMarkTimeTests {
     @Test("Each message carries the instant its own first receipt was written")
     func eachMessageKeepsItsOwnInstant() async throws {

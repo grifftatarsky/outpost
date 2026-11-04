@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Watching what was refused")
+@Suite("Watching what was refused", .tags(.crypto, .sync))
 struct RefusalWatchTests {
     private let now = Date(timeIntervalSince1970: 1_786_635_000)
     private let mallory = ParticipantID(rawValue: WideID.of([1]))
@@ -52,7 +52,7 @@ struct RefusalWatchTests {
 }
 
 @MainActor
-@Suite("A refused packet holds a room's keys for one round", .serialized)
+@Suite("A refused packet holds a room's keys for one round", .serialized, .tags(.crypto, .sync))
 struct ARefusedPacketHoldsKeysOnceTests {
     private struct Rig {
         let t: RoomOfThree

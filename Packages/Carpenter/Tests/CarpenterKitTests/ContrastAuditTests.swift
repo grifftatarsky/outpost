@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterUI
 
-@Suite("WCAG AA contrast")
+@Suite("WCAG AA contrast", .tags(.ui))
 struct ContrastAuditTests {
     private static let appearances: [Appearance] = [.dark, .light]
     private static let contrasts: [ColorSchemeContrast] = [.standard, .increased]
@@ -427,7 +427,7 @@ struct ContrastAuditTests {
     }
 }
 
-@Suite("Contrast arithmetic")
+@Suite("Contrast arithmetic", .tags(.ui))
 struct WCAGMathTests {
     @Test("Black on white is the maximum ratio")
     func extremes() {
@@ -464,7 +464,7 @@ struct WCAGMathTests {
     }
 }
 
-@Suite("The sent bubble carries white text")
+@Suite("The sent bubble carries white text", .tags(.ui))
 struct SentBubbleContrastTests {
     @Test("White clears AA on every accent, in both appearances")
     func whiteIsLegibleEverywhere() {

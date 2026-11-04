@@ -20,7 +20,7 @@ private actor LogThatWillNotRewrite: LogStore {
 }
 
 @MainActor
-@Suite("Deleting a conversation you are no longer in", .serialized)
+@Suite("Deleting a conversation you are no longer in", .serialized, .timeLimit(.minutes(10)))
 struct DeletingARoomTests {
     private struct Rig {
         let alice: AppSession
@@ -345,7 +345,7 @@ struct DeletingARoomTests {
     }
 
     private func settle(_ first: AppSession, _ second: AppSession, until done: () -> Bool) async throws {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while !done(), Date() < deadline {
             await first.refreshDeviceSync()
             await second.refreshDeviceSync()

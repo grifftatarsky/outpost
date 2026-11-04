@@ -2,7 +2,7 @@ import Testing
 
 @testable import CarpenterUI
 
-@Suite("No paragraph ends on one word by itself")
+@Suite("No paragraph ends on one word by itself", .tags(.ui))
 struct NoParagraphEndsOnOneWordTests {
     @Test("The last two words of each paragraph are held together")
     func lastTwoWords() {

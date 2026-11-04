@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Identity and device keys")
+@Suite("Identity and device keys", .tags(.crypto))
 struct IdentityTests {
     @Test("A generated identity has both a signing and an agreement key")
     func generation() throws {

@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Changing your hidden address when a device is removed", .serialized)
+@Suite("Changing your hidden address when a device is removed", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct ChangingYourHiddenAddressTests {
     @MainActor
@@ -55,7 +55,7 @@ struct ChangingYourHiddenAddressTests {
         tablet.syncDevices(through: InMemoryEntrySync(relay: relay))
         await tablet.load()
         try await phone.approveNewDevice(tablet)
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while tablet.rooms.isEmpty, Date() < deadline {
             await phone.refreshDeviceSync()
             await phone.settleDeviceSync()

@@ -32,7 +32,7 @@ private final class FlushLog: @unchecked Sendable {
 
 private struct Refused: Error {}
 
-@Suite("What is written down stays readable", .serialized)
+@Suite("What is written down stays readable", .serialized, .tags(.storage))
 struct WhatIsWrittenDownStaysReadableTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

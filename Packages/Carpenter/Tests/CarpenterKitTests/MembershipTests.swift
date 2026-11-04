@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("Membership attestations")
+@Suite("Membership attestations", .tags(.membership))
 struct MembershipAttestationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -117,7 +117,7 @@ struct MembershipAttestationTests {
     }
 }
 
-@Suite("Room roster")
+@Suite("Room roster", .tags(.membership))
 struct RoomRosterTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -403,7 +403,7 @@ struct RoomRosterTests {
     }
 }
 
-@Suite("Invites out of band")
+@Suite("Invites out of band", .tags(.membership))
 struct InviteCodecTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -457,7 +457,7 @@ struct InviteCodecTests {
     }
 }
 
-@Suite("A joiner checking their own invite")
+@Suite("A joiner checking their own invite", .tags(.membership))
 struct JoinerVerificationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -531,7 +531,7 @@ struct JoinerVerificationTests {
     }
 }
 
-@Suite("The invite envelope")
+@Suite("The invite envelope", .tags(.membership))
 struct InviteEnvelopeTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

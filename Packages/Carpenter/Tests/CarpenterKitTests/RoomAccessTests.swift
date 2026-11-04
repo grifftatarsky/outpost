@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("Room access control")
+@Suite("Room access control", .tags(.membership))
 struct RoomAccessTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()

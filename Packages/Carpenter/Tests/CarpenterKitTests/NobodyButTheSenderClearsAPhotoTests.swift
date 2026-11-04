@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Nobody but the sender clears a photo from its outbox", .serialized)
+@Suite("Nobody but the sender clears a photo from its outbox", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct NobodyButTheSenderClearsAPhotoTests {
     @MainActor
@@ -226,7 +226,7 @@ struct NobodyButTheSenderClearsAPhotoTests {
     }
 }
 
-@Suite("A photo and a member with two devices", .serialized)
+@Suite("A photo and a member with two devices", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct APhotoAndTwoDevicesTests {
     @MainActor

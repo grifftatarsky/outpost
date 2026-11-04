@@ -3,7 +3,7 @@ import Foundation
 import Testing
 import CarpenterKitTesting
 
-@Suite("How long an invitation lasts")
+@Suite("How long an invitation lasts", .tags(.membership))
 struct InvitationLifetimeTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -108,7 +108,7 @@ struct InvitationLifetimeTests {
     }
 }
 
-@Suite("Invitations a room is still waiting on")
+@Suite("Invitations a room is still waiting on", .tags(.membership))
 struct PendingInvitationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()

@@ -3,7 +3,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What a room draws after a removal")
+@Suite("What a room draws after a removal", .tags(.membership, .ui))
 struct RemovedMemberRenderingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

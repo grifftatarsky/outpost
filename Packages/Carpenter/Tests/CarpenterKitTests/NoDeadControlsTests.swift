@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("Controls that are drawn do something", .serialized)
+@Suite("Controls that are drawn do something", .serialized, .tags(.ui))
 struct NoDeadControlsTests {
     @Test("A code that has not parsed is not a code")
     func aCodeThatHasNotParsedIsNotACode() async throws {

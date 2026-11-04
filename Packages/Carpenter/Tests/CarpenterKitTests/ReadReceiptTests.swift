@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Delivered and read", .serialized)
+@Suite("Delivered and read", .serialized, .tags(.sync))
 @MainActor
 struct ReadReceiptTests {
     private func scratch() -> URL {

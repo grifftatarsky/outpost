@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("An entry's hash")
+@Suite("An entry's hash", .tags(.crypto))
 struct EntryHashTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

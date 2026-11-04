@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("A removed device cannot write itself back in with old dates")
+@Suite("A removed device cannot write itself back in with old dates", .timeLimit(.minutes(10)), .tags(.sync))
 struct WhatTheRegistryCountsTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let identity = Identity.generate()
@@ -186,7 +186,7 @@ extension AuthorityEvent {
     }
 }
 
-@Suite("Your devices ignore a removed device writing old dates into iCloud", .serialized)
+@Suite("Your devices ignore a removed device writing old dates into iCloud", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct WritingOldDatesIntoICloudTests {
     private struct Rig {
@@ -340,7 +340,7 @@ extension AuthorityEvent {
     }
 }
 
-@Suite("Another member remembers your removals", .serialized)
+@Suite("Another member remembers your removals", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct RemembersRemovalsTests {
     @Test("A member still knows another member's removed device after relaunching")

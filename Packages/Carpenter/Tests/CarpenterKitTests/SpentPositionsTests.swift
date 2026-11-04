@@ -3,7 +3,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("A deleted conversation leaves its positions spent, not empty")
+@Suite("A deleted conversation leaves its positions spent, not empty", .tags(.crypto))
 struct SpentPositionsTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -115,7 +115,7 @@ struct SpentPositionsTests {
     }
 }
 
-@Suite("Taking a room's entries out of the log on disk", .serialized)
+@Suite("Taking a room's entries out of the log on disk", .serialized, .tags(.crypto))
 struct LogRemovalTests {
     @Test("Removing entries keeps every other entry, in order, across a reload")
     func removalKeepsTheRest() async throws {

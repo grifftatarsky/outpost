@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Checking for an existing registration", .serialized)
+@Suite("Checking for an existing registration", .serialized, .tags(.storage))
 @MainActor
 struct ExistingRegistrationTests {
     private func session(
@@ -201,7 +201,7 @@ final class StubAccountRegistry: AccountRegistry, @unchecked Sendable {
 }
 
 @MainActor
-@Suite("Handing over a room after a relaunch", .serialized)
+@Suite("Handing over a room after a relaunch", .serialized, .tags(.storage))
 struct EpochLinkRestoreTests {
     @Test("A joiner can read a room whose host has relaunched since making it")
     func aRelaunchedHostStillHandsOverHistory() async throws {

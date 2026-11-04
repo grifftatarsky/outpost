@@ -7,7 +7,7 @@ import Testing
 @testable import CarpenterKitTesting
 
 @MainActor
-@Suite("App session", .serialized)
+@Suite("App session", .serialized, .timeLimit(.minutes(10)))
 struct AppSessionTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -415,7 +415,7 @@ struct AppSessionTests {
     }
 }
 
-@Suite("Persisted state tolerates fields it has never seen")
+@Suite("Persisted state tolerates fields it has never seen", .timeLimit(.minutes(10)))
 struct PersistedStateCompatibilityTests {
     @Test("A state file written before a field existed still decodes")
     func missingFieldsFallBackToDefaults() throws {
@@ -452,7 +452,7 @@ struct PersistedStateCompatibilityTests {
     }
 }
 
-@Suite("Integrity is reported, never repaired", .serialized)
+@Suite("Integrity is reported, never repaired", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct IntegrityReportingTests {
     private func scratch() -> URL {
@@ -562,7 +562,7 @@ struct IntegrityReportingTests {
     }
 }
 
-@Suite("Devices and pairing", .serialized)
+@Suite("Devices and pairing", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct DeviceListTests {
     private func scratch() -> URL {
@@ -627,7 +627,7 @@ extension DeviceListTests {
 
 }
 
-@Suite("A second device on one account", .serialized)
+@Suite("A second device on one account", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct SecondDeviceTests {
     private func storage(_ keychain: InMemoryKeychainStore) -> SessionStorage {
@@ -662,7 +662,7 @@ struct SecondDeviceTests {
     }
 }
 
-@Suite("A device that has never spoken says so", .serialized)
+@Suite("A device that has never spoken says so", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct UnusedDeviceTests {
     private func session() -> AppSession { TestSession.make() }

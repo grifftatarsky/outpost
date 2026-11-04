@@ -127,24 +127,29 @@ fi
 #    Matching the use rather than a bare name is deliberate: an unrelated local called
 #    `reduceMotion` would not excuse a file.
 motion_hits=""
-for file in $sources; do
-    grep -qE 'accessibilityReduceMotion|reduceMotion \?' "$file" && continue
+# shellcheck disable=SC2086
+unanswered=$(grep -LE 'accessibilityReduceMotion|reduceMotion \?' $sources 2>/dev/null)
+if [ -n "$unanswered" ]; then
     # The marker may sit on the animating line or in a comment just above it, which is where
     # anyone explaining themselves would actually write it.
-    hits=$(
+    # shellcheck disable=SC2086
+    motion_hits=$(
         awk '
-            { line[NR] = $0 }
+            FNR == 1 { delete line; named = 0 }
+            { line[FNR] = $0 }
             /withAnimation|\.animation\(|\.transition\(|matchedGeometryEffect|repeatForever/ {
                 excused = 0
-                for (i = NR - 3; i <= NR; i++) {
+                for (i = FNR - 3; i <= FNR; i++) {
                     if (i > 0 && line[i] ~ /cross-fade only/) excused = 1
                 }
-                if (!excused) printf "%d:%s\n", NR, $0
+                if (!excused) {
+                    if (!named) { print FILENAME; named = 1 }
+                    printf "%d:%s\n", FNR, $0
+                }
             }
-        ' "$file" 2>/dev/null
+        ' $unanswered 2>/dev/null
     )
-    [ -n "$hits" ] && motion_hits+="$file"$'\n'"$hits"$'\n'
-done
+fi
 if [ -n "$motion_hits" ]; then
     report "error: animation that neither honours Reduce Motion nor declares itself a cross-fade:" "$motion_hits"
 fi
@@ -184,24 +189,25 @@ fi
 #
 #    A hairline that genuinely divides two *regions* rather than two rows is legitimate; say so on
 #    the line and this leaves it alone.
-separator_hits=""
-for file in $sources; do
-    hits=$(
-        awk '
-            { line[NR] = $0 }
-            /\.fill\(palette\.separator\)/ {
-                # A comment describing the pattern is not the pattern.
-                if ($0 ~ /^[[:space:]]*\/\//) next
-                excused = 0
-                for (i = NR - 4; i <= NR; i++) {
-                    if (i > 0 && line[i] ~ /divides regions/) excused = 1
-                }
-                if (!excused) printf "%d:%s\n", NR, $0
+# shellcheck disable=SC2086
+separator_hits=$(
+    awk '
+        FNR == 1 { delete line; named = 0 }
+        { line[FNR] = $0 }
+        /\.fill\(palette\.separator\)/ {
+            # A comment describing the pattern is not the pattern.
+            if ($0 ~ /^[[:space:]]*\/\//) next
+            excused = 0
+            for (i = FNR - 4; i <= FNR; i++) {
+                if (i > 0 && line[i] ~ /divides regions/) excused = 1
             }
-        ' "$file" 2>/dev/null
-    )
-    [ -n "$hits" ] && separator_hits+="$file"$'\n'"$hits"$'\n'
-done
+            if (!excused) {
+                if (!named) { print FILENAME; named = 1 }
+                printf "%d:%s\n", FNR, $0
+            }
+        }
+    ' $sources 2>/dev/null
+)
 if [ -n "$separator_hits" ]; then
     report "error: hand-drawn row separator; use a List section (or say 'divides regions'):" "$separator_hits"
 fi
@@ -239,13 +245,13 @@ fi
 #     two effects on unrelated screens in one file are fine — so a file that has thought about it can
 #     say `one glass shape per screen` and be left alone.
 glass_hits=""
-for file in $sources; do
-    effects=$(grep -c '\.glassEffect(' "$file" 2>/dev/null)
+# shellcheck disable=SC2086
+while IFS=: read -r file effects; do
     [ "$effects" -gt 1 ] || continue
     grep -q 'GlassEffectContainer' "$file" && continue
     grep -q 'one glass shape per screen' "$file" && continue
     glass_hits+="$file ($effects effects, no GlassEffectContainer)"$'\n'
-done
+done < <(grep -c '\.glassEffect(' $sources 2>/dev/null)
 if [ -n "$glass_hits" ]; then
     report "error: sibling Liquid Glass effects outside a GlassEffectContainer:" "$glass_hits"
 fi

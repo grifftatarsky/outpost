@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What goes to iCloud is compressed, and nothing can make a phone expand it without limit")
+@Suite("What goes to iCloud is compressed, and nothing can make a phone expand it without limit", .tags(.crypto))
 struct CompressionTests {
     @Test("Whatever goes in comes back out, and what would not get smaller is left as it is")
     func roundTrips() throws {

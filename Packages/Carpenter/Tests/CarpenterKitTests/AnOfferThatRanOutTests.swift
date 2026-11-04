@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("An invitation that ran out")
+@Suite("An invitation that ran out", .tags(.membership))
 struct AnOfferThatRanOutTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let day: TimeInterval = 24 * 60 * 60

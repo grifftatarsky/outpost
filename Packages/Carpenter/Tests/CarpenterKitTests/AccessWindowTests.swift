@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("What a reader may read, stretch by stretch", .serialized)
+@Suite("What a reader may read, stretch by stretch", .serialized, .tags(.membership))
 struct AccessWindowSessionTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6
@@ -113,7 +113,7 @@ struct AccessWindowSessionTests {
     }
 }
 
-@Suite("Which changes are on offer")
+@Suite("Which changes are on offer", .tags(.membership))
 struct AccessStandingTests {
     private let when = Date(timeIntervalSince1970: 1_775_260_800)
 
@@ -162,7 +162,7 @@ struct AccessStandingTests {
     }
 }
 
-@Suite("Stretches, said as dates")
+@Suite("Stretches, said as dates", .tags(.membership))
 struct AccessWindowsCopyTests {
     private let march = Date(timeIntervalSince1970: 1_772_000_000)
     private let july = Date(timeIntervalSince1970: 1_784_000_000)

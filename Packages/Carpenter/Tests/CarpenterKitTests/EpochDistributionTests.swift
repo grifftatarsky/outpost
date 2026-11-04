@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Epoch distribution")
+@Suite("Epoch distribution", .tags(.crypto))
 struct EpochDistributionTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

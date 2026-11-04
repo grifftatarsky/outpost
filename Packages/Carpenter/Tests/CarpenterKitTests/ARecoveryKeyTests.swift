@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A recovery key")
+@Suite("A recovery key", .tags(.crypto))
 struct ARecoveryKeyTests {
     private func aSecret() throws -> RecoverySecret {
         try RecoverySecret(material: Data((0..<32).map { UInt8($0) }))
@@ -141,7 +141,7 @@ struct ARecoveryKeyTests {
     }
 }
 
-@Suite("The recovery key is its own key, and the identity alone cannot stand in for it")
+@Suite("The recovery key is its own key, and the identity alone cannot stand in for it", .tags(.crypto))
 struct TheRecoveryKeyIsItsOwnKeyTests {
     @Test("Every derived key is distinct, and nothing a device holds gives back the recovery key")
     func derivedKeysAreSeparate() throws {

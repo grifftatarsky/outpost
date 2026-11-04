@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("Who sees an Outpost", .serialized)
+@Suite("Who sees an Outpost", .serialized, .tags(.membership))
 struct OutpostAudienceTests {
     private func acquainted() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -240,7 +240,7 @@ actor RefusingLogStore: LogStore {
 }
 
 @MainActor
-@Suite("A key rotation that is owed", .serialized)
+@Suite("A key rotation that is owed", .serialized, .tags(.membership))
 struct OutpostKeyRotationTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 5
@@ -345,7 +345,7 @@ struct OutpostKeyRotationTests {
 }
 
 @MainActor
-@Suite("Being let in later", .serialized)
+@Suite("Being let in later", .serialized, .tags(.membership))
 struct OutpostBackfillTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6

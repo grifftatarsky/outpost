@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Device sync", .serialized)
+@Suite("Device sync", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct EntrySyncTests {
     private func pair() -> (relay: InMemoryEntrySync.Relay, keychain: InMemoryKeychainStore) {
@@ -13,7 +13,7 @@ struct EntrySyncTests {
     }
 
     private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while Date() < deadline {
             if condition() { return }
             await session.refreshDeviceSync()
@@ -75,7 +75,7 @@ struct EntrySyncTests {
             incoming.messages(in: room).isEmpty,
             "arrived without being fetched — this relay does not announce")
 
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while Date() < deadline,
             !(incoming.rooms.first?.name == "Kitchen"
                 && incoming.messages(in: room).contains { $0.body == "door code changed" })

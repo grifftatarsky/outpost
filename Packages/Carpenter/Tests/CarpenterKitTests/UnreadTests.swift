@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Unread", .serialized)
+@Suite("Unread", .serialized, .tags(.ui))
 struct UnreadTests {
     private func joined(
         bobAt directory: URL? = nil, bobKeychain: any KeychainStore = InMemoryKeychainStore()

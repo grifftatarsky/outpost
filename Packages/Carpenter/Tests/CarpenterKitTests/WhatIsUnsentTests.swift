@@ -43,7 +43,7 @@ struct WhatIsUnsentTests {
         }
     }
 
-    @Test("A feed read past a position does not walk a sequence number nobody wrote up to")
+    @Test("A feed read past a position does not walk a sequence number nobody wrote up to", .tags(.timing))
     func aFarPositionIsNotWalked() throws {
         var replica = Replica()
         let alice = Author()
@@ -75,7 +75,7 @@ struct WhatIsUnsentTests {
         #expect(session.unsentEntries().map(\.seq) == [48, 49, 50])
     }
 
-    @Test("Which of my messages in a room are unsent is answered from that room, not the log")
+    @Test("Which of my messages in a room are unsent is answered from that room, not the log", .tags(.timing))
     func unsentIsAskedOfTheRoom() {
         let viewer = ParticipantID(rawValue: WideID.of([1]))
         let device = DeviceID(rawValue: WideID.of([2]))

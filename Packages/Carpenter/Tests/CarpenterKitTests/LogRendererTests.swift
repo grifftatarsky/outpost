@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Rendering the log")
+@Suite("Rendering the log", .tags(.ui))
 struct LogRendererTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -211,7 +211,7 @@ struct LogRendererTests {
     }
 }
 
-@Suite("Every payload type is classified")
+@Suite("Every payload type is classified", .tags(.ui))
 struct PayloadTypeClassificationTests {
     @Test("No declared type is left to fall through into a transcript by accident")
     func everyKnownTypeIsDeliberate() {
@@ -235,7 +235,7 @@ struct PayloadTypeClassificationTests {
     }
 }
 
-@Suite("A wall's machinery is addressed to the wall")
+@Suite("A wall's machinery is addressed to the wall", .tags(.ui))
 struct WallPlumbingRoutingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

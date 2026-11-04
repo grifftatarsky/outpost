@@ -4,7 +4,7 @@ import UserNotifications
 
 @testable import CarpenterApp
 
-@Suite("Which pushes the member is allowed to see")
+@Suite("Which pushes the member is allowed to see", .tags(.ui))
 struct PushPresentationTests {
     @Test("A bell shows a banner")
     func bellShowsBanner() {

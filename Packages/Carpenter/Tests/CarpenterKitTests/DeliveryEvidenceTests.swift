@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("What a delivery mark is allowed to claim", .serialized)
+@Suite("What a delivery mark is allowed to claim", .serialized, .tags(.sync))
 @MainActor
 struct DeliveryEvidenceTests {
     private func scratch() -> URL {

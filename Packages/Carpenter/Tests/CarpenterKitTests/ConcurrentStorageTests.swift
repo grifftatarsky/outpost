@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Concurrent storage", .serialized)
+@Suite("Concurrent storage", .serialized, .tags(.storage))
 struct ConcurrentStorageTests {
     private func scratch() -> URL {
         let directory = TestScratch.root.appending(path: "carpenter-concurrent-\(UUID().uuidString)")

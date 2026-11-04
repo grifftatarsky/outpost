@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("The app and the notification extension share one container without undoing each other", .serialized)
+@Suite("The app and the notification extension share one container without undoing each other", .serialized, .tags(.storage))
 struct AppAndExtensionTests {
     private struct Rig {
         let alice: AppSession

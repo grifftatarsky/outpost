@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterCloudKit
 
-@Suite("Reading a mailbox that would not take a packet")
+@Suite("Reading a mailbox that would not take a packet", .tags(.sync))
 struct MailboxRefusalTests {
     private func ckError(_ code: CKError.Code, userInfo: [String: Any] = [:]) -> CKError {
         CKError(code, userInfo: userInfo)

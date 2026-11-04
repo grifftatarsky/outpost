@@ -68,7 +68,7 @@ extension Replica {
     }
 }
 
-@Suite("Replica")
+@Suite("Replica", .tags(.sync))
 struct ReplicaTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -301,7 +301,7 @@ struct ReplicaTests {
     }
 }
 
-@Suite("What the replica holds")
+@Suite("What the replica holds", .tags(.sync))
 struct ReplicaHoldsTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -334,11 +334,11 @@ struct ReplicaHoldsTests {
     }
 }
 
-@Suite("What a replica does with what it already holds")
+@Suite("What a replica does with what it already holds", .tags(.sync))
 struct ReplicaAlreadyHoldsTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
-    @Test("Offering held entries again changes nothing and verifies nothing")
+    @Test("Offering held entries again changes nothing and verifies nothing", .tags(.timing))
     func heldEntriesAreNotVerifiedAgain() throws {
         var replica = Replica()
         var alice = Author()

@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Pairwise secrets")
+@Suite("Pairwise secrets", .tags(.crypto))
 struct PairwiseTests {
     @Test("Both members derive the same secret without exchanging it")
     func symmetric() throws {
@@ -94,7 +94,7 @@ struct PairwiseTests {
     }
 }
 
-@Suite("Epoch chain")
+@Suite("Epoch chain", .tags(.crypto))
 struct EpochChainTests {
     private let room = RoomID()
 
@@ -244,7 +244,7 @@ struct EpochChainTests {
     }
 }
 
-@Suite("Sealed payloads")
+@Suite("Sealed payloads", .tags(.crypto))
 struct SealedPayloadTests {
     private let room = RoomID()
 

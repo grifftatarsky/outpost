@@ -1,7 +1,7 @@
 import CarpenterUI
 import Testing
 
-@Suite("Which picture is drawn for somebody")
+@Suite("Which picture is drawn for somebody", .tags(.ui))
 struct AvatarPrecedenceTests {
     private func source(
         isViewer: Bool = false,

@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Writes that cannot land are counted")
+@Suite("Writes that cannot land are counted", .timeLimit(.minutes(10)), .tags(.storage))
 @MainActor
 struct WritesThatCannotLandTests {
     @Test("A join nonce that cannot be written down is reported, not swallowed")
@@ -19,7 +19,7 @@ struct WritesThatCannotLandTests {
 
         _ = alice.identityCode()
 
-        let deadline = Date().addingTimeInterval(2)
+        let deadline = TestDeadline.fromNow
         while alice.integrity.writesFailed == before, Date() < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }

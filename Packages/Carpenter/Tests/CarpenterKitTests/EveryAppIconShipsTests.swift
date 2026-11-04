@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Every app icon ships")
+@Suite("Every app icon ships", .tags(.ui))
 struct EveryAppIconShipsTests {
     private var repository: URL {
         var url = URL(fileURLWithPath: #filePath)

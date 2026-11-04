@@ -3,7 +3,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Pasting a code somebody sent you")
+@Suite("Pasting a code somebody sent you", .tags(.membership))
 struct PastedCodeTests {
     private let scheme = "outpost"
 

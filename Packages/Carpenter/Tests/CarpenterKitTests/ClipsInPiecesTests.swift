@@ -5,7 +5,7 @@ import CryptoKit
 import Foundation
 import Testing
 
-@Suite("A clip is sealed and sent in pieces, never whole")
+@Suite("A clip is sealed and sent in pieces, never whole", .tags(.sync))
 struct SealingAClipInPiecesTests {
     private func file(bytes: Int, seed: UInt8 = 7) throws -> URL {
         let url = TestScratch.root.appending(path: "clip-\(UUID().uuidString).mp4")
@@ -92,7 +92,7 @@ struct SealingAClipInPiecesTests {
 }
 
 @MainActor
-@Suite("Sending a clip in pieces", .serialized)
+@Suite("Sending a clip in pieces", .serialized, .tags(.sync))
 struct SendingAClipInPiecesTests {
     private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
         let mailbox = InMemoryMailbox()

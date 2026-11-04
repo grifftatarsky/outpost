@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("The code two people compare later is the same on both phones, and costs a full search to fake")
+@Suite("The code two people compare later is the same on both phones, and costs a full search to fake", .tags(.crypto))
 struct ComparisonCodeTests {
     @Test("Both phones show the same two halves, in the same order")
     func symmetric() {

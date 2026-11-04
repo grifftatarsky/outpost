@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("A message typed mid-fetch", .serialized)
+@Suite("A message typed mid-fetch", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct ReplicaRaceTests {
     private func scratch() -> URL {
@@ -113,7 +113,7 @@ struct ReplicaRaceTests {
     }
 }
 
-@Suite("Acknowledging a packet")
+@Suite("Acknowledging a packet", .timeLimit(.minutes(10)), .tags(.sync))
 struct AcknowledgementTests {
     @Test("A packet whose entries would not verify is left for the next round")
     func rejectedEntriesHoldThePacket() throws {

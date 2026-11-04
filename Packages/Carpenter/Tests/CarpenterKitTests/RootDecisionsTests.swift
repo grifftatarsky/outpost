@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Composition root decisions")
+@Suite("Composition root decisions", .tags(.ui))
 @MainActor
 struct RootDecisionsTests {
     // MARK: Which screen

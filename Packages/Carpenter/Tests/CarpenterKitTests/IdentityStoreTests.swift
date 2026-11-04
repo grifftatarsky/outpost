@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Identity storage")
+@Suite("Identity storage", .tags(.crypto))
 struct IdentityStoreTests {
     private func stored(in keychain: InMemoryKeychainStore) async throws -> Identity {
         let identity = RecoverySecret.generate().identity

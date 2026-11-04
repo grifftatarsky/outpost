@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A device counts only between the times iCloud stored its approval and its removal")
+@Suite("A device counts only between the times iCloud stored its approval and its removal", .tags(.membership))
 struct WhoCanRemoveADeviceTests {
     private let t0 = Date(timeIntervalSince1970: 1_786_635_000)
 

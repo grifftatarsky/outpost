@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterUI
 
 @MainActor
-@Suite("The mailbox on You says tap me until it is tapped")
+@Suite("The mailbox on You says tap me until it is tapped", .tags(.ui))
 struct TheMailboxSaysTapMeTests {
     private func defaults() -> UserDefaults {
         let name = "mark-bubbles-\(UUID().uuidString)"

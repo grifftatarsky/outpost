@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Asking for a photo again", .serialized)
+@Suite("Asking for a photo again", .serialized, .tags(.sync))
 @MainActor
 struct AskingForAPhotoAgainTests {
     @MainActor

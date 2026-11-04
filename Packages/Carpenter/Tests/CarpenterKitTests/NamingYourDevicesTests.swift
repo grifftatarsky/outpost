@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Naming your own devices", .serialized)
+@Suite("Naming your own devices", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct NamingYourDevicesTests {
     private func session() async throws -> AppSession {
@@ -92,7 +92,7 @@ struct NamingYourDevicesTests {
         await sibling.load()
         try await first.approveNewDevice(sibling)
 
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while Date() < deadline, sibling.deviceName(me) == nil {
             await first.refreshDeviceSync()
             await sibling.refreshDeviceSync()
@@ -115,7 +115,7 @@ struct NamingYourDevicesTests {
     }
 }
 
-@Suite("Cutting off several devices at once", .serialized)
+@Suite("Cutting off several devices at once", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct RemovingSeveralDevicesTests {
     private func sessionWithSpareDevices(_ count: Int) async throws -> (

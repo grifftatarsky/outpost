@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A record between a member's devices counts only with its writer's signature")
+@Suite("A record between a member's devices counts only with its writer's signature", .tags(.crypto))
 struct SigningSiblingRecordsTests {
     private let member = Identity.generate()
     private let phone = DeviceKeys.generate()

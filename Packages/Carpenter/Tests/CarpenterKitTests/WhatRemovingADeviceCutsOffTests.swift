@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What removing a device cuts off", .serialized)
+@Suite("What removing a device cuts off", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct WhatRemovingADeviceCutsOffTests {
     private struct Rig {
@@ -44,7 +44,7 @@ struct WhatRemovingADeviceCutsOffTests {
         restored.syncDevices(through: InMemoryEntrySync(relay: relay))
         await restored.load()
         try await stolen.approveNewDevice(restored)
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while restored.rooms.isEmpty, Date() < deadline {
             await stolen.refreshDeviceSync()
             await stolen.settleDeviceSync()
