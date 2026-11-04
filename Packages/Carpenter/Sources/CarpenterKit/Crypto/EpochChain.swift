@@ -142,7 +142,10 @@ public struct EpochChain: Sendable {
         secrets[epoch] = secret
     }
 
-    public mutating func hold(_ secret: EpochSecret, at epoch: EpochNumber, from giver: ParticipantID? = nil) {
+    public mutating func hold(
+        _ secret: EpochSecret, at epoch: EpochNumber, from giver: ParticipantID? = nil,
+        recorded: @autoclosure () -> Bool = false
+    ) {
         if secrets[epoch] == nil, let derived = try? self.secret(for: epoch) { secrets[epoch] = derived }
         guard let primary = secrets[epoch] else {
             secrets[epoch] = secret
@@ -153,7 +156,7 @@ public struct EpochChain: Sendable {
             (rivals[epoch]?.count ?? 0) < Self.mostRivals
         else { return }
         if let giver {
-            guard !(givenBy[epoch]?.values.contains(giver) ?? false) else { return }
+            guard !(givenBy[epoch]?.values.contains(giver) ?? false) || recorded() else { return }
             givenBy[epoch, default: [:]][secret] = giver
         }
         rivals[epoch, default: []].append(secret)

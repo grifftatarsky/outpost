@@ -885,8 +885,9 @@ not arrived counts only if it is the first
 the phone holds for its number and whoever gave it is in, which covers the real key arriving a round
 before its record. Among several that count for one number, every phone takes the one with the lowest
 fingerprint, so two members who turn the key at once end up on the same key. One person can put only
-one key beside a number, and no number holds more than sixteen, so a flood cannot crowd out the real
-key. The room's first key has no record and no second key.
+one key beside a number unless the room's log holds a record of the change made under that key, and
+no number holds more than sixteen, so a flood cannot crowd out the real key. The room's first key has
+no record and no second key.
 
 **Cost:** a key with no record is never written under unless it is the first for its number, and a
 phone whose newest key is waiting on its record writes under the one before it until the record
@@ -899,6 +900,13 @@ had.
 and reading the second found that a phone joining after a tie never got the key that lost it, because
 the newest key only walks back down its own lineage. Both fixed 2026-09-30; `AMadeUpKeyTests` and
 `AStrandedKeyTests` pass in the package suite. Not run on the rig.
+
+**Changed 2026-10-31, PROPOSED:** the one-key-per-person limit now gives way to a key the room's log
+records. Before, a member whose two phones rotated at once had the second key refused everywhere, and
+so did a member who had passed somebody else's key on to a phone before making their own; phones
+holding the other key then wrote under one that phone could not open. A key is held as a second one
+from the same person only if an `epochChange` entry for that number, authenticated under that very key,
+is in the log, so each extra key still costs a signed entry in the room (`TwoKeysFromOneMemberTests`).
 
 <!-- COPY END 6264031c -->
 

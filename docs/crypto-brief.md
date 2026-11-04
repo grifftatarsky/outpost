@@ -489,7 +489,10 @@ reaches a phone still joining the room before its inviter's, or from somebody th
 show as in, waits until it does, and is dropped if the phone shows them removed or gone; the inviter's
 own key never waits, because until the phone can read the room nothing could ever release it
 (`AKeyThatWaitsTests`).
-One giver may add one key per number and no number holds more than sixteen.
+One giver may add one key per number, unless the room's log holds a record of the change made under
+that key (since 2026-10-31, because a member who passed on somebody else's key, or whose two phones
+rotated at once, had their own key refused), and no number holds more than sixteen
+(`TwoKeysFromOneMemberTests`).
 The two-advances case still needs three real accounts to prove over iCloud
 ([Proofs a rig cannot run](proofs-a-rig-cannot-run.md)).
 

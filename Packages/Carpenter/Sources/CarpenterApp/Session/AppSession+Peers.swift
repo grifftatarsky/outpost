@@ -339,12 +339,18 @@ extension AppSession {
             return
         }
         var chain = held ?? EpochChain(room: grant.room)
+        var changes: [(author: ParticipantID, change: EpochChangeBody)]?
+        let recorded = { [self] (secret: EpochSecret) -> Bool in
+            let made = changes ?? projection.keyChanges(in: grant.room, opening: payloadOpener())
+            changes = made
+            return made.contains { $0.change.link.epoch == grant.epoch && $0.change.isAuthentic(under: secret) }
+        }
         do {
             var opened = false
             var lastError: any Error = CryptoError.openFailed
             for secret in [peer.secret] + alternateSecrets(with: peer.them).filter({ $0 != peer.secret }) {
                 do {
-                    try chain.adopt(grant, using: secret, as: enrolment?.device, from: peer.them)
+                    try chain.adopt(grant, using: secret, as: enrolment?.device, from: peer.them, recorded: recorded)
                     opened = true
                     break
                 } catch CryptoError.notSealedForThisDevice {
