@@ -39,11 +39,11 @@ Each epic has its own test plan: [Messaging](epics/messaging.md#test-plan),
 
 | Suite | Runs with | Covers |
 |---|---|---|
-| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 1,478 tests on 2026-09-17. |
+| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,009 tests in 348 suites on 2026-11-04. |
 | App suite, `App/CarpenterTests` | `xcodebuild test … -only-testing:CarpenterTests` | What needs a real app bundle: the system keychain, and the live CloudKit tests, which are off unless asked for. |
 | UI tests, `App/CarpenterUITests` | `xcodebuild test … -only-testing:CarpenterUITests/<class>` | Apple's accessibility audit, a contrast audit per accent, a label check, and the rig steps. |
 
-CI runs the package suite, the lint and a build of the app.
+CI runs the package suite, the app suite, the lint and a build of the app for iOS and macOS.
 
 **What green is worth.** The package suite has been green while the app did not work, more than once.
 It proves the logic above the mailbox and cannot prove CloudKit. A run on two accounts is the only
@@ -63,6 +63,103 @@ again without rebuilding anything, and `--only app-suite` (or any list of steps)
 A failing app-suite test is named from its result bundle, through `xcresulttool`.
 
 <!-- COPY END d9819eff -->
+
+<!-- COPY BEGIN 8a4d142d [NEEDS HUMAN REVIEW] -->
+
+## How the package suite holds up, measured 2026-11-04
+
+**Where the time goes.** The full run with coverage took 382 seconds of test time on 2026-11-04,
+with the load average between 400 and 1,000 because several other builds were running. Later the
+same night, at a load average under 30, it took 101 seconds and 163 seconds of processor time, so on
+average fewer than two of the eight cores were busy. Most of the time is spent on the main actor. 173
+suites are `@MainActor`, and every `AppSession` lives there, so those tests take turns on one thread
+however many cores the machine has. That is also why a test's reported duration says little about
+what it costs: its clock runs while it waits for the main actor. The longest reported 296 seconds,
+and the reported durations add up to 36,662 seconds inside a 382-second run. To find out what a
+suite costs, run it alone with `--filter`.
+
+**`.serialized` protects nothing here.** 149 suites in 113 files carry it. Each test gets a new suite
+value and makes its own sessions, mailbox, clock and scratch folder, and no test reads a static
+another test writes (`TestScratch.root` is made once per process and only read). So there is nothing
+for the trait to keep apart; all it does is stop the tests of one suite overlapping while they wait.
+Taken off all 149 on 2026-11-04, the full suite passed in 121 seconds against 101 with it,
+one run each at a similar load, so taking it off saves no time. Alone at a load average of 10, the
+formerly serialized suites passed; with a sanitizer build running beside them, two device-sync tests
+failed on their five-second deadline, which is the load problem below and not something the trait
+guarded. It was left in place.
+
+**What is flaky, and why.** Six tests failed in that loaded run, and each holds a bound in wall-clock
+time. Two in `ProjectionCostTests` (drawing the feed, and what a screen reads) and one in
+`WhatIsUnsentTests` hold an absolute time per call. `WhatALaunchWritesTests` allows the session three
+times what a plain log takes, plus 50 milliseconds. Two poll device sync until a five-second deadline
+runs out: "Opening the app on both devices is enough" in `EntrySyncTests`, and "A device away for
+longer than mail is kept" in `SiblingMailTests`. `DeletingARoomTests`, `NamingYourDevicesTests`,
+`WritesThatCannotLandTests` and the photo loader in `MediaTests` also poll against a deadline of two
+to five seconds, and passed. `DeletingARoomTests` also sleeps a fixed 200 milliseconds before it goes
+on, which [style](style.md#tests) rules out.
+
+The suites that a search for clocks, sleeps and concurrent code found, 34 suites and 180 tests
+including all six, then ran alone ten times at load averages from 230 down to 15, and passed every
+time. So none of them is flaky by interleaving that ten runs could find. They are flaky under load,
+and the cost tests measure the machine as much as the code. A cost test that counts something
+(`projectionBuilds`, decryptions) does not have this problem; one that times something does.
+
+<!-- COPY END 8a4d142d -->
+
+<!-- COPY BEGIN c835132c [NEEDS HUMAN REVIEW] -->
+
+**Fakes that are easier than the real thing.** The table under
+[the fakes](#the-fakes-are-held-to-the-real-seams) covers the mailbox, the log store, device sync and
+screening. Four seams arrived after it and are not in it.
+`InMemoryDeathmarkBoard` posts in one step, where `CloudKitDeathmarkBoard.post` deletes the zone,
+makes it again and then saves the mark, so a failure between those calls leaves no mark at all; the
+fake cannot fail, and no test covers a post that half happened. `FakeHardwareKeys` checks whether the
+Secure Enclave is available before looking for the key, and `SecureEnclaveKeys.agree` looks for the
+key first, so a missing key and an unavailable enclave come back as different errors in the two.
+`StubAccountRegistry` answers whatever it is built with, and the mapping from CloudKit errors to an
+answer is tested on its own in `AccountCheckErrorTests`, which is the right split. And
+`InMemoryEntrySync` lives in `CarpenterKit`, not `CarpenterKitTesting`, so the fake is compiled into
+the app that ships; nothing in the app uses it.
+
+**Coverage**, from `swift test --enable-code-coverage` and `llvm-cov`, by lines and by functions:
+
+| Code | Lines | Functions |
+|---|---|---|
+| `CarpenterKit/Crypto` | 97.9% | 95.4% |
+| `CarpenterKit/Membership` | 96.0% | 94.0% |
+| `CarpenterKit/Log` | 97.4% | 94.4% |
+| `CarpenterKit/Sync` | 92.7% | 84.3% |
+| `CarpenterKit/Storage` | 85.6% | 78.9% |
+| `CarpenterApp/Session` | 92.1% | 86.2% |
+| `CarpenterUI` | 2.4% | 4.6% |
+| `CarpenterCloudKit` | 6.7% | 7.1% |
+
+What no test runs, in the parts that matter most. `AppSession.deathmarkNamesThisDevice(on:)`, which
+the notification extension calls to decide whether this device was erased from another, has no test,
+and repeats the checks in `obeyDeathmark(on:)` rather than sharing them. `WriteBudget` and
+`BudgetedMailbox` are tested only in part and are used by nothing in the app: no transport is
+budgeted. The write paths of the read-only stores the extension uses (`ReadOnlyLogStore`,
+`ReadOnlyKeychainStore`, `ReadOnlyDocumentStore`) never run, so nothing shows they refuse.
+`FileAvatarStore` never runs at all, and `FileMediaStore`'s `sealed(for:)`, `remove` and `removeAll`
+never run. `DeviceOnlyKeychainStore`, which keeps a test profile's keys off iCloud Keychain, never has
+its reads or writes run. `PacketWire.outstanding(in:)` and `TapSwap.disconnected(_:)` never run
+either. Two overloads, `EpochGrant.issue(_:at:link:to:)` and
+`MembershipAttestation.issue(joining:code:by:at:lifetime:requiring:)`, are called by nothing in the
+app or the suite.
+
+**Assumptions that went stale.** The rig is gone from this Mac: `outpost-alpha` and the other four
+simulators on [the simulator rig](simulator-rig.md) do not exist here, and the one simulator is
+`bullet`, on iOS 27.2. `check-all.sh` defaulted to `outpost-alpha`, so it skipped the app suite and the
+release check on any machine without the rig. `scan-for-vulnerabilities.sh` named `outpost-alpha` with
+`name=`, which on Xcode 27 finds nothing even when the device exists, and `check-release-leaves.sh`
+looked it up by name. The screen catalogue command above names `outpost-27`, and the build and test
+commands in `CLAUDE.md` name `outpost-alpha`'s UDID. CI selects the newest
+Xcode 26 on `macos-26`, which on 2026-11-04 was 26.6 with iOS 26.5 at most
+([runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md)),
+while every local build is Xcode 27.1 with Swift 6.4, so CI compiles with an older compiler than
+anybody here does and cannot catch what only Xcode 27 reports.
+
+<!-- COPY END c835132c -->
 
 <!-- COPY BEGIN 64f99f8f [NEEDS HUMAN REVIEW] -->
 
