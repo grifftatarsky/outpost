@@ -562,11 +562,13 @@ extension AppSession {
         }
         guard !wanted.isEmpty else { return }
 
+        let remaining = (replica.registry(for: enrolment.identity.id)?.activeDevices ?? [])
+            .subtracting(wanted).union([enrolment.device.id])
         for device in wanted {
             let top = replica.link(atTopOf: FeedKey(author: enrolment.identity.id, device: device))
             let revocation = try DeviceRevocation.issue(
                 for: device, by: enrolment.identity, at: clock.now, from: enrolment.device,
-                cutoff: top?.seq ?? 0, head: top?.hash)
+                cutoff: top?.seq ?? 0, head: top?.hash, remaining: remaining)
             try replica.revoke(revocation, storedAt: authorityNow())
         }
         recordAuthority()
@@ -581,7 +583,8 @@ extension AppSession {
             """)
 
         var notRotated: [RoomID] = []
-        for room in persisted.knownRooms where chains[room] != nil {
+        let me = enrolment.identity.id
+        for room in persisted.knownRooms where chains[room] != nil && outpostOwner(of: room).map({ $0 == me }) ?? true {
             do {
                 try await advanceEpoch(of: room)
             } catch {

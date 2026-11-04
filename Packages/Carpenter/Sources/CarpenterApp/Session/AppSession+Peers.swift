@@ -187,11 +187,37 @@ extension AppSession {
         }
     }
 
+    private func keyMakers(of room: RoomID) -> Set<ParticipantID> {
+        if let owner = outpostOwner(of: room) { return [owner] }
+        let roster = roster(of: room)
+        return roster.members.union(roster.departures.keys).subtracting(roster.removals.keys)
+    }
+
+    func writesBelowAKeyARemovedMemberMade(in room: RoomID) -> Bool {
+        guard outpostOwner(of: room) == nil, let chain = chains[room], let top = chain.highestKnownEpoch else {
+            return false
+        }
+        let writing = writingKey(of: room)?.epoch ?? .initial
+        let removed = Set(roster(of: room).removals.keys)
+        guard writing < top, !removed.isEmpty else { return false }
+        let changes = projection.keyChanges(in: room, opening: payloadOpener())
+        return chain.heldNumbers.contains { epoch in
+            epoch > writing
+                && chain.heldSecrets(at: epoch).contains { secret in
+                    chain.giver(of: secret, at: epoch).map(removed.contains) == true
+                        || changes.contains {
+                            $0.change.link.epoch == epoch && removed.contains($0.author)
+                                && $0.change.isAuthentic(under: secret)
+                        }
+                }
+        }
+    }
+
     private func straysBelow(_ heads: [TrustedKey], in room: RoomID) -> [TrustedKey] {
         guard var above = heads.first?.epoch, let chain = chains[room],
             chain.heldKeyCount > chain.knownEpochs.count
         else { return [] }
-        let makers = outpostOwner(of: room).map { Set([$0]) } ?? roster(of: room).members
+        let makers = keyMakers(of: room)
         let changes = projection.keyChanges(in: room, opening: payloadOpener())
         var reachable = Set(heads.map(\.secret))
         var strays: [TrustedKey] = []
@@ -211,7 +237,7 @@ extension AppSession {
     private func trustedKeys(of room: RoomID) -> [TrustedKey] {
         cached(\.cachedTrustedKeys, room) {
             guard let chain = chains[room] else { return [] }
-            let makers = outpostOwner(of: room).map { Set([$0]) } ?? roster(of: room).members
+            let makers = keyMakers(of: room)
             let changes = projection.keyChanges(in: room, opening: payloadOpener())
             for epoch in chain.knownEpochs.sorted(by: >) {
                 let trusted = chain.heldSecrets(at: epoch).compactMap { secret in
@@ -305,7 +331,16 @@ extension AppSession {
         return held > shown.count + EpochChain.mostNumbersTheLogHasNotShown
     }
 
-    private func outpostOwner(of room: RoomID) -> ParticipantID? {
+    func readerLostADevice(from before: Replica, to after: Replica) -> Bool {
+        guard let me = enrolment?.identity.id, chains[outpostRoom(for: me)] != nil else { return false }
+        return outpostReaders().contains { reader in
+            let was = before.registry(for: reader)?.activeDevices ?? []
+            let now = after.registry(for: reader)?.activeDevices ?? []
+            return !was.isSubset(of: now)
+        }
+    }
+
+    func outpostOwner(of room: RoomID) -> ParticipantID? {
         guard let me = enrolment?.identity.id else { return nil }
         if room == outpostRoom(for: me) { return me }
         return replica.knownParticipants.first { outpostRoom(for: $0) == room }
@@ -339,12 +374,18 @@ extension AppSession {
             return
         }
         var chain = held ?? EpochChain(room: grant.room)
+        var changes: [(author: ParticipantID, change: EpochChangeBody)]?
+        let recorded = { [self] (secret: EpochSecret) -> Bool in
+            let made = changes ?? projection.keyChanges(in: grant.room, opening: payloadOpener())
+            changes = made
+            return made.contains { $0.change.link.epoch == grant.epoch && $0.change.isAuthentic(under: secret) }
+        }
         do {
             var opened = false
             var lastError: any Error = CryptoError.openFailed
             for secret in [peer.secret] + alternateSecrets(with: peer.them).filter({ $0 != peer.secret }) {
                 do {
-                    try chain.adopt(grant, using: secret, as: enrolment?.device, from: peer.them)
+                    try chain.adopt(grant, using: secret, as: enrolment?.device, from: peer.them, recorded: recorded)
                     opened = true
                     break
                 } catch CryptoError.notSealedForThisDevice {

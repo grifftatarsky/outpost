@@ -170,6 +170,7 @@ public struct SealedSiblingFeed: Hashable, Sendable, Codable {
         as kind: SiblingRecord.Kind = .state, to recipients: [DeviceRecipient] = [],
         signedBy signer: DeviceKeys? = nil
     ) throws -> SealedSiblingFeed {
+        guard !recipients.isEmpty || !kind.carriesKeys else { throw CryptoError.notSealedForThisDevice }
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         let context = context(member: identity.id, device: device, kind: kind)

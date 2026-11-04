@@ -152,6 +152,10 @@ extension ForwardCompatibilityTests {
             try DeviceRevocation.issue(
                 for: DeviceKeys.generate().id, by: other, at: stamp.at, from: DeviceKeys.generate())
         ]
+        state.supersededLines = [
+            FeedKey(author: other.id, device: DeviceID(rawValue: WideID.of([8]))):
+                DeviceRegistry.Line(seq: 12, head: EntryHash(rawValue: Data(repeating: 0x5C, count: 32)))
+        ]
         state.authorityStored = [Data(repeating: 0x5D, count: 32): stamp.at]
         state.authorityIsLegacy = true
         state.authorityPublished = [Data(repeating: 0x5E, count: 32)]

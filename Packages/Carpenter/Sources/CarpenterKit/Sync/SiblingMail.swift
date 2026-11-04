@@ -41,6 +41,13 @@ public struct SiblingRecord: Hashable, Sendable {
         case request
         case approval(for: DeviceID)
         case authority(Data)
+
+        public var carriesKeys: Bool {
+            switch self {
+            case .mail, .catchUp: true
+            case .state, .request, .approval, .authority: false
+            }
+        }
     }
 
     public struct Name: Hashable, Sendable {

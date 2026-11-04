@@ -57,6 +57,10 @@ public actor InMemoryEntrySync: EntrySync {
 
         public func created(_ name: SiblingRecord.Name) -> Date? { created[name.recordName] }
 
+        public func sealed(_ name: SiblingRecord.Name) -> SealedSiblingFeed? {
+            records[name.recordName].flatMap { try? JSONDecoder().decode(SealedSiblingFeed.self, from: $0) }
+        }
+
         private func stamp(_ key: String) {
             serverNow += 1
             if created[key] == nil { created[key] = serverNow }

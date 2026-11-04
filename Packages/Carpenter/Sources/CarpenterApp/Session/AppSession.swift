@@ -378,6 +378,10 @@ public final class AppSession {
             try await persistEpoch(secret, at: .initial, for: chainRoom)
         }
         if persisted.rekeyBeforeWriting.contains(chainRoom) { try await rekeyBeforeWriting(chainRoom) }
+        if !PayloadType.plumbing.contains(payload.type), writesBelowAKeyARemovedMemberMade(in: chainRoom) {
+            try await oweKeyRotation(in: chainRoom)
+            try await rotateOwedKey(in: chainRoom)
+        }
 
         try await oneWriteAtATime { [self] in
             guard let enrolment = self.enrolment, let chain = chains[chainRoom] else {
@@ -439,6 +443,7 @@ public final class AppSession {
             }
             try? replica.revoke(revocation, storedAt: at)
         }
+        replica.restore(supersededLines: persisted.supersededLines)
         if enrolment != nil { recordAuthority() }
         replica.restore(spent: persisted.spentEntries, closing: persisted.preferences.roomsDeleted)
 
@@ -451,10 +456,10 @@ public final class AppSession {
         let checked = await replica.signatureChecks(for: loaded.entries)
         let ownFeed = enrolment.map { FeedKey(author: $0.identity.id, device: $0.device.id) }
         var stillOnDisk: [Entry] = []
-        for entry in loaded.entries {
+        for (entry, result) in replica.integrate(loaded.entries, checked: checked) {
             let outcome: IntegrationResult
             do {
-                outcome = try replica.integrate(entry, checked: checked)
+                outcome = try result.get()
             } catch {
                 integrity.unverifiableOnDisk += 1
                 continue
@@ -483,6 +488,7 @@ public final class AppSession {
             if let room = spent.room { noteOwn(spent.link, in: room) }
         }
         persisted.spentEntries = replica.spentEntries
+        replica.fixSupersededLines(sparing: identity.id)
 
         try await restoreEpochs()
 

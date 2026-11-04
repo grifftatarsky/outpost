@@ -153,10 +153,10 @@ public func isAuthorized(_ device: DeviceID, at instant: Date) -> Bool {
 
 Three properties are worth naming because each is a decision:
 
-- **Authority is an interval, not a flag.** An entry is checked against the registry *at the entry's
-  own `wallTime`*, in `Replica.integrate`. Revoking a device does not retroactively invalidate what
-  it said before the revocation, which is what stops a lost phone from erasing a year of
-  conversation.
+- **Authority is an interval, not a flag.** An entry is checked against the registry in
+  `Replica.integrate`, by its number when the removal names a cutoff and by its `wallTime` when it
+  does not. Removing a device does not take back what the member's devices had already seen it say:
+  see *What a removed device wrote*, below.
 - **Revocation only ever moves earlier.** `revoke` takes `min(existing, new)`, so a second
   revocation cannot be used to *widen* a device's window.
 - **A certificate cannot be swapped.** `admit` refuses a certificate for a `DeviceID` already known
@@ -195,6 +195,15 @@ from an older root stops counting at the new root's date, including anything a t
 an old recovery certificate, or one published late, changes nothing, because its date is older
 (`DeviceApprovalTests`, `WhatTheRegistryCountsTests`).
 
+That date is one the old device can write before, so since 2026-10-31 each contact also fixes a line
+for every older root's device the first time it hears of the newer root: the highest number of that
+device's feed it holds then, and the entry there (`Replica.fixSupersededLines`, kept in
+`PersistedState.supersededLines` and put back before the log is read). Past it nothing counts,
+whatever date it carries, and below it an entry still has to be dated before the restore. The line
+differs a little from contact to contact, but no contact takes anything new from the old device. The
+member's own devices are spared, because a restored device fills its history from its peers after
+it hears of the old root (`ADeviceLeftBehindByARestoreTests`).
+
 **Approvals and removals count in the order iCloud first stored them** (since 2026-09-27). Until then
 the registry ordered them by the dates their authors wrote, and a removed device that keeps the
 identity key could date an approval, or removals of the member's other devices, before its own
@@ -226,6 +235,34 @@ room used cannot be checked yet. The room chain Griff ruled for on 2026-09-28
 ([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)) closes it for a
 person removed from a room, not yet for a removed device, which Griff has asked to be closed
 ([Open questions](decisions.md)).
+
+**A removal cannot erase what the member's devices had seen** (since 2026-10-31). The device that
+signs a removal chooses its cutoff, so a stolen phone could sign one with a cutoff of 0, or with no
+cutoff and a date before everything, and take every entry of the member's real phone off every
+friend's phone. So each contact checks a removal against what the member's devices had already
+shown. An entry's vector clock is its device's signed statement of how far it had read every feed,
+and a removal's cutoff is its remover's. `DeviceRegistry.noteWhatWasSeen` keeps, for each of the
+member's feeds, the furthest position each of their other devices has stated. A removal whose cutoff
+is below what its own remover, or any of the member's devices that still counts, had stated is
+contradicted: its cutoff and head are ignored, and the line is the furthest position stated. A
+removal that agrees with the evidence keeps its cutoff and head exactly as before. A removed
+device's statements stop counting as evidence for anybody else's removal, so a second stolen phone
+cannot vouch for the first once it is removed too. Entries that arrive before what vouches for them
+are tried again in the same batch (`Replica.integrate(_:)` over a list), so the order a packet or the
+log on disk holds them in does not matter (`ARemovalCannotEraseWhatWasSeenTests`).
+
+**A removal names the devices that stay** (since 2026-10-31). A stolen phone that still counts can
+approve a device and show it only to friends, so the member's own phones never list it. The app's
+removal now signs `remaining`, the member's devices that stay, appended under its own label and count
+only when present. A contact removes, at the removal's stored time, every device the removed one
+approved, directly or through others, that the list leaves out and that still counts
+(`ADeviceTheRemovedOneApprovedTests`).
+
+**Outposts a removed device read** (since 2026-10-31). Only an Outpost's owner can change its key, so
+removing a device rotates the key of every room the member is in and of their own Outpost, and leaves
+other people's alone. Each owner rotates their Outpost's key the round they see one of its readers lose
+a device, whether removed, left off a removal's list or left behind by a restore, and seals the new key
+only to the reader's devices that remain (`ARemovedDeviceAndTheOutpostsItReadTests`).
 
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
@@ -458,7 +495,12 @@ reaches a phone still joining the room before its inviter's, or from somebody th
 show as in, waits until it does, and is dropped if the phone shows them removed or gone; the inviter's
 own key never waits, because until the phone can read the room nothing could ever release it
 (`AKeyThatWaitsTests`).
-One giver may add one key per number and no number holds more than sixteen.
+One giver may add one key per number, unless the room's log holds a record of the change made under
+that key (since 2026-10-31, because a member who passed on somebody else's key, or whose two phones
+rotated at once, had their own key refused), and no number holds more than sixteen
+(`TwoKeysFromOneMemberTests`). A key keeps counting when its maker leaves of their own accord, and
+stops only when they are removed; a phone that holds a removed member's key above the one it would
+write under makes a new key before writing a message (`WhenAKeysMakerGoesTests`).
 The two-advances case still needs three real accounts to prove over iCloud
 ([Proofs a rig cannot run](proofs-a-rig-cannot-run.md)).
 
@@ -833,7 +875,10 @@ which is exactly right — a device restored from the recovery key can reopen it
 nothing else can.
 
 Mail and catch-ups, which carry room keys, are sealed a second time around that: a random content
-key, sealed to each of the member's devices that is not removed with `DeviceSeal`. The small state
+key, sealed to each of the member's devices that is not removed with `DeviceSeal`. A device with no
+receiving key is left out, the way a grant leaves it out, and a record with no device left to seal to
+is not sent; until 2026-10-31 one such device made the whole record fall back to the identity alone,
+which a removed device holds (`MailBetweenDevicesIsSealedPerDeviceTests`). The small state
 record, which carries certificates, revocations and the member's people, is sealed under the identity
 only, so a new device can be read before anybody knows its receiving key.
 

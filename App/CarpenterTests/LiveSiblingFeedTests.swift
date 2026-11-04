@@ -12,6 +12,8 @@ struct LiveSiblingFeedTests {
 
     private static let zoneName = "SiblingFeeds"
 
+    private let mailReader = DeviceKeys.generate()
+
     private func device() -> DeviceID {
         DeviceID(rawValue: Data((0..<16).map { _ in UInt8.random(in: .min ... .max) }))
     }
@@ -47,7 +49,8 @@ struct LiveSiblingFeedTests {
         SiblingRecord(
             name: SiblingRecord.Name(writer: device, kind: .mail(number)),
             sealed: try SealedSiblingFeed.seal(
-                feed(carrying: material), for: identity, on: device, as: .mail(number)))
+                feed(carrying: material), for: identity, on: device, as: .mail(number),
+                to: [DeviceRecipient(device: mailReader.id, agreementKey: mailReader.agreementPublicKey)]))
     }
 
     @Test("What reaches the server is ciphertext, and the epoch secret is not in it")
@@ -98,14 +101,14 @@ struct LiveSiblingFeedTests {
             "the bytes on the server are not the ciphertext the app sealed")
 
         let reopened = try SealedSiblingFeed(ciphertext: payload).open(
-            with: identity, from: mine, as: .mail(1))
+            with: identity, from: mine, as: .mail(1), reading: mailReader)
         #expect(reopened.epochs.first?.material == material, "the round trip lost the secret")
         #expect(
             throws: (any Error).self,
             "a stranger's identity opened a feed read back off the real server"
         ) {
             try SealedSiblingFeed(ciphertext: payload).open(
-                with: Identity.generate(), from: mine, as: .mail(1))
+                with: Identity.generate(), from: mine, as: .mail(1), reading: mailReader)
         }
 
         try? await sync.forgetOwnContribution()
@@ -164,7 +167,7 @@ struct LiveSiblingFeedTests {
             """)
         #expect(from == first, "the feed was attributed to the wrong device")
 
-        let opened = try sealed.open(with: identity, from: first, as: .mail(1))
+        let opened = try sealed.open(with: identity, from: first, as: .mail(1), reading: mailReader)
         #expect(
             opened.epochs.first?.material == material,
             "the sibling received the record but could not read the epoch out of it")
@@ -269,7 +272,8 @@ struct LiveSiblingFeedTests {
         var material: Data?
         for _ in 0..<30 {
             if let data = try await record(written.name)?["feed"] as? Data,
-                let opened = try? SealedSiblingFeed(ciphertext: data).open(with: identity, from: mine, as: .mail(1)),
+                let opened = try? SealedSiblingFeed(ciphertext: data).open(
+                    with: identity, from: mine, as: .mail(1), reading: mailReader),
                 opened.epochs.first?.material == second
             {
                 material = second

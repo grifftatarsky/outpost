@@ -885,8 +885,9 @@ not arrived counts only if it is the first
 the phone holds for its number and whoever gave it is in, which covers the real key arriving a round
 before its record. Among several that count for one number, every phone takes the one with the lowest
 fingerprint, so two members who turn the key at once end up on the same key. One person can put only
-one key beside a number, and no number holds more than sixteen, so a flood cannot crowd out the real
-key. The room's first key has no record and no second key.
+one key beside a number unless the room's log holds a record of the change made under that key, and
+no number holds more than sixteen, so a flood cannot crowd out the real key. The room's first key has
+no record and no second key.
 
 **Cost:** a key with no record is never written under unless it is the first for its number, and a
 phone whose newest key is waiting on its record writes under the one before it until the record
@@ -899,6 +900,22 @@ had.
 and reading the second found that a phone joining after a tie never got the key that lost it, because
 the newest key only walks back down its own lineage. Both fixed 2026-09-30; `AMadeUpKeyTests` and
 `AStrandedKeyTests` pass in the package suite. Not run on the rig.
+
+**Changed 2026-10-31, PROPOSED:** the one-key-per-person limit now gives way to a key the room's log
+records. Before, a member whose two phones rotated at once had the second key refused everywhere, and
+so did a member who had passed somebody else's key on to a phone before making their own; phones
+holding the other key then wrote under one that phone could not open. A key is held as a second one
+from the same person only if an `epochChange` entry for that number, authenticated under that very key,
+is in the log, so each extra key still costs a signed entry in the room (`TwoKeysFromOneMemberTests`).
+
+**Changed 2026-10-31, PROPOSED, keeping the ruling:** "in" now means somebody the room does not show
+as removed. A key whose maker left of their own accord keeps counting; before, every phone dropped back
+to the key below it the moment the departure arrived, which everybody removed earlier still held, until
+somebody rotated the key. Removal still takes a maker's key down. And a phone that holds a key made or
+given by somebody the room shows as removed, above the one it would now write under, makes a new key
+before it writes a message, rather than writing under an older key while the remover's new one is on
+its way; the two new keys meet at one number and every phone takes the lower fingerprint
+(`WhenAKeysMakerGoesTests`). **Cost:** in that gap a phone adds a key and its grants, once per room.
 
 <!-- COPY END 6264031c -->
 
@@ -3653,6 +3670,112 @@ stands](#a-removed-person-hears-last-and-the-first-removal-stands)).
 room without its link, and a removal or departure that names no heads.
 
 <!-- COPY END d920b620 -->
+
+<!-- COPY BEGIN 050f54e6 [NEEDS HUMAN REVIEW] -->
+
+### A device removal cannot claim to have seen less than the member's devices showed
+
+**PROPOSED 2026-10-31**, to keep [the ruling above](#a-removed-persons-words-stop-where-the-removal-saw-them)
+true against a remover who lies about what it had received. The device that signs a removal writes
+its own cutoff, so a stolen phone could remove the member's real phone with a cutoff of 0, or with no
+cutoff and a date before everything, and every friend's phone dropped everything the real phone had
+ever written. Nothing brought it back: the friends were the ones who held it.
+
+Now a contact checks a removal against what the member's devices had stated they had received: the
+vector clock on every entry they signed, and the cutoff on every removal they signed. If the remover
+itself, or any of the member's devices that still counts, had stated a position past the removal's
+cutoff, the cutoff is a lie; it and its head are ignored, and everything up to the furthest stated
+position stays. A removal that agrees with the evidence works exactly as before. When two of the
+member's devices remove the same one, the line is the furthest either had seen, so a new phone that
+had not caught up does not erase what the old tablet had read.
+
+**Cost:** past a contradicted cutoff there is no head, so between the lying cutoff and the furthest
+stated position the first entry a contact receives at each number is the one it keeps. Somebody who
+holds a device that still counts can keep a removed device's later entries counting, for as long as
+that device counts. An honest phone removing another when no device of the member had stated more
+than it had received still drops the rest, as ruled.
+
+**What would change it:** a statement that names entries by hash rather than by number, which would
+give the contradicted range a head.
+
+**Built** 2026-10-31; `ARemovalCannotEraseWhatWasSeenTests` passes in the package suite. Not run over
+iCloud.
+
+<!-- COPY END 050f54e6 -->
+
+<!-- COPY BEGIN 719b3a40 [NEEDS HUMAN REVIEW] -->
+
+### A device removal names the devices that stay, and takes the ones the removed device added unseen
+
+**PROPOSED 2026-10-31.** Every phone judges an approval by when it saw it stored, so a thief on a stolen
+phone could approve a second device and show its certificate only to friends, never to the member's own
+zone. The friends counted it, because the stolen phone still counted when it was stored; the member's
+phones never did, so it was not on their device list and could not be removed. Removing the stolen
+phone left that device counting at every friend: room keys were sealed to it, and it could announce a
+new address for the member.
+
+Now the app's removal signs the list of the member's devices that stay (`DeviceRevocation.remaining`,
+appended to the signed bytes under its own label and count, only when present, so every older removal
+keeps its bytes). A contact applying it removes, at the same stored time, every device that the removed
+one approved, directly or through others, that is not on the list and still counts. A device the list
+leaves out is cut off the way any removed device is: nothing it writes counts past what the member's
+devices had seen of it, which for a device they never knew is nothing. Devices approved through another
+of the member's devices, and devices already removed, are not touched.
+
+**Cost:** a device the removed one approved shortly before, that the removing device had not heard of
+yet, is cut off with it, and erases itself when it hears. It shows as removed on the member's list and
+has to be approved again.
+
+**Built** 2026-10-31; `ADeviceTheRemovedOneApprovedTests` passes in the package suite. Not run over
+iCloud. This changes the removal's wire form: a build without the field still reads the removal, and
+ignores the list.
+
+<!-- COPY END 719b3a40 -->
+
+<!-- COPY BEGIN c98cba7f [NEEDS HUMAN REVIEW] -->
+
+### A device a restore left behind stops where each contact had read it
+
+**PROPOSED 2026-10-31**, to keep [the ruling above](#a-removed-persons-words-stop-where-the-removal-saw-them)
+true for the devices a recovery key leaves behind. A restore ends every older device at the new root's
+date, and there was no cutoff, so a stolen phone could go on posting as the member, in any room whose old
+key it held, by dating each entry before the restore. The restored device's offer to remove the old
+devices did not help, because in the newest root's history the old device never counted.
+
+Now each contact, the first time it hears of the newer root, fixes a line for every older root's device:
+the highest number of that device's feed it holds at that moment, and the entry there. It keeps the line
+across a relaunch. Past it nothing counts; below it an entry must still be dated before the restore. A
+contact that held nothing of the old device takes nothing of it afterwards.
+
+**Cost:** the line differs a little from contact to contact, so a contact that had not yet received an
+old device's last entries before it heard of the restore never shows them, and somebody who first meets
+the member after the restore sees nothing the old devices wrote. The member's own devices are not given
+a line, because a restored device hears of its old devices before its peers have sent back what they
+wrote; a backdated entry that reaches the member's own restored device still goes by its date there.
+
+**Built** 2026-10-31; `ADeviceLeftBehindByARestoreTests` passes in the package suite. Not run over
+iCloud.
+
+<!-- COPY END c98cba7f -->
+
+<!-- COPY BEGIN 7f1a1fab [NEEDS HUMAN REVIEW] -->
+
+### An Outpost's owner rotates its key when a reader loses a device
+
+**PROPOSED 2026-10-31.** Removing a device rotated the key of every room the member knew, which
+included other people's Outposts they read. Only the owner can change an Outpost's key, so that wrote a
+key change nobody trusts into a friend's Outpost, and the friend kept posting under the key the removed
+device held. Now a removal leaves other people's Outposts alone, and an owner rotates their own
+Outpost's key in the round they see any reader lose a device, so the new key is sealed only to the
+devices the reader still has.
+
+**Cost:** one key rotation on the owner's Outpost for each round in which a reader lost a device, and its
+grants to every reader.
+
+**Built** 2026-10-31; `ARemovedDeviceAndTheOutpostsItReadTests` passes in the package suite. Not run
+over iCloud.
+
+<!-- COPY END 7f1a1fab -->
 
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 
