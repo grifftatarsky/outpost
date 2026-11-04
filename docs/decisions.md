@@ -924,6 +924,20 @@ before it writes a message, rather than writing under an older key while the rem
 its way; the two new keys meet at one number and every phone takes the lower fingerprint
 (`WhenAKeysMakerGoesTests`). **Cost:** in that gap a phone adds a key and its grants, once per room.
 
+**Changed 2026-11-04, PROPOSED:** a record counts toward a second key only when the person who handed
+the key over wrote it, and one person can add at most four keys to a number. Before, any record in
+the log would do, and the sixteen-key cap counted every key, so one member who logged seventeen key
+changes for a number filled it and another member's real key there was refused. Now a key is counted
+against the person who handed it over and against whoever the log shows making it, and that count
+survives a relaunch because the log does. The cap of sixteen applies only to keys no record shows
+anybody making; a key its giver is recorded making is never refused for want of room
+(`OneMemberCannotCrowdANumberTests`, `HowManyKeysOnePersonAddsTests`). A relaunch restores every key
+the keychain held for a number, without the caps, because they were all held under them once.
+
+**Cost:** a member who passes on another member's key as their second key for a number has it
+refused; the phone gets it from its maker instead. A member whose phones made more than four keys for
+one number has the fifth refused everywhere.
+
 <!-- COPY END 6264031c -->
 
 <!-- COPY BEGIN 000ef40b [NEEDS HUMAN REVIEW] -->

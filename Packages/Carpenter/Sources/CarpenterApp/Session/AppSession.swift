@@ -592,9 +592,7 @@ public final class AppSession {
                 let epoch = EpochNumber(rawValue: raw)
                 guard let stored = try await storage.keychain.data(for: Self.epochKey(room, epoch))
                 else { continue }
-                let keys = Self.keys(inKeychainForm: stored)
-                chain.adopt(keys[0], at: epoch)
-                for rival in keys.dropFirst() { chain.hold(rival, at: epoch) }
+                chain.restore(Self.keys(inKeychainForm: stored), at: epoch)
                 found = true
             }
 

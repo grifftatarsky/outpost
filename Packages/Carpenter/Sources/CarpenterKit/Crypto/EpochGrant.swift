@@ -131,7 +131,7 @@ public struct EpochGrant: Hashable, Sendable, Codable {
 extension EpochChain {
     public mutating func adopt(
         _ grant: EpochGrant, using peer: PairwiseSecret, as device: DeviceKeys? = nil, from giver: ParticipantID? = nil,
-        recorded: (EpochSecret) -> Bool = { _ in false }
+        recordedBy recorders: (EpochSecret) -> Set<ParticipantID> = { _ in [] }
     ) throws {
         guard grant.room == room else { throw CryptoError.wrongRoom }
         let secret = try grant.open(with: peer, as: device)
@@ -139,7 +139,7 @@ extension EpochChain {
         guard grant.links.count <= Self.mostLinksInAGrant, reaches(grant.epoch, carrying: carried) else {
             throw CryptoError.keyTooFarAhead
         }
-        hold(secret, at: grant.epoch, from: giver, recorded: recorded(secret))
+        hold(secret, at: grant.epoch, from: giver, recordedBy: recorders)
         try record(carried)
     }
 

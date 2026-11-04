@@ -193,6 +193,15 @@ extension AppSession {
         return roster.members.union(roster.departures.keys).subtracting(roster.removals.keys)
     }
 
+    func keyRecords(in room: RoomID) -> (EpochNumber, EpochSecret) -> Set<ParticipantID> {
+        var changes: [(author: ParticipantID, change: EpochChangeBody)]?
+        return { [self] epoch, secret in
+            let made = changes ?? projection.keyChanges(in: room, opening: payloadOpener())
+            changes = made
+            return Set(made.filter { $0.change.link.epoch == epoch && $0.change.isAuthentic(under: secret) }.map(\.author))
+        }
+    }
+
     func writesBelowAKeyARemovedMemberMade(in room: RoomID) -> Bool {
         guard outpostOwner(of: room) == nil, let chain = chains[room], let top = chain.highestKnownEpoch else {
             return false
@@ -374,18 +383,15 @@ extension AppSession {
             return
         }
         var chain = held ?? EpochChain(room: grant.room)
-        var changes: [(author: ParticipantID, change: EpochChangeBody)]?
-        let recorded = { [self] (secret: EpochSecret) -> Bool in
-            let made = changes ?? projection.keyChanges(in: grant.room, opening: payloadOpener())
-            changes = made
-            return made.contains { $0.change.link.epoch == grant.epoch && $0.change.isAuthentic(under: secret) }
-        }
+        let records = keyRecords(in: grant.room)
         do {
             var opened = false
             var lastError: any Error = CryptoError.openFailed
             for secret in [peer.secret] + alternateSecrets(with: peer.them).filter({ $0 != peer.secret }) {
                 do {
-                    try chain.adopt(grant, using: secret, as: enrolment?.device, from: peer.them, recorded: recorded)
+                    try chain.adopt(
+                        grant, using: secret, as: enrolment?.device, from: peer.them,
+                        recordedBy: { records(grant.epoch, $0) })
                     opened = true
                     break
                 } catch CryptoError.notSealedForThisDevice {

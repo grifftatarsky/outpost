@@ -499,8 +499,10 @@ own key never waits, because until the phone can read the room nothing could eve
 (`AKeyThatWaitsTests`).
 One giver may add one key per number, unless the room's log holds a record of the change made under
 that key (since 2026-10-31, because a member who passed on somebody else's key, or whose two phones
-rotated at once, had their own key refused), and no number holds more than sixteen
-(`TwoKeysFromOneMemberTests`). A key keeps counting when its maker leaves of their own accord, and
+rotated at once, had their own key refused). Since 2026-11-04 that record has to be the giver's own,
+one person adds at most four keys to a number, and the cap of sixteen counts only keys no record shows
+anybody making, so one member's logged keys cannot crowd out another's
+(`TwoKeysFromOneMemberTests`, `OneMemberCannotCrowdANumberTests`). A key keeps counting when its maker leaves of their own accord, and
 stops only when they are removed; a phone that holds a removed member's key above the one it would
 write under makes a new key before writing a message (`WhenAKeysMakerGoesTests`).
 The two-advances case still needs three real accounts to prove over iCloud
