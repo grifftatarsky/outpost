@@ -172,6 +172,13 @@ add a device as if restored with the recovery key, because it holds the identity
 [open question](../decisions.md).
 [Decisions](../decisions.md#a-new-device-needs-approval-from-one-of-your-devices).
 
+**Changed 2026-10-31.** A removal names the devices that stay, and a contact cuts off any device the
+removed one approved that the list leaves out. A removal cannot drop what the member's devices had
+shown they had seen, whatever cutoff or date it names. A device a restore left behind stops at what
+each contact held when it heard of the restore. Removing a device no longer writes into friends'
+Outposts; each owner rotates their Outpost's key instead. In the package suite only, not over iCloud
+([Decisions](../decisions.md#a-device-removal-cannot-claim-to-have-seen-less-than-the-members-devices-showed)).
+
 **Testing.** `DeviceApprovalTests` (which certificates count), `ApprovingADeviceTests` and
 `DeviceEnrolmentTests` (two devices through the relay), and a live CloudKit test for the request and
 approval records. Not yet on two real devices on one account; a simulator can now do this part,
