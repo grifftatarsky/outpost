@@ -29,22 +29,19 @@ struct AccountCheckErrorTests {
         #expect(CloudKitEntrySync.occupancy(for: ckError(.userDeletedZone)) == .empty)
     }
 
-    @Test("Never reaching iCloud reads as offline, so a first run still works")
-    func networkFailuresReadAsOffline() {
-        for code in [CKError.Code.networkUnavailable, .networkFailure, .notAuthenticated] {
-            #expect(CloudKitEntrySync.occupancy(for: ckError(code)) == .offline, "\(code)")
-        }
+    @Test(
+        "Never reaching iCloud reads as offline, so a first run still works",
+        arguments: [CKError.Code.networkUnavailable, .networkFailure, .notAuthenticated])
+    func networkFailuresReadAsOffline(code: CKError.Code) {
+        #expect(CloudKitEntrySync.occupancy(for: ckError(code)) == .offline)
     }
 
-    @Test("Being refused an answer is never read as an empty account")
-    func transientFailuresAreUndetermined() {
-        let transient: [CKError.Code] = [
-            .serviceUnavailable, .requestRateLimited, .zoneBusy, .internalError, .serverResponseLost,
-        ]
-        for code in transient {
-            #expect(CloudKitEntrySync.occupancy(for: ckError(code)) == .undetermined, "\(code)")
-            #expect(CloudKitEntrySync.occupancy(for: ckError(code)) != .empty, "\(code)")
-        }
+    @Test(
+        "Being refused an answer is never read as an empty account",
+        arguments: [CKError.Code.serviceUnavailable, .requestRateLimited, .zoneBusy, .internalError, .serverResponseLost])
+    func transientFailuresAreUndetermined(code: CKError.Code) {
+        #expect(CloudKitEntrySync.occupancy(for: ckError(code)) == .undetermined)
+        #expect(CloudKitEntrySync.occupancy(for: ckError(code)) != .empty)
     }
 
     @Test("An internal failure with no word of the account's security says nothing about a member")
