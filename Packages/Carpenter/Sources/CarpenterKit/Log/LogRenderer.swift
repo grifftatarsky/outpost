@@ -30,7 +30,7 @@ public struct RenderedEntry: Identifiable, Hashable, Sendable {
 
     public var revisions: [Revision] = []
 
-    public var roomKind: RoomKind? = nil
+    public var founds: RoomKind? = nil
 
     public var memberPhoto: MemberPhotoBody? = nil
 
@@ -164,7 +164,9 @@ public enum LogRenderer {
                 clock: entry.clock
             )
             if payload.type == .roomProfile {
-                made.roomKind = (try? payload.decode(RoomProfileBody.self))?.kind
+                if let profile = try? payload.decode(RoomProfileBody.self), profile.founds(entry.room, by: entry.author) {
+                    made.founds = profile.kind ?? .room
+                }
             }
             if payload.type == .memberPhoto {
                 made.memberPhoto = try? payload.decode(MemberPhotoBody.self)

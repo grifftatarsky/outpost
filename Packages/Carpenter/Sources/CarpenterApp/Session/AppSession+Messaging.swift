@@ -9,12 +9,13 @@ extension AppSession {
 
     @discardableResult
     public func createRoom(named name: String, kind: RoomKind = .room) async throws -> RoomID {
-        let room = RoomID()
+        guard let founder = enrolment?.identity.id else { throw AppSessionError.noIdentity }
+        let (room, founding) = RoomID.founding(by: founder, as: kind)
         let (chain, secret) = EpochChain.create(room: room)
         chains[room] = chain
         try await persistEpoch(secret, at: .initial, for: room)
 
-        try await append(try Payload.roomProfile(name: name, kind: kind), to: room)
+        try await append(try Payload.roomProfile(name: name, kind: kind, founding: founding), to: room)
         try await announceProfile(in: room)
         return room
     }
@@ -364,7 +365,7 @@ extension AppSession {
         let mark = deliveryMarks(in: room, of: projected)
 
         let marked: [TranscriptEntry] = projected.transcript(
-            in: room, opening: payloadOpener(), outOfRoom: outOfRoom(in: room, of: projected)
+            in: room, opening: payloadOpener(), outOfRoom: outOfRoom(in: room, of: projected), roster: roster(of: room)
         ).compactMap { item in
             guard let message = item.message else { return item }
             guard isDrawn(message) else { return nil }
@@ -453,8 +454,9 @@ extension AppSession {
 
     public func latestIncomingMessage() -> IncomingMessage? {
         var newest: IncomingMessage?
+        let projected = projection
         for room in rooms {
-            for message in projection.messages(in: room.id)
+            for message in projected.messages(in: room.id, outOfRoom: outOfRoom(in: room.id, of: projected))
             where !message.isMine && isDrawn(message) {
                 guard newest == nil || message.sentAt > newest!.sentAt else { continue }
                 newest = IncomingMessage(

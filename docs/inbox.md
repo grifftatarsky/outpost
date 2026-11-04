@@ -166,7 +166,8 @@ A third Apple Account without Advanced Data Protection would settle it over Clou
 Re-appending an earlier invitation's bytes makes it current again. Keying confirmations and admissions
 by invitation guarantees an answer matches the offer it answers; it does not stop the offer being
 swapped. Only the inviter can swap it now, because a request counts only when its inviter writes it as a
-member. The invitation's signature is still checked only when it is written, not when the log is read.
+member, and since 2026-10-31 only when its signature checks out and the person it names is the owner of
+the keys it carries (`NobodyIsListedWithoutSigningTests`).
 
 <!-- COPY END e80f8f25 -->
 

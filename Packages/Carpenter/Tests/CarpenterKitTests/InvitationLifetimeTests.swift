@@ -125,11 +125,10 @@ struct PendingInvitationTests {
     private func roomWith(
         founder: Identity, inviting joiners: [(Identity, InvitationLifetime)]
     ) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
         var hash: UInt8 = 1
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: hash),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: hash), body: profile)
         roster.set(access: .founder, by: founder.id)
         for (joiner, lifetime) in joiners {
             hash += 1

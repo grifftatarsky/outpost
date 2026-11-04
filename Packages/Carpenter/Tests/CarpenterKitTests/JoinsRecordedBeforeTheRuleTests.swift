@@ -21,12 +21,11 @@ struct JoinsRecordedBeforeTheRuleTests {
     private func asTheOldBuildWroteIt(
         founder: Identity, joiner: Identity
     ) throws -> (roster: RoomRoster, invitation: MembershipAttestation) {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         let invitation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: founder, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: founder, at: start)
         roster.apply(
             rendered(founder.id, .joinRequest, hash: 2, at: 60),
             body: try Payload.joinRequest(invitation))
@@ -73,13 +72,12 @@ struct JoinsRecordedBeforeTheRuleTests {
 
     @Test("The transcript of an old join says invited, and does not say arrived")
     func theTranscriptSaysWhatHappened() throws {
-        let founder = Identity.generate()
         let joiner = Identity.generate()
-        let (_, invitation) = try asTheOldBuildWroteIt(founder: founder, joiner: joiner)
-
-        var author = Author()
+        var (author, room, profile) = try Author.founding()
+        let invitation = try TestInvite.issue(
+            joining: room, joinerKeys: joiner.publicKeys, by: author.identity, at: start)
         let entries = [
-            try author.append(try Payload.roomProfile(name: "Hangar 7"), at: start, room: room),
+            try author.append(profile, at: start, room: room),
             try author.append(
                 try Payload.joinRequest(invitation), at: start.addingTimeInterval(60), room: room),
         ]

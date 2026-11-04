@@ -34,18 +34,14 @@ extension AppSession {
         var secrets: [ParticipantID: PairwiseSecret] = [:]
 
         func open(_ entry: Entry) -> Payload? {
-            let own = chains[entry.room ?? RoomID.outpost(of: entry.author)]
-            if let own, let opened = entry.opened(using: own) { return opened }
-            if let opened = chains.values.lazy.compactMap(entry.opened(using:)).first {
-                return opened
-            }
+            if let own = chains[entry.sealingRoom], let opened = entry.opened(using: own) { return opened }
             guard entry.hasSecondReader, let identity,
                 let keys = replica.registry(for: entry.author)?.identity,
                 let secret = secrets[entry.author]
                     ?? (try? PairwiseSecret.derive(mine: identity, theirs: keys))
             else { return nil }
             secrets[entry.author] = secret
-            return entry.opened(pairwise: secret, wall: RoomID.outpost(of: entry.author))
+            return entry.openedByTheWallsOwner(pairwise: secret)
         }
 
         return { entry in
@@ -565,7 +561,7 @@ extension AppSession {
         let roster = roster(of: room)
         guard roster.members.contains(enrolment.identity.id) else { return nil }
         guard roster.founder != enrolment.identity.id else { return nil }
-        guard let stored = projection.name(of: room) else { return nil }
+        guard let stored = roster.name else { return nil }
 
         let named = projection.naming()
         let invitedBy = roster.requests[enrolment.identity.id].map { named($0.inviter) }

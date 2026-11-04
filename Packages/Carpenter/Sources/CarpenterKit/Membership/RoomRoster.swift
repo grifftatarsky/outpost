@@ -5,6 +5,8 @@ public struct RoomRoster: Hashable, Sendable {
 
     public private(set) var founder: ParticipantID?
 
+    public private(set) var name: String?
+
     public private(set) var requests: [ParticipantID: MembershipAttestation] = [:]
 
     private var admissionsByInvitation: [Data: Set<ParticipantID>] = [:]
@@ -40,6 +42,8 @@ public struct RoomRoster: Hashable, Sendable {
     private var rescinded: Set<Data> = []
 
     private var spent: Set<Data> = []
+
+    public private(set) var counted: Set<EntryHash> = []
 
     public struct Removal: Hashable, Sendable {
         public let removed: ParticipantID
@@ -277,10 +281,14 @@ public struct RoomRoster: Hashable, Sendable {
     public mutating func apply(_ entry: RenderedEntry, body: Payload) {
         switch body.type {
         case .roomProfile:
-            if founder == nil {
+            guard let profile = try? body.decode(RoomProfileBody.self) else { return }
+            if founder == nil, profile.founds(room, by: entry.author) {
                 founder = entry.author
                 establish(entry.author)
             }
+            guard established.contains(entry.author) else { return }
+            name = profile.name
+            counted.insert(entry.id)
 
         case .roomAccess:
             guard let body = try? body.decode(RoomAccessBody.self) else { return }
@@ -290,9 +298,11 @@ public struct RoomRoster: Hashable, Sendable {
             guard let request = try? body.decode(JoinRequestBody.self),
                 request.attestation.room == room,
                 request.attestation.inviter == entry.author,
-                established.contains(entry.author)
+                established.contains(entry.author),
+                request.attestation.isAuthentic
             else { return }
             requests[request.attestation.joiner] = request.attestation
+            counted.insert(entry.id)
 
             if isAdmitted(request.attestation.joiner) {
                 establish(request.attestation.joiner)
@@ -304,6 +314,7 @@ public struct RoomRoster: Hashable, Sendable {
                 let attestation = requests[confirmation.joiner],
                 (try? confirmation.verify(confirming: attestation)) != nil
             else { return }
+            counted.insert(entry.id)
             let at = entry.wallTime
             if let already = confirmations[attestation.signature] {
                 confirmations[attestation.signature] = Swift.min(already, at)

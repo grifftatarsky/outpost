@@ -42,8 +42,9 @@ struct WhoCanAddPeopleToARoomTests {
     }
 
     private func founded(by founder: Identity, access: RoomAccess) throws -> Room {
-        var room = Room(roster: RoomRoster(room: self.room), start: start)
-        room.write(founder, .roomProfile, try Payload.roomProfile(name: "Hangar 7"))
+        let (founded, profile) = try TestFounding.room(by: founder.id)
+        var room = Room(roster: RoomRoster(room: founded), start: start)
+        room.write(founder, .roomProfile, profile)
         room.roster.set(access: access, by: founder.id)
         return room
     }
@@ -95,7 +96,7 @@ struct WhoCanAddPeopleToARoomTests {
         room.write(founder, .removal, try Payload.removal(of: removed.id, heads: []))
 
         let invite = try TestInvite.issue(
-            joining: self.room, joinerKeys: joiner.publicKeys, by: removed, at: start)
+            joining: room.roster.room, joinerKeys: joiner.publicKeys, by: removed, at: start)
         room.write(member, .joinRequest, try Payload.joinRequest(invite))
         room.write(
             member, .joinConfirmed,
@@ -111,7 +112,7 @@ struct WhoCanAddPeopleToARoomTests {
         var room = try founded(by: founder, access: .open)
         _ = try room.invite(removed, by: founder)
         let invite = try TestInvite.issue(
-            joining: self.room, joinerKeys: puppet.publicKeys, by: removed, at: start)
+            joining: room.roster.room, joinerKeys: puppet.publicKeys, by: removed, at: start)
         room.write(removed, .joinRequest, try Payload.joinRequest(invite))
         room.write(founder, .removal, try Payload.removal(of: removed.id, heads: []))
 

@@ -529,11 +529,20 @@ the key* and to *build the associated data*, so an altered epoch yields the wron
 authentication failure rather than a decryption. Likewise the author and device are bound in, so a
 ciphertext cannot be replayed as if written by somebody else.
 
+The reader holds up its side the same way. An entry is opened only with the chain of the room it
+names, or of its author's Outpost when it names none (`Entry.sealingRoom`), and `Entry.opened(using:)`
+refuses any other chain before it tries a key. Until 2026-10-31 the phone also tried every other
+chain it held and the pair secret with the author, so a contact who shared one room with you could
+write in another room of yours without its key (`AnEntryOpensOnlyInItsOwnRoomTests`).
+
 **Two readers, two ciphertexts.** `alsoFor` seals the *same plaintext a second time* under a
-pairwise secret. It is used for one case in the app: commenting on somebody's Outpost when you are
-not inside that wall's epoch. Your own devices read the room-key copy, the wall's owner reads the
-pairwise copy, and the two ciphertexts share no key. This is the safe way to do it — no key is used
-twice, no nonce is reused — and the small cost is that the message travels twice.
+pairwise secret. It is used for one case in the app: commenting on or reacting in somebody's Outpost
+when you are not inside that wall's epoch. The entry names no room and is sealed in your own
+Outpost's chain. Your own devices read the room-key copy, the wall's owner reads the pairwise copy,
+and the two ciphertexts share no key. This is the safe way to do it — no key is used twice, no nonce
+is reused — and the small cost is that the message travels twice. The owner's phone opens the
+pairwise copy only on an entry that names no room and only when it holds a comment or a reaction
+(`Entry.openedByTheWallsOwner`), so the copy cannot carry anything else.
 
 **Assumption named.** Every message in an epoch is sealed under **the same key** with a **random
 96-bit nonce**, which CryptoKit generates per seal. Random nonces under a fixed key are safe up to
@@ -606,6 +615,33 @@ trade for this architecture and it should never be described as if it were not.
 
 <!-- COPY END 3be1484d -->
 
+<!-- COPY BEGIN 1470960d [NEEDS HUMAN REVIEW] -->
+
+## Who founded a room
+
+**In plain words.** A room's ID is worked out from the person who made it, so nobody else can claim
+to have made it, however they date what they write.
+
+**What actually happens.** Everybody's standing in a room comes down from its founder, the one person
+who is in without an invitation. Until 2026-10-31 the founder was whoever wrote the first room profile
+in log order, and log order between unrelated entries follows the dates their writers chose. A member
+with a modified app could date a profile before the room existed and become its only member on every
+phone. Now `createRoom` draws 32 random bytes and the room's ID is the first 16 bytes of
+`SHA256("carpenter.room-founding.v1" ‖ founder ‖ kind ‖ those bytes)` (`RoomID.founded`). The first
+profile carries the bytes, sealed like any payload. A profile founds the room only if its author's ID,
+the kind it names and its bytes hash to the room's ID (`RoomProfileBody.founds`), so the founder and the
+room's kind are fixed when the room is made. A Solo cannot be made into a room or a room into a Solo,
+and a reader cannot make somebody's Outpost into a room, because an Outpost's ID is not made this way.
+A room whose profile carries no founding has no founder and nobody in it; that is every room made
+before this, by a decision recorded as proposed in
+[Decisions](decisions.md#a-rooms-id-names-its-founder). Matching a room ID for another founder means
+finding a second preimage of a 128-bit truncated hash. The package suite holds it
+(`ARoomIsFoundedByThePersonItsIDNamesTests`); none of it has run over iCloud.
+
+---
+
+<!-- COPY END 1470960d -->
+
 <!-- COPY BEGIN 2523f808 [NEEDS HUMAN REVIEW] -->
 
 ## The bytes everything is signed and sealed over
@@ -633,8 +669,8 @@ public static func payload(domain: String, fields: [Data]) -> Data {
 ```
 
 Every field is length-prefixed, big-endian, and every structure begins with its own domain string —
-there are **twenty-four** distinct domains in `Domain`, one per construction. That is the right
-shape and it is applied consistently.
+each construction has its own entry in `Domain`. That is the right layout and it is applied
+consistently.
 
 **The trap, which has already been sprung.** `CanonicalBytes.optional` emits a **presence byte**:
 

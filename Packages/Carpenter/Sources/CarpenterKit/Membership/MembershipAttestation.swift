@@ -121,6 +121,10 @@ public struct MembershipAttestation: Hashable, Sendable, Codable {
         }
     }
 
+    public var isAuthentic: Bool {
+        (try? verify(against: inviterKeys, at: issuedAt, allowingExpired: true)) != nil
+    }
+
     public func verifyAsJoiner(at instant: Date) throws {
         try verify(against: inviterKeys, at: instant)
     }

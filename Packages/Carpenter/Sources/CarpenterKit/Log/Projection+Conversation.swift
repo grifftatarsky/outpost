@@ -3,7 +3,7 @@ import Foundation
 extension Projection {
     // MARK: Conversation
 
-    private func draws(_ entry: RenderedEntry, notIn out: Set<EntryHash>) -> Bool {
+    func draws(_ entry: RenderedEntry, notIn out: Set<EntryHash>) -> Bool {
         !out.contains(entry.id) || entry.author == viewer
     }
 
@@ -14,10 +14,11 @@ extension Projection {
     }
 
     public func transcript(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = []
+        in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = [],
+        roster: RoomRoster
     ) -> [TranscriptEntry] {
         var items: [TranscriptEntry] = []
-        var founder: ParticipantID?
+        let founder = foundings[room]?.author
         var named = false
         var offers: [Data: MembershipAttestation] = [:]
 
@@ -31,23 +32,28 @@ extension Projection {
             let kind: RoomNotice.Kind?
             switch entry.type {
             case .roomProfile:
-                guard case .text(let name) = entry.content else { continue }
-                if founder == nil { founder = entry.author }
+                guard roster.counted.contains(entry.id), case .text(let name) = entry.content,
+                    named || entry.founds != nil
+                else { continue }
                 kind = named
                     ? .renamed(by: member(entry.author), to: name)
-                    : entry.roomKind == .solo
+                    : entry.founds == .solo
                         ? .startedSolo(by: member(entry.author))
                         : .created(by: member(entry.author), named: name)
                 named = true
 
             case .joinRequest:
-                guard let body = try? opening(entry)?.decode(JoinRequestBody.self) else { continue }
+                guard roster.counted.contains(entry.id),
+                    let body = try? opening(entry)?.decode(JoinRequestBody.self)
+                else { continue }
                 offers[body.attestation.signature] = body.attestation
                 kind = .invited(
                     member(body.attestation.joiner), by: member(body.attestation.inviter))
 
             case .joinConfirmed:
-                guard let body = try? opening(entry)?.decode(JoinConfirmedBody.self) else { continue }
+                guard roster.counted.contains(entry.id),
+                    let body = try? opening(entry)?.decode(JoinConfirmedBody.self)
+                else { continue }
                 kind = .confirmed(member(body.joiner))
 
             case .soloCheck:

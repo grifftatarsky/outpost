@@ -35,6 +35,31 @@ phone can check it. It changes what a key hand-off carries.
 
 <!-- COPY END 2648f0dc -->
 
+<!-- COPY BEGIN 1b539bd8 [NEEDS HUMAN REVIEW] -->
+
+## A remover who never said what they had seen can still cut everything
+
+A removal names the last entry of each of the removed person's devices that the remover's phone holds,
+and everything of theirs past that line stops counting, on Griff's ruling that the line is what the
+remover's device had received. A modified app can name nothing. Since 2026-10-31 that cannot cut what
+the remover's own phone had already named by hash in the room before the removal (a read receipt, the
+heads a key change lists, a Solo answer), anything the removed person wrote before they left on their
+own, or an invitation of theirs that another member had answered. What is still open: in an open
+room, a member who never sent a read receipt, never changed the key and never answered a check can
+remove somebody with an empty list, and every phone drops all of that person's words and everybody
+they let in whom nobody else answered for. Nothing the remover signed earlier says otherwise, and the
+dates and positions in the log cannot be used instead, because a removed person can sign a new entry
+under a number they used in a room the remover is not in.
+
+**Recommendation: build it.** Each device names the newest entry it holds from every device in a room
+now and then, signed, the way a key change already does (for example on each read receipt, or once a
+day per room). The line of a removal already reaches back to every entry the remover's earlier lists
+named, so nothing else has to change. It changes what a read receipt carries, and costs 32 bytes per
+device in the room each time: about 2 KB for thirty people with two phones each, worked out and not
+measured.
+
+<!-- COPY END 1b539bd8 -->
+
 <!-- COPY BEGIN 8f4c521a [NEEDS HUMAN REVIEW] -->
 
 ## A phone with Advanced On Device Security on cannot collect while it is locked

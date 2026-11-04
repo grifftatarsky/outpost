@@ -8,23 +8,42 @@ struct Author {
     let device: DeviceKeys
     let certificate: DeviceCertificate
     let chain: EpochChain
+    let writesIn: RoomID?
     private(set) var head: Entry?
     private(set) var roomHeads: [RoomID: EntryHash] = [:]
 
-    init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil) {
-        identity = Identity.generate()
+    static func founding(
+        _ name: String = "Hangar 7", as kind: RoomKind = .room
+    ) throws -> (founder: Author, room: RoomID, profile: Payload) {
+        let identity = Identity.generate()
+        let (room, founding) = RoomID.founding(by: identity.id, as: kind)
+        let profile = try Payload.roomProfile(name: name, kind: kind, founding: founding)
+        return (Author(identity: identity, chain: EpochChain.create(room: room).chain), room, profile)
+    }
+
+    init(
+        at issuedAt: Date = Date(timeIntervalSince1970: 0), identity: Identity = .generate(),
+        chain: EpochChain? = nil, writingIn room: RoomID? = nil
+    ) {
+        self.identity = identity
         device = DeviceKeys.generate()
         certificate = try! DeviceCertificate.recovered(
             for: device.publicKey, by: identity, at: issuedAt)
-        self.chain = chain ?? EpochChain.create(room: RoomID()).chain
+        self.chain = chain ?? EpochChain.create(room: RoomID.outpost(of: identity.id)).chain
+        writesIn = room
+    }
+
+    init(onTheWallOf owner: Author) {
+        self.init(chain: owner.chain, writingIn: owner.chain.room)
     }
 
     var feedKey: FeedKey { FeedKey(author: identity.id, device: device.id) }
 
     mutating func append(
         _ payload: Payload, clock: VectorClock = VectorClock(), at wallTime: Date,
-        room: RoomID? = nil
+        room given: RoomID? = nil
     ) throws -> Entry {
+        let room = given ?? writesIn
         let entry = try Entry.append(
             to: head, author: identity.id, device: device,
             clock: clock.merging(head?.clock ?? VectorClock()),

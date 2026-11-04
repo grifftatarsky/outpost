@@ -176,13 +176,11 @@ struct UnreadTests {
     // MARK: The rule itself
 
     private func kitchen() throws -> (projected: Projection, room: RoomID) {
-        let chain = EpochChain.create(room: RoomID())
-        var alice = Author(chain: chain.chain)
-        let room = chain.chain.room
-        let named = try alice.append(try Payload.roomProfile(name: "Kitchen"), at: TestSession.now, room: room)
+        var (alice, room, profile) = try Author.founding("Kitchen")
+        let named = try alice.append(profile, at: TestSession.now, room: room)
         let said = try alice.append(try Payload.post("hello"), at: TestSession.now, room: room)
         let projected = Projection(
-            viewer: alice.identity.id, rendered: LogRenderer.render([named, said], using: chain.chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render([named, said], using: alice.chain))
         return (projected, room)
     }
 
@@ -192,7 +190,7 @@ struct UnreadTests {
 
         #expect(
             projected.summary(
-                of: room, unreadFor: Identity.generate().id,
+                of: room, named: "Kitchen", unreadFor: Identity.generate().id,
                 readThrough: EntryHash(rawValue: Data([0xDE, 0xAD])))?.hasUnread == true,
             "an unfindable mark hid a message that had never been read")
     }
@@ -201,6 +199,6 @@ struct UnreadTests {
     func noViewerMeansNoUnread() throws {
         let (projected, room) = try kitchen()
 
-        #expect(projected.summary(of: room, unreadFor: nil)?.hasUnread == false)
+        #expect(projected.summary(of: room, named: "Kitchen", unreadFor: nil)?.hasUnread == false)
     }
 }

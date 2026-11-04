@@ -142,9 +142,11 @@ struct RoomRosterTests {
     @Test("Whoever names the room founded it, and needs no attestation")
     func founder() throws {
         let alice = Identity.generate()
+        let (room, profile) = try TestFounding.room(by: alice.id)
+
         var roster = RoomRoster(room: room)
 
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         #expect(roster.founder == alice.id)
         #expect(roster.members == [alice.id])
@@ -156,11 +158,12 @@ struct RoomRosterTests {
         let outsider = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         let forged = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
 
         #expect(throws: MembershipError.inviterNotAMember) {
             try roster.verify(
@@ -173,8 +176,9 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         let elsewhere = try TestInvite.issue(
             joining: RoomID(), joinerKeys: joiner.publicKeys, by: alice, at: start)
@@ -189,12 +193,13 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: .anyMember, by: alice.id)
 
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
         roster.apply(
@@ -218,10 +223,11 @@ struct RoomRosterTests {
         let bob = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         let bobsInvite = try TestInvite.issue(
-            joining: room, joinerKeys: bob.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: bob.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 8), body: try Payload.joinRequest(bobsInvite))
         roster.apply(
@@ -230,7 +236,7 @@ struct RoomRosterTests {
                 try JoinConfirmedBody.signed(confirming: bobsInvite, by: bob)))
 
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 3), body: try Payload.joinRequest(attestation))
         roster.apply(
@@ -261,13 +267,14 @@ struct RoomRosterTests {
         let bob = Identity.generate()
         let carol = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: .anyMember, by: alice.id)
 
         for (offset, joiner) in [bob, carol].enumerated() {
             let attestation = try TestInvite.issue(
-                joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+                joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
             roster.apply(
                 rendered(alice.id, .joinRequest, hash: UInt8(2 + offset)),
                 body: try Payload.joinRequest(attestation))
@@ -288,10 +295,11 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2),
             body: try Payload.joinRequest(attestation))
@@ -313,14 +321,13 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let bob = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(alice.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: .anyMember, by: alice.id)
 
         let first = try TestInvite.issue(
-            joining: room, joinerKeys: bob.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: bob.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(first))
         roster.apply(
@@ -332,7 +339,7 @@ struct RoomRosterTests {
             "the fixture let them in before they had confirmed anything")
 
         let second = try TestInvite.issue(
-            joining: room, joinerKeys: bob.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: bob.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 4), body: try Payload.joinRequest(second))
         roster.apply(
@@ -358,10 +365,11 @@ struct RoomRosterTests {
         let joiner = Identity.generate()
         let relay = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
 
         roster.apply(
             rendered(relay.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
@@ -379,11 +387,12 @@ struct RoomRosterTests {
         let outsider = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         let forged = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(forged))
 

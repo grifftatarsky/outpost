@@ -1624,6 +1624,47 @@ again.
 
 <!-- COPY END d9b15824 -->
 
+<!-- COPY BEGIN 5e8b1be3 [NEEDS HUMAN REVIEW] -->
+
+### A room's ID names its founder
+
+**PROPOSED by Claude, 2026-10-31** — a default, not a constraint. He has not ruled on this.
+
+A room's ID is the first 16 bytes of a hash of its founder's ID, its kind (room or Solo) and 32 random
+bytes the first profile carries. A profile founds the room only when those three hash to the room's
+ID, so the founder and the kind are fixed when the room is made, and nobody can become the founder by
+dating a profile earlier than the room. Before this, whoever's profile came first in log order was the
+founder, and a member with a modified app could put theirs first and be the only person in the room on
+every phone ([Who founded a room](crypto-brief.md#who-founded-a-room)).
+
+It changes what a new room's first profile carries, and it refuses rooms made before it: a room whose
+profile has no founding has no founder and nobody in it, and is not listed. The app has not gone to
+TestFlight, and when older forms were last refused Griff's word was "Security is most important"
+([A removed person's words stop where the removal
+saw them](#a-removed-persons-words-stop-where-the-removal-saw-them)), so this follows the same line.
+The cost is that every room on a test phone stops working and has to be made again. Built 2026-10-31,
+and the package suite passes; not run over iCloud.
+
+<!-- COPY END 5e8b1be3 -->
+
+<!-- COPY BEGIN 3008f634 [NEEDS HUMAN REVIEW] -->
+
+### An entry a phone cannot open is drawn only from somebody the room let in
+
+**PROPOSED by Claude, 2026-10-31** — a default, not a constraint. He has not ruled on this.
+
+A room's ID travels in the clear on every entry, so anybody who has seen one can write an entry naming
+that room. Without the key it never opens, but it used to be drawn anyway as *Not readable on this
+device* under the writer's name, it made the room show unread, and the notification banner could name
+the writer in a room they have never been in. Now an entry the phone cannot open is drawn only when its
+author is in the room, has left or been removed, or has an invitation in it. A member writing under a
+key this phone does not hold yet is still drawn as unreadable. Only unreadable entries are held to this:
+an entry that opens from somebody the member list does not know is still drawn, because a phone that
+cannot read part of a room's history would otherwise hide real members. Built 2026-10-31, and the
+package suite passes (`AnEntryOpensOnlyInItsOwnRoomTests`); not run over iCloud.
+
+<!-- COPY END 3008f634 -->
+
 <!-- COPY BEGIN c6b32346 [NEEDS HUMAN REVIEW] -->
 
 ### An invite travels as a link, and the link changes nothing about the invite
@@ -3636,8 +3677,10 @@ numbered in one sequence across all their rooms, so the numbers they used in roo
 gaps you never hold, and a removed person or device could sign a new entry under one of them and have
 it count as written before the removal. Two ways were weighed. A removal listing a fingerprint of each
 entry the remover held would give the remover a new power: a modified app could leave any of the
-removed person's earlier messages off the list and hide it, where today a remover can only cut off the
-newest ones; and an honest remover who never received some old history would hide it by accident. The
+removed person's earlier messages off the list and hide it, where with the chain a remover can only cut
+off the newest ones (corrected 2026-10-31: a removal naming nothing cut everything the person ever wrote,
+see [What a removal cannot cut](#what-a-removal-cannot-cut)); and an honest remover who never received
+some old history would hide it by accident. The
 room chain adds no power: each entry names its author's previous entry in the same room, the removal
 names the last one it saw, and only that chain counts. It changes the log's format, the careful way
 older entries require: the new field is signed only when present, so every existing entry keeps its
@@ -3668,6 +3711,11 @@ other and neither removal had seen the other, the removal a phone could read fir
 stands](#a-removed-person-hears-last-and-the-first-removal-stands)).
 **The forms older builds wrote are refused**, on Griff's "Security is most important": an entry in a
 room without its link, and a removal or departure that names no heads.
+**The rooms list follows the chain too**, built 2026-10-31 and passing in the package suite: a row's
+preview, latest activity and recent speakers come only from what the conversation draws, and so does
+the newest message a notification shows. The room's name comes only from a profile written by somebody
+who was in the room at that point, so a removed person cannot rename it
+(`TheRoomsListBelievesOnlyThePeopleInTheRoomTests`).
 
 <!-- COPY END d920b620 -->
 
@@ -3776,6 +3824,29 @@ grants to every reader.
 over iCloud.
 
 <!-- COPY END 7f1a1fab -->
+
+<!-- COPY BEGIN 7ba6e22b [NEEDS HUMAN REVIEW] -->
+
+### What a removal cannot cut
+
+**PROPOSED by Claude, 2026-10-31** — a default, not a constraint. He has not ruled on this.
+
+The ruling above sets the line at what the remover's device had received, and the removal says what
+that was. A modified app could say nothing (`heads: []`), and every phone then dropped everything the
+person had ever written in the room, and everybody they had let in. The line now also reaches back
+from every entry of theirs that the remover's own device named by hash in that room before the removal:
+the target of a read receipt, the heads a key change lists, the check a Solo answer replies to. Those
+are signed statements of what that device had received, so they add nothing it had not, and nothing
+written after them. A departure also keeps the chain of the device that wrote it, so leaving cannot take
+back what that phone wrote before. And an invitation the removed person made stays, with the
+confirmations they passed on for it, when another member had answered it (a vote or a passed-on
+confirmation naming it) before seeing the removal, unless that answer is itself something a removal
+cut. Positions in the log are not used, because a removed person can sign a new entry under a number
+they used in a room the remover is not in. Built 2026-10-31, and the package suite passes
+(`ARemovalCannotTakeBackWhatTheRemoverSawTests`); not run over iCloud. What is still open is in
+[Open questions](open-questions.md#a-remover-who-never-said-what-they-had-seen-can-still-cut-everything).
+
+<!-- COPY END 7ba6e22b -->
 
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 

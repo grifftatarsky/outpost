@@ -333,8 +333,10 @@ board 53: no sender in the preview, and the metrics are Messages' own — see th
 <summary>Record — what was built, and a control that did nothing</summary>
 
 **Solos, 2026-09-05.** A two-person conversation is called a *solo* (Griff's word) and is founded as
-one: `RoomKind.solo` rides the first profile entry, `Projection.kind(of:)` reads it from that entry
-alone so a later profile cannot change it, and `RoomSummary.isDirect` is set from it rather than
+one: `RoomKind.solo` rides the profile that founds the room and is hashed into the room's ID (since
+2026-10-31, [A room's ID names its founder](../decisions.md#a-rooms-id-names-its-founder)),
+`Projection.kind(of:)` reads it from that profile alone so no other profile can change it, and
+`RoomSummary.isDirect` is set from it rather than
 guessed from a headcount. Each device titles a solo by the person it is with, per its own name
 setting; the founder's stored name is only a fallback for the moment before the invitation is in the
 roster. The first *Send a Solo* on the rig, an hour before this landed, made an ordinary room named

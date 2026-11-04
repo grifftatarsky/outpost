@@ -611,6 +611,15 @@ public enum WideID {
     }
 }
 
+public enum TestFounding {
+    public static func room(
+        named name: String = "Hangar 7", by founder: ParticipantID, as kind: RoomKind = .room
+    ) throws -> (room: RoomID, profile: Payload) {
+        let (room, founding) = RoomID.founding(by: founder, as: kind)
+        return (room, try Payload.roomProfile(name: name, kind: kind, founding: founding))
+    }
+}
+
 public enum TestInvite {
     public static func nonce(for joinerKeys: IdentityPublicKeys) -> Data {
         Data(SHA256.hash(data: Data("carpenter.test-nonce".utf8) + joinerKeys.signing))

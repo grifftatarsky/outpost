@@ -20,10 +20,9 @@ struct InvitationIsAnOfferTests {
     }
 
     private func founded(by founder: Identity, access: RoomAccess = .open) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         if access != .open {
             roster.apply(
                 rendered(founder.id, .roomAccess, hash: 2),
@@ -36,7 +35,7 @@ struct InvitationIsAnOfferTests {
         _ joiner: Identity, to roster: inout RoomRoster, by inviter: Identity, hash: UInt8
     ) throws -> MembershipAttestation {
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: hash),
             body: try Payload.joinRequest(attestation))
@@ -106,7 +105,7 @@ struct InvitationIsAnOfferTests {
         var roster = try founded(by: inviter)
 
         let unseen = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         try confirm(unseen, by: joiner, to: &roster, relayedBy: inviter, hash: 4)
 
         #expect(!roster.members.contains(joiner.id))

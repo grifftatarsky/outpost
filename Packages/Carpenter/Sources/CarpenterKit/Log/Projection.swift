@@ -5,9 +5,7 @@ public struct Projection: Sendable {
     let rendered: [RenderedEntry]
     let roomPositions: [RoomID: [Int]]
     let positionByID: [EntryHash: Int]
-    let lastProfiles: [RoomID: RenderedEntry]
-    let roomKinds: [RoomID: RoomKind]
-    let namedRooms: Set<RoomID>
+    let foundings: [RoomID: RenderedEntry]
     let outpostAuthorOrder: [ParticipantID]
     let chains: RoomChains
     let claimTimes: [EntryHash: Date]
@@ -26,8 +24,7 @@ public struct Projection: Sendable {
         self.claimTimes = claimTimes
         var roomPositions: [RoomID: [Int]] = [:]
         var positionByID: [EntryHash: Int] = [:]
-        var profiles: [RoomID: RenderedEntry] = [:]
-        var kinds: [RoomID: RoomKind] = [:]
+        var foundings: [RoomID: RenderedEntry] = [:]
         var lastPosted: [ParticipantID: Int] = [:]
         var notes: Set<EntryHash> = []
         for (position, entry) in rendered.enumerated() {
@@ -35,10 +32,7 @@ public struct Projection: Sendable {
             if entry.type == .removalNoted { notes.insert(entry.id) }
             if let room = entry.room {
                 roomPositions[room, default: []].append(position)
-                if entry.type == .roomProfile {
-                    profiles[room] = entry
-                    if kinds[room] == nil { kinds[room] = entry.roomKind ?? .room }
-                }
+                if entry.founds != nil, foundings[room] == nil { foundings[room] = entry }
             } else if entry.isConversation && entry.isReadable {
                 lastPosted[entry.author] = position
             }
@@ -46,11 +40,7 @@ public struct Projection: Sendable {
         self.roomPositions = roomPositions
         self.positionByID = positionByID
         removalNoteIDs = notes
-        lastProfiles = profiles
-        roomKinds = kinds
-        namedRooms = Set(profiles.compactMap { room, profile in
-            if case .text = profile.content { room } else { nil }
-        })
+        self.foundings = foundings
         outpostAuthorOrder = lastPosted.sorted { $0.value > $1.value }.map(\.key)
         (members, supporterBadges) = Self.namesAndBadges(in: rendered)
         self.revealsNames = revealsNames

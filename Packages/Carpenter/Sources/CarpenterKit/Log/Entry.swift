@@ -167,13 +167,19 @@ public struct Entry: Hashable, Sendable, Codable {
             roomLink: roomLink)
     }
 
+    public var sealingRoom: RoomID { room ?? RoomID.outpost(of: author) }
+
     public func opened(using chain: EpochChain) -> Payload? {
-        try? payload.opened(using: chain, by: feedKey)
+        guard chain.room == sealingRoom else { return nil }
+        return try? payload.opened(using: chain, by: feedKey)
     }
 
-    public func opened(pairwise secret: PairwiseSecret, wall: RoomID) -> Payload? {
-        guard payload.alsoFor != nil else { return nil }
-        return try? payload.opened(pairwise: secret, room: room ?? wall, by: feedKey)
+    public func openedByTheWallsOwner(pairwise secret: PairwiseSecret) -> Payload? {
+        guard room == nil, hasSecondReader,
+            let opened = try? payload.opened(pairwise: secret, room: sealingRoom, by: feedKey),
+            PayloadType.forTheWallsOwner.contains(opened.type)
+        else { return nil }
+        return opened
     }
 
     public var hasSecondReader: Bool { payload.alsoFor != nil }

@@ -17,15 +17,11 @@ extension Projection {
     }
 
     public func namedRoomIDs() -> Set<RoomID> {
-        namedRooms
-    }
-
-    public func name(of room: RoomID) -> String? {
-        lastProfiles[room].flatMap { if case .text(let name) = $0.content { name } else { nil } }
+        Set(foundings.keys)
     }
 
     public func kind(of room: RoomID) -> RoomKind {
-        roomKinds[room] ?? .room
+        foundings[room]?.founds ?? .room
     }
 
     public func roster(of room: RoomID, opening: (RenderedEntry) -> Payload?) -> RoomRoster {

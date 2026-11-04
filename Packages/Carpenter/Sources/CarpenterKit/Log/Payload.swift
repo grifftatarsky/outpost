@@ -66,6 +66,8 @@ public struct PayloadType: Hashable, Sendable, Codable, RawRepresentable {
         .supporterBadge, .pairLink, .removalNoted,
     ]
 
+    public static let forTheWallsOwner: Set<PayloadType> = [.comment, .reaction]
+
     var canonicalBytes: Data {
         withUnsafeBytes(of: rawValue.bigEndian) { Data($0) }
     }

@@ -114,9 +114,9 @@ extension Payload {
         Payload(type: .readPolicy, body: try encode(ReadPolicyBody(reports: reports)))
     }
 
-    public static func roomProfile(name: String, kind: RoomKind = .room) throws -> Payload {
+    public static func roomProfile(name: String, kind: RoomKind = .room, founding: Data? = nil) throws -> Payload {
         Payload(
-            type: .roomProfile, body: try encode(RoomProfileBody(name: name, kind: kind)),
+            type: .roomProfile, body: try encode(RoomProfileBody(name: name, kind: kind, founding: founding)),
             fallbackText: name)
     }
 

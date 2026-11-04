@@ -29,18 +29,17 @@ struct ApprovalThresholdTests {
         threshold: Int, founder: Identity, others: [Identity], joiner: Identity,
         admittedBy admitters: [Identity], refusedBy refusers: [Identity] = []
     ) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
         var hash: UInt8 = 1
         func next() -> UInt8 { defer { hash += 1 }; return hash }
 
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: next()),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: next()), body: profile)
         roster.set(access: .atLeast(threshold), by: founder.id)
 
         for other in others {
             let invite = try TestInvite.issue(
-                joining: self.room, joinerKeys: other.publicKeys, by: founder, at: start)
+                joining: room, joinerKeys: other.publicKeys, by: founder, at: start)
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: next()),
                 body: try Payload.joinRequest(invite))
@@ -56,7 +55,7 @@ struct ApprovalThresholdTests {
         }
 
         let invite = try TestInvite.issue(
-            joining: self.room, joinerKeys: joiner.publicKeys, by: founder, at: start)
+            joining: room, joinerKeys: joiner.publicKeys, by: founder, at: start)
         roster.apply(
             rendered(founder.id, .joinRequest, hash: next()),
             body: try Payload.joinRequest(invite))
