@@ -21,34 +21,51 @@ them without taking over the Mac.
 
 ## The devices
 
-Four simulators on iOS 26.5, run from Xcode 27, where `DeviceHub.app` replaces `Simulator.app`.
+Two simulators on iOS 27.2, run from Xcode 27.1, where `DeviceHub.app` replaces `Simulator.app`.
+They replaced the five-device rig of September in November 2026.
 **Address them by `id=<UDID>`, never by `name=`**: a duplicate name once made `xcodebuild` boot a
-shut-down twin instead of the running device, and on Xcode 27 a name also means the newest iOS, so
-`name=outpost-alpha` finds no device at all (measured 2026-09-28). `Scripts/check-all.sh` looks the
-UDID up by name through `.github/scripts/pick-simulator.py`.
+shut-down twin instead of the running device, and on Xcode 27 a name also means the newest iOS
+(measured 2026-09-28). `Scripts/check-all.sh`, `Scripts/check-release-leaves.sh` and
+`Scripts/scan-for-vulnerabilities.sh` look `bullet` up by name through
+`.github/scripts/pick-simulator.py`.
 
-| Name | UDID | Apple Account | Member | Points |
-|---|---|---|---|---|
-| `outpost-alpha`, iPhone 17 Pro | `5D9E446D-DE6D-474A-ABEE-0F4096E775B5` | development account A | Griff | 402 × 874 |
-| `outpost-beta`, iPhone 17 Pro Max | `C8637538-65DC-47B1-9D99-73DA89A8CBC5` | development account B | Outie | 440 × 956 |
-| `outpost-gamma`, iPhone 17 | `0993066E-DA3B-4925-A7C3-F4189A3F7DD7` | none | Trig | 402 × 874 |
-| `outpost-delta`, iPhone 17 | `92E0602F-FCEF-4EDF-BC71-389B3C052E89` | none | Quad | 402 × 874 |
-| `outpost-27`, iPhone 17 Pro, iOS 27 | `EBDFF5AF-7699-4646-93B0-7218985EC2C0` | none | none | 402 × 874 |
+| Name | UDID | Apple Account | Points |
+|---|---|---|---|
+| `bullet`, iPhone 17 Pro | `D2CC04F2-782C-495B-AEE2-D80BD21A8D43` | account A | 402 × 874 |
+| `iPhone 17`, iPhone 17 | `955E8D27-689F-45D6-9D41-D73AEE9FF887` | account B | 402 × 874 |
 
-Alpha and beta are on two different Apple Accounts, and only they prove anything about CloudKit.
-Gamma and delta have no account and reach each other through a directory instead; see
-[members without an Apple Account](#members-without-an-apple-account). Which account's password
-belongs to which device is kept outside this repository.
+The two are on different Apple Accounts, so they prove what two people over CloudKit can. Which
+account belongs to which device is kept outside this repository, and so is whose they are:
+**do not run `--reset-account` on either, or anything else that erases the account's data**, without
+asking Griff first.
+
+**Both accounts already have a member.** On 2026-11-04 the first launch on each device logged
+`load: this account already has a member` and showed *Approve this device* with a six-character
+code, so neither can onboard without a recovery key, an approval from one of that member's devices,
+or `--reset-account`. The launch wrote one approval request into the account's `SiblingFeeds`
+zone, which reached the server from `bullet` (`device sync: sent 1 record(s), 0 failed`). Until
+Griff decides what to do with those members:
+
+- **The live suite must not run here.** `CloudKitMailboxTests` and `LivePairTests` call
+  `eraseEverySpace()`, which deletes every `Pair-` zone in the account; `LiveDeathmarkTests` clears
+  the account's deathmark; `LiveSiblingFeedTests` writes records from made-up devices into the
+  member's own `SiblingFeeds` zone.
+- **`--mailbox` does not keep a device off the account.** It swaps the mailbox and the account
+  check, but `startDeviceSync()` still publishes a sibling feed to CloudKit, so a member made under
+  it would be a second member on an account that has one. Read in the code, not measured.
+
+There is no device without an account any more, so nothing here runs the three-device walks under
+`--mailbox` ([members without an Apple Account](#members-without-an-apple-account),
+`Scripts/rig-walk-removals.sh`, which still names the old devices).
 
 **Build once, install everywhere, and never leave an old build on a device.** A device running last
 week's code looks exactly like a defect, and Griff has caught one twice.
 
 ```bash
 xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter \
-  -destination 'platform=iOS Simulator,id=5D9E446D-DE6D-474A-ABEE-0F4096E775B5' \
+  -destination 'platform=iOS Simulator,id=D2CC04F2-782C-495B-AEE2-D80BD21A8D43' \
   -derivedDataPath /tmp/carpenter-dd build
-for u in 5D9E446D-DE6D-474A-ABEE-0F4096E775B5 C8637538-65DC-47B1-9D99-73DA89A8CBC5 \
-         0993066E-DA3B-4925-A7C3-F4189A3F7DD7 92E0602F-FCEF-4EDF-BC71-389B3C052E89; do
+for u in D2CC04F2-782C-495B-AEE2-D80BD21A8D43 955E8D27-689F-45D6-9D41-D73AEE9FF887; do
   xcrun simctl terminate "$u" com.microgpt.carpenter 2>/dev/null
   xcrun simctl install "$u" /tmp/carpenter-dd/Build/Products/Debug-iphonesimulator/Outpost.app
 done
