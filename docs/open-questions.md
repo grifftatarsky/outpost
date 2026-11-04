@@ -47,7 +47,10 @@ heads a key change lists, a Solo answer), anything the removed person wrote befo
 own, or an invitation of theirs that another member had answered. What is still open: in an open
 room, a member who never sent a read receipt, never changed the key and never answered a check can
 remove somebody with an empty list, and every phone drops all of that person's words and everybody
-they let in whom nobody else answered for. Nothing the remover signed earlier says otherwise, and the
+they let in whom nobody else answered for. A removed member can do the same with the old key by
+writing a clock that hides that they had read their own removal: a removal of the founder that names
+only the founder's entries up to the member's own invitation ends the remover's invitation, and with it
+the removal (found 2026-11-04). Nothing the remover signed earlier says otherwise, and the
 dates and positions in the log cannot be used instead, because a removed person can sign a new entry
 under a number they used in a room the remover is not in.
 

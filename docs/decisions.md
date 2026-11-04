@@ -3855,6 +3855,40 @@ they used in a room the remover is not in. Built 2026-10-31, and the package sui
 
 <!-- COPY END 7ba6e22b -->
 
+<!-- COPY BEGIN 714e733d [NEEDS HUMAN REVIEW] -->
+
+### A removed member's own removals cannot undo their removal
+
+**PROPOSED 2026-11-04** — a default, not a constraint. A removed member still holds the room's old key,
+so they can still write a removal, and a modified app can make it name nothing. Every phone used to set
+aside first each removal that had not taken, and only then ask which removals cut each other. So a
+removed member who removed the founder, naming nothing, cut the founder's invitations; the remover
+then looked as if they had never been let in, their removal was set aside for good, and everything the
+removed member wrote after it came back, in the room and in the rooms list.
+
+Now a phone settles the removals and departures in a room in this order. A removal whose author had already read a
+removal of themselves (its clock covers it) goes, whenever that removal takes without it. A removal
+that has not taken is set aside only if it still fails when the only cuts are those of removals that
+take, and of cut removals that would take without whoever cut them. A removal cut by one that takes,
+or would take once the removals it cuts are gone, goes. A removal that its own cut stops from taking
+goes. When two removals cut each other, one whose author had read the other goes first; only when
+neither had read the other does the time each was read decide, as
+[ruled](#a-removed-person-hears-last-and-the-first-removal-stands). So nothing but that race depends
+on which phone is asking or when it read what.
+
+**Cost:** a phone walks the room's log a few more times when removals conflict: once more for each
+removal that cuts another without having taken, once for each cut removal while something has not
+taken, and once for each removal that has not taken in the rare case nothing else settles. A room with
+no conflict costs what it did.
+
+**What would change it:** the signed lists of what each device holds that the open question
+recommends, which would give every removal a line its author cannot shorten.
+
+**Built** 2026-11-04; `ARemovalCannotTakeBackWhatTheRemoverSawTests` and `TheRoomChainTests` pass in
+the package suite. Not run over iCloud.
+
+<!-- COPY END 714e733d -->
+
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 
 ### Tapping two phones swaps codes
