@@ -1630,6 +1630,24 @@ and the package suite passes; not run over iCloud.
 
 <!-- COPY END 5e8b1be3 -->
 
+<!-- COPY BEGIN 3008f634 [NEEDS HUMAN REVIEW] -->
+
+### An entry a phone cannot open is drawn only from somebody the room let in
+
+**PROPOSED by Claude, 2026-10-31** — a default, not a constraint. He has not ruled on this.
+
+A room's ID travels in the clear on every entry, so anybody who has seen one can write an entry naming
+that room. Without the key it never opens, but it used to be drawn anyway as *Not readable on this
+device* under the writer's name, it made the room show unread, and the notification banner could name
+the writer in a room they have never been in. Now an entry the phone cannot open is drawn only when its
+author is in the room, has left or been removed, or has an invitation in it. A member writing under a
+key this phone does not hold yet is still drawn as unreadable. Only unreadable entries are held to this:
+an entry that opens from somebody the member list does not know is still drawn, because a phone that
+cannot read part of a room's history would otherwise hide real members. Built 2026-10-31, and the
+package suite passes (`AnEntryOpensOnlyInItsOwnRoomTests`); not run over iCloud.
+
+<!-- COPY END 3008f634 -->
+
 <!-- COPY BEGIN c6b32346 [NEEDS HUMAN REVIEW] -->
 
 ### An invite travels as a link, and the link changes nothing about the invite

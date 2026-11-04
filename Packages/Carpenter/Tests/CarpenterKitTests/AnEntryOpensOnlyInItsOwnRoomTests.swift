@@ -73,6 +73,38 @@ struct AnEntryOpensOnlyInItsOwnRoomTests {
         }
     }
 
+    @Test("What somebody never let into a room seals there is not drawn, counted unread or announced")
+    func aStrangersSealedEntryIsNotDrawn() async throws {
+        let k = try await Kitchen.make()
+        try #require(k.t.alice.rooms.first { $0.id == k.room }?.hasUnread == false, "precondition: nothing unread")
+        let (madeUp, _) = EpochChain.create(room: k.room)
+
+        _ = try k.carolWrites(try Payload.post("from Carol").sealed(at: .initial, using: madeUp, by: k.carolsFeed))
+
+        #expect(
+            !k.t.alice.messages(in: k.room).contains { $0.author.id == k.t.carolID },
+            "a bubble from Carol was drawn in a room she has never been in")
+        #expect(k.t.alice.rooms.first { $0.id == k.room }?.hasUnread == false, "Carol made a room she is not in show unread")
+        #expect(k.t.alice.latestIncomingMessage()?.room != k.room, "a notification would have named Carol in a room she is not in")
+    }
+
+    @Test("What a member seals under a key this phone does not hold yet is still drawn as unreadable")
+    func aMembersSealedEntryIsDrawn() async throws {
+        let k = try await Kitchen.make()
+        let sam = try #require(k.t.sam.enrolment)
+        let (madeUp, _) = EpochChain.create(room: k.room)
+        let entry = try Entry.append(
+            after: k.t.sam.head, author: sam.identity.id, device: sam.device, clock: k.t.sam.replica.frontier,
+            wallTime: TestSession.now, room: k.room,
+            payload: try Payload.post("under a newer key").sealed(
+                at: .initial, using: madeUp, by: FeedKey(author: sam.identity.id, device: sam.device.id)),
+            roomLink: RoomLink(previous: k.t.sam.roomHeads[k.room]?.hash))
+        _ = try k.t.alice.replica.integrate(entry)
+        k.t.alice.refresh()
+
+        #expect(k.t.alice.messages(in: k.room).contains { $0.id.entry == entry.hash }, "a member's unreadable message vanished")
+    }
+
     @Test("The copy for the owner of an Outpost opens only for a comment or a reaction, the two the app writes")
     func theOwnersCopyIsOnlyForACommentOrAReaction() async throws {
         let k = try await Kitchen.make()

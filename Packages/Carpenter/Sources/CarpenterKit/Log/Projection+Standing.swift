@@ -71,9 +71,18 @@ extension Projection {
             {
                 cutting.subtract(walked.voidedBy[first] ?? [])
             } else {
-                return walked.standing
+                return withoutWhatStrangersSealed(walked.standing, in: room)
             }
         }
+    }
+
+    private func withoutWhatStrangersSealed(_ standing: Standing, in room: RoomID) -> Standing {
+        let known = standing.roster.members.union(standing.roster.absent).union(standing.roster.requests.keys)
+        var kept = standing
+        for entry in entries(in: room) where entry.content == .sealed && !known.contains(entry.author) {
+            kept.out.insert(entry.id)
+        }
+        return kept
     }
 
     private func firstOf(_ voided: Set<Int>, in claims: [Claim], noted: [EntryHash: Date]) -> Int? {
