@@ -1275,7 +1275,7 @@ search screen shows before a query appears under the keyboard.
 
 ### The log is repaired at the next write, and a reader steps over what it cannot use
 
-**PROPOSED** — Claude chose this on 2026-10-31.
+**PROPOSED** — Claude chose this on 2026-10-31, and changed what `append` checks on 2026-11-04.
 
 The log file is a run of records, each a four-byte length and an entry as JSON. A reader that stopped
 at the first bad record lost everything after it, and every later write landed where no reader went.
@@ -1288,9 +1288,13 @@ never holds a zero byte and a length under 16 MiB starts with one, so nothing in
 like a header. What it stepped over is counted in `discardedBytes`, and `termination` names the first
 damage it met.
 
-`append` walks the length headers before its first write in a process and whenever the file's size is
-not the size it left. If they do not reach the end of the file, it rewrites the log from what can be
-read: into a scratch file, flushed to the drive, then swapped in, so a process that dies at any point
+`append` checks the file before its first write in a process and whenever the file's size is not the
+size it left: every record past the point it last knew to be whole has to line up and decode. A
+`loadAll` that read the whole file without damage sets that point, so the first write after a launch
+checks nothing it has just read. Until 2026-11-04 the check only walked the length headers, so a
+record whose bytes were garbled but whose length still lined up was never repaired, and the History
+check reported the same damage on every launch. If the check fails, `append` rewrites the log from
+what can be read: into a scratch file, flushed to the drive, then swapped in, so a process that dies at any point
 leaves the old file whole. `compact()` and `removeEntries` use the same rewrite. A write that fails is
 cut back off, so an entry the caller was told failed is not on disk.
 
@@ -1298,10 +1302,11 @@ cut back off, so an entry the caller was told failed is not on disk.
 (`man 2 fsync`). An acknowledgement sent after it means the entry survives a power cut.
 
 **Cost:** a drive flush on every write, not measured on a phone; on this Mac it took the test suite
-from 67 to 84 seconds. One extra read of the whole log on the first write of each launch. A rewrite
-needs room for a second copy, so on a full disk the repair fails and the write fails with it, and
-the entries stay owed. A whole record that does not decode is left alone by `append` but dropped by a
-rewrite, so a record from a newer build is lost if damage elsewhere forces one.
+from 67 to 84 seconds. A write after another process has written decodes what that process added,
+and a write by a process that never loaded the log decodes all of it. A rewrite needs room for a
+second copy, so on a full disk the repair fails and the write fails with it, and the entries stay
+owed. A record this build cannot decode is dropped at the next write, so a record written by a newer
+build is lost if an older build writes after it.
 
 <!-- COPY END 084ff3b8 -->
 

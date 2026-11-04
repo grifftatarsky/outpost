@@ -40,4 +40,29 @@ struct ADamagedRecordIsRepairedTests {
         #expect(loaded.discardedBytes == 0)
         try await FileLogStore(url: url).removeAll()
     }
+
+    @Test("A garbled record another process adds after this store has read the log is repaired by the next append")
+    func aGarbledRecordAddedLaterIsRepaired() async throws {
+        let url = TestScratch.root
+            .appending(path: "carpenter-tests-\(UUID().uuidString)")
+            .appending(path: "log.carpenter")
+        var alice = Author()
+        let store = FileLogStore(url: url)
+        try await store.append([try alice.post("first", at: start)])
+        #expect(try await store.loadAll().termination == .complete)
+
+        let garbled = Data(repeating: 0x41, count: 40)
+        var data = try Data(contentsOf: url)
+        data.append(withUnsafeBytes(of: UInt32(garbled.count).bigEndian) { Data($0) })
+        data.append(garbled)
+        try data.write(to: url)
+
+        try await store.append([try alice.post("second", at: start.addingTimeInterval(1))])
+        let loaded = try await FileLogStore(url: url).loadAll()
+
+        #expect(loaded.entries.count == 2, "precondition: both written records are read")
+        #expect(loaded.termination == .complete, "the next write left the damage in place: \(loaded.termination)")
+        #expect(loaded.discardedBytes == 0)
+        try await FileLogStore(url: url).removeAll()
+    }
 }
