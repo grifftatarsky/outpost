@@ -99,6 +99,8 @@ struct DeliveryMarkView: View {
             return Text(
                 "Saved. There is nobody in this room to send it to yet — it will go when somebody joins.",
                 bundle: .module)
+        case .notCollected:
+            return notCollectedLabel
         case .delivered:
             return Text("Collected. Not yet shown.", bundle: .module)
         case .notReported:
@@ -110,6 +112,14 @@ struct DeliveryMarkView: View {
         }
         // COPY END c562b6b2
     }
+
+    // COPY BEGIN 2c05bd49 [NEEDS HUMAN REVIEW]
+    private var notCollectedLabel: Text {
+        Text(
+            "Not collected by everybody within ^[\(NotGone.takenBackAfterDays) day](inflect: true). The copy that was waiting was taken back from your iCloud.",
+            bundle: .module)
+    }
+    // COPY END 2c05bd49
 }
 
 #if DEBUG

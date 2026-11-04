@@ -464,6 +464,23 @@ extension AppSession {
         }
     }
 
+    private func noteWhetherCollected(_ entries: Set<EntryHash>, by person: ParticipantID, collected: Bool) {
+        if collected {
+            guard persisted.notCollected[person]?.isDisjoint(with: entries) == false else { return }
+            let left = persisted.notCollected[person, default: []].subtracting(entries)
+            persisted.notCollected[person] = left.isEmpty ? nil : left
+            return
+        }
+        guard let me = enrolment?.identity.id else { return }
+        let held = entriesByHash
+        let theirs = entries.filter { hash in
+            guard let entry = held[hash], entry.author == me, let room = entry.room else { return false }
+            return roster(of: room).members.contains(person)
+        }
+        guard !theirs.isEmpty else { return }
+        persisted.notCollected[person, default: []].formUnion(theirs)
+    }
+
     private func settleWhatWasSent(
         _ sent: [PacketID: SentPacket], through mailbox: any Mailbox, in pairs: Pairs
     ) async {
@@ -517,6 +534,7 @@ extension AppSession {
                     if missing.isEmpty { confirmAnnouncement(packet) }
                     persisted.outstandingPackets[packet] = nil
                     persisted.packetsWritten[packet] = nil
+                    noteWhetherCollected(entries, by: record.to, collected: missing.isEmpty)
                 } catch {
                     Diagnostics.sync.error(
                         "mailbox: could not take back a packet everybody has (\(String(describing: error), privacy: .public))")

@@ -138,6 +138,13 @@ collected. That record was in memory only, so every relaunch lit both marks on m
 touched, and the first sync then turned them off again — a mark going backwards, which is the one
 direction it may never go. It is written down now, beside the log.
 
+That rule alone also read a packet taken back after nine days with no receipt as collected, because
+it had left the outbox. Since 2026-10-31 a packet withdrawn that way records its entries, per person,
+in `PersistedState.notCollected`, and the message is drawn as *not collected* until a later copy is
+signed for. A read receipt for a later message does not override it: a receipt covers everything
+before the message it names, including a message that never reached that phone. The message detail
+names who did not collect it, and the waiting-on list counts it.
+
 <!-- COPY END da72cc7c -->
 
 <!-- COPY BEGIN 670d2f16 [NEEDS HUMAN REVIEW] -->

@@ -148,9 +148,17 @@ public struct MessageDetailView: View {
             Text("Nothing yet", bundle: .module)
         case .doesNotReport:
             Text("Does not report", bundle: .module)
+        case .notCollected:
+            notCollectedDetail
         }
     }
     // COPY END 52d2b508
+
+    // COPY BEGIN 7591616c [NEEDS HUMAN REVIEW]
+    private var notCollectedDetail: Text {
+        Text("Not collected in ^[\(NotGone.takenBackAfterDays) day](inflect: true)", bundle: .module)
+    }
+    // COPY END 7591616c
 
     @ViewBuilder
     private var history: some View {

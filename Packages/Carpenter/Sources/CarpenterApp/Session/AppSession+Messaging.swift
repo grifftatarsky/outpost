@@ -268,12 +268,16 @@ extension AppSession {
                         missing.formUnion(
                             (persisted.outstandingPackets[packet] ?? []).intersection(mine))
                     }
+                }
+                let takenBack = (persisted.notCollected[person] ?? []).intersection(mine).subtracting(missing)
+                missing.formUnion(takenBack)
+                if pendingRecipients != nil, pairwiseSecret(with: person) != nil {
                     holding = missing.isEmpty ? .everything : .missing(missing.count)
                 } else {
                     holding = missing.isEmpty ? .notCheckedYet : .missing(missing.count)
                 }
                 return WaitingOnPerson(
-                    member: projected.member(person), holding: holding,
+                    member: projected.member(person), holding: holding, takenBack: takenBack.count,
                     lastHeard: lastHeard[person])
             }
             .sorted { left, right in
@@ -320,7 +324,9 @@ extension AppSession {
             .filter { $0 != me }
             .map { who in
                 let report: ReadReport
-                if !reporting.contains(who) {
+                if persisted.notCollected[who]?.contains(message.entry) == true {
+                    report = .notCollected
+                } else if !reporting.contains(who) {
                     report = .doesNotReport
                 } else if let at = evidence[who]?.firstCovering(position) {
                     report = .displayed(at: at)
@@ -424,7 +430,8 @@ extension AppSession {
         let notYetWritten = enrolment.map {
             projected.unsent(in: room, by: $0.identity.id, past: persisted.syncedFrontier)
         } ?? []
-        let unsent = notYetWritten.union(owedToMembers(of: room).subtracting(undelivered))
+        let unsent = notYetWritten.union(owed(toMembersOf: room, in: persisted.entriesOwed).subtracting(undelivered))
+        let takenBack = owed(toMembersOf: room, in: persisted.notCollected)
         let evidence = readEvidence(in: room, of: projected)
         let reporting = reportingMembers(in: room, of: projected)
             .subtracting([enrolment?.identity.id].compactMap(\.self))
@@ -438,7 +445,7 @@ extension AppSession {
                 sentAt: message.sentAt,
                 isMine: true,
                 delivery: deliveryState(
-                    of: message.id, unsent: unsent, undelivered: undelivered,
+                    of: message.id, unsent: unsent, undelivered: undelivered, takenBack: takenBack,
                     position: positions[message.id], evidence: evidence,
                     anyoneReports: !reporting.isEmpty,
                     hasSomebodyToReach: hasSomebodyToReach),
@@ -451,10 +458,12 @@ extension AppSession {
         }
     }
 
-    private func owedToMembers(of room: RoomID) -> Set<EntryHash> {
-        guard !persisted.entriesOwed.isEmpty else { return [] }
+    private func owed(
+        toMembersOf room: RoomID, in perPerson: [ParticipantID: Set<EntryHash>]
+    ) -> Set<EntryHash> {
+        guard !perPerson.isEmpty else { return [] }
         return roster(of: room).members.reduce(into: Set<EntryHash>()) { owed, member in
-            owed.formUnion(persisted.entriesOwed[member] ?? [])
+            owed.formUnion(perPerson[member] ?? [])
         }
     }
 
@@ -578,7 +587,7 @@ extension AppSession {
     }
 
     private func deliveryState(
-        of message: MessageID, unsent: Set<EntryHash>, undelivered: Set<EntryHash>,
+        of message: MessageID, unsent: Set<EntryHash>, undelivered: Set<EntryHash>, takenBack: Set<EntryHash>,
         position: Int?, evidence: ReadEvidence, anyoneReports: Bool,
         hasSomebodyToReach: Bool
     ) -> DeliveryState {
@@ -586,6 +595,7 @@ extension AppSession {
             return hasSomebodyToReach ? .pending : .noRecipients
         }
         if undelivered.contains(message.entry) { return .sent }
+        if takenBack.contains(message.entry) { return .notCollected }
         if let position, let seenAt = evidence.firstCovering(position) {
             return .displayed(at: seenAt)
         }

@@ -50,6 +50,7 @@ public enum ReadReport: Hashable, Sendable {
     case displayed(at: Date)
     case nothingYet
     case doesNotReport
+    case notCollected
 
     public var wasDisplayed: Bool {
         if case .displayed = self { return true }
