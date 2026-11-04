@@ -195,6 +195,15 @@ from an older root stops counting at the new root's date, including anything a t
 an old recovery certificate, or one published late, changes nothing, because its date is older
 (`DeviceApprovalTests`, `WhatTheRegistryCountsTests`).
 
+That date is one the old device can write before, so since 2026-10-31 each contact also fixes a line
+for every older root's device the first time it hears of the newer root: the highest number of that
+device's feed it holds then, and the entry there (`Replica.fixSupersededLines`, kept in
+`PersistedState.supersededLines` and put back before the log is read). Past it nothing counts,
+whatever date it carries, and below it an entry still has to be dated before the restore. The line
+differs a little from contact to contact, but no contact takes anything new from the old device. The
+member's own devices are spared, because a restored device fills its history from its peers after
+it hears of the old root (`ADeviceLeftBehindByARestoreTests`).
+
 **Approvals and removals count in the order iCloud first stored them** (since 2026-09-27). Until then
 the registry ordered them by the dates their authors wrote, and a removed device that keeps the
 identity key could date an approval, or removals of the member's other devices, before its own

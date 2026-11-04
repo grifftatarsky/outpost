@@ -156,7 +156,8 @@ extension AppSession {
         let checked = await replica.signatureChecks(
             for: collected.entries, alsoTrusting: collected.certificates)
         var working = replica
-        let (received, settled) = SyncSession.integrate(collected, into: &working, checked: checked)
+        let (received, settled) = SyncSession.integrate(
+            collected, into: &working, checked: checked, sparing: enrolment?.identity.id)
         if working.revision != replica.revision { replica = working }
         entriesNotWrittenDown += received.integrated
         report = report.adding(received)

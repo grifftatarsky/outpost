@@ -439,6 +439,7 @@ public final class AppSession {
             }
             try? replica.revoke(revocation, storedAt: at)
         }
+        replica.restore(supersededLines: persisted.supersededLines)
         if enrolment != nil { recordAuthority() }
         replica.restore(spent: persisted.spentEntries, closing: persisted.preferences.roomsDeleted)
 
@@ -483,6 +484,7 @@ public final class AppSession {
             if let room = spent.room { noteOwn(spent.link, in: room) }
         }
         persisted.spentEntries = replica.spentEntries
+        replica.fixSupersededLines(sparing: identity.id)
 
         try await restoreEpochs()
 

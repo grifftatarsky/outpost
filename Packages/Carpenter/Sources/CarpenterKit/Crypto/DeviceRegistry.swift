@@ -14,12 +14,25 @@ public struct DeviceRegistry: Hashable, Sendable {
         fileprivate var limits: [Limit] = []
     }
 
+    public struct Line: Hashable, Sendable, Codable {
+        public let seq: UInt64
+        public let head: EntryHash?
+
+        public init(seq: UInt64, head: EntryHash?) {
+            self.seq = seq
+            self.head = head
+        }
+    }
+
     fileprivate struct Limit: Hashable, Sendable {
         let cutoff: UInt64?
         let head: EntryHash?
         let before: Date
         let remover: DeviceID?
+        var alsoByDate = false
         var seen: UInt64 = 0
+
+        var weighsEvidence: Bool { remover != nil }
 
         var isContradicted: Bool { cutoff.map { seen > $0 } ?? false }
 
@@ -28,7 +41,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         func admits(seq: UInt64, hash: EntryHash?, at instant: Date) -> Bool {
             if let cutoff, !isContradicted {
                 if seq == cutoff, let head, let hash, hash != head { return false }
-                return seq <= cutoff
+                return seq <= cutoff && (!alsoByDate || instant < before)
             }
             if seq <= seen { return true }
             return cutoff == nil && instant < before
@@ -45,9 +58,23 @@ public struct DeviceRegistry: Hashable, Sendable {
     private var standings: [DeviceID: Standing] = [:]
     private var windows: [DeviceID: Authority] = [:]
     private var witnessed: [DeviceID: [DeviceID: UInt64]] = [:]
+    private var supersededAt: [DeviceID: Line] = [:]
 
     public init(identity: IdentityPublicKeys) {
         self.identity = identity
+    }
+
+    public var supersededLines: [DeviceID: Line] { supersededAt }
+
+    public var supersededWithoutALine: [DeviceID] {
+        standings.filter { $0.value.removedByRecovery && supersededAt[$0.key] == nil }.map(\.key)
+    }
+
+    public mutating func fix(_ lines: [DeviceID: Line]) {
+        let fresh = lines.filter { supersededAt[$0.key] == nil && standings[$0.key] != nil }
+        guard !fresh.isEmpty else { return }
+        supersededAt.merge(fresh) { held, _ in held }
+        recompute()
     }
 
     public var deviceCount: Int { standings.count }
@@ -180,7 +207,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         guard var standing = standings[device], !standing.limits.isEmpty else { return }
         let counting = standings.filter { $0.key != device && $0.value.revokedAt == nil }.keys
         let fromCounting = counting.map { statement(of: $0, about: device, in: standing) }.max() ?? 0
-        for index in standing.limits.indices {
+        for index in standing.limits.indices where standing.limits[index].weighsEvidence {
             let fromRemover = standing.limits[index].remover.map { statement(of: $0, about: device, in: standing) } ?? 0
             standing.limits[index].seen = Swift.max(fromCounting, fromRemover)
         }
@@ -254,7 +281,9 @@ public struct DeviceRegistry: Hashable, Sendable {
                     capped.revokedAt = next.issuedAt
                     capped.revokedBy = next.device
                     capped.removedByRecovery = true
-                    capped.limits.append(Limit(cutoff: nil, head: nil, before: next.issuedAt, remover: next.device))
+                    let line = supersededAt[device]
+                    capped.limits.append(
+                        Limit(cutoff: line?.seq, head: line?.head, before: next.issuedAt, remover: nil, alsoByDate: true))
                 }
                 combined[device] = capped
             }

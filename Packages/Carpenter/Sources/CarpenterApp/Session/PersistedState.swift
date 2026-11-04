@@ -70,6 +70,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var certificates: [DeviceCertificate] = []
     var revocations: [DeviceRevocation] = []
     var otherRevocations: [DeviceRevocation] = []
+    var supersededLines: [FeedKey: DeviceRegistry.Line] = [:]
     var authorityStored: [Data: Date] = [:]
     var authorityIsLegacy = false
     var authorityPublished: Set<Data> = []
@@ -170,6 +171,8 @@ struct PersistedState: Codable, Equatable, Sendable {
         siblingMail = try container.decodeIfPresent(SiblingMail.self, forKey: .siblingMail) ?? SiblingMail()
         otherRevocations =
             try container.decodeIfPresent([DeviceRevocation].self, forKey: .otherRevocations) ?? []
+        supersededLines =
+            try container.decodeIfPresent([FeedKey: DeviceRegistry.Line].self, forKey: .supersededLines) ?? [:]
         if let stored = try container.decodeIfPresent([Data: Date].self, forKey: .authorityStored) {
             authorityStored = stored
             authorityIsLegacy = try container.decodeIfPresent(Bool.self, forKey: .authorityIsLegacy) ?? false

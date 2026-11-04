@@ -31,6 +31,8 @@ extension AppSession {
             persisted.otherRevocations = kept.union(others)
                 .sorted { $0.digest.lexicographicallyPrecedes($1.digest) }
         }
+        let lines = persisted.supersededLines.merging(replica.supersededLines) { held, _ in held }
+        if lines != persisted.supersededLines { persisted.supersededLines = lines }
     }
 
     func recordAuthority() {
@@ -92,6 +94,7 @@ extension AppSession {
                     "authority: refused a removal (\(String(describing: error), privacy: .public))")
             }
         }
+        replica.fixSupersededLines(sparing: enrolment?.identity.id)
         recordAuthority()
         if thisDeviceWasRemoved {
             await handOverBeforeErasing()

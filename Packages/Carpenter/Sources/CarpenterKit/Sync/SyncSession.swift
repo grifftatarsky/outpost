@@ -472,7 +472,7 @@ public struct SyncSession: Sendable {
     @discardableResult
     public static func integrate(
         _ collected: CollectedPackets, into replica: inout Replica,
-        checked: SignatureChecks = SignatureChecks()
+        checked: SignatureChecks = SignatureChecks(), sparing member: ParticipantID? = nil
     ) -> (report: SyncReport, settled: Set<PacketID>) {
         var report = SyncReport()
         report.packetsFetched = collected.packets.count
@@ -514,6 +514,7 @@ public struct SyncSession: Sendable {
                 }
             }
             report.credentialsRejected += rejected
+            if !delivery.certificates.isEmpty { replica.fixSupersededLines(sparing: member) }
 
             var entriesRejected = 0
             var refusedForever = 0
@@ -591,7 +592,7 @@ public struct SyncSession: Sendable {
         let collected = try await collect(as: peer, at: instant, alreadyTaken: alreadyTaken)
         let checked = await replica.signatureChecks(
             for: collected.entries, alsoTrusting: collected.certificates)
-        let (report, settled) = Self.integrate(collected, into: &replica, checked: checked)
+        let (report, settled) = Self.integrate(collected, into: &replica, checked: checked, sparing: peer.me)
         if let receipt { try await acknowledge(collected, settled, signing: receipt) }
         return report
     }

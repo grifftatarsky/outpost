@@ -3715,6 +3715,32 @@ ignores the list.
 
 <!-- COPY END 719b3a40 -->
 
+<!-- COPY BEGIN c98cba7f [NEEDS HUMAN REVIEW] -->
+
+### A device a restore left behind stops where each contact had read it
+
+**PROPOSED 2026-10-31**, to keep [the ruling above](#a-removed-persons-words-stop-where-the-removal-saw-them)
+true for the devices a recovery key leaves behind. A restore ends every older device at the new root's
+date, and there was no cutoff, so a stolen phone could go on posting as the member, in any room whose old
+key it held, by dating each entry before the restore. The restored device's offer to remove the old
+devices did not help, because in the newest root's history the old device never counted.
+
+Now each contact, the first time it hears of the newer root, fixes a line for every older root's device:
+the highest number of that device's feed it holds at that moment, and the entry there. It keeps the line
+across a relaunch. Past it nothing counts; below it an entry must still be dated before the restore. A
+contact that held nothing of the old device takes nothing of it afterwards.
+
+**Cost:** the line differs a little from contact to contact, so a contact that had not yet received an
+old device's last entries before it heard of the restore never shows them, and somebody who first meets
+the member after the restore sees nothing the old devices wrote. The member's own devices are not given
+a line, because a restored device hears of its old devices before its peers have sent back what they
+wrote; a backdated entry that reaches the member's own restored device still goes by its date there.
+
+**Built** 2026-10-31; `ADeviceLeftBehindByARestoreTests` passes in the package suite. Not run over
+iCloud.
+
+<!-- COPY END c98cba7f -->
+
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 
 ### Tapping two phones swaps codes

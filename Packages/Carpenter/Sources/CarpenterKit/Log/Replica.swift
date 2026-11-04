@@ -118,6 +118,41 @@ public struct Replica: Sendable {
         enforceStanding(of: event.participant)
     }
 
+    public var supersededLines: [FeedKey: DeviceRegistry.Line] {
+        registries.reduce(into: [:]) { lines, pair in
+            for (device, line) in pair.value.supersededLines {
+                lines[FeedKey(author: pair.key, device: device)] = line
+            }
+        }
+    }
+
+    public mutating func fixSupersededLines(sparing member: ParticipantID?) {
+        for (participant, registry) in registries where participant != member {
+            let unfixed = registry.supersededWithoutALine
+            guard !unfixed.isEmpty else { continue }
+            fix(
+                Dictionary(uniqueKeysWithValues: unfixed.map { device in
+                    let top = link(atTopOf: FeedKey(author: participant, device: device))
+                    return (device, DeviceRegistry.Line(seq: top?.seq ?? 0, head: top?.hash))
+                }), of: participant)
+        }
+    }
+
+    public mutating func restore(supersededLines lines: [FeedKey: DeviceRegistry.Line]) {
+        for (participant, held) in Dictionary(grouping: lines, by: \.key.author) {
+            fix(Dictionary(uniqueKeysWithValues: held.map { ($0.key.device, $0.value) }), of: participant)
+        }
+    }
+
+    private mutating func fix(_ lines: [DeviceID: DeviceRegistry.Line], of participant: ParticipantID) {
+        guard var registry = registries[participant] else { return }
+        registry.fix(lines)
+        guard registry != registries[participant] else { return }
+        registries[participant] = registry
+        revision = UUID()
+        enforceStanding(of: participant)
+    }
+
     public var storedTimes: [Data: Date] {
         registries.values.reduce(into: [:]) { times, registry in
             times.merge(registry.storedTimes) { min($0, $1) }
