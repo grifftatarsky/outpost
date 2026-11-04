@@ -230,7 +230,9 @@ not established; it rides in the same build as Address Sanitizer.
 has no file in any of them, so a clean analyze says nothing about this code. Run for `bullet` on
 2026-11-04, it succeeded, ran no analyzer step at all and reported nothing. The one warning in its
 log was the Swift compiler's: an isolated conformance in `CarpenterUI/Previews/Fixtures.swift:61`,
-which is preview code compiled only in a debug build. It was left alone.
+which is preview code compiled only in a debug build. It was left alone. The scan used to count
+every warning in the log, so from an empty build folder it failed on that one; it now counts only
+warnings in C, C++ and Objective-C files, which are the only ones the analyzer writes.
 
 **Results on 2026-11-04.** Under Thread Sanitizer all 2,009 tests ran in 424 seconds of test time,
 with the runtime linked, and no race was reported. The only failures were three `timing` tests,

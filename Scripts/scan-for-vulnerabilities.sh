@@ -43,7 +43,7 @@ echo "== static analysis"
 if xcodebuild analyze -workspace Carpenter.xcworkspace -scheme Carpenter \
     -destination "$DEST" -derivedDataPath "${DERIVED_DATA:-/tmp/carpenter-analyze}" \
     >/tmp/analyze.log 2>&1; then
-    found=$(grep -E "warning:" /tmp/analyze.log | grep -vE "AppIntents|Metadata extraction" | sort -u)
+    found=$(grep -E '\.(c|cc|cpp|cxx|m|mm|h|hpp):[0-9]+:[0-9]+: warning:' /tmp/analyze.log | sort -u)
     if [ -n "$found" ]; then
         echo "$found"
         fail "the analyzer reported the warnings above. Answer each or record why it stands."
