@@ -75,11 +75,14 @@ struct WhatVouchesForAnEntryCanArriveInALaterPacketTests {
         let (lateFirst, settledFirst) = SyncSession.integrate(
             SyncSession.CollectedPackets(tags: [], packets: [late]), into: &first)
         SyncSession.integrate(SyncSession.CollectedPackets(tags: [], packets: [witness]), into: &first)
+        let stillOffered = [late].filter { !settledFirst.contains($0.id) }
+        SyncSession.integrate(SyncSession.CollectedPackets(tags: [], packets: stillOffered), into: &first)
 
         SyncSession.integrate(SyncSession.CollectedPackets(tags: [], packets: [witness]), into: &second)
         SyncSession.integrate(SyncSession.CollectedPackets(tags: [], packets: [late]), into: &second)
 
         #expect(held(second) == [1, 2, 3, 4, 5], "precondition: the tablet's clock vouches for what it had seen")
+        #expect(lateFirst.entriesRefusedForever == 0, "a refusal another of the member's devices could still lift was final")
         #expect(
             held(first) == held(second),
             """
@@ -87,5 +90,50 @@ struct WhatVouchesForAnEntryCanArriveInALaterPacketTests {
             (\(lateFirst.entriesRefusedForever) refused for good, packet settled: \(settledFirst.contains(late.id))), \
             so the app acknowledges the packet and records the numbers as unverifiable, and repair never asks again
             """)
+    }
+
+    @Test("Once the packet is gone, history repair still asks for what the member's tablet vouched for")
+    func repairAsksForWhatWasVouchedFor() throws {
+        let words = try feed(of: stolen, 5)
+        var seeing = VectorClock()
+        seeing.observe(words[4].feedKey, seq: words[4].seq)
+        let vouch = try feed(of: tablet, 1, seeing: seeing)
+        var replica = try friend()
+        for entry in words.prefix(3) { try replica.integrate(entry) }
+        try replica.revoke(
+            DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 3, head: words[2].hash),
+            storedAt: start + 1000)
+
+        let (late, _) = SyncSession.integrate(
+            SyncSession.CollectedPackets(tags: [], packets: [packet(Array(words.suffix(2)), storedAt: start + 1100)]),
+            into: &replica)
+        #expect(replica.gaps().allSatisfy { $0.feed != words[0].feedKey }, "precondition: nothing vouches for 4 and 5 yet")
+        SyncSession.integrate(
+            SyncSession.CollectedPackets(tags: [], packets: [packet(vouch, storedAt: start + 1200)]), into: &replica)
+
+        let givenUpOn = Set(late.refusals.filter(\.isFinal).compactMap(\.seq))
+        let asked = (replica.gaps().first { $0.feed == words[0].feedKey }?.spans ?? [])
+            .flatMap { Array($0.lower...$0.upper) }.filter { !givenUpOn.contains($0) }
+        #expect(asked == [4, 5], "what the tablet had seen of the removed device was never asked for again")
+    }
+
+    @Test("A refusal past the cutoff is final once no other device of the member could vouch for it")
+    func nobodyLeftToVouch() throws {
+        let words = try feed(of: stolen, 4)
+        var replica = Replica()
+        replica.introduce(identity.publicKeys)
+        try replica.admit(DeviceCertificate.recovered(for: phone, by: identity, at: start), storedAt: start)
+        try replica.admit(
+            DeviceCertificate.issue(for: stolen, by: identity, at: start + 10, approvedBy: phone), storedAt: start + 10)
+        for entry in words.prefix(3) { try replica.integrate(entry) }
+        try replica.revoke(
+            DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 3, head: words[2].hash),
+            storedAt: start + 1000)
+        #expect(throws: (any Error).self) { try replica.integrate(words[3]) }
+        #expect(!replica.refusesForever(words[3]), "the member's phone could still vouch, and the refusal was final")
+
+        try replica.revoke(
+            DeviceRevocation.issue(for: phone.id, by: identity, at: start + 2000, from: phone), storedAt: start + 2000)
+        #expect(replica.refusesForever(words[3]), "nobody is left to vouch, and the refusal is still not final")
     }
 }

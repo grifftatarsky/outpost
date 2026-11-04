@@ -3756,6 +3756,22 @@ give the contradicted range a head.
 **Built** 2026-10-31; `ARemovalCannotEraseWhatWasSeenTests` passes in the package suite. Not run over
 iCloud.
 
+**Changed 2026-11-04, PROPOSED:** a refusal past a removed device's cutoff is no longer final while
+another of the member's devices still counts. Before, a contact that got the removed device's later
+entries before the entry of the member's tablet that showed it had seen them refused them for good:
+it acknowledged the packet, recorded the numbers as never verifying, and history repair never asked
+for them again, while a contact that got the two the other way round kept them. Now the packet is left
+outstanding, so the next round reads it again after the tablet's entry, and the numbers stay among
+what repair asks for once a device of the member has said it held them. A refusal becomes final when
+no other device of the member counts, when an earlier line drawn without evidence (a restore's) rules
+the entry out, or when a different entry already holds its number
+(`WhatVouchesForAnEntryCanArriveInALaterPacketTests`).
+
+**Cost of the change:** a packet carrying a removed device's later entries that nobody vouches for is
+read again every round until it is nine days old and no longer collected, and a new refusal like it
+can hold back, for one round, the keys of rooms where somebody is out, at most once an hour per sender,
+as any refusal that may yet be lifted does.
+
 <!-- COPY END 050f54e6 -->
 
 <!-- COPY BEGIN 719b3a40 [NEEDS HUMAN REVIEW] -->
