@@ -101,6 +101,26 @@ struct ARemovalCannotTakeBackWhatTheRemoverSawTests {
         #expect(!r.members.contains(r.vic.identity.id), "precondition: the removal took")
     }
 
+    @Test("A removed member cannot bring back what they wrote after their removal by removing the founder")
+    func aRemovedMemberCannotUndoTheirOwnRemoval() throws {
+        var r = try room()
+        let removal = try r.write(
+            try Payload.removal(of: r.vic.identity.id, heads: []), by: \.mallory, clock: r.seeing(r.vic), at: start + 20)
+        var afterTheRemoval = r.seeing(r.vic)
+        afterTheRemoval.observe(removal.feedKey, seq: removal.seq)
+        let after = try r.write(try Payload.post("still here"), by: \.vic, clock: afterTheRemoval, at: start + 30)
+        try #require(r.out.contains(after.hash), "precondition: what Vic wrote after his removal is out")
+
+        afterTheRemoval.observe(after.feedKey, seq: after.seq)
+        _ = try r.write(
+            try Payload.removal(of: r.founder.identity.id, heads: []), by: \.vic, clock: afterTheRemoval, at: start + 31)
+
+        #expect(
+            r.out.contains(after.hash),
+            "one removal of the founder, written by somebody already removed, put their post-removal words back in the room")
+        #expect(r.members.contains(r.founder.identity.id), "precondition: Vic's removal of the founder did nothing")
+    }
+
     @Test("Leaving cannot take back what the leaver's own phone wrote before it")
     func aDepartureKeepsItsOwnPast() throws {
         var r = try room()
