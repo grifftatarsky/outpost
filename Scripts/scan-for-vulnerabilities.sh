@@ -14,7 +14,7 @@
 set -uo pipefail
 
 UDID="${1:-}"
-DEST="platform=iOS Simulator,name=outpost-alpha"
+DEST="platform=iOS Simulator,id=$(xcrun simctl list devices available --json | python3 .github/scripts/pick-simulator.py bullet)"
 if [ -n "$UDID" ]; then DEST="platform=iOS Simulator,id=$UDID"; fi
 
 status=0
