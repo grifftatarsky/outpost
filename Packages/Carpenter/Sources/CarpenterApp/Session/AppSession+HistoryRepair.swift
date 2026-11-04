@@ -254,7 +254,7 @@ extension AppSession {
             let entries = fill.entries.filter {
                 $0.seq <= persisted.syncedFrontier[$0.feedKey] && !justSent.contains($0.hash)
             }
-            let (fitting, bytes) = Self.prefix(of: entries, within: allowance)
+            let fitting = Self.prefix(of: entries, within: allowance)
             let answer = RepairAnswer(
                 request: duty.request.id, unheld: fill.unheld,
                 heads: replica.heads(of: Set(duty.request.authors)), elsewhere: fill.elsewhere)
@@ -265,7 +265,7 @@ extension AppSession {
                     identities: knownIdentities(), withholding: withheld)
                 noteWritten(sent)
                 report = report.adding(sent)
-                spendRepairBytes(bytes, on: duty.from)
+                spendRepairBytes(sent.bytesWritten, on: duty.from)
                 guard sent.sendFailure == nil else { continue }
                 if fitting.count < entries.count {
                     carryOn(duty, past: fitting)
@@ -370,7 +370,7 @@ extension AppSession {
         persisted.repairSpend[person] = RepairSpend(day: day, bytes: before + max(bytes, Self.leastAnAnswerCosts))
     }
 
-    private static func prefix(of entries: [Entry], within allowance: Int) -> (entries: [Entry], bytes: Int) {
+    private static func prefix(of entries: [Entry], within allowance: Int) -> [Entry] {
         var total = 0
         var count = 0
         for bytes in SyncSession.bytes(of: entries) {
@@ -378,7 +378,7 @@ extension AppSession {
             total += bytes
             count += 1
         }
-        return (Array(entries.prefix(count)), total)
+        return Array(entries.prefix(count))
     }
 
     private func carryOn(_ duty: RepairDuty, past sent: [Entry]) {

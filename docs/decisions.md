@@ -560,8 +560,14 @@ keeps a request only for a room whose list shows the asker as in or being let in
 own Outpost if the asker reads it. An answer carries only entries from rooms the asker is in. Authors,
 gaps and spans past `RepairRequest.mostAuthors`, `mostGaps` and `mostSpans` are dropped, and a request
 is answered at most once however often its packet is collected. Each person has
-`AppSession.repairBytesPerPersonPerDay` (16 MB) a day, every answer costs at least four kilobytes, and an
-answer that runs out stops there, keeps its duty, and carries on from where it stopped the next day.
+`AppSession.repairBytesPerPersonPerDay` (16 MB) a day, and an answer that runs out stops there, keeps its
+duty, and carries on from where it stopped the next day. An answer costs what its packets wrote
+(`SyncReport.bytesWritten`, weighed as the mailbox weighs a record), and at least four kilobytes. Until
+2026-11-04 it cost only the entries it carried, so an answer that named back every made-up span of a
+request, with its certificates and keys, wrote 74 KB and was charged 4 KB, and the daily limit was
+really about 300 MB. The entries are chosen to fit what is left before the answer is written, so the
+last answer of a day can go over by what it carries besides entries; the next one waits for the next
+day.
 
 A feed runs across all of an author's rooms, so an asker can name a position in a room they are not in.
 The answer names those back in `elsewhere`, and the asker stops counting them as missing

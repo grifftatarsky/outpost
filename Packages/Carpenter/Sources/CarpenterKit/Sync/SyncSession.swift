@@ -2,6 +2,7 @@ import Foundation
 
 public struct SyncReport: Hashable, Sendable {
     public var packetsWritten: Int = 0
+    public var bytesWritten: Int = 0
     public var packetsFetched: Int = 0
     public var entriesSent: Int = 0
     public var entriesReceived: Int = 0
@@ -129,6 +130,7 @@ public struct SyncReport: Hashable, Sendable {
     public func adding(_ other: SyncReport) -> SyncReport {
         var merged = self
         merged.packetsWritten += other.packetsWritten
+        merged.bytesWritten += other.bytesWritten
         merged.packetsFetched += other.packetsFetched
         merged.entriesSent += other.entriesSent
         merged.entriesReceived += other.entriesReceived
@@ -306,6 +308,7 @@ public struct SyncSession: Sendable {
                 }
                 reached.insert(peer.them)
                 report.packetsWritten += 1
+                report.bytesWritten += MailboxRules.weigh(PacketWire.fields(of: packet))
                 report.entriesSent += planned.entries.count
                 report.written.append(
                     SyncReport.WrittenPacket(
