@@ -378,6 +378,10 @@ public final class AppSession {
             try await persistEpoch(secret, at: .initial, for: chainRoom)
         }
         if persisted.rekeyBeforeWriting.contains(chainRoom) { try await rekeyBeforeWriting(chainRoom) }
+        if !PayloadType.plumbing.contains(payload.type), writesBelowAKeyARemovedMemberMade(in: chainRoom) {
+            try await oweKeyRotation(in: chainRoom)
+            try await rotateOwedKey(in: chainRoom)
+        }
 
         try await oneWriteAtATime { [self] in
             guard let enrolment = self.enrolment, let chain = chains[chainRoom] else {

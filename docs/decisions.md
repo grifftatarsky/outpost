@@ -908,6 +908,15 @@ holding the other key then wrote under one that phone could not open. A key is h
 from the same person only if an `epochChange` entry for that number, authenticated under that very key,
 is in the log, so each extra key still costs a signed entry in the room (`TwoKeysFromOneMemberTests`).
 
+**Changed 2026-10-31, PROPOSED, keeping the ruling:** "in" now means somebody the room does not show
+as removed. A key whose maker left of their own accord keeps counting; before, every phone dropped back
+to the key below it the moment the departure arrived, which everybody removed earlier still held, until
+somebody rotated the key. Removal still takes a maker's key down. And a phone that holds a key made or
+given by somebody the room shows as removed, above the one it would now write under, makes a new key
+before it writes a message, rather than writing under an older key while the remover's new one is on
+its way; the two new keys meet at one number and every phone takes the lower fingerprint
+(`WhenAKeysMakerGoesTests`). **Cost:** in that gap a phone adds a key and its grants, once per room.
+
 <!-- COPY END 6264031c -->
 
 <!-- COPY BEGIN 000ef40b [NEEDS HUMAN REVIEW] -->
