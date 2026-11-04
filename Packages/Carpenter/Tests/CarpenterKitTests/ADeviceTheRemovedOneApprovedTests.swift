@@ -96,12 +96,33 @@ struct ADeviceTheRemovedOneApprovedTests {
         #expect(friend.activeDevices == [phone.id, hidden.id])
     }
 
-    @Test("A device the removed one had already removed keeps the line that removal drew")
-    func anAlreadyRemovedDeviceKeepsItsLine() throws {
+    @Test("A device the removed one had already removed is cut back to what the member's devices had seen of it")
+    func anAlreadyRemovedDeviceIsCutBack() throws {
+        for seenByThePhone in [0, 5] as [UInt64] {
+            var friend = try registry()
+            try friend.admit(try approval(of: hidden, by: stolen, at: start + 20), storedAt: start + 20)
+            if seenByThePhone > 0 {
+                var clock = VectorClock()
+                clock.observe(FeedKey(author: identity.id, device: hidden.id), seq: seenByThePhone)
+                friend.noteWhatWasSeen(by: phone.id, in: clock)
+            }
+            try friend.revoke(
+                DeviceRevocation.issue(for: hidden.id, by: identity, at: start + 40, from: stolen, cutoff: 7),
+                storedAt: start + 40)
+            try friend.revoke(try removal(of: stolen, remaining: [phone.id]), storedAt: start + 100)
+
+            #expect(
+                friend.line(of: hidden.id) == seenByThePhone,
+                "the cutoff the removed device chose for a device it approved outlived its own removal")
+        }
+    }
+
+    @Test("A device the member's own phone had already removed keeps the line that removal drew")
+    func aDeviceTheMemberRemovedKeepsItsLine() throws {
         var friend = try registry()
         try friend.admit(try approval(of: hidden, by: stolen, at: start + 20), storedAt: start + 20)
         try friend.revoke(
-            DeviceRevocation.issue(for: hidden.id, by: identity, at: start + 40, from: stolen, cutoff: 7),
+            DeviceRevocation.issue(for: hidden.id, by: identity, at: start + 40, from: phone, cutoff: 7),
             storedAt: start + 40)
         try friend.revoke(try removal(of: stolen, remaining: [phone.id]), storedAt: start + 100)
 

@@ -343,10 +343,7 @@ public struct DeviceRegistry: Hashable, Sendable {
 
         func leaveOut(everyDeviceApprovedThrough revocation: DeviceRevocation, at instant: Date) {
             guard let remaining = revocation.remaining.map(Set.init) else { return }
-            let unnamed = result.keys.filter {
-                !remaining.contains($0) && authority[$0].map { $0.until == nil } == true
-                    && descends($0, from: revocation.device)
-            }
+            let unnamed = result.keys.filter { !remaining.contains($0) && descends($0, from: revocation.device) }
             for device in unnamed { apply(Removal(order: instant, leftOutOf: revocation), to: device) }
         }
 

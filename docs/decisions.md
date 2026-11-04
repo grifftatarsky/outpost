@@ -3775,7 +3775,7 @@ keeps its bytes). A contact applying it removes, at the same stored time, every 
 one approved, directly or through others, that is not on the list and still counts. A device the list
 leaves out is cut off the way any removed device is: nothing it writes counts past what the member's
 devices had seen of it, which for a device they never knew is nothing. Devices approved through another
-of the member's devices, and devices already removed, are not touched.
+of the member's devices are not touched.
 
 **Cost:** a device the removed one approved shortly before, that the removing device had not heard of
 yet, is cut off with it, and erases itself when it hears. It shows as removed on the member's list and
@@ -3784,6 +3784,19 @@ has to be approved again.
 **Built** 2026-10-31; `ADeviceTheRemovedOneApprovedTests` passes in the package suite. Not run over
 iCloud. This changes the removal's wire form: a build without the field still reads the removal, and
 ignores the list.
+
+**Changed 2026-11-04, PROPOSED:** the list now also reaches devices the removed one had already
+removed. Before, a thief on the stolen phone could approve a second device and then remove it from the
+stolen phone with a cutoff of their own choosing, far ahead of anything written; once the member
+removed the stolen phone, that second device kept writing as the member at every friend up to the
+thief's cutoff, while the member's own list showed it as removed and offered nothing to do about it.
+Now every device the removed one approved, directly or through others, that the list does not name is
+cut back to what the member's devices that still count had seen of it, whatever an earlier removal
+said. A device the member's own phone had removed keeps the line that phone drew, because that phone's
+removal is part of what it had seen (`ADeviceTheStolenPhoneRemovedItselfTests`).
+
+**Cost of the change:** a device that the removed one had removed honestly, before it was stolen, loses
+at friends whatever of its words no other device of the member had seen.
 
 <!-- COPY END 719b3a40 -->
 

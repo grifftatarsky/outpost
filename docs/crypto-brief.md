@@ -255,8 +255,10 @@ log on disk holds them in does not matter (`ARemovalCannotEraseWhatWasSeenTests`
 approve a device and show it only to friends, so the member's own phones never list it. The app's
 removal now signs `remaining`, the member's devices that stay, appended under its own label and count
 only when present. A contact removes, at the removal's stored time, every device the removed one
-approved, directly or through others, that the list leaves out and that still counts
-(`ADeviceTheRemovedOneApprovedTests`).
+approved, directly or through others, that the list leaves out, and cuts it back to what the member's
+devices that still count had seen of it. Since 2026-11-04 that includes a device the removed one had
+already removed itself, so a cutoff the stolen phone chose does not outlive the stolen phone
+(`ADeviceTheRemovedOneApprovedTests`, `ADeviceTheStolenPhoneRemovedItselfTests`).
 
 **Outposts a removed device read** (since 2026-10-31). Only an Outpost's owner can change its key, so
 removing a device rotates the key of every room the member is in and of their own Outpost, and leaves
