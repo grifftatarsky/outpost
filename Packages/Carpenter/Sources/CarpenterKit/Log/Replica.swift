@@ -380,8 +380,12 @@ public struct Replica: Sendable {
 
     public func refusesForever(_ entry: Entry) -> Bool {
         guard let registry = registries[entry.author] else { return false }
-        guard registry.standing(of: entry.device) != nil else { return false }
-        return !registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash)
+        guard registry.standing(of: entry.device) != nil,
+            !registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash)
+        else { return false }
+        let numberTaken = feeds[entry.feedKey]?[entry.seq].map { $0[entry.hash] == nil && !$0.isEmpty } ?? false
+        return numberTaken
+            || !registry.mayYetBeVouchedFor(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash)
     }
 
     // MARK: What a removed device wrote

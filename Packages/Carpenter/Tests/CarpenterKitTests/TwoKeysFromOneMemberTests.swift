@@ -18,8 +18,8 @@ struct TwoKeysFromOneMemberChainTests {
         let unrecorded = EpochSecret.random()
 
         chain.hold(fromOnePhone, at: next, from: zed)
-        chain.hold(unrecorded, at: next, from: zed, recorded: false)
-        chain.hold(fromTheOther, at: next, from: zed, recorded: true)
+        chain.hold(unrecorded, at: next, from: zed)
+        chain.hold(fromTheOther, at: next, from: zed, recordedBy: { $0 == fromTheOther ? [zed] : [] })
 
         #expect(Set(chain.heldSecrets(at: next)) == [fromOnePhone, fromTheOther])
     }

@@ -242,6 +242,13 @@ public struct DeviceRegistry: Hashable, Sendable {
             && standing.limits.allSatisfy { $0.admits(seq: seq, hash: hash, at: instant) }
     }
 
+    public func mayYetBeVouchedFor(_ device: DeviceID, at instant: Date, seq: UInt64, hash: EntryHash?) -> Bool {
+        guard let standing = standings[device], standing.revokedAt != nil, instant >= standing.addedAt,
+            standings.contains(where: { $0.key != device && $0.value.revokedAt == nil })
+        else { return false }
+        return standing.limits.allSatisfy { $0.weighsEvidence || $0.admits(seq: seq, hash: hash, at: instant) }
+    }
+
     public func line(of device: DeviceID) -> UInt64? {
         standings[device]?.line
     }
@@ -403,10 +410,7 @@ public struct DeviceRegistry: Hashable, Sendable {
 
         func leaveOut(everyDeviceApprovedThrough revocation: DeviceRevocation, at instant: Date) {
             guard let remaining = revocation.remaining.map(Set.init) else { return }
-            let unnamed = result.keys.filter {
-                !remaining.contains($0) && authority[$0].map { $0.until == nil } == true
-                    && descends($0, from: revocation.device)
-            }
+            let unnamed = result.keys.filter { !remaining.contains($0) && descends($0, from: revocation.device) }
             for device in unnamed { apply(Removal(order: instant, leftOutOf: revocation), to: device) }
         }
 

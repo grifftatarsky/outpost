@@ -255,8 +255,10 @@ log on disk holds them in does not matter (`ARemovalCannotEraseWhatWasSeenTests`
 approve a device and show it only to friends, so the member's own phones never list it. The app's
 removal now signs `remaining`, the member's devices that stay, appended under its own label and count
 only when present. A contact removes, at the removal's stored time, every device the removed one
-approved, directly or through others, that the list leaves out and that still counts
-(`ADeviceTheRemovedOneApprovedTests`).
+approved, directly or through others, that the list leaves out, and cuts it back to what the member's
+devices that still count had seen of it. Since 2026-11-04 that includes a device the removed one had
+already removed itself, so a cutoff the stolen phone chose does not outlive the stolen phone
+(`ADeviceTheRemovedOneApprovedTests`, `ADeviceTheStolenPhoneRemovedItselfTests`).
 
 **How much a registry keeps** (since 2026-11-04). Whoever holds the identity can mint certificates and
 removals, so a registry keeps them by who signed them: up to 16 approvals and 16 removals for each
@@ -505,8 +507,10 @@ own key never waits, because until the phone can read the room nothing could eve
 (`AKeyThatWaitsTests`).
 One giver may add one key per number, unless the room's log holds a record of the change made under
 that key (since 2026-10-31, because a member who passed on somebody else's key, or whose two phones
-rotated at once, had their own key refused), and no number holds more than sixteen
-(`TwoKeysFromOneMemberTests`). A key keeps counting when its maker leaves of their own accord, and
+rotated at once, had their own key refused). Since 2026-11-04 that record has to be the giver's own,
+one person adds at most four keys to a number, and the cap of sixteen counts only keys no record shows
+anybody making, so one member's logged keys cannot crowd out another's
+(`TwoKeysFromOneMemberTests`, `OneMemberCannotCrowdANumberTests`). A key keeps counting when its maker leaves of their own accord, and
 stops only when they are removed; a phone that holds a removed member's key above the one it would
 write under makes a new key before writing a message (`WhenAKeysMakerGoesTests`).
 The two-advances case still needs three real accounts to prove over iCloud

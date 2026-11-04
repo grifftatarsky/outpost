@@ -88,6 +88,8 @@ public struct EpochChain: Sendable {
 
     public static let mostRivals = 16
 
+    public static let mostKeysFromOnePerson = 4
+
     public static let mostNumbersSkipped: UInt64 = 8
 
     public static let mostLinksInAGrant = 2_048
@@ -144,7 +146,7 @@ public struct EpochChain: Sendable {
 
     public mutating func hold(
         _ secret: EpochSecret, at epoch: EpochNumber, from giver: ParticipantID? = nil,
-        recorded: @autoclosure () -> Bool = false
+        recordedBy recorders: (EpochSecret) -> Set<ParticipantID> = { _ in [] }
     ) {
         if secrets[epoch] == nil, let derived = try? self.secret(for: epoch) { secrets[epoch] = derived }
         guard let primary = secrets[epoch] else {
@@ -152,14 +154,26 @@ public struct EpochChain: Sendable {
             if let giver { givenBy[epoch, default: [:]][secret] = giver }
             return
         }
-        guard primary != secret, epoch != .initial, !(rivals[epoch] ?? []).contains(secret),
-            (rivals[epoch]?.count ?? 0) < Self.mostRivals
-        else { return }
+        let held = [primary] + (rivals[epoch] ?? [])
+        guard epoch != .initial, !held.contains(secret) else { return }
+        let madeByTheGiver = giver.map { recorders(secret).contains($0) } ?? false
         if let giver {
-            guard !(givenBy[epoch]?.values.contains(giver) ?? false) || recorded() else { return }
-            givenBy[epoch, default: [:]][secret] = giver
+            let theirs = held.filter { givenBy[epoch]?[$0] == giver || recorders($0).contains(giver) }
+            guard theirs.count < Self.mostKeysFromOnePerson, theirs.isEmpty || madeByTheGiver else { return }
         }
+        if !madeByTheGiver {
+            guard (rivals[epoch] ?? []).count(where: { recorders($0).isEmpty }) < Self.mostRivals else { return }
+        }
+        if let giver { givenBy[epoch, default: [:]][secret] = giver }
         rivals[epoch, default: []].append(secret)
+    }
+
+    public mutating func restore(_ keys: [EpochSecret], at epoch: EpochNumber) {
+        guard let first = keys.first else { return }
+        adopt(first, at: epoch)
+        for key in keys.dropFirst() where !heldSecrets(at: epoch).contains(key) {
+            rivals[epoch, default: []].append(key)
+        }
     }
 
     public func choosing(_ secret: EpochSecret, at epoch: EpochNumber) -> EpochChain {

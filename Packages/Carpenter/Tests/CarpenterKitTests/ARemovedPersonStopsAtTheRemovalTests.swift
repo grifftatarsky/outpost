@@ -184,7 +184,7 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
         #expect(!registry.isAuthorized(stolen.id, at: start + 1001, seq: 1))
     }
 
-    @Test("A replica refuses the stolen device's backdated entry past the cutoff, and keeps refusing it")
+    @Test("A replica refuses the stolen device's backdated entry past the cutoff, and leaves it open while the phone could vouch for it")
     func theReplicaRefuses() throws {
         var replica = Replica()
         replica.introduce(identity.publicKeys)
@@ -212,7 +212,7 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
         #expect(throws: (any Error).self, "an entry past the cutoff, dated before the removal, was taken") {
             try replica.integrate(written[2])
         }
-        #expect(replica.refusesForever(written[2]))
+        #expect(!replica.refusesForever(written[2]), "the member's phone still counts and could state it had seen it")
         #expect(!replica.refusesForever(written[1]))
     }
 
@@ -302,7 +302,7 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
         #expect(
             replica.allEntries.map(\.hash) == written.prefix(2).map(\.hash),
             "entries past the cutoff stayed because they arrived before the removal did")
-        #expect(replica.refusesForever(written[3]))
+        #expect(replica.gaps().isEmpty, "what the removal took back was counted as missing")
     }
 
     @Test("The head is signed: changing it breaks the removal")

@@ -999,6 +999,20 @@ before it writes a message, rather than writing under an older key while the rem
 its way; the two new keys meet at one number and every phone takes the lower fingerprint
 (`WhenAKeysMakerGoesTests`). **Cost:** in that gap a phone adds a key and its grants, once per room.
 
+**Changed 2026-11-04, PROPOSED:** a record counts toward a second key only when the person who handed
+the key over wrote it, and one person can add at most four keys to a number. Before, any record in
+the log would do, and the sixteen-key cap counted every key, so one member who logged seventeen key
+changes for a number filled it and another member's real key there was refused. Now a key is counted
+against the person who handed it over and against whoever the log shows making it, and that count
+survives a relaunch because the log does. The cap of sixteen applies only to keys no record shows
+anybody making; a key its giver is recorded making is never refused for want of room
+(`OneMemberCannotCrowdANumberTests`, `HowManyKeysOnePersonAddsTests`). A relaunch restores every key
+the keychain held for a number, without the caps, because they were all held under them once.
+
+**Cost:** a member who passes on another member's key as their second key for a number has it
+refused; the phone gets it from its maker instead. A member whose phones made more than four keys for
+one number has the fifth refused everywhere.
+
 <!-- COPY END 6264031c -->
 
 <!-- COPY BEGIN 000ef40b [NEEDS HUMAN REVIEW] -->
@@ -3836,6 +3850,22 @@ give the contradicted range a head.
 **Built** 2026-10-31; `ARemovalCannotEraseWhatWasSeenTests` passes in the package suite. Not run over
 iCloud.
 
+**Changed 2026-11-04, PROPOSED:** a refusal past a removed device's cutoff is no longer final while
+another of the member's devices still counts. Before, a contact that got the removed device's later
+entries before the entry of the member's tablet that showed it had seen them refused them for good:
+it acknowledged the packet, recorded the numbers as never verifying, and history repair never asked
+for them again, while a contact that got the two the other way round kept them. Now the packet is left
+outstanding, so the next round reads it again after the tablet's entry, and the numbers stay among
+what repair asks for once a device of the member has said it held them. A refusal becomes final when
+no other device of the member counts, when an earlier line drawn without evidence (a restore's) rules
+the entry out, or when a different entry already holds its number
+(`WhatVouchesForAnEntryCanArriveInALaterPacketTests`).
+
+**Cost of the change:** a packet carrying a removed device's later entries that nobody vouches for is
+read again every round until it is nine days old and no longer collected, and a new refusal like it
+can hold back, for one round, the keys of rooms where somebody is out, at most once an hour per sender,
+as any refusal that may yet be lifted does.
+
 <!-- COPY END 050f54e6 -->
 
 <!-- COPY BEGIN 719b3a40 [NEEDS HUMAN REVIEW] -->
@@ -3855,7 +3885,7 @@ keeps its bytes). A contact applying it removes, at the same stored time, every 
 one approved, directly or through others, that is not on the list and still counts. A device the list
 leaves out is cut off the way any removed device is: nothing it writes counts past what the member's
 devices had seen of it, which for a device they never knew is nothing. Devices approved through another
-of the member's devices, and devices already removed, are not touched.
+of the member's devices are not touched.
 
 **Cost:** a device the removed one approved shortly before, that the removing device had not heard of
 yet, is cut off with it, and erases itself when it hears. It shows as removed on the member's list and
@@ -3864,6 +3894,19 @@ has to be approved again.
 **Built** 2026-10-31; `ADeviceTheRemovedOneApprovedTests` passes in the package suite. Not run over
 iCloud. This changes the removal's wire form: a build without the field still reads the removal, and
 ignores the list.
+
+**Changed 2026-11-04, PROPOSED:** the list now also reaches devices the removed one had already
+removed. Before, a thief on the stolen phone could approve a second device and then remove it from the
+stolen phone with a cutoff of their own choosing, far ahead of anything written; once the member
+removed the stolen phone, that second device kept writing as the member at every friend up to the
+thief's cutoff, while the member's own list showed it as removed and offered nothing to do about it.
+Now every device the removed one approved, directly or through others, that the list does not name is
+cut back to what the member's devices that still count had seen of it, whatever an earlier removal
+said. A device the member's own phone had removed keeps the line that phone drew, because that phone's
+removal is part of what it had seen (`ADeviceTheStolenPhoneRemovedItselfTests`).
+
+**Cost of the change:** a device that the removed one had removed honestly, before it was stolen, loses
+at friends whatever of its words no other device of the member had seen.
 
 <!-- COPY END 719b3a40 -->
 
@@ -3934,6 +3977,40 @@ they used in a room the remover is not in. Built 2026-10-31, and the package sui
 [Open questions](open-questions.md#a-remover-who-never-said-what-they-had-seen-can-still-cut-everything).
 
 <!-- COPY END 7ba6e22b -->
+
+<!-- COPY BEGIN 714e733d [NEEDS HUMAN REVIEW] -->
+
+### A removed member's own removals cannot undo their removal
+
+**PROPOSED 2026-11-04** — a default, not a constraint. A removed member still holds the room's old key,
+so they can still write a removal, and a modified app can make it name nothing. Every phone used to set
+aside first each removal that had not taken, and only then ask which removals cut each other. So a
+removed member who removed the founder, naming nothing, cut the founder's invitations; the remover
+then looked as if they had never been let in, their removal was set aside for good, and everything the
+removed member wrote after it came back, in the room and in the rooms list.
+
+Now a phone settles the removals and departures in a room in this order. A removal whose author had already read a
+removal of themselves (its clock covers it) goes, whenever that removal takes without it. A removal
+that has not taken is set aside only if it still fails when the only cuts are those of removals that
+take, and of cut removals that would take without whoever cut them. A removal cut by one that takes,
+or would take once the removals it cuts are gone, goes. A removal that its own cut stops from taking
+goes. When two removals cut each other, one whose author had read the other goes first; only when
+neither had read the other does the time each was read decide, as
+[ruled](#a-removed-person-hears-last-and-the-first-removal-stands). So nothing but that race depends
+on which phone is asking or when it read what.
+
+**Cost:** a phone walks the room's log a few more times when removals conflict: once more for each
+removal that cuts another without having taken, once for each cut removal while something has not
+taken, and once for each removal that has not taken in the rare case nothing else settles. A room with
+no conflict costs what it did.
+
+**What would change it:** the signed lists of what each device holds that the open question
+recommends, which would give every removal a line its author cannot shorten.
+
+**Built** 2026-11-04; `ARemovalCannotTakeBackWhatTheRemoverSawTests` and `TheRoomChainTests` pass in
+the package suite. Not run over iCloud.
+
+<!-- COPY END 714e733d -->
 
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 

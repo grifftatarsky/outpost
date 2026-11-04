@@ -56,24 +56,55 @@ extension Projection {
         let authors = Dictionary(
             claims.map { ($0.entry.id, $0.entry.author) }, uniquingKeysWith: { first, _ in first })
 
+        let walking = { (cutting: Set<Int>) in self.walk(room, claims: claims, cutting: cutting, payloads: payloads) }
+
         var cutting = Set(claims.indices)
         while true {
-            let walked = walk(room, claims: claims, cutting: cutting, payloads: payloads)
-            let voided = Set(walked.voidedBy.keys).intersection(cutting)
-            let idle = cutting.subtracting(walked.took).subtracting(voided)
-            let defeated = voided.filter { !(walked.voidedBy[$0] ?? []).isSubset(of: voided) }
-            if !idle.isEmpty {
-                cutting.subtract(idle)
-            } else if !defeated.isEmpty {
-                cutting.subtract(defeated)
-            } else if let first = firstOf(
-                voided, in: claims, noted: Self.earliest(notes, besides: walked.standing.out, authors: authors))
-            {
-                cutting.subtract(walked.voidedBy[first] ?? [])
-            } else {
-                return withoutWhatStrangersSealed(walked.standing, in: room)
+            let walked = walking(cutting)
+            let losing = losers(
+                among: cutting, after: walked, in: claims, walking: walking,
+                noted: { Self.earliest(notes, besides: walked.standing.out, authors: authors) })
+            guard !losing.isEmpty else { return withoutWhatStrangersSealed(walked.standing, in: room) }
+            cutting.subtract(losing)
+        }
+    }
+
+    private func losers(
+        among cutting: Set<Int>, after walked: Walk, in claims: [Claim], walking: (Set<Int>) -> Walk,
+        noted: () -> [EntryHash: Date]
+    ) -> Set<Int> {
+        let voided = Set(walked.voidedBy.keys).intersection(cutting)
+        let free = cutting.subtracting(voided)
+        let taking = free.intersection(walked.took)
+        let unsettled = free.subtracting(walked.took)
+        let voiders = { (claim: Int) in (walked.voidedBy[claim] ?? []).intersection(cutting) }
+        func takes(_ claim: Int, _ cutting: Set<Int>) -> Bool { walking(cutting).took.contains(claim) }
+
+        let victims = { (voider: Int) in voided.filter { voiders($0).contains(voider) } }
+        let upheld = Set(voided.flatMap(voiders)).intersection(free).filter { voider in
+            walked.took.contains(voider) || takes(voider, cutting.subtracting(victims(voider)))
+        }
+        let answeredAfterTheirRemoval = voided.filter { victim in
+            voiders(victim).contains { voider in
+                upheld.contains(voider) && Self.hadSeen(claims[voider].entry, before: claims[victim].entry)
             }
         }
+        if !answeredAfterTheirRemoval.isEmpty { return answeredAfterTheirRemoval }
+
+        if !unsettled.isEmpty {
+            let viable = voided.filter { takes($0, cutting.subtracting(voiders($0))) }
+            let idle = unsettled.subtracting(walking(taking.union(viable)).took)
+            if !idle.isEmpty { return idle }
+        }
+
+        let defeated = voided.filter { !voiders($0).isDisjoint(with: upheld) }
+        if !defeated.isEmpty { return defeated }
+
+        let undone = unsettled.filter { !takes($0, taking.union([$0])) }
+        if !undone.isEmpty { return undone }
+
+        if let first = firstOf(voided, in: claims, noted: noted()) { return voiders(first) }
+        return lastOf(unsettled, in: claims, noted: noted()).map { [$0] } ?? []
     }
 
     private func withoutWhatStrangersSealed(_ standing: Standing, in room: RoomID) -> Standing {
@@ -85,8 +116,24 @@ extension Projection {
         return kept
     }
 
-    private func firstOf(_ voided: Set<Int>, in claims: [Claim], noted: [EntryHash: Date]) -> Int? {
-        voided.min { comesFirst(claims[$0].entry, claims[$1].entry, noted: noted) }
+    private func firstOf(_ indices: Set<Int>, in claims: [Claim], noted: [EntryHash: Date]) -> Int? {
+        let unpreceded = indices.filter { index in
+            !indices.contains { Self.hadSeen(claims[$0].entry, before: claims[index].entry) }
+        }
+        return (unpreceded.isEmpty ? indices : unpreceded)
+            .min { comesFirst(claims[$0].entry, claims[$1].entry, noted: noted) }
+    }
+
+    private func lastOf(_ indices: Set<Int>, in claims: [Claim], noted: [EntryHash: Date]) -> Int? {
+        let unfollowed = indices.filter { index in
+            !indices.contains { Self.hadSeen(claims[index].entry, before: claims[$0].entry) }
+        }
+        return (unfollowed.isEmpty ? indices : unfollowed)
+            .max { comesFirst(claims[$0].entry, claims[$1].entry, noted: noted) }
+    }
+
+    static func hadSeen(_ earlier: RenderedEntry, before later: RenderedEntry) -> Bool {
+        earlier.id != later.id && earlier.seq > 0 && later.clock[earlier.feedKey] >= earlier.seq
     }
 
     func comesFirst(_ one: RenderedEntry, _ other: RenderedEntry, noted: [EntryHash: Date]) -> Bool {

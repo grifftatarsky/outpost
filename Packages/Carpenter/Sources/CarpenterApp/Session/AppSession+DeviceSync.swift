@@ -200,7 +200,8 @@ extension AppSession {
                     "device sync: took a room key from a removed device; the room gets a new key before anything is written")
             }
             var chain = chains[held.room] ?? EpochChain(room: held.room)
-            chain.hold(EpochSecret(material: held.material), at: held.epoch)
+            let records = keyRecords(in: held.room)
+            chain.hold(EpochSecret(material: held.material), at: held.epoch, recordedBy: { records(held.epoch, $0) })
             chains[held.room] = chain
 
             await persistOrReport("a room key from another of your devices") {
