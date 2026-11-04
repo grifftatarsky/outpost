@@ -39,20 +39,15 @@ account belongs to which device is kept outside this repository, and so is whose
 **do not run `--reset-account` on either, or anything else that erases the account's data**, without
 asking Griff first.
 
-**Both accounts already have a member.** On 2026-11-04 the first launch on each device logged
-`load: this account already has a member` and showed *Approve this device* with a six-character
-code, so neither can onboard without a recovery key, an approval from one of that member's devices,
-or `--reset-account`. The launch wrote one approval request into the account's `SiblingFeeds`
-zone, which reached the server from `bullet` (`device sync: sent 1 record(s), 0 failed`). Until
-Griff decides what to do with those members:
+**What the live suite does to an account.** `CloudKitMailboxTests` and `LivePairTests` call
+`eraseEverySpace()`, which deletes every `Pair-` zone in the account; `LiveDeathmarkTests` clears the
+account's deathmark; `LiveSiblingFeedTests` writes records from made-up devices into the member's own
+`SiblingFeeds` zone. So a member made on the device beforehand loses its spaces. Run the suite on an
+account that holds nothing you want, or run it after the round. Both accounts held a member from
+before when the rig started; Griff had them reset on 2026-11-04.
 
-- **The live suite must not run here.** `CloudKitMailboxTests` and `LivePairTests` call
-  `eraseEverySpace()`, which deletes every `Pair-` zone in the account; `LiveDeathmarkTests` clears
-  the account's deathmark; `LiveSiblingFeedTests` writes records from made-up devices into the
-  member's own `SiblingFeeds` zone.
-- **`--mailbox` does not keep a device off the account.** It swaps the mailbox and the account
-  check, but `startDeviceSync()` still publishes a sibling feed to CloudKit, so a member made under
-  it would be a second member on an account that has one. Read in the code, not measured.
+`--mailbox` does not keep a device off the account. It swaps the mailbox and the account check, but
+`startDeviceSync()` still publishes a sibling feed to CloudKit. Read in the code, not measured.
 
 There is no device without an account any more, so nothing here runs the three-device walks under
 `--mailbox` ([members without an Apple Account](#members-without-an-apple-account),
@@ -362,6 +357,38 @@ instead of one. Erase them one at a time, or well before a walk.
   space for a code, fixed the same night.
 
 <!-- COPY END 9596e0ef -->
+
+<!-- COPY BEGIN c16c17ef [NEEDS HUMAN REVIEW] -->
+
+### What bullet and iPhone 17 have shown, 2026-11-04
+
+On the build of `overnight-2026-10-31` at 1483934, two accounts, both reset first.
+
+- **The live suite passed on iPhone 17**: 38 tests in 79 seconds, none failed. `LivePairTests`
+  skipped, because it needs both devices and bullet's account had stopped answering (below).
+- **A round between two people worked.** Ada (bullet) and Bea (iPhone 17) onboarded with the
+  software keyboard. Codes went through a file saved to Files, not the pasteboard. Ada invited Bea to
+  a room, both screens read `AQRENT6D5A`, and Bea confirmed. A message crossed each way. A photo
+  went Ada to Bea at the same size on both ends (`media: uploaded 942bcf28 bytes=770768`, `fetched
+  942bcf28 bytes=770768`). With Bea's read receipts on, Ada's photo showed a filled plane and eye and
+  "10:42 AM".
+- **Starting a Solo with somebody you already share a room with does not work.** On iPhone 17 the
+  app said *The solo was started, but the invitation was not sent*, and logged `invite failed while
+  making a room: DecodingError.keyNotFound … "keys"`. `AppRootView.invite(_:to:kind:)` passes
+  `IdentityPublicKeys.encoded()` to `session.invite(joinerCode:)`, which decodes a `JoinerCode` (keys,
+  commitment, requires). On bullet, *Send a Solo* opened nothing. Neither was chased further, and the
+  block test below ran in the room instead.
+- **After a block and an unblock, messages crossed only one way.** Bea blocked Ada at 10:43:59. Her
+  rounds then showed `peers=0`, and Ada's message sent during the block appeared on Bea's screen once
+  she unblocked. Bea's rounds wrote packets at 10:45:22, 10:45:29, 10:45:52 and 10:45:56, including
+  *Bea after unblock*. Ada ran rounds throughout and logged `entriesReceived=0` from the block until
+  10:47:08, and her message stayed not collected. Bea's round at 10:45:22 logged `met 1 new peer(s)`.
+  One run, not repeated, and the cause is not known.
+- **Running the suite on bullet stopped its account.** As the test host launched at 10:47:57, cloudd
+  began failing every request with `AuthTokenError` (2011), and the device showed *Apple Account
+  Verification*. The prompt was left for Griff. Whether the run caused it is not known.
+
+<!-- COPY END c16c17ef -->
 
 <!-- COPY BEGIN b526cfb5 [NEEDS HUMAN REVIEW] -->
 
