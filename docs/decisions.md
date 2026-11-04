@@ -570,13 +570,18 @@ last answer of a day can go over by what it carries besides entries; the next on
 day.
 
 A feed runs across all of an author's rooms, so an asker can name a position in a room they are not in.
-The answer names those back in `elsewhere`, and the asker stops counting them as missing
-(`persisted.elsewhere`), or a late joiner would ask about them every hour for ever.
+The answer names those back in `elsewhere`, and the asker keeps what each person said
+(`persisted.saidElsewhere`, keyed by who answered). A position stops counting as missing in a room only
+when every other member of that room has said it is elsewhere, or a late joiner would ask about it every
+hour for ever. Until 2026-11-04 one answer from anybody settled it for every room: a person outside a
+room, answering a repair for another room, made the asker stop looking for that room's missing
+message, and a member running a modified app could hide any hole.
 
 **Cost:** a long history takes days to come back from one person. A contact can fill up to about 144
-MB of a member's iCloud, sixteen a day for the nine days a packet waits. A contact can also claim a
-position is `elsewhere` when it is not; the asker then stops asking about it, though anything another
-person sends still lands. An invited person who has not been let in can be sent the room's sealed
+MB of a member's iCloud, sixteen a day for the nine days a packet waits. A position every member of a
+room calls `elsewhere` is not asked about again, which is only wrong if every one of them is lying. A
+member who has not answered keeps a position counted as missing, so the history check can show a
+hole for a room the member is not in until everybody has answered. An invited person who has not been let in can be sent the room's sealed
 history, which they cannot open without a key.
 
 **What would change it:** a feed per room, so a position always belongs to one room.

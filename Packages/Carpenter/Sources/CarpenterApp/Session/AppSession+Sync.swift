@@ -228,7 +228,9 @@ extension AppSession {
             if let index = persisted.repairs.firstIndex(where: { $0.id == answer.request }) {
                 persisted.repairs[index].answers[peer.them] = answer
                 let named = answer.elsewhere.intersecting(persisted.repairs[index].request.gaps)
-                if !named.isEmpty { persisted.elsewhere = persisted.elsewhere.merging(named) }
+                if !named.isEmpty {
+                    persisted.saidElsewhere[peer.them] = (persisted.saidElsewhere[peer.them] ?? []).merging(named)
+                }
             }
         }
 
