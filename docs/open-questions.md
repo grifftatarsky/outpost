@@ -26,8 +26,8 @@ cannot take a place of the member's own phone, and her removal of it and her res
 refused for want of room. But a stolen phone that still counts can approve 16 devices and have each
 of them approve 16. That uses the 256 places the lineage has, and every contact then refuses a device
 the member approves next, until she restores with the recovery key. Removing the stolen phone does
-not give the places back, because if a removal did, a thief could approve and remove in turn and grow
-the registry without end. Measured in a test on 2026-11-04 (two levels of 16 approvals, then the
+not give the places back, because if a removal did, a thief could approve and remove one after the other
+and grow the registry without end. Measured in a test on 2026-11-04 (two levels of 16 approvals, then the
 member's phone approving a new one: refused); not run on the rig.
 
 **Recommendation: let a removal that names the devices that stay drop every device it leaves out that
