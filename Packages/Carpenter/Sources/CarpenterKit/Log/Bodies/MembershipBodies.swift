@@ -164,8 +164,11 @@ public struct RoomProfileBody: Hashable, Sendable, Codable {
 
     public let kind: RoomKind?
 
-    public init(name: String, kind: RoomKind? = nil) {
+    public let founding: Data?
+
+    public init(name: String, kind: RoomKind? = nil, founding: Data? = nil) {
         self.name = name
         self.kind = kind
+        self.founding = founding
     }
 }

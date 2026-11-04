@@ -1607,6 +1607,29 @@ again.
 
 <!-- COPY END d9b15824 -->
 
+<!-- COPY BEGIN 5e8b1be3 [NEEDS HUMAN REVIEW] -->
+
+### A room's ID names its founder
+
+**PROPOSED by Claude, 2026-10-31** — a default, not a constraint. He has not ruled on this.
+
+A room's ID is the first 16 bytes of a hash of its founder's ID, its kind (room or Solo) and 32 random
+bytes the first profile carries. A profile founds the room only when those three hash to the room's
+ID, so the founder and the kind are fixed when the room is made, and nobody can become the founder by
+dating a profile earlier than the room. Before this, whoever's profile came first in log order was the
+founder, and a member with a modified app could put theirs first and be the only person in the room on
+every phone ([Who founded a room](crypto-brief.md#who-founded-a-room)).
+
+It changes what a new room's first profile carries, and it refuses rooms made before it: a room whose
+profile has no founding has no founder and nobody in it, and is not listed. The app has not gone to
+TestFlight, and when older forms were last refused Griff's word was "Security is most important"
+([A removed person's words stop where the removal
+saw them](#a-removed-persons-words-stop-where-the-removal-saw-them)), so this follows the same line.
+The cost is that every room on a test phone stops working and has to be made again. Built 2026-10-31,
+and the package suite passes; not run over iCloud.
+
+<!-- COPY END 5e8b1be3 -->
+
 <!-- COPY BEGIN c6b32346 [NEEDS HUMAN REVIEW] -->
 
 ### An invite travels as a link, and the link changes nothing about the invite

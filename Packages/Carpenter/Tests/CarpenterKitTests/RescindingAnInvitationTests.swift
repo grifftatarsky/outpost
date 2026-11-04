@@ -19,10 +19,9 @@ struct RescindingAnInvitationTests {
     }
 
     private func founded(by founder: Identity, access: RoomAccess = .open) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         if access != .open { roster.set(access: access, by: founder.id) }
         return roster
     }
@@ -31,7 +30,7 @@ struct RescindingAnInvitationTests {
         _ joiner: Identity, by inviter: Identity, to roster: inout RoomRoster, hash: UInt8
     ) throws -> MembershipAttestation {
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: hash),
             body: try Payload.joinRequest(attestation))
@@ -187,7 +186,7 @@ struct RescindingAnInvitationTests {
         let theirs = try invite(other, by: founder, to: &roster, hash: 2)
         try confirm(theirs, by: other, relayedBy: founder, to: &roster, hash: 3)
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: other, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: other, at: start)
         roster.apply(
             rendered(other.id, .joinRequest, hash: 4),
             body: try Payload.joinRequest(attestation))
@@ -234,7 +233,7 @@ struct RescindingAnInvitationTests {
             body: try Payload.invitationRescinded(of: first))
 
         let second = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start.addingTimeInterval(20))
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start.addingTimeInterval(20))
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: 4, at: 20),
             body: try Payload.joinRequest(second))
@@ -316,7 +315,7 @@ struct RescindingAnInvitationTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
 
         let fallback = try #require(try Payload.invitationRescinded(of: attestation).fallbackText)
         #expect(!fallback.isEmpty)

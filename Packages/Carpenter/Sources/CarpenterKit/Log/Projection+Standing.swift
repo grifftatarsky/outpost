@@ -167,7 +167,7 @@ extension Projection {
         readThrough: EntryHash? = nil,
         undrawn: Set<EntryHash> = []
     ) -> RoomSummary? {
-        guard let positions = roomPositions[room], let newest = positions.last,
+        guard let positions = roomPositions[room], let newest = positions.last, namedRooms.contains(room),
             let profile = lastProfiles[room], case .text(let stored) = profile.content
         else { return nil }
         let kind = kind(of: room)

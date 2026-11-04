@@ -12,8 +12,20 @@ struct Author {
     private(set) var head: Entry?
     private(set) var roomHeads: [RoomID: EntryHash] = [:]
 
-    init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil, writingIn room: RoomID? = nil) {
-        identity = Identity.generate()
+    static func founding(
+        _ name: String = "Hangar 7", as kind: RoomKind = .room
+    ) throws -> (founder: Author, room: RoomID, profile: Payload) {
+        let identity = Identity.generate()
+        let (room, founding) = RoomID.founding(by: identity.id, as: kind)
+        let profile = try Payload.roomProfile(name: name, kind: kind, founding: founding)
+        return (Author(identity: identity, chain: EpochChain.create(room: room).chain), room, profile)
+    }
+
+    init(
+        at issuedAt: Date = Date(timeIntervalSince1970: 0), identity: Identity = .generate(),
+        chain: EpochChain? = nil, writingIn room: RoomID? = nil
+    ) {
+        self.identity = identity
         device = DeviceKeys.generate()
         certificate = try! DeviceCertificate.recovered(
             for: device.publicKey, by: identity, at: issuedAt)

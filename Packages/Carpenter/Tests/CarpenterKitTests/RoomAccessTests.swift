@@ -29,14 +29,13 @@ struct RoomAccessTests {
     private func founded(by founder: Identity, alongside others: [Identity] = []) throws
         -> RoomRoster
     {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
 
         for (offset, member) in others.enumerated() {
             let attestation = try TestInvite.issue(
-                joining: room, joinerKeys: member.publicKeys, by: founder, at: start)
+                joining: roster.room, joinerKeys: member.publicKeys, by: founder, at: start)
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: UInt8(20 + offset)),
                 body: try Payload.joinRequest(attestation))
@@ -55,7 +54,7 @@ struct RoomAccessTests {
         _ joiner: Identity, from inviter: Identity, into roster: inout RoomRoster, hash: UInt8
     ) throws {
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: hash),
             body: try Payload.joinRequest(attestation))

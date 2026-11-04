@@ -17,7 +17,7 @@ extension Projection {
         in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = []
     ) -> [TranscriptEntry] {
         var items: [TranscriptEntry] = []
-        var founder: ParticipantID?
+        let founder = foundings[room]?.author
         var named = false
         var offers: [Data: MembershipAttestation] = [:]
 
@@ -31,11 +31,10 @@ extension Projection {
             let kind: RoomNotice.Kind?
             switch entry.type {
             case .roomProfile:
-                guard case .text(let name) = entry.content else { continue }
-                if founder == nil { founder = entry.author }
+                guard case .text(let name) = entry.content, named || entry.founds != nil else { continue }
                 kind = named
                     ? .renamed(by: member(entry.author), to: name)
-                    : entry.roomKind == .solo
+                    : entry.founds == .solo
                         ? .startedSolo(by: member(entry.author))
                         : .created(by: member(entry.author), named: name)
                 named = true

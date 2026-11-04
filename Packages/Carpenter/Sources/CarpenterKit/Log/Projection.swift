@@ -6,7 +6,7 @@ public struct Projection: Sendable {
     let roomPositions: [RoomID: [Int]]
     let positionByID: [EntryHash: Int]
     let lastProfiles: [RoomID: RenderedEntry]
-    let roomKinds: [RoomID: RoomKind]
+    let foundings: [RoomID: RenderedEntry]
     let namedRooms: Set<RoomID>
     let outpostAuthorOrder: [ParticipantID]
     let chains: RoomChains
@@ -27,7 +27,7 @@ public struct Projection: Sendable {
         var roomPositions: [RoomID: [Int]] = [:]
         var positionByID: [EntryHash: Int] = [:]
         var profiles: [RoomID: RenderedEntry] = [:]
-        var kinds: [RoomID: RoomKind] = [:]
+        var foundings: [RoomID: RenderedEntry] = [:]
         var lastPosted: [ParticipantID: Int] = [:]
         var notes: Set<EntryHash> = []
         for (position, entry) in rendered.enumerated() {
@@ -37,7 +37,7 @@ public struct Projection: Sendable {
                 roomPositions[room, default: []].append(position)
                 if entry.type == .roomProfile {
                     profiles[room] = entry
-                    if kinds[room] == nil { kinds[room] = entry.roomKind ?? .room }
+                    if entry.founds != nil, foundings[room] == nil { foundings[room] = entry }
                 }
             } else if entry.isConversation && entry.isReadable {
                 lastPosted[entry.author] = position
@@ -47,9 +47,9 @@ public struct Projection: Sendable {
         self.positionByID = positionByID
         removalNoteIDs = notes
         lastProfiles = profiles
-        roomKinds = kinds
+        self.foundings = foundings
         namedRooms = Set(profiles.compactMap { room, profile in
-            if case .text = profile.content { room } else { nil }
+            if case .text = profile.content, foundings[room] != nil { room } else { nil }
         })
         outpostAuthorOrder = lastPosted.sorted { $0.value > $1.value }.map(\.key)
         (members, supporterBadges) = Self.namesAndBadges(in: rendered)

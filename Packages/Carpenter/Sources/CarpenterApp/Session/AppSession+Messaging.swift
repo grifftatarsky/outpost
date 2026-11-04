@@ -9,12 +9,13 @@ extension AppSession {
 
     @discardableResult
     public func createRoom(named name: String, kind: RoomKind = .room) async throws -> RoomID {
-        let room = RoomID()
+        guard let founder = enrolment?.identity.id else { throw AppSessionError.noIdentity }
+        let (room, founding) = RoomID.founding(by: founder, as: kind)
         let (chain, secret) = EpochChain.create(room: room)
         chains[room] = chain
         try await persistEpoch(secret, at: .initial, for: room)
 
-        try await append(try Payload.roomProfile(name: name, kind: kind), to: room)
+        try await append(try Payload.roomProfile(name: name, kind: kind, founding: founding), to: room)
         try await announceProfile(in: room)
         return room
     }

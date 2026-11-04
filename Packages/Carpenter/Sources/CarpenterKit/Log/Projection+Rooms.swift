@@ -25,7 +25,7 @@ extension Projection {
     }
 
     public func kind(of room: RoomID) -> RoomKind {
-        roomKinds[room] ?? .room
+        foundings[room]?.founds ?? .room
     }
 
     public func roster(of room: RoomID, opening: (RenderedEntry) -> Payload?) -> RoomRoster {

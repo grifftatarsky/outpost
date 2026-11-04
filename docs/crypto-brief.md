@@ -573,6 +573,33 @@ trade for this architecture and it should never be described as if it were not.
 
 <!-- COPY END 3be1484d -->
 
+<!-- COPY BEGIN 1470960d [NEEDS HUMAN REVIEW] -->
+
+## Who founded a room
+
+**In plain words.** A room's ID is worked out from the person who made it, so nobody else can claim
+to have made it, however they date what they write.
+
+**What actually happens.** Everybody's standing in a room comes down from its founder, the one person
+who is in without an invitation. Until 2026-10-31 the founder was whoever wrote the first room profile
+in log order, and log order between unrelated entries follows the dates their writers chose. A member
+with a modified app could date a profile before the room existed and become its only member on every
+phone. Now `createRoom` draws 32 random bytes and the room's ID is the first 16 bytes of
+`SHA256("carpenter.room-founding.v1" ‖ founder ‖ kind ‖ those bytes)` (`RoomID.founded`). The first
+profile carries the bytes, sealed like any payload. A profile founds the room only if its author's ID,
+the kind it names and its bytes hash to the room's ID (`RoomProfileBody.founds`), so the founder and the
+room's kind are fixed when the room is made. A Solo cannot be made into a room or a room into a Solo,
+and a reader cannot make somebody's Outpost into a room, because an Outpost's ID is not made this way.
+A room whose profile carries no founding has no founder and nobody in it; that is every room made
+before this, by a decision recorded as proposed in
+[Decisions](decisions.md#a-rooms-id-names-its-founder). Matching a room ID for another founder means
+finding a second preimage of a 128-bit truncated hash. The package suite holds it
+(`ARoomIsFoundedByThePersonItsIDNamesTests`); none of it has run over iCloud.
+
+---
+
+<!-- COPY END 1470960d -->
+
 <!-- COPY BEGIN 2523f808 [NEEDS HUMAN REVIEW] -->
 
 ## The bytes everything is signed and sealed over
@@ -600,8 +627,8 @@ public static func payload(domain: String, fields: [Data]) -> Data {
 ```
 
 Every field is length-prefixed, big-endian, and every structure begins with its own domain string —
-there are **twenty-four** distinct domains in `Domain`, one per construction. That is the right
-shape and it is applied consistently.
+each construction has its own entry in `Domain`. That is the right layout and it is applied
+consistently.
 
 **The trap, which has already been sprung.** `CanonicalBytes.optional` emits a **presence byte**:
 

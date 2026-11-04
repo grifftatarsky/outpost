@@ -20,10 +20,9 @@ struct AnOfferThatRanOutTests {
     }
 
     private func founded(by founder: Identity, access: RoomAccess = .open) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         if access != .open { roster.set(access: access, by: founder.id) }
         return roster
     }
@@ -37,7 +36,7 @@ struct AnOfferThatRanOutTests {
         var roster = try founded(by: founder)
 
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: founder, at: start, lasting: .aDay)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: founder, at: start, lasting: .aDay)
         roster.apply(
             rendered(founder.id, .joinRequest, hash: 2),
             body: try Payload.joinRequest(attestation))
@@ -205,9 +204,9 @@ struct AnOfferThatRanOutTests {
         var roster = try founded(by: founder, access: .founder)
 
         let taken = try TestInvite.issue(
-            joining: room, joinerKeys: answered.publicKeys, by: founder, at: start, lasting: .aDay)
+            joining: roster.room, joinerKeys: answered.publicKeys, by: founder, at: start, lasting: .aDay)
         let untaken = try TestInvite.issue(
-            joining: room, joinerKeys: ignored.publicKeys, by: founder, at: start, lasting: .aDay)
+            joining: roster.room, joinerKeys: ignored.publicKeys, by: founder, at: start, lasting: .aDay)
         for (hash, attestation) in [(UInt8(2), taken), (UInt8(3), untaken)] {
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: hash),

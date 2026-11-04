@@ -294,4 +294,5 @@ enum Domain {
     static let syncPacket = "carpenter.sync-packet.v1"
     static let attachment = "carpenter.attachment.v1"
     static let membershipAttestation = "carpenter.membership-attestation.v1"
+    static let roomFounding = "carpenter.room-founding.v1"
 }

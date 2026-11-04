@@ -19,14 +19,13 @@ struct RemovalTests {
     }
 
     private func room(founder: Identity, joining: [Identity]) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
 
         for (index, joiner) in joining.enumerated() {
             let invite = try TestInvite.issue(
-                joining: self.room, joinerKeys: joiner.publicKeys, by: founder, at: start)
+                joining: roster.room, joinerKeys: joiner.publicKeys, by: founder, at: start)
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: UInt8(20 + index)),
                 body: try Payload.joinRequest(invite))
@@ -202,7 +201,7 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &roster, hash: 90, at: 10)
 
         let again = try TestInvite.issue(
-            joining: room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
+            joining: roster.room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 93, at: 30),
             body: try Payload.joinRequest(again))
@@ -253,7 +252,7 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &roster, hash: 90, at: 10)
 
         let again = try TestInvite.issue(
-            joining: room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
+            joining: roster.room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 93, at: 30),
             body: try Payload.joinRequest(again))
@@ -276,7 +275,7 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &roster, hash: 94, at: 15)
 
         let again = try TestInvite.issue(
-            joining: room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
+            joining: roster.room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 93, at: 30),
             body: try Payload.joinRequest(again))

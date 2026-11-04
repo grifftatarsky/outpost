@@ -21,15 +21,14 @@ struct ConfirmingAJoinTests {
     private func room(
         access: RoomAccess, founder: Identity, inviter: Identity? = nil, joiner: Identity
     ) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: access, by: founder.id)
 
         let issuer = inviter ?? founder
         let invite = try TestInvite.issue(
-            joining: self.room, joinerKeys: joiner.publicKeys, by: issuer, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: issuer, at: start)
         roster.apply(
             rendered(issuer.id, .joinRequest, hash: 2), body: try Payload.joinRequest(invite))
         roster.apply(
@@ -93,7 +92,7 @@ struct ConfirmingAJoinTests {
 
         var roster = try room(access: .open, founder: alice, joiner: bob)
         let invite = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: bob, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: bob, at: start)
         roster.apply(
             rendered(bob.id, .joinRequest, hash: 9), body: try Payload.joinRequest(invite))
         roster.apply(
@@ -162,13 +161,12 @@ struct ConfirmingAJoinTests {
         let alice = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(alice.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: .founder, by: alice.id)
         let invite = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(invite))
 

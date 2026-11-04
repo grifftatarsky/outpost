@@ -17,10 +17,10 @@ struct JoinEndToEndTests {
         var id: ParticipantID { author.identity.id }
     }
 
-    private func room() throws -> (RoomID, EpochSecret, EpochChain) {
-        let id = RoomID()
+    private func room(foundedBy founder: Identity) throws -> (RoomID, Payload, EpochChain, EpochSecret) {
+        let (id, profile) = try TestFounding.room(by: founder.id)
         let (chain, secret) = EpochChain.create(room: id)
-        return (id, secret, chain)
+        return (id, profile, chain, secret)
     }
 
     private func confirm(
@@ -47,10 +47,11 @@ struct JoinEndToEndTests {
 
     @Test("Alice, Bob and Carol each verify Dave's attestation for themselves")
     func fourthMemberJoins() throws {
-        let (roomID, founding, chain) = try room()
+        let founder = Identity.generate()
+        let (roomID, profile, chain, founding) = try room(foundedBy: founder)
 
         var alice = Resident(
-            author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain)
+            author: Author(identity: founder, chain: chain), roster: RoomRoster(room: roomID), chain: chain)
         var bob = Resident(
             author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain)
         var carol = Resident(
@@ -64,9 +65,8 @@ struct JoinEndToEndTests {
             for other in residents { try residents[index].replica.meet(other.author) }
         }
 
-        let named = try residents[0].author.append(
-            Payload.roomProfile(name: "Hangar 7"), at: start, room: roomID)
-        try broadcast(named, try Payload.roomProfile(name: "Hangar 7"), to: &residents)
+        let named = try residents[0].author.append(profile, at: start, room: roomID)
+        try broadcast(named, profile, to: &residents)
 
         for joiner in [1, 2] {
             let invite = try TestInvite.issue(
@@ -161,10 +161,11 @@ struct JoinEndToEndTests {
 
     @Test("One member refusing withholds their keys without splitting the roster")
     func aRefusalIsLoud() throws {
-        let (roomID, _, chain) = try room()
+        let founder = Identity.generate()
+        let (roomID, profile, chain, _) = try room(foundedBy: founder)
 
         var residents = [
-            Resident(author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain),
+            Resident(author: Author(identity: founder, chain: chain), roster: RoomRoster(room: roomID), chain: chain),
             Resident(author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain),
             Resident(author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain),
         ]
@@ -172,9 +173,8 @@ struct JoinEndToEndTests {
             for other in residents { try residents[index].replica.meet(other.author) }
         }
 
-        let named = try residents[0].author.append(
-            Payload.roomProfile(name: "Hangar 7"), at: start, room: roomID)
-        try broadcast(named, try Payload.roomProfile(name: "Hangar 7"), to: &residents)
+        let named = try residents[0].author.append(profile, at: start, room: roomID)
+        try broadcast(named, profile, to: &residents)
 
         let bobsInvite = try TestInvite.issue(
             joining: roomID, joinerKeys: residents[1].author.identity.publicKeys,

@@ -51,7 +51,7 @@ struct RoomSummaryIndexTests {
         guard let profile = inRoom.last(where: { $0.type == .roomProfile }),
             case .text(let stored) = profile.content
         else { return nil }
-        let kind = inRoom.first { $0.type == .roomProfile }?.roomKind ?? .room
+        let kind = inRoom.first { $0.founds != nil }?.founds ?? .room
         let partner = kind == .solo ? others.first(where: { $0 != projected.viewer }).map(projected.member) : nil
         let conversation = inRoom.filter(\.isConversation)
         let last = conversation.last
@@ -97,7 +97,7 @@ struct RoomSummaryIndexTests {
                     author: people.randomElement(using: &random)!, device: DeviceID(rawValue: WideID.of([9])),
                     wallTime: Date(timeIntervalSince1970: Double(index)), room: rooms.randomElement(using: &random)!,
                     content: content, editedAt: nil, replyingTo: nil, reactions: [:])
-                if type == .roomProfile { entry.roomKind = Bool.random(using: &random) ? .solo : .room }
+                if type == .roomProfile { entry.founds = Bool.random(using: &random) ? RoomKind.solo : .room }
                 rendered.append(entry)
             }
             let viewer = Bool.random(using: &random) ? people[0] : nil
@@ -151,15 +151,22 @@ struct ProjectionFirstPassTests {
         let viewer = ParticipantID(rawValue: WideID.of([1]))
         let kitchen = RoomID()
         let hangar = RoomID()
+        let attic = RoomID()
+        func founding(_ entry: RenderedEntry) -> RenderedEntry {
+            var founding = entry
+            founding.founds = .room
+            return founding
+        }
         let projected = Projection(
             viewer: viewer,
             rendered: [
-                entry(1, by: viewer, in: kitchen, type: .roomProfile, content: .text("Kitchen")),
-                entry(2, by: viewer, in: hangar, type: .roomProfile, content: .text("Hangar")),
+                founding(entry(1, by: viewer, in: kitchen, type: .roomProfile, content: .text("Kitchen"))),
+                founding(entry(2, by: viewer, in: hangar, type: .roomProfile, content: .text("Hangar"))),
                 entry(3, by: viewer, in: hangar, type: .roomProfile, content: .sealed),
+                entry(4, by: viewer, in: attic, type: .roomProfile, content: .text("Attic")),
             ])
 
-        #expect(projected.namedRoomIDs() == [kitchen])
+        #expect(projected.namedRoomIDs() == [kitchen], "a room nobody founded, or whose latest profile is unreadable, was listed")
         #expect(projected.name(of: kitchen) == "Kitchen")
         #expect(projected.name(of: hangar) == nil)
     }

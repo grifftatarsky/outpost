@@ -277,10 +277,11 @@ public struct RoomRoster: Hashable, Sendable {
     public mutating func apply(_ entry: RenderedEntry, body: Payload) {
         switch body.type {
         case .roomProfile:
-            if founder == nil {
-                founder = entry.author
-                establish(entry.author)
-            }
+            guard founder == nil, let profile = try? body.decode(RoomProfileBody.self),
+                profile.founds(room, by: entry.author)
+            else { return }
+            founder = entry.author
+            establish(entry.author)
 
         case .roomAccess:
             guard let body = try? body.decode(RoomAccessBody.self) else { return }

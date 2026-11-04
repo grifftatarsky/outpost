@@ -16,12 +16,10 @@ struct TheRoomChainTests {
     }
 
     private func room() throws -> (alice: Author, sam: Author, room: RoomID, entries: [Entry]) {
-        let chain = EpochChain.create(room: RoomID())
-        var alice = Author(chain: chain.chain)
-        let sam = Author(chain: chain.chain)
-        let room = chain.chain.room
+        var (alice, room, profile) = try Author.founding()
+        let sam = Author(chain: alice.chain)
         var entries: [Entry] = []
-        entries.append(try alice.append(try Payload.roomProfile(name: "Hangar 7"), at: start, room: room))
+        entries.append(try alice.append(profile, at: start, room: room))
         entries += try admit(sam.identity, by: &alice, into: room, at: start + 1)
         return (alice, sam, room, entries)
     }
