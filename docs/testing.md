@@ -161,6 +161,45 @@ anybody here does and cannot catch what only Xcode 27 reports.
 
 <!-- COPY END c835132c -->
 
+<!-- COPY BEGIN 546f80b2 [NEEDS HUMAN REVIEW] -->
+
+## Before a commit
+
+`.pre-commit-config.yaml` holds six hooks, every one local, so `pre-commit` fetches nothing. They are
+not installed by default. `Scripts/install-hooks.sh` installs them for the clone, which means every
+worktree of it, and `Scripts/install-hooks.sh --remove` takes them out. `SKIP=<hook-id> git commit`
+skips one.
+
+| Hook | What it does |
+|---|---|
+| `branding-lint` | `Scripts/lint-branding.sh` without the symbol check, when a Swift, plist, xcconfig, entitlements, project or catalogue file is staged |
+| `copy-markers` | `copy-review.py check` |
+| `swift-format` | swift-format's rules over the staged Swift files, and nothing about layout |
+| `whitespace` | trailing whitespace and merge markers on the lines the commit adds |
+| `large-files` | a staged file over 512 KB |
+| `secrets` | something shaped like a credential, a signing or key file, the Team ID outside the project file, or an account email address, on the lines the commit adds |
+
+The last three read the staged diff, so they never fail over a line the commit did not touch, and
+`pre-commit run --all-files` with nothing staged checks nothing for them. The scan runs the credential
+shapes over the whole tree and the whole history instead.
+
+**swift-format checks its rules and not the layout.** The house layout is not swift-format's: run over
+the tree with its own printer, it reported 1,908 lines indented differently and 690 places where it
+would break a line. The codebase was not reformatted, so `Scripts/hooks/swift-format-rules.py` drops
+the printer's findings and fails only on the rules in `.swift-format`. Seven rules that the code already breaks are off:
+`OrderedImports` (292 places), `DoNotUseSemicolons` (136), `OnlyOneTrailingClosureArgument`,
+`OneVariableDeclarationPerLine`, `AlwaysUseLowerCamelCase`, `NoAccessLevelOnExtensionDeclaration` and
+`UseLetInEveryBoundCaseVariable`. With them off, the whole tree passes. Never run
+`swift format format` over the tree: it would rewrite thousands of lines.
+
+**Speed.** On 2026-11-04 all six hooks took 3.9 seconds over a one-line change to a Swift file, at a
+load average of 22. The branding lint took 19 seconds and 10.8 seconds of processor time at a load
+average near 1,000 until its three per-file loops became one `awk` each; each loop had started up to
+three processes for each of 414 files. Afterwards it took 5.8 seconds and 2.0 seconds of processor
+time, at a higher load.
+
+<!-- COPY END 546f80b2 -->
+
 <!-- COPY BEGIN 64f99f8f [NEEDS HUMAN REVIEW] -->
 
 **What only a phone can answer.** `FileProtectionTests` is skipped on a simulator, which does not keep

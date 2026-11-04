@@ -5681,6 +5681,30 @@ copy arriving unwrapped often enough to need a check that fails on it.
 
 <!-- COPY END 97a3a139 -->
 
+<!-- COPY BEGIN 7a1e64c5 [NEEDS HUMAN REVIEW] -->
+
+### A commit hook judges only what the commit adds, and swift-format judges rules, not layout
+
+`PROPOSED` — Claude, 2026-10-31, when Griff asked for linting and other checks before a commit.
+
+The hooks in `.pre-commit-config.yaml` that read lines (whitespace, merge markers, secrets) read the
+staged diff, never the whole file, so a commit is not refused over a line it did not touch. The
+swift-format hook fails on swift-format's rules and drops its layout findings, because the house
+layout is not swift-format's and reformatting the tree was not asked for. Seven rules the code
+already breaks are switched off in `.swift-format`, so the whole tree passes as it stands.
+
+**What it costs.** Layout is not checked by anything. A secret already in a file is not found by the
+hook, only by the scan, which searches the tree and the history. And a rule switched off for the old
+code is off for new code too.
+
+**Built.** The hooks are not installed: `Scripts/install-hooks.sh` installs them, and installing them
+changes the hooks of every worktree of the clone at once.
+
+**What would change it:** a decision to reformat the tree in one commit, after which the layout
+findings could fail a commit too and the seven rules could come back on.
+
+<!-- COPY END 7a1e64c5 -->
+
 <!-- COPY BEGIN da54c3de [NEEDS HUMAN REVIEW] -->
 
 ## Superseded
