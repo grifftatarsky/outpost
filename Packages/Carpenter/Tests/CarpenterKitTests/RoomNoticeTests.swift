@@ -154,8 +154,7 @@ struct RoomNoticeTests {
 
     @Test("The room says who took the invitation back, not who offered it")
     func aWithdrawalNamesWhoeverDidIt() throws {
-        let room = RoomID()
-        var alice = Author(chain: EpochChain.create(room: room).chain)
+        var (alice, room, profile) = try Author.founding()
         var bob = Author(chain: alice.chain)
         let joiner = Identity.generate()
 
@@ -164,7 +163,7 @@ struct RoomNoticeTests {
             lasting: .aWeek)
 
         let entries = [
-            try alice.append(try Payload.roomProfile(name: "Hangar 7"), at: TestSession.now, room: room),
+            try alice.append(profile, at: TestSession.now, room: room),
             try alice.append(
                 try Payload.joinRequest(invitation), at: TestSession.now.addingTimeInterval(60),
                 room: room),

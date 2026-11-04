@@ -72,11 +72,10 @@ struct JoinsRecordedBeforeTheRuleTests {
 
     @Test("The transcript of an old join says invited, and does not say arrived")
     func theTranscriptSaysWhatHappened() throws {
-        let founder = Identity.generate()
         let joiner = Identity.generate()
-        let (_, invitation) = try asTheOldBuildWroteIt(founder: founder, joiner: joiner)
-
         var (author, room, profile) = try Author.founding()
+        let invitation = try TestInvite.issue(
+            joining: room, joinerKeys: joiner.publicKeys, by: author.identity, at: start)
         let entries = [
             try author.append(profile, at: start, room: room),
             try author.append(

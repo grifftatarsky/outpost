@@ -41,6 +41,8 @@ public struct RoomRoster: Hashable, Sendable {
 
     private var spent: Set<Data> = []
 
+    public private(set) var counted: Set<EntryHash> = []
+
     public struct Removal: Hashable, Sendable {
         public let removed: ParticipantID
         public let by: ParticipantID
@@ -291,9 +293,11 @@ public struct RoomRoster: Hashable, Sendable {
             guard let request = try? body.decode(JoinRequestBody.self),
                 request.attestation.room == room,
                 request.attestation.inviter == entry.author,
-                established.contains(entry.author)
+                established.contains(entry.author),
+                request.attestation.isAuthentic
             else { return }
             requests[request.attestation.joiner] = request.attestation
+            counted.insert(entry.id)
 
             if isAdmitted(request.attestation.joiner) {
                 establish(request.attestation.joiner)
@@ -305,6 +309,7 @@ public struct RoomRoster: Hashable, Sendable {
                 let attestation = requests[confirmation.joiner],
                 (try? confirmation.verify(confirming: attestation)) != nil
             else { return }
+            counted.insert(entry.id)
             let at = entry.wallTime
             if let already = confirmations[attestation.signature] {
                 confirmations[attestation.signature] = Swift.min(already, at)

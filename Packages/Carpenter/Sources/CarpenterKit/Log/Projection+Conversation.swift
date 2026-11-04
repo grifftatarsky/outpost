@@ -14,7 +14,8 @@ extension Projection {
     }
 
     public func transcript(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = []
+        in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = [],
+        roster: RoomRoster
     ) -> [TranscriptEntry] {
         var items: [TranscriptEntry] = []
         let founder = foundings[room]?.author
@@ -40,13 +41,17 @@ extension Projection {
                 named = true
 
             case .joinRequest:
-                guard let body = try? opening(entry)?.decode(JoinRequestBody.self) else { continue }
+                guard roster.counted.contains(entry.id),
+                    let body = try? opening(entry)?.decode(JoinRequestBody.self)
+                else { continue }
                 offers[body.attestation.signature] = body.attestation
                 kind = .invited(
                     member(body.attestation.joiner), by: member(body.attestation.inviter))
 
             case .joinConfirmed:
-                guard let body = try? opening(entry)?.decode(JoinConfirmedBody.self) else { continue }
+                guard roster.counted.contains(entry.id),
+                    let body = try? opening(entry)?.decode(JoinConfirmedBody.self)
+                else { continue }
                 kind = .confirmed(member(body.joiner))
 
             case .soloCheck:

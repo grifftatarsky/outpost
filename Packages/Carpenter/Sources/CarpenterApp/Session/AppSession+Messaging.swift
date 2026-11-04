@@ -365,7 +365,7 @@ extension AppSession {
         let mark = deliveryMarks(in: room, of: projected)
 
         let marked: [TranscriptEntry] = projected.transcript(
-            in: room, opening: payloadOpener(), outOfRoom: outOfRoom(in: room, of: projected)
+            in: room, opening: payloadOpener(), outOfRoom: outOfRoom(in: room, of: projected), roster: roster(of: room)
         ).compactMap { item in
             guard let message = item.message else { return item }
             guard isDrawn(message) else { return nil }
