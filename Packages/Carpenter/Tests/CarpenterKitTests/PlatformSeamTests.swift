@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Platform seams")
+@Suite("Platform seams", .tags(.sync))
 struct PlatformSeamTests {
     @Test("A test clock does not move unless the test moves it")
     func fixedClock() {
@@ -51,7 +51,7 @@ struct PlatformSeamTests {
     }
 }
 
-@Suite("In-memory mailbox")
+@Suite("In-memory mailbox", .tags(.sync))
 struct InMemoryMailboxTests {
     private struct Three {
         let mailbox = InMemoryMailbox()

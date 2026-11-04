@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("A removed device cannot take a message away from its member", .serialized, .timeLimit(.minutes(10)))
+@Suite("A removed device cannot take a message away from its member", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct NothingIsSnatchedTests {
     private struct Rig {

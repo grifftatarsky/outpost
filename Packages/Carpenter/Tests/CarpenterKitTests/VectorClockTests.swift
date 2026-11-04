@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Vector clocks")
+@Suite("Vector clocks", .tags(.sync))
 struct VectorClockTests {
     private let alice = FeedKey(author: Identity.generate().id, device: DeviceKeys.generate().id)
     private let bob = FeedKey(author: Identity.generate().id, device: DeviceKeys.generate().id)

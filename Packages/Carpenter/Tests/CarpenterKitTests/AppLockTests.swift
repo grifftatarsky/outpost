@@ -6,7 +6,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Locking the app with a code of its own")
+@Suite("Locking the app with a code of its own", .tags(.crypto))
 struct AppLockTests {
     private let boot = "boot-one"
 
@@ -131,7 +131,7 @@ struct AppLockTests {
 }
 
 @MainActor
-@Suite("What the lock lets somebody holding the phone do")
+@Suite("What the lock lets somebody holding the phone do", .tags(.crypto))
 struct AppLockControllerTests {
     final class Uptime: @unchecked Sendable {
         var seconds: TimeInterval = 1_000

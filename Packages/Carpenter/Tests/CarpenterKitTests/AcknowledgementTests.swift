@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Acknowledging a round", .serialized)
+@Suite("Acknowledging a round", .serialized, .tags(.sync))
 struct RoundAcknowledgementTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox

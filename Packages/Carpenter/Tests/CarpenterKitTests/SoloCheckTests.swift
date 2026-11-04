@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("Checking who you are talking to")
+@Suite("Checking who you are talking to", .tags(.membership))
 struct SoloCheckTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()

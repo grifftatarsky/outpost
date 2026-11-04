@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Somebody you talk to adding a device is said in the conversation, with its date", .serialized, .timeLimit(.minutes(10)))
+@Suite("Somebody you talk to adding a device is said in the conversation, with its date", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 struct DeviceAddedNoticeTests {
     private func addedDevices(_ session: AppSession, _ room: RoomID) -> [(ParticipantID, Date)] {
         session.transcript(in: room).compactMap { item in

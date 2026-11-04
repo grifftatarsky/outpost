@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Signatures checked ahead of time")
+@Suite("Signatures checked ahead of time", .tags(.crypto))
 struct SignatureChecksTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

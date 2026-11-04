@@ -5,7 +5,7 @@ import CarpenterKitTesting
 @testable import CarpenterApp
 @testable import CarpenterKit
 
-@Suite struct ForwardCompatibilityTests {
+@Suite(.tags(.storage)) struct ForwardCompatibilityTests {
     @Test func preferencesDecodeFromBeforeNotificationLevelsExisted() throws {
         let old = Data(#"{"hidden":[]}"#.utf8)
         let decoded = try JSONDecoder().decode(MemberPreferences.self, from: old)

@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterUI
 
 @MainActor
-@Suite("Sentences built from sentences read as one, with the spaces where they belong")
+@Suite("Sentences built from sentences read as one, with the spaces where they belong", .tags(.ui))
 struct JoinedSentencesTests {
     private let ada = Member(id: ParticipantID(rawValue: Data(repeating: 4, count: 32)), displayName: "Ada")
 

@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterApp
 @testable import CarpenterKit
 
-@Suite("Who can send you a room key", .serialized)
+@Suite("Who can send you a room key", .serialized, .tags(.crypto, .membership))
 @MainActor
 struct WhoCanSendYouAKeyTests {
     private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
@@ -203,7 +203,7 @@ struct WhoCanSendYouAKeyTests {
     }
 }
 
-@Suite("The links between a room's keys")
+@Suite("The links between a room's keys", .tags(.crypto, .membership))
 struct EpochLinkTests {
     @Test("A link that does not open under the key it names is refused, and the one that does is kept")
     func aBrokenLinkIsRefused() throws {

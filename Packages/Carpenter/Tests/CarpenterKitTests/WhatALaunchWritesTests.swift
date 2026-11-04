@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("What a launch writes")
+@Suite("What a launch writes", .tags(.storage))
 @MainActor
 struct WhatALaunchWritesTests {
     @Test("Growing the session's log one entry at a time costs what growing a plain one does", .tags(.timing))
@@ -94,7 +94,7 @@ private actor CountedDocuments: DocumentStore {
     func clear() async throws { try await inner.clear() }
 }
 
-@Suite("What a sync round writes", .serialized)
+@Suite("What a sync round writes", .serialized, .tags(.storage))
 @MainActor
 struct WhatARoundWritesTests {
     private func counted() -> (AppSession, CountedDocuments, InMemoryKeychainStore) {

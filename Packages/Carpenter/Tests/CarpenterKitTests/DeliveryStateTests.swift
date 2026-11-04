@@ -2,7 +2,7 @@ import CarpenterKit
 import Foundation
 import Testing
 
-@Suite("Delivery marks")
+@Suite("Delivery marks", .tags(.sync))
 struct DeliveryStateTests {
     private let instant = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -37,7 +37,7 @@ struct DeliveryStateTests {
     }
 }
 
-@Suite struct NoRecipientsStateTests {
+@Suite(.tags(.sync)) struct NoRecipientsStateTests {
     @Test("A message with nobody to reach is drawn, unlike one that is merely about to go")
     func nobodyToReachIsVisible() {
         #expect(DeliveryState.pending.isVisible == false)

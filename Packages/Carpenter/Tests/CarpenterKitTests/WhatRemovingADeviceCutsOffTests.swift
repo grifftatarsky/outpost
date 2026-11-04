@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What removing a device cuts off", .serialized, .timeLimit(.minutes(10)))
+@Suite("What removing a device cuts off", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct WhatRemovingADeviceCutsOffTests {
     private struct Rig {

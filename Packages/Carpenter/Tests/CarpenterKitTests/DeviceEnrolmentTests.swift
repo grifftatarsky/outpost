@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Device enrolment", .serialized, .timeLimit(.minutes(10)))
+@Suite("Device enrolment", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct DeviceEnrolmentTests {
     private func settle(_ session: AppSession, until condition: () -> Bool) async {

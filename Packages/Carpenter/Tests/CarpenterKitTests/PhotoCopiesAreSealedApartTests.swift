@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Each person's copy of a photo is sealed apart, so nothing in iCloud ties two copies together", .serialized)
+@Suite("Each person's copy of a photo is sealed apart, so nothing in iCloud ties two copies together", .serialized, .tags(.crypto, .sync))
 struct PhotoCopiesAreSealedApartTests {
     private let tag = RecipientTag(rawValue: Data([7]))
 

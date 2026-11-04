@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A phone writes only under a key made by somebody the room shows as in", .serialized)
+@Suite("A phone writes only under a key made by somebody the room shows as in", .serialized, .tags(.crypto))
 struct AMadeUpKeyTests {
     @Test(
         "A key somebody made up before being removed stops being written under when the removal arrives, and the room's real key is taken beside it",
@@ -157,7 +157,7 @@ extension RoomOfThree {
 }
 
 @MainActor
-@Suite("A key that reaches a joining phone before it can check who gave it waits", .serialized)
+@Suite("A key that reaches a joining phone before it can check who gave it waits", .serialized, .tags(.crypto))
 struct AKeyThatWaitsTests {
     @Test("Somebody who joins during a tie gets both keys when another member's comes before the inviter's")
     func anotherMembersKeyBeforeTheInviters() async throws {
@@ -243,7 +243,7 @@ struct AKeyThatWaitsTests {
 }
 
 @MainActor
-@Suite("A key stranded when two members turn one at once still reaches a phone that joins later", .serialized)
+@Suite("A key stranded when two members turn one at once still reaches a phone that joins later", .serialized, .tags(.crypto))
 struct AStrandedKeyTests {
     @Test("Somebody who joins after a tie reads what was written under the key that lost it")
     func aJoinerReadsBothSidesOfATie() async throws {
@@ -282,7 +282,7 @@ struct AStrandedKeyTests {
     }
 }
 
-@Suite("Several keys for one number")
+@Suite("Several keys for one number", .tags(.crypto))
 struct SeveralKeysForOneNumberTests {
     @Test("A second key for a number is held beside the first, and what either sealed opens")
     func aSecondKeyIsHeldBesideTheFirst() throws {

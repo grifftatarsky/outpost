@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("The order a file mailbox hands packets back in")
+@Suite("The order a file mailbox hands packets back in", .tags(.sync))
 struct FileMailboxOrderTests {
     private func tag(_ byte: UInt8) -> RecipientTag {
         RecipientTag(rawValue: Data(repeating: byte, count: 16))

@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("The device list tells the truth", .serialized, .timeLimit(.minutes(10)))
+@Suite("The device list tells the truth", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 struct TheDeviceListTellsTheTruthTests {
     @Test("The founding device says when it was made, not that it was always here")
     func theFoundingDeviceSaysWhenItWasMade() async throws {

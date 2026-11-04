@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Restoring a member from their recovery key", .serialized, .timeLimit(.minutes(10)))
+@Suite("Restoring a member from their recovery key", .serialized, .timeLimit(.minutes(10)), .tags(.crypto))
 @MainActor
 struct RestoringFromAKeyTests {
     @Test("A key puts the same member back on a fresh device")

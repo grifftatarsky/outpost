@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("What the app icon means")
+@Suite("What the app icon means", .tags(.ui))
 struct WhatTheAppIconMeansTests {
     @Test("Every combination of the two switches has one true sentence")
     func everyCombinationIsCovered() {

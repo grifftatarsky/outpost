@@ -3,7 +3,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Test profiles")
+@Suite("Test profiles", .tags(.storage))
 struct TestProfilesTests {
     private func scratch() throws -> URL {
         let directory = TestScratch.root

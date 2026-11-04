@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Somebody a phone has only heard of can still invite it into a room", .serialized)
+@Suite("Somebody a phone has only heard of can still invite it into a room", .serialized, .tags(.membership))
 struct BeingInvitedByAStrangerTests {
     @MainActor
     private struct FriendOfAFriend {

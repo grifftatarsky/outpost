@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("How long a free year lasts")
+@Suite("How long a free year lasts", .tags(.ui))
 struct SupporterStandingTests {
     private let claimed = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -68,7 +68,7 @@ struct SupporterStandingTests {
 }
 
 @MainActor
-@Suite("The Supporter badge", .serialized)
+@Suite("The Supporter badge", .serialized, .tags(.ui))
 struct SupporterBadgeTests {
     private func joined(clock: TestClock = TestClock(now: TestSession.now)) async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID

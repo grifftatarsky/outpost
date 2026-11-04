@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Who can add people to a room")
+@Suite("Who can add people to a room", .tags(.membership))
 struct WhoCanAddPeopleToARoomTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()

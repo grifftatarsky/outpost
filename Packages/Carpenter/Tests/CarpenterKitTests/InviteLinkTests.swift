@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Invite links")
+@Suite("Invite links", .tags(.membership))
 struct InviteLinkTests {
     private let scheme = "outposttest"
 

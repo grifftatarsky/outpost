@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Making notifications private, and checking a recovery key, for the app lock")
+@Suite("Making notifications private, and checking a recovery key, for the app lock", .tags(.ui))
 struct PrivateNotificationsTests {
     private func member() async throws -> (AppSession, RoomID) {
         let session = TestSession.make()

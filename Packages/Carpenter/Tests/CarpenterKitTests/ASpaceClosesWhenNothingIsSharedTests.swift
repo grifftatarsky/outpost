@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("The space kept for somebody closes nine days after you last share anything with them", .serialized)
+@Suite("The space kept for somebody closes nine days after you last share anything with them", .serialized, .tags(.sync))
 struct ASpaceClosesWhenNothingIsSharedTests {
     @MainActor
     private struct Pair {

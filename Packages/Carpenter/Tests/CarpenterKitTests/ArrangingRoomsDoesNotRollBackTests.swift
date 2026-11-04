@@ -51,7 +51,7 @@ private actor GatedDocumentStore: DocumentStore {
     }
 }
 
-@Suite("Arranging the rooms list does not roll back what else was written", .serialized, .timeLimit(.minutes(10)))
+@Suite("Arranging the rooms list does not roll back what else was written", .serialized, .timeLimit(.minutes(10)), .tags(.storage))
 @MainActor
 struct ArrangingRoomsDoesNotRollBackTests {
     @Test("A save that started before another change still writes the change")

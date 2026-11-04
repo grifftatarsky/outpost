@@ -2,7 +2,7 @@ import CarpenterUI
 import Foundation
 import Testing
 
-@Suite("Keyboards from other apps are refused unless the member allows them")
+@Suite("Keyboards from other apps are refused unless the member allows them", .tags(.ui))
 struct OtherKeyboardsTests {
     private func defaults() -> UserDefaults {
         let name = "keyboards-\(UUID().uuidString)"

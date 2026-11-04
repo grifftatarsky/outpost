@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A packet of strangers stops nobody", .serialized)
+@Suite("A packet of strangers stops nobody", .serialized, .tags(.sync))
 struct APacketOfStrangersTests {
     private func strangers(_ count: Int) throws -> (identities: [IdentityPublicKeys], certificates: [DeviceCertificate]) {
         var identities: [IdentityPublicKeys] = []

@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Wire form")
+@Suite("Wire form", .tags(.crypto))
 struct WireFormTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

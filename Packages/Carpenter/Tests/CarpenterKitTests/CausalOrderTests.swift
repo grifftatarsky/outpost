@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Causal order")
+@Suite("Causal order", .tags(.sync))
 struct CausalOrderTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Starting a solo", .serialized)
+@Suite("Starting a solo", .serialized, .tags(.membership))
 struct SoloTests {
     private func pair() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox) {
         let mailbox = InMemoryMailbox()

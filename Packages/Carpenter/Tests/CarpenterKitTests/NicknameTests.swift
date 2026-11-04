@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A name of your own for somebody", .serialized)
+@Suite("A name of your own for somebody", .serialized, .tags(.ui))
 struct NicknameTests {
     private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
         let mailbox = InMemoryMailbox()
@@ -97,7 +97,7 @@ struct NicknameTests {
     }
 }
 
-@Suite("Photos kept for other people")
+@Suite("Photos kept for other people", .tags(.ui))
 struct PersonAvatarStoreTests {
     @Test("A photo is filed by the whole identifier and comes back for it alone")
     func roundTrip() throws {

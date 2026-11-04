@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Each pair of people has a space of its own in each one's iCloud", .serialized)
+@Suite("Each pair of people has a space of its own in each one's iCloud", .serialized, .tags(.sync))
 struct EachPairHasASpaceOfItsOwnTests {
     @MainActor
     private struct Three {

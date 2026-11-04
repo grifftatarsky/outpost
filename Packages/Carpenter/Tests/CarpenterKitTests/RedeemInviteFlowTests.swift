@@ -3,7 +3,7 @@ import CarpenterUI
 import Foundation
 import Testing
 
-@Suite("The joiner's sheet")
+@Suite("The joiner's sheet", .tags(.membership))
 struct RedeemInviteFlowTests {
     private let offer = InviteOffer(
         roomName: nil, inviterName: nil, phrase: "K7M2QX",

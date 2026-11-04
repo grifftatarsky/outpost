@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterCloudKit
 @testable import CarpenterKit
 
-@Suite("CloudKit packet serialisation")
+@Suite("CloudKit packet serialisation", .tags(.sync))
 struct CloudKitPacketRecordTests {
     @Test("A packet round-trips through a CKRecord with its grant intact")
     func grantSurvivesRecordRoundTrip() throws {

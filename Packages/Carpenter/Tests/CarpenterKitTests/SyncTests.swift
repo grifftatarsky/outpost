@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Sync packets")
+@Suite("Sync packets", .tags(.sync))
 struct SyncEngineTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -117,7 +117,7 @@ struct SyncEngineTests {
     }
 }
 
-@Suite("Write budget")
+@Suite("Write budget", .tags(.sync))
 struct WriteBudgetTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -198,7 +198,7 @@ struct WriteBudgetTests {
     }
 }
 
-@Suite("Two members converge over a mailbox")
+@Suite("Two members converge over a mailbox", .tags(.sync))
 struct MailboxConvergenceTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -382,7 +382,7 @@ struct MailboxConvergenceTests {
     }
 }
 
-@Suite("File mailbox")
+@Suite("File mailbox", .tags(.sync))
 struct FileMailboxTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

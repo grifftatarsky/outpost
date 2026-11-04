@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Changing your hidden address when a device is removed", .serialized, .timeLimit(.minutes(10)))
+@Suite("Changing your hidden address when a device is removed", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct ChangingYourHiddenAddressTests {
     @MainActor

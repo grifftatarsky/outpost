@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Taking an invitation back")
+@Suite("Taking an invitation back", .tags(.membership))
 struct RescindingAnInvitationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -324,7 +324,7 @@ struct RescindingAnInvitationTests {
 }
 
 @MainActor
-@Suite("Taking an invitation back, through the session", .serialized)
+@Suite("Taking an invitation back, through the session", .serialized, .tags(.membership))
 struct SessionRescindTests {
     private func pair() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox

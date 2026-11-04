@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Confirming that the right person joined")
+@Suite("Confirming that the right person joined", .tags(.membership))
 struct ConfirmingAJoinTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -179,7 +179,7 @@ struct ConfirmingAJoinTests {
 }
 
 @MainActor
-@Suite("Confirming a join, through the session", .serialized)
+@Suite("Confirming a join, through the session", .serialized, .tags(.membership))
 struct SessionConfirmationTests {
     @Test("An open room offers the confirmation, and answering it clears it")
     func confirmingClearsIt() async throws {

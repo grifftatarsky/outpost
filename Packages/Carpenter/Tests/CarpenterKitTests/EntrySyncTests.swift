@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Device sync", .serialized, .timeLimit(.minutes(10)))
+@Suite("Device sync", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct EntrySyncTests {
     private func pair() -> (relay: InMemoryEntrySync.Relay, keychain: InMemoryKeychainStore) {

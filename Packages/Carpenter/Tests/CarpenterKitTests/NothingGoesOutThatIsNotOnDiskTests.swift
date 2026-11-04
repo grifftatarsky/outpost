@@ -34,7 +34,7 @@ private actor HeldLogStore: LogStore {
     }
 }
 
-@Suite("A member's own entry exists only once it is on disk", .serialized, .timeLimit(.minutes(10)))
+@Suite("A member's own entry exists only once it is on disk", .serialized, .timeLimit(.minutes(10)), .tags(.storage))
 @MainActor
 struct OwnEntriesReachTheDiskFirstTests {
     private func directory() -> URL {
@@ -219,7 +219,7 @@ struct OwnEntriesReachTheDiskFirstTests {
     }
 }
 
-@Suite("Nothing is acknowledged that is not on disk", .serialized, .timeLimit(.minutes(10)))
+@Suite("Nothing is acknowledged that is not on disk", .serialized, .timeLimit(.minutes(10)), .tags(.storage))
 @MainActor
 struct AcknowledgedMeansOnDiskTests {
     private struct Room {

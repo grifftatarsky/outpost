@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("One member, two devices")
+@Suite("One member, two devices", .tags(.membership))
 struct MultiDeviceTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let chain = EpochChain.create(room: RoomID()).chain

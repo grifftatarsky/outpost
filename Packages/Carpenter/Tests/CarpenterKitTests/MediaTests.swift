@@ -7,7 +7,7 @@ import CoreGraphics
 import Foundation
 import Testing
 
-@Suite("Sealing an attachment", .timeLimit(.minutes(10)))
+@Suite("Sealing an attachment", .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct SealedAttachmentTests {
     private let bytes = Data((0..<5_000).map { UInt8($0 % 251) })
 
@@ -79,7 +79,7 @@ struct SealedAttachmentTests {
 }
 
 @MainActor
-@Suite("Sending a photo", .serialized, .timeLimit(.minutes(10)))
+@Suite("Sending a photo", .serialized, .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct SendingPhotoTests {
     static func photo(caption: String? = nil, preview: Data? = Data(repeating: 0xAB, count: 900)) -> PreparedMedia {
         PreparedMedia(
@@ -321,7 +321,7 @@ struct SendingPhotoTests {
 }
 
 @MainActor
-@Suite("Blocking", .serialized, .timeLimit(.minutes(10)))
+@Suite("Blocking", .serialized, .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct BlockingTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -543,7 +543,7 @@ struct BlockingTests {
 }
 
 @MainActor
-@Suite("Loading a photo for the screen", .serialized, .timeLimit(.minutes(10)))
+@Suite("Loading a photo for the screen", .serialized, .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct MediaLoaderTests {
     static let onePixelJPEG = Data(base64Encoded:
         "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AKwAB//Z")!

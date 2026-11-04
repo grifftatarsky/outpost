@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("A line under your own name", .serialized)
+@Suite("A line under your own name", .serialized, .tags(.ui))
 struct BlurbTests {
     private func acquainted() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox

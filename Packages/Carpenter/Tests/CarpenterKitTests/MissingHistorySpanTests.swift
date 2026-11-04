@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Spans of missing history")
+@Suite("Spans of missing history", .tags(.sync))
 struct MissingHistorySpanTests {
     private func spans(_ random: inout Seeded) -> [SequenceSpan] {
         (0..<Int.random(in: 0...5, using: &random)).map { _ in
@@ -78,7 +78,7 @@ struct MissingHistorySpanTests {
     }
 }
 
-@Suite("History somebody else can claim")
+@Suite("History somebody else can claim", .tags(.sync))
 struct ClaimedHistoryTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

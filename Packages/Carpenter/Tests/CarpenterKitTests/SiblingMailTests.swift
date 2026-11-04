@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("What goes to iCloud for your other devices", .serialized, .timeLimit(.minutes(10)))
+@Suite("What goes to iCloud for your other devices", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct SiblingMailTests {
     private struct Devices {

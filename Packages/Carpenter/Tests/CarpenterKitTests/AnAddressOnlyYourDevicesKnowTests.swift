@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("An address only your devices know")
+@Suite("An address only your devices know", .tags(.sync))
 struct AnAddressOnlyYourDevicesKnowTests {
     private let t0 = Date(timeIntervalSince1970: 1_786_635_000)
 

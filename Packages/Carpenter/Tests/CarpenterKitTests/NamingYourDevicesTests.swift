@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Naming your own devices", .serialized, .timeLimit(.minutes(10)))
+@Suite("Naming your own devices", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct NamingYourDevicesTests {
     private func session() async throws -> AppSession {
@@ -115,7 +115,7 @@ struct NamingYourDevicesTests {
     }
 }
 
-@Suite("Cutting off several devices at once", .serialized, .timeLimit(.minutes(10)))
+@Suite("Cutting off several devices at once", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct RemovingSeveralDevicesTests {
     private func sessionWithSpareDevices(_ count: Int) async throws -> (

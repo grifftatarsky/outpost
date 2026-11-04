@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Room summaries")
+@Suite("Room summaries", .tags(.ui))
 @MainActor
 struct RoomSummaryTests {
     @Test("Summarising every room at once agrees with summarising each room alone")
@@ -41,7 +41,7 @@ struct RoomSummaryTests {
     }
 }
 
-@Suite("A room summary read from the projection's index")
+@Suite("A room summary read from the projection's index", .tags(.ui))
 struct RoomSummaryIndexTests {
     private func referenceSummary(
         _ projected: Projection, of room: RoomID, others: [ParticipantID], viewer: ParticipantID?,
@@ -119,7 +119,7 @@ struct RoomSummaryIndexTests {
     }
 }
 
-@Suite("What a projection knows from its first pass")
+@Suite("What a projection knows from its first pass", .tags(.ui))
 struct ProjectionFirstPassTests {
     private func entry(
         _ index: UInt8, by author: ParticipantID, in room: RoomID?, type: PayloadType = .post,

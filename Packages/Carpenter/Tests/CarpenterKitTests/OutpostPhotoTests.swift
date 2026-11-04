@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("A photo on an Outpost", .serialized)
+@Suite("A photo on an Outpost", .serialized, .tags(.sync))
 struct OutpostPhotoTests {
     @Test("A photo becomes a post with a picture, and its caption is the words")
     func aPhotoIsAPost() async throws {
@@ -78,7 +78,7 @@ struct OutpostPhotoTests {
 }
 
 @MainActor
-@Suite("A gallery on a post", .serialized)
+@Suite("A gallery on a post", .serialized, .tags(.sync))
 struct OutpostGalleryTests {
     private static func clip(caption: String? = nil) -> PreparedMedia {
         PreparedMedia(
@@ -226,7 +226,7 @@ struct OutpostGalleryTests {
 }
 
 @MainActor
-@Suite("A gallery's pictures are all named", .serialized)
+@Suite("A gallery's pictures are all named", .serialized, .tags(.sync))
 struct GalleryAttachmentTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox

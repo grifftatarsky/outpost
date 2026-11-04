@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Checking who you are talking to, through the app", .serialized)
+@Suite("Checking who you are talking to, through the app", .serialized, .tags(.crypto, .membership))
 struct SoloVerificationTests {
     private func solo() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -275,7 +275,7 @@ struct SoloVerificationTests {
 }
 
 @MainActor
-@Suite("Requiring a check before a solo opens", .serialized)
+@Suite("Requiring a check before a solo opens", .serialized, .tags(.crypto, .membership))
 struct RequiringSoloCheckTests {
     @Test("It is off by default, and never answered is not the same as answered no")
     func offByDefault() async throws {

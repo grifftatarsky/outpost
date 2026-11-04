@@ -262,6 +262,27 @@ all of it waiting for its turn on the main actor, and a time limit counts that t
 
 <!-- COPY END 894dca3c -->
 
+<!-- COPY BEGIN 7e5a7491 [NEEDS HUMAN REVIEW] -->
+
+## Running one area
+
+Suites carry a tag for what they are about, defined in `Tags.swift`: `crypto` (375 tests),
+`membership` (498), `sync` (445), `storage` (107) and `ui` (353), counted on 2026-11-04. A suite can
+carry two, and one about the whole session carries none, so a tagged run is a quick check while
+working and never the gate. `Scripts/test-tag.sh crypto` runs the tests tagged `crypto`, and anything
+after the tag goes to `swift test`, for example `--skip-build`. The tag is given by the file a suite
+is in, read from its name and its suite titles, so check it before trusting a tagged run to cover a
+change.
+
+`swift test --filter tag:crypto` runs nothing on Swift 6.4 (measured 2026-11-04: "No matching test
+cases were run"); filtering by tag from the command line is proposal
+[ST-0025](https://forums.swift.org/t/review-st-0025-tag-based-test-execution-filtering/87320), in
+review in June 2026. So `Scripts/tests-tagged.py` reads the tags out of the source and prints a
+`--filter` pattern, and the sanitizer steps use the same script to skip `timing`. Xcode reads the tags
+as they are.
+
+<!-- COPY END 7e5a7491 -->
+
 <!-- COPY BEGIN 64f99f8f [NEEDS HUMAN REVIEW] -->
 
 **What only a phone can answer.** `FileProtectionTests` is skipped on a simulator, which does not keep

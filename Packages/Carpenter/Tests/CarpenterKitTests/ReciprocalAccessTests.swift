@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("What each of us can read of the other", .serialized)
+@Suite("What each of us can read of the other", .serialized, .tags(.membership))
 struct ReciprocalAccessTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6
@@ -162,7 +162,7 @@ struct ReciprocalAccessTests {
     }
 }
 
-@Suite("What one direction amounts to")
+@Suite("What one direction amounts to", .tags(.membership))
 struct ReciprocalReachTests {
     private let when = Date(timeIntervalSince1970: 1_775_260_800)
     private var person: Member {

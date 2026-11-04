@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Identifiers are a fixed width")
+@Suite("Identifiers are a fixed width", .tags(.crypto))
 struct IdentifierWidthTests {
 
     private func encoded(_ raw: Data) -> Data {

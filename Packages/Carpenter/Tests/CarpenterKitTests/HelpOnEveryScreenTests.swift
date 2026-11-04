@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterUI
 
 @MainActor
-@Suite("Help on every screen")
+@Suite("Help on every screen", .tags(.ui))
 struct HelpOnEveryScreenTests {
 
     private func defaults(_ name: String) -> UserDefaults {

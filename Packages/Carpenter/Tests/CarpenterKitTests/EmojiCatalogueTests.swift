@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterUI
 
-@Suite("The emoji catalogue")
+@Suite("The emoji catalogue", .tags(.ui))
 struct EmojiCatalogueTests {
 
     private var catalogue: EmojiCatalogue { .shared }

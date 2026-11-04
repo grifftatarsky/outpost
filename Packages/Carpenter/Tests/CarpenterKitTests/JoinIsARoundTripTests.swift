@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A join is a round trip", .serialized)
+@Suite("A join is a round trip", .serialized, .tags(.membership))
 struct JoinIsARoundTripTests {
     private func pair() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox

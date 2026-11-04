@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Removing somebody from a room")
+@Suite("Removing somebody from a room", .tags(.membership))
 struct RemovalTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -330,7 +330,7 @@ struct RemovalTests {
 }
 
 @MainActor
-@Suite("Removing somebody, through the session", .serialized)
+@Suite("Removing somebody, through the session", .serialized, .tags(.membership))
 struct SessionRemovalTests {
     private func roomWithTwo() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, bobID: ParticipantID
@@ -415,7 +415,7 @@ struct SessionRemovalTests {
 }
 
 @MainActor
-@Suite("Removal, enforced by the session", .serialized)
+@Suite("Removal, enforced by the session", .serialized, .tags(.membership))
 struct RemovalEnforcementTests {
     private func roomWithTwo() async throws -> (
         alice: AppSession, room: RoomID, bob: ParticipantID

@@ -3,7 +3,7 @@ import CarpenterKit
 import Foundation
 import Testing
 
-@Suite("What the extension decides a banner is")
+@Suite("What the extension decides a banner is", .tags(.ui))
 struct ArrivingBannerTests {
     private let room = RoomID()
     private let other = RoomID()

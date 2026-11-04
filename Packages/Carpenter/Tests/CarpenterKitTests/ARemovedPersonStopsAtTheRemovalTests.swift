@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A removed person's words stop where the removal saw them")
+@Suite("A removed person's words stop where the removal saw them", .tags(.membership))
 struct ARemovedPersonStopsAtTheRemovalTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -146,7 +146,7 @@ struct ARemovedPersonStopsAtTheRemovalTests {
     }
 }
 
-@Suite("A removed device's words stop where its removal saw them")
+@Suite("A removed device's words stop where its removal saw them", .tags(.membership))
 struct ARemovedDeviceStopsAtTheCutoffTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let identity = Identity.generate()

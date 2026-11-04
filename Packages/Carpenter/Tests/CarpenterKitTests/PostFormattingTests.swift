@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Post formatting")
+@Suite("Post formatting", .tags(.ui))
 struct PostFormattingTests {
     private func runs(_ source: String) -> [PostFormatting.Run] {
         PostFormatting.runs(in: source)

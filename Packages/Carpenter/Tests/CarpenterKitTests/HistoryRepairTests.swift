@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("What a replica can tell it is missing", .timeLimit(.minutes(10)))
+@Suite("What a replica can tell it is missing", .timeLimit(.minutes(10)), .tags(.sync))
 struct FeedGapTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -111,7 +111,7 @@ struct FeedGapTests {
     }
 }
 
-@Suite("A repair on the wire", .timeLimit(.minutes(10)))
+@Suite("A repair on the wire", .timeLimit(.minutes(10)), .tags(.sync))
 struct RepairWireTests {
     @Test("Requests and answers ride the sealed body, and a body without them still opens")
     func rideTheBody() throws {
@@ -141,7 +141,7 @@ struct RepairWireTests {
 }
 
 @MainActor
-@Suite("Repairing a history with holes in it", .serialized, .timeLimit(.minutes(10)))
+@Suite("Repairing a history with holes in it", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 struct HistoryRepairTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -393,7 +393,7 @@ struct HistoryRepairTests {
     }
 }
 
-@Suite("The gap index agrees with a scan", .timeLimit(.minutes(10)))
+@Suite("The gap index agrees with a scan", .timeLimit(.minutes(10)), .tags(.sync))
 struct GapIndexTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -462,7 +462,7 @@ struct GapIndexTests {
     }
 }
 
-@Suite("A refusal that no credential can lift", .timeLimit(.minutes(10)))
+@Suite("A refusal that no credential can lift", .timeLimit(.minutes(10)), .tags(.sync))
 struct FinalRefusalTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -555,7 +555,7 @@ struct FinalRefusalTests {
 }
 
 @MainActor
-@Suite("Repairing without being asked", .serialized, .timeLimit(.minutes(10)))
+@Suite("Repairing without being asked", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 struct AutomaticRepairTests {
     private func joined(_ clock: TestClock) async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -755,7 +755,7 @@ struct AutomaticRepairTests {
 }
 
 @MainActor
-@Suite("A refusal a member is told about", .serialized, .timeLimit(.minutes(10)))
+@Suite("A refusal a member is told about", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 struct FinalRefusalThroughTheSessionTests {
     private func settle(_ session: AppSession, until condition: () -> Bool) async {
         let deadline = TestDeadline.fromNow

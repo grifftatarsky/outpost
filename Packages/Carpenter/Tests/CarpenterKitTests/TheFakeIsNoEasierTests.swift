@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("The in-memory mailbox is no easier than the real one", .serialized)
+@Suite("The in-memory mailbox is no easier than the real one", .serialized, .tags(.sync))
 struct TheFakeIsNoEasierTests {
     private func linked(_ mailbox: InMemoryMailbox) async throws -> (toBob: Peer, asBob: Peer, alice: Pairs, bob: Pairs) {
         let (toBob, asBob) = try peers(Identity.generate(), Identity.generate())
@@ -188,7 +188,7 @@ struct TheFakeIsNoEasierTests {
 }
 
 @MainActor
-@Suite("The fake screen is no easier than Apple's")
+@Suite("The fake screen is no easier than Apple's", .tags(.sync))
 struct TheFakeScreenIsNoEasierTests {
     @Test("With screening off, it refuses to look, as the real analyser does")
     func offRefuses() async {
@@ -220,7 +220,7 @@ enum LoadingPhotoForTheScreenFixtures {
     @MainActor static var jpeg: Data { MediaLoaderTests.onePixelJPEG }
 }
 
-@Suite("A choice is recorded even when it matches the default", .serialized)
+@Suite("A choice is recorded even when it matches the default", .serialized, .tags(.sync))
 @MainActor
 struct AnsweringIsNotTheSameAsNotAnsweringTests {
     @Test("Choosing the value that was already the default still records an answer")

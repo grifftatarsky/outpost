@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A receipt counts only when the device it names signed it while it counted")
+@Suite("A receipt counts only when the device it names signed it while it counted", .tags(.crypto))
 struct ForgingAReceiptTests {
     private let t0 = Date(timeIntervalSince1970: 1_786_635_000)
     private let sender = Identity.generate()

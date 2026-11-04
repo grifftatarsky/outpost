@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What a chain walks is what it holds")
+@Suite("What a chain walks is what it holds", .tags(.crypto, .sync))
 struct WhatAChainWalksTests {
     private let room = RoomID(rawValue: UUID())
 
@@ -36,7 +36,7 @@ struct WhatAChainWalksTests {
 }
 
 @MainActor
-@Suite("A key's number is not a loop bound", .serialized)
+@Suite("A key's number is not a loop bound", .serialized, .tags(.crypto, .sync))
 struct AKeysNumberIsNotALoopBoundTests {
     private func grant(
         at epoch: EpochNumber, links: [EpochLink] = [], from giver: AppSession, to taker: AppSession, in room: RoomID

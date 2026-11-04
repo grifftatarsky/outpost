@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A sibling feed is sealed before it leaves the device")
+@Suite("A sibling feed is sealed before it leaves the device", .tags(.crypto, .sync))
 struct SiblingFeedIsSealedTests {
     private static let identity = Identity.generate()
     private static let device = DeviceID(rawValue: Data(repeating: 0xA1, count: 32))
@@ -180,7 +180,7 @@ struct SiblingFeedIsSealedTests {
     }
 }
 
-@Suite("Sealing the feed between your devices")
+@Suite("Sealing the feed between your devices", .tags(.crypto, .sync))
 @MainActor
 struct SiblingFeedOffTheMainActorTests {
     private final class Ticks {

@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("The joiner's confirmation, on the wire")
+@Suite("The joiner's confirmation, on the wire", .tags(.membership))
 struct JoinConfirmationWireTests {
     private let now = Date(timeIntervalSince1970: 1_786_635_000)
 

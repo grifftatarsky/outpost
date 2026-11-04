@@ -1,7 +1,7 @@
 @testable import CarpenterUI
 import Testing
 
-@Suite("Scanning an invite is asked about first, and saying no leaves pasting")
+@Suite("Scanning an invite is asked about first, and saying no leaves pasting", .tags(.membership))
 struct InviteScanningTests {
     @Test("Before anybody has answered, the join screen asks rather than scanning")
     func unansweredAsks() {

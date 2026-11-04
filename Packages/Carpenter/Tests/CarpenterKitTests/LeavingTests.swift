@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Leaving a room")
+@Suite("Leaving a room", .tags(.membership))
 struct LeavingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -251,7 +251,7 @@ struct LeavingTests {
 }
 
 @MainActor
-@Suite("Leaving a room, from the app", .serialized)
+@Suite("Leaving a room, from the app", .serialized, .tags(.membership))
 struct SessionLeavingTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox

@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("What drawing a screen costs")
+@Suite("What drawing a screen costs", .tags(.ui))
 @MainActor
 struct ProjectionCostTests {
     private func session() -> AppSession {

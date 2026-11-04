@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Who can tell your phone where to read somebody", .serialized, .timeLimit(.minutes(10)))
+@Suite("Who can tell your phone where to read somebody", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 @MainActor
 struct WhoCanTellYouWhereToReadSomebodyTests {
     @MainActor

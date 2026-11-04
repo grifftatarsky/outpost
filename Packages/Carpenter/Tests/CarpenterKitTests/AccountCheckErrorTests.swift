@@ -7,7 +7,7 @@ import Testing
 @testable import CarpenterApp
 @testable import CarpenterCloudKit
 
-@Suite("Reading a failed account check")
+@Suite("Reading a failed account check", .tags(.sync))
 struct AccountCheckErrorTests {
     private func ckError(_ code: CKError.Code, userInfo: [String: Any] = [:]) -> CKError {
         CKError(code, userInfo: userInfo)
@@ -84,7 +84,7 @@ struct AccountCheckErrorTests {
     }
 }
 
-@Suite("While iCloud holds this device", .serialized)
+@Suite("While iCloud holds this device", .serialized, .tags(.sync))
 @MainActor
 struct WhileICloudHoldsThisDeviceTests {
     @Test("Nothing is sent or fetched, what is here stays readable, and it resumes when iCloud lets it in")

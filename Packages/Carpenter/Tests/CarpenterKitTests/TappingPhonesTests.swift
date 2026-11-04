@@ -3,7 +3,7 @@ import CryptoKit
 import Foundation
 import Testing
 
-@Suite("Tapping two phones swaps codes between those two and nobody else")
+@Suite("Tapping two phones swaps codes between those two and nobody else", .tags(.membership))
 struct TappingPhonesTests {
     private final class Room {
         private var phones: [String: TapSwap] = [:]

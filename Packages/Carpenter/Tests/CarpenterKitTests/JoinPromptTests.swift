@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Being introduced to a room", .serialized)
+@Suite("Being introduced to a room", .serialized, .tags(.membership))
 struct JoinPromptTests {
     private func joined() async throws -> (alice: AppSession, bob: AppSession, room: RoomID) {
         let mailbox = InMemoryMailbox()

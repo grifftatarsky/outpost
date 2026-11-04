@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterApp
 @testable import CarpenterKit
 
-@Suite("A message too big to send", .serialized)
+@Suite("A message too big to send", .serialized, .tags(.sync))
 @MainActor
 struct AMessageTooBigTests {
     private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {

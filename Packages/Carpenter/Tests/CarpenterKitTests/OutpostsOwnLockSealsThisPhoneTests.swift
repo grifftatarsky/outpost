@@ -4,7 +4,7 @@ import CryptoKit
 import Foundation
 import Testing
 
-@Suite("Outpost's own lock seals what this phone keeps")
+@Suite("Outpost's own lock seals what this phone keeps", .tags(.crypto))
 struct OutpostsOwnLockSealsThisPhoneTests {
     private let rounds = 1_000
 

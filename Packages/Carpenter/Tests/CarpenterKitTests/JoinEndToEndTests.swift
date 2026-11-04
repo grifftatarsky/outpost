@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("A fourth member joins")
+@Suite("A fourth member joins", .tags(.membership))
 struct JoinEndToEndTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

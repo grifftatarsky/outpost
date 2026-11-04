@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Log storage", .serialized)
+@Suite("Log storage", .serialized, .tags(.storage))
 struct LogStoreTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -176,7 +176,7 @@ struct LogStoreTests {
     }
 }
 
-@Suite("Document storage", .serialized)
+@Suite("Document storage", .serialized, .tags(.storage))
 struct DocumentStoreTests {
     private func scratch() -> URL {
         TestScratch.root
@@ -268,7 +268,7 @@ struct DocumentStoreTests {
     }
 }
 
-@Suite("A long log on disk", .serialized)
+@Suite("A long log on disk", .serialized, .tags(.storage))
 struct LongLogStoreTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 

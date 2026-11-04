@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Conversation layout")
+@Suite("Conversation layout", .tags(.ui))
 struct ConversationLayoutTests {
     private let hastur = Member(id: Identity.generate().id, displayName: "Hastur")
     private let yhtill = Member(id: Identity.generate().id, displayName: "Yhtill")

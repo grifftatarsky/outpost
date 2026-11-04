@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("The verification phrase")
+@Suite("The verification phrase", .tags(.crypto))
 struct VerificationPhraseTests {
 
     private func transcript(_ n: Int) -> Data { Data("transcript-\(n)".utf8) }

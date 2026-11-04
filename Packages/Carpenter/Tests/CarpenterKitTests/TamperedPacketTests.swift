@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A packet holds one reader, and one changed after it was written is sent again", .serialized)
+@Suite("A packet holds one reader, and one changed after it was written is sent again", .serialized, .tags(.crypto, .sync))
 struct TamperedPacketTests {
     private struct Three {
         let alice: AppSession
