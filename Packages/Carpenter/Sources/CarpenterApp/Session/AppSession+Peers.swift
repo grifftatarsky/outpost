@@ -198,7 +198,8 @@ extension AppSession {
         return { [self] epoch, secret in
             let made = changes ?? projection.keyChanges(in: room, opening: payloadOpener())
             changes = made
-            return Set(made.filter { $0.change.link.epoch == epoch && $0.change.isAuthentic(under: secret) }.map(\.author))
+            let records = made.filter { $0.change.link.epoch == epoch && $0.change.isAuthentic(under: secret) }
+            return Set(records.map(\.author))
         }
     }
 

@@ -80,11 +80,14 @@ extension Projection {
         let voiders = { (claim: Int) in (walked.voidedBy[claim] ?? []).intersection(cutting) }
         func takes(_ claim: Int, _ cutting: Set<Int>) -> Bool { walking(cutting).took.contains(claim) }
 
+        let victims = { (voider: Int) in voided.filter { voiders($0).contains(voider) } }
         let upheld = Set(voided.flatMap(voiders)).intersection(free).filter { voider in
-            walked.took.contains(voider) || takes(voider, cutting.subtracting(voided.filter { voiders($0).contains(voider) }))
+            walked.took.contains(voider) || takes(voider, cutting.subtracting(victims(voider)))
         }
         let answeredAfterTheirRemoval = voided.filter { victim in
-            voiders(victim).contains { upheld.contains($0) && Self.hadSeen(claims[$0].entry, before: claims[victim].entry) }
+            voiders(victim).contains { voider in
+                upheld.contains(voider) && Self.hadSeen(claims[voider].entry, before: claims[victim].entry)
+            }
         }
         if !answeredAfterTheirRemoval.isEmpty { return answeredAfterTheirRemoval }
 
