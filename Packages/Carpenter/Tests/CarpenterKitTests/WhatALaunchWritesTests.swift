@@ -8,7 +8,7 @@ import Testing
 @Suite("What a launch writes")
 @MainActor
 struct WhatALaunchWritesTests {
-    @Test("Growing the session's log one entry at a time costs what growing a plain one does")
+    @Test("Growing the session's log one entry at a time costs what growing a plain one does", .tags(.timing))
     func theSessionsLogGrowsInPlace() async throws {
         var alice = Author()
         var entries: [Entry] = []

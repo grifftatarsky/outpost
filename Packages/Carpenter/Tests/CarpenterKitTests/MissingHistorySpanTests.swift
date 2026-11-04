@@ -94,7 +94,7 @@ struct ClaimedHistoryTests {
             signature: try author.device.sign(unsigned.signingPayload))
     }
 
-    @Test("An entry signed at a sequence number no feed will reach does not stop the gaps being found")
+    @Test("An entry signed at a sequence number no feed will reach does not stop the gaps being found", .tags(.timing))
     func aFarEntryLeavesGapsCheap() throws {
         var replica = Replica()
         var alice = Author()
@@ -109,7 +109,7 @@ struct ClaimedHistoryTests {
         #expect(gaps == [FeedGap(feed: alice.feedKey, spans: [SequenceSpan(4, (1 << 50) - 1)])])
     }
 
-    @Test("A request for every sequence number is answered from what is held")
+    @Test("A request for every sequence number is answered from what is held", .tags(.timing))
     func askingForEverythingIsCheap() throws {
         var replica = Replica()
         var alice = Author()

@@ -8,16 +8,19 @@
 # files this branch changed; it is printed at the end and copied to the clipboard, so it can be
 # pasted straight back into the session that asked for the run.
 #
-# Usage: Scripts/check-all.sh [simulator-name]              run everything (default: outpost-alpha)
+# Usage: Scripts/check-all.sh [simulator-name]              run everything (default: bullet)
 #        Scripts/check-all.sh --only STEP[,STEP] [simulator] run only those steps, e.g. app-suite
 #        Scripts/check-all.sh --digest                      read the last run's logs again
+#
+# The scan steps (thread-sanitizer, address-sanitizer, vulnerabilities) run only when named;
+# Scripts/scan.sh names them. CHECK_LOGS moves the logs, so a scan keeps its own.
 
 set -uo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root" || exit 1
 
-logs="${TMPDIR:-/tmp}/carpenter-check"
+logs="${CHECK_LOGS:-${TMPDIR:-/tmp}/carpenter-check}"
 digest="$logs/digest.txt"
 base="$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || true)"
 changed="$([ -n "$base" ] && git diff --name-only "$base" HEAD -- '*.swift')"
@@ -39,7 +42,8 @@ test_fault = re.compile(
     r"^Failing test: |^Failing tests:|"
     r"Executed \d+ tests?, with [1-9]|Fatal error|Assertion failed|Precondition failed|"
     r"unexpected signal|crashed|\*\* (BUILD|TEST) FAILED \*\*|Testing failed:|"
-    r"The following build commands failed|Undefined symbols|^ld: |^error: (?!SwiftCompile)"
+    r"The following build commands failed|Undefined symbols|^ld: |^error: (?!SwiftCompile)|"
+    r"WARNING: ThreadSanitizer|ERROR: AddressSanitizer|^SUMMARY: \w+Sanitizer|runtime error: "
 )
 crash = re.compile(r"^Stack dump:|^\d+\.\s+While |PLEASE submit a bug report|failed due to signal|\S: error: ")
 generic = re.compile(r"^error: (Build failed|fatalError)\s*$")
@@ -138,10 +142,12 @@ write_digest() {
     mv "$digest.new" "$digest"
 }
 
+wants() { [ -z "$only" ] || [[ "$only" == *",$1,"* ]]; }
+
 run() {
     local name="$1"
     shift
-    [ -z "$only" ] || [[ "$only" == *",$name,"* ]] || return 0
+    wants "$name" || return 0
     printf '%-18s' "$name"
     local started=$SECONDS outcome=passed
     "$@" >"$logs/$name.log" 2>&1 || outcome=FAILED
@@ -152,7 +158,7 @@ run() {
 }
 
 skip() {
-    [ -z "$only" ] || [[ "$only" == *",$1,"* ]] || return 0
+    wants "$1" || return 0
     printf '%-18sskipped  (%s)\n' "$1" "$2"
     printf '%-8s %s (%s)\n' skipped "$1" "$2" >>"$logs/summary"
 }
@@ -188,6 +194,30 @@ release_leaves() {
     cat /tmp/release-check-build.log 2>/dev/null
     return $status
 }
+sanitized_suite() {
+    local scratch=".build/sanitize-$1" runtime="$2" flags=() sanitizer
+    shift 2
+    for sanitizer in "$@"; do flags+=("--sanitize=$sanitizer"); done
+    local timed
+    timed="$(python3 Scripts/tests-tagged.py timing)" || return
+    (cd Packages/Carpenter && swift test --scratch-path "$scratch" "${flags[@]}" --skip "$timed") || return
+    local binary="Packages/Carpenter/$scratch/debug/CarpenterKitTests.xctest/Contents/MacOS/CarpenterKitTests"
+    if ! otool -L "$binary" 2>&1 | grep -q "$runtime"; then
+        printf 'error: %s is not linked into %s, so a clean run proves nothing\n' "$runtime" "$binary"
+        return 1
+    fi
+    printf 'linked: %s\n' "$runtime"
+}
+simulator_udid() {
+    local devices
+    devices="$(xcrun simctl list devices available --json 2>/dev/null)"
+    local found
+    found="$(python3 .github/scripts/pick-simulator.py "$1" <<<"$devices")"
+    if [ -z "$found" ] && [ "$2" = default ]; then
+        found="$(python3 .github/scripts/pick-simulator.py <<<"$devices")"
+    fi
+    printf '%s' "$found"
+}
 
 only=""
 if [ "${1:-}" = "--only" ]; then
@@ -201,7 +231,8 @@ if [ "${1:-}" = "--digest" ]; then
         exit 1
     fi
 else
-    simulator="${1:-outpost-alpha}"
+    simulator="${1:-bullet}"
+    chosen="$([ -n "${1:-}" ] && echo named || echo default)"
     rm -rf "$logs"
     mkdir -p "$logs"
     {
@@ -214,7 +245,10 @@ else
     run lint ./Scripts/lint-branding.sh
     run copy-markers python3 Scripts/copy-review.py check
     run build-macos build_for "platform=macOS"
-    udid="$(xcrun simctl list devices available --json 2>/dev/null | python3 .github/scripts/pick-simulator.py "$simulator")"
+    udid=""
+    if wants app-suite || wants release-leaves || { [ -n "$only" ] && wants vulnerabilities; }; then
+        udid="$(simulator_udid "$simulator" "$chosen")"
+    fi
     if ! run build-ios build_for "generic/platform=iOS Simulator"; then
         skip app-suite "the iOS build failed"
         skip release-leaves "the iOS build failed"
@@ -224,6 +258,16 @@ else
     else
         run app-suite app_suite "$udid"
         run release-leaves release_leaves "$udid"
+    fi
+
+    if [ -n "$only" ]; then
+        run thread-sanitizer sanitized_suite thread libclang_rt.tsan thread
+        run address-sanitizer sanitized_suite address-undefined libclang_rt.asan address undefined
+        if [ -n "$udid" ]; then
+            run vulnerabilities ./Scripts/scan-for-vulnerabilities.sh "$udid"
+        else
+            skip vulnerabilities "no simulator named $simulator"
+        fi
     fi
 fi
 

@@ -1,0 +1,30 @@
+name: Scan
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sanitizers:
+    name: Package suite under ${{ matrix.step }}
+    runs-on: macos-26
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        step: [thread-sanitizer, address-sanitizer]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/xcode-26
+      - name: Run
+        env:
+          CHECK_LOGS: ${{ runner.temp }}/scan
+        run: ./Scripts/check-all.sh --only ${{ matrix.step }}

@@ -116,7 +116,7 @@ struct CausalOrderTests {
         #expect(CausalOrder.sorted(entries).map(\.hash) == Self.fullDependencyOrder(entries).map(\.hash))
     }
 
-    @Test("Sorting a thousand entries takes a fraction of a second")
+    @Test("Sorting a thousand entries takes a fraction of a second", .tags(.timing))
     func sortingIsNotQuadratic() throws {
         let entries = try forkedHistoryWithGaps(seed: 7, steps: 1_000)
         let took = (0..<3).map { _ in

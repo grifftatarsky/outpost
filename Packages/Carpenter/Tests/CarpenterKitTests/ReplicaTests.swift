@@ -319,7 +319,7 @@ struct ReplicaHoldsTests {
 struct ReplicaAlreadyHoldsTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
-    @Test("Offering held entries again changes nothing and verifies nothing")
+    @Test("Offering held entries again changes nothing and verifies nothing", .tags(.timing))
     func heldEntriesAreNotVerifiedAgain() throws {
         var replica = Replica()
         var alice = Author()

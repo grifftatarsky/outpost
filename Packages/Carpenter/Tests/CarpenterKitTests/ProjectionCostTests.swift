@@ -93,7 +93,7 @@ struct ProjectionCostTests {
         #expect(alice.rooms.contains { $0.id == fresh })
     }
 
-    @Test("Drawing the root screen does not re-decrypt the log every time")
+    @Test("Drawing the root screen does not re-decrypt the log every time", .tags(.timing))
     func rootScreenReadsAreCheap() async throws {
         let (alice, _) = try await populated(rooms: 6, messagesEach: 20)
 
@@ -118,7 +118,7 @@ struct ProjectionCostTests {
             """)
     }
 
-    @Test("Naming an author costs the same however long the log is")
+    @Test("Naming an author costs the same however long the log is", .tags(.timing))
     func namingDoesNotScanTheLog() {
         let viewer = ParticipantID(rawValue: WideID.of([1]))
         let author = ParticipantID(rawValue: WideID.of([2]))
@@ -150,7 +150,7 @@ struct ProjectionCostTests {
             """)
     }
 
-    @Test("Finding one entry by its hash does not walk the log")
+    @Test("Finding one entry by its hash does not walk the log", .tags(.timing))
     func findingAnEntryDoesNotScan() {
         let viewer = ParticipantID(rawValue: WideID.of([1]))
         let rendered: [RenderedEntry] = (0..<5_000).map { index in
@@ -178,7 +178,7 @@ struct ProjectionCostTests {
             """)
     }
 
-    @Test("Drawing the feed does not walk the log once per post")
+    @Test("Drawing the feed does not walk the log once per post", .tags(.timing))
     func theFeedIsLinear() {
         let viewer = ParticipantID(rawValue: WideID.of([1]))
         let author = ParticipantID(rawValue: WideID.of([2]))
@@ -245,7 +245,7 @@ struct ProjectionCostTests {
             """)
     }
 
-    @Test("Nothing a screen reads re-decrypts the log on every call")
+    @Test("Nothing a screen reads re-decrypts the log on every call", .tags(.timing))
     func screenReadsAreCheap() async throws {
         let (alice, rooms) = try await populated(rooms: 6, messagesEach: 20)
         let room = try #require(rooms.first)

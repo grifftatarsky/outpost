@@ -68,7 +68,7 @@ struct APacketOfStrangersTests {
         #expect(t.alice.replica.knownParticipants.count < 20)
     }
 
-    @Test("Working out who to address costs what this phone is in touch with, not who it has heard of")
+    @Test("Working out who to address costs what this phone is in touch with, not who it has heard of", .tags(.timing))
     func pairsDoNotWalkStrangers() async throws {
         let t = try await RoomOfThree.make()
         for _ in 0..<20_000 { t.carol.replica.introduce(Identity.generate().publicKeys) }

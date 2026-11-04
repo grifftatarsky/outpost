@@ -148,12 +148,15 @@ either. Two overloads, `EpochGrant.issue(_:at:link:to:)` and
 app or the suite.
 
 **Assumptions that went stale.** The rig is gone from this Mac: `outpost-alpha` and the other four
-simulators on [the simulator rig](simulator-rig.md) do not exist here, and the one simulator is
-`bullet`, on iOS 27.2. `check-all.sh` defaulted to `outpost-alpha`, so it skipped the app suite and the
-release check on any machine without the rig. `scan-for-vulnerabilities.sh` named `outpost-alpha` with
-`name=`, which on Xcode 27 finds nothing even when the device exists, and `check-release-leaves.sh`
-looked it up by name. The screen catalogue command above names `outpost-27`, and the build and test
-commands in `CLAUDE.md` name `outpost-alpha`'s UDID. CI selects the newest
+simulators on [the simulator rig](simulator-rig.md) do not exist here; the simulators are `bullet`,
+on iOS 27.2, and `iPhone 17`. `check-all.sh` defaulted to `outpost-alpha`, so it skipped the app
+suite and the release check on any machine without the rig. `scan-for-vulnerabilities.sh` named
+`outpost-alpha` with `name=`, which on Xcode 27 finds nothing even when the device exists, and
+`check-release-leaves.sh` looked it up by name. The screen catalogue command above named
+`outpost-27`. All of those were changed the same day: `check-all.sh` defaults to `bullet` and, when
+no simulator was named and `bullet` is not there, takes the newest iPhone simulator, which is also
+what the other two take when they are not given one. The build and test commands in `CLAUDE.md`
+still name `outpost-alpha`'s UDID. CI selects the newest
 Xcode 26 on `macos-26`, which on 2026-11-04 was 26.6 with iOS 26.5 at most
 ([runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md)),
 while every local build is Xcode 27.1 with Swift 6.4, so CI compiles with an older compiler than
@@ -199,6 +202,45 @@ three processes for each of 414 files. Afterwards it took 5.8 seconds and 2.0 se
 time, at a higher load.
 
 <!-- COPY END 546f80b2 -->
+
+<!-- COPY BEGIN a322ce24 [NEEDS HUMAN REVIEW] -->
+
+## The scan
+
+`Scripts/scan.sh` runs the package suite under Thread Sanitizer, then under Address Sanitizer and
+Undefined Behavior Sanitizer together, then `Scripts/scan-for-vulnerabilities.sh`: the dependency
+count, `xcodebuild analyze`, and the secret search over the tree and every commit on every branch. It
+is `check-all.sh` with those three steps named, so it ends in the same digest, kept apart in
+`$TMPDIR/carpenter-scan`. `--only thread-sanitizer` (or either of the others) runs one, and
+`--digest` reads the last run again. Each sanitizer builds into its own folder under `.build`, so
+switching between them and an ordinary `swift test` does not rebuild everything.
+
+A sanitizer step fails if `otool -L` does not show its runtime in the test binary, because a run
+without the runtime is clean and proves nothing. It skips the tests tagged `timing`, which hold a
+bound in wall-clock time; the instrumented code is several times slower, so they fail under a
+sanitizer for that reason alone. `Scripts/tests-tagged.py timing` prints which ones.
+
+Undefined Behavior Sanitizer is Clang's, made for C, and the package has no C. Swift already stops on
+an overflow or an out-of-range index. Whether `-sanitize=undefined` adds any check to Swift code was
+not established; it rides in the same build as Address Sanitizer.
+
+`xcodebuild analyze` runs Clang's static analyzer, which reads C, C++ and Objective-C. The repository
+has no file in any of them, so a clean analyze says nothing about this code.
+
+**Results on 2026-11-04.** Under Thread Sanitizer all 2,009 tests ran in 424 seconds of test time,
+with the runtime linked, and no race was reported. The only failures were three `timing` tests,
+which is why the step now skips them. Under Address Sanitizer and Undefined Behavior Sanitizer, the
+1,994 tests that are not `timing` ran in 200 seconds with the runtime linked, and nothing was
+reported. Keep in mind what is written under [practical traps](#practical-traps-on-the-rig): a clean
+Thread Sanitizer run once missed a race that was real.
+
+**In CI**, `.github/workflows/scan.yml` runs both sanitizer steps every Monday and on demand, not on
+every pull request. Locally the Thread Sanitizer build took 227 seconds and its run 424, against 101
+seconds for the plain suite, on eight cores; a standard hosted macOS runner has three
+([runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)). That is
+too slow to wait for on every push, and affordable once a week.
+
+<!-- COPY END a322ce24 -->
 
 <!-- COPY BEGIN 64f99f8f [NEEDS HUMAN REVIEW] -->
 
@@ -433,7 +475,7 @@ button that cancels; when it cannot find one, it closes the app and starts again
 It is off unless asked:
 
 ```bash
-TEST_RUNNER_CARPENTER_SCREEN_CATALOGUE=1 xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,name=outpost-27' -only-testing:CarpenterUITests/ScreenCatalogueTests -resultBundlePath /tmp/catalogue.xcresult
+TEST_RUNNER_CARPENTER_SCREEN_CATALOGUE=1 xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=<udid>' -only-testing:CarpenterUITests/ScreenCatalogueTests -resultBundlePath /tmp/catalogue.xcresult
 ```
 
 ```bash
