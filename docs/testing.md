@@ -225,7 +225,10 @@ an overflow or an out-of-range index. Whether `-sanitize=undefined` adds any che
 not established; it rides in the same build as Address Sanitizer.
 
 `xcodebuild analyze` runs Clang's static analyzer, which reads C, C++ and Objective-C. The repository
-has no file in any of them, so a clean analyze says nothing about this code.
+has no file in any of them, so a clean analyze says nothing about this code. Run for `bullet` on
+2026-11-04, it succeeded, ran no analyzer step at all and reported nothing. The one warning in its
+log was the Swift compiler's: an isolated conformance in `CarpenterUI/Previews/Fixtures.swift:61`,
+which is preview code compiled only in a debug build. It was left alone.
 
 **Results on 2026-11-04.** Under Thread Sanitizer all 2,009 tests ran in 424 seconds of test time,
 with the runtime linked, and no race was reported. The only failures were three `timing` tests,
