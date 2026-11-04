@@ -520,13 +520,15 @@ public final class AppSession {
             let blocked = projected.entries(by: shutOut, in: room)
             return projected.summary(
                 of: room,
+                named: roster.name,
                 memberCount: roster.members.count,
                 others: roster.members.union(roster.requests.keys)
                     .filter { $0 != me }
                     .sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
                 unreadFor: me,
                 readThrough: persisted.readThrough[room],
-                undrawn: hidden.union(outOfRoom(in: room, of: projected)).union(blocked))
+                undrawn: hidden.union(blocked),
+                outOfRoom: outOfRoom(in: room, of: projected))
         }
         update(\.rooms, to: summaries)
         update(\.roomsThisMemberIsIn, to: joined)

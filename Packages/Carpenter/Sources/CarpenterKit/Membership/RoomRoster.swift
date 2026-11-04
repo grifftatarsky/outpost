@@ -5,6 +5,8 @@ public struct RoomRoster: Hashable, Sendable {
 
     public private(set) var founder: ParticipantID?
 
+    public private(set) var name: String?
+
     public private(set) var requests: [ParticipantID: MembershipAttestation] = [:]
 
     private var admissionsByInvitation: [Data: Set<ParticipantID>] = [:]
@@ -279,11 +281,14 @@ public struct RoomRoster: Hashable, Sendable {
     public mutating func apply(_ entry: RenderedEntry, body: Payload) {
         switch body.type {
         case .roomProfile:
-            guard founder == nil, let profile = try? body.decode(RoomProfileBody.self),
-                profile.founds(room, by: entry.author)
-            else { return }
-            founder = entry.author
-            establish(entry.author)
+            guard let profile = try? body.decode(RoomProfileBody.self) else { return }
+            if founder == nil, profile.founds(room, by: entry.author) {
+                founder = entry.author
+                establish(entry.author)
+            }
+            guard established.contains(entry.author) else { return }
+            name = profile.name
+            counted.insert(entry.id)
 
         case .roomAccess:
             guard let body = try? body.decode(RoomAccessBody.self) else { return }

@@ -561,7 +561,7 @@ extension AppSession {
         let roster = roster(of: room)
         guard roster.members.contains(enrolment.identity.id) else { return nil }
         guard roster.founder != enrolment.identity.id else { return nil }
-        guard let stored = projection.name(of: room) else { return nil }
+        guard let stored = roster.name else { return nil }
 
         let named = projection.naming()
         let invitedBy = roster.requests[enrolment.identity.id].map { named($0.inviter) }

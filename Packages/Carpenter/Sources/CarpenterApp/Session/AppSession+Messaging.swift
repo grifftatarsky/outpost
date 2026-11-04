@@ -454,8 +454,9 @@ extension AppSession {
 
     public func latestIncomingMessage() -> IncomingMessage? {
         var newest: IncomingMessage?
+        let projected = projection
         for room in rooms {
-            for message in projection.messages(in: room.id)
+            for message in projected.messages(in: room.id, outOfRoom: outOfRoom(in: room.id, of: projected))
             where !message.isMine && isDrawn(message) {
                 guard newest == nil || message.sentAt > newest!.sentAt else { continue }
                 newest = IncomingMessage(

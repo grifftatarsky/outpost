@@ -78,7 +78,8 @@ struct ARoomIsFoundedByThePersonItsIDNamesTests {
         let projected = Projection(viewer: alice.id, rendered: LogRenderer.render(entries, using: chain))
 
         #expect(projected.kind(of: room) == .solo, "a profile written ahead of the founder's chose the room's kind")
-        let first = projected.transcript(in: room, opening: { _ in nil }).compactMap { item -> RoomNotice.Kind? in
+        let opening = { (rendered: RenderedEntry) in entries.first { $0.hash == rendered.id }?.opened(using: chain) }
+        let first = projected.transcript(in: room, opening: opening).compactMap { item -> RoomNotice.Kind? in
             if case .notice(let notice) = item { return notice.kind }
             return nil
         }.first

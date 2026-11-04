@@ -155,27 +155,27 @@ extension Projection {
         standing(in: room, opening: opening).out
     }
 
-    public func summaries() -> [RoomSummary] {
-        roomIDs().compactMap { summary(of: $0) }
-    }
-
     public func summary(
         of room: RoomID,
+        named stored: String?,
         memberCount: Int? = nil,
         others: [ParticipantID] = [],
         unreadFor viewer: ParticipantID? = nil,
         readThrough: EntryHash? = nil,
-        undrawn: Set<EntryHash> = []
+        undrawn: Set<EntryHash> = [],
+        outOfRoom out: Set<EntryHash> = []
     ) -> RoomSummary? {
-        guard let positions = roomPositions[room], let newest = positions.last, namedRooms.contains(room),
-            let profile = lastProfiles[room], case .text(let stored) = profile.content
-        else { return nil }
+        guard let stored, foundings[room] != nil, let positions = roomPositions[room] else { return nil }
         let kind = kind(of: room)
 
         let partner = kind == .solo ? others.first(where: { $0 != self.viewer }).map(member) : nil
         let name = partner?.displayName ?? stored
 
-        let last = positions.last { rendered[$0].isConversation }.map { rendered[$0] }
+        let drawn = { (position: Int) in
+            !undrawn.contains(self.rendered[position].id) && self.draws(self.rendered[position], notIn: out)
+        }
+        let last = positions.last { rendered[$0].isConversation && drawn($0) }.map { rendered[$0] }
+        let newest = positions.last(where: drawn) ?? positions[0]
 
         return RoomSummary(
             id: room,
@@ -184,23 +184,23 @@ extension Projection {
             lastAuthor: last.map { member($0.author) },
             lastMessage: last.map { preview($0) } ?? "",
             lastActivity: last?.wallTime ?? rendered[newest].wallTime,
-            hasUnread: hasUnread(
-                in: room, at: positions, for: viewer, readThrough: readThrough, undrawn: undrawn),
+            hasUnread: hasUnread(in: room, at: positions, for: viewer, readThrough: readThrough, drawn: drawn),
             isDirect: kind == .solo,
             initials: partner?.initials,
             partner: partner?.id,
-            recentSpeakers: kind == .solo ? [] : recentSpeakers(at: positions)
+            recentSpeakers: kind == .solo ? [] : recentSpeakers(at: positions, drawn: drawn)
         )
     }
 
     static let speakersShown = 3
     static let speakersSearched = 200
 
-    private func recentSpeakers(at positions: [Int]) -> [Member] {
+    private func recentSpeakers(at positions: [Int], drawn: (Int) -> Bool) -> [Member] {
         var found: [ParticipantID] = []
         for position in positions.reversed().prefix(Self.speakersSearched) {
             let entry = rendered[position]
-            guard entry.isConversation, entry.author != viewer, !found.contains(entry.author) else { continue }
+            guard entry.isConversation, entry.author != viewer, !found.contains(entry.author), drawn(position)
+            else { continue }
             found.append(entry.author)
             if found.count == Self.speakersShown { break }
         }
@@ -209,7 +209,7 @@ extension Projection {
 
     private func hasUnread(
         in room: RoomID, at positions: [Int], for viewer: ParticipantID?, readThrough: EntryHash?,
-        undrawn: Set<EntryHash>
+        drawn: (Int) -> Bool
     ) -> Bool {
         guard let viewer else { return false }
         let mark = readThrough.flatMap { positionByID[$0] }
@@ -217,7 +217,7 @@ extension Projection {
         for position in positions.reversed() {
             if let mark, position <= mark { return false }
             let entry = rendered[position]
-            guard entry.isConversation, entry.author != viewer, !undrawn.contains(entry.id) else { continue }
+            guard entry.isConversation, entry.author != viewer, drawn(position) else { continue }
             if case .withdrawn = entry.content { continue }
             return true
         }

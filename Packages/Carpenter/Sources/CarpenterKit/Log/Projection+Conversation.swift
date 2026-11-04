@@ -3,7 +3,7 @@ import Foundation
 extension Projection {
     // MARK: Conversation
 
-    private func draws(_ entry: RenderedEntry, notIn out: Set<EntryHash>) -> Bool {
+    func draws(_ entry: RenderedEntry, notIn out: Set<EntryHash>) -> Bool {
         !out.contains(entry.id) || entry.author == viewer
     }
 
@@ -32,7 +32,9 @@ extension Projection {
             let kind: RoomNotice.Kind?
             switch entry.type {
             case .roomProfile:
-                guard case .text(let name) = entry.content, named || entry.founds != nil else { continue }
+                guard roster.counted.contains(entry.id), case .text(let name) = entry.content,
+                    named || entry.founds != nil
+                else { continue }
                 kind = named
                     ? .renamed(by: member(entry.author), to: name)
                     : entry.founds == .solo

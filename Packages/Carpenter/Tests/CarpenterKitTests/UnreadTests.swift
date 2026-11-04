@@ -190,7 +190,7 @@ struct UnreadTests {
 
         #expect(
             projected.summary(
-                of: room, unreadFor: Identity.generate().id,
+                of: room, named: "Kitchen", unreadFor: Identity.generate().id,
                 readThrough: EntryHash(rawValue: Data([0xDE, 0xAD])))?.hasUnread == true,
             "an unfindable mark hid a message that had never been read")
     }
@@ -199,6 +199,6 @@ struct UnreadTests {
     func noViewerMeansNoUnread() throws {
         let (projected, room) = try kitchen()
 
-        #expect(projected.summary(of: room, unreadFor: nil)?.hasUnread == false)
+        #expect(projected.summary(of: room, named: "Kitchen", unreadFor: nil)?.hasUnread == false)
     }
 }

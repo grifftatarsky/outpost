@@ -3674,6 +3674,11 @@ other and neither removal had seen the other, the removal a phone could read fir
 stands](#a-removed-person-hears-last-and-the-first-removal-stands)).
 **The forms older builds wrote are refused**, on Griff's "Security is most important": an entry in a
 room without its link, and a removal or departure that names no heads.
+**The rooms list follows the chain too**, built 2026-10-31 and passing in the package suite: a row's
+preview, latest activity and recent speakers come only from what the conversation draws, and so does
+the newest message a notification shows. The room's name comes only from a profile written by somebody
+who was in the room at that point, so a removed person cannot rename it
+(`TheRoomsListBelievesOnlyThePeopleInTheRoomTests`).
 
 <!-- COPY END d920b620 -->
 
