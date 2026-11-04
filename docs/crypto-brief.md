@@ -258,6 +258,12 @@ only when present. A contact removes, at the removal's stored time, every device
 approved, directly or through others, that the list leaves out and that still counts
 (`ADeviceTheRemovedOneApprovedTests`).
 
+**Outposts a removed device read** (since 2026-10-31). Only an Outpost's owner can change its key, so
+removing a device rotates the key of every room the member is in and of their own Outpost, and leaves
+other people's alone. Each owner rotates their Outpost's key the round they see one of its readers lose
+a device, whether removed, left off a removal's list or left behind by a restore, and seals the new key
+only to the reader's devices that remain (`ARemovedDeviceAndTheOutpostsItReadTests`).
+
 What it does not stop: anything a device does before its removal reaches iCloud; and a device still
 signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
 removal (erasing it with Find My signs it out). A removed device can no longer add a device of its

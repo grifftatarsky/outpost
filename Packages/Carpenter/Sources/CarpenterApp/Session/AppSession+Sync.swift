@@ -158,7 +158,13 @@ extension AppSession {
         var working = replica
         let (received, settled) = SyncSession.integrate(
             collected, into: &working, checked: checked, sparing: enrolment?.identity.id)
+        let wallKeyOwed = readerLostADevice(from: replica, to: working)
         if working.revision != replica.revision { replica = working }
+        if wallKeyOwed, let me = enrolment?.identity.id {
+            await persistOrReport("that your Outpost's key has to be rotated") {
+                try await oweKeyRotation(in: outpostRoom(for: me))
+            }
+        }
         entriesNotWrittenDown += received.integrated
         report = report.adding(received)
         integrity.rejectedFromPeers += received.entriesTooLarge

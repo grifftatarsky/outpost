@@ -583,7 +583,8 @@ extension AppSession {
             """)
 
         var notRotated: [RoomID] = []
-        for room in persisted.knownRooms where chains[room] != nil {
+        let me = enrolment.identity.id
+        for room in persisted.knownRooms where chains[room] != nil && outpostOwner(of: room).map({ $0 == me }) ?? true {
             do {
                 try await advanceEpoch(of: room)
             } catch {

@@ -3758,6 +3758,25 @@ iCloud.
 
 <!-- COPY END c98cba7f -->
 
+<!-- COPY BEGIN 7f1a1fab [NEEDS HUMAN REVIEW] -->
+
+### An Outpost's owner rotates its key when a reader loses a device
+
+**PROPOSED 2026-10-31.** Removing a device rotated the key of every room the member knew, which
+included other people's Outposts they read. Only the owner can change an Outpost's key, so that wrote a
+key change nobody trusts into a friend's Outpost, and the friend kept posting under the key the removed
+device held. Now a removal leaves other people's Outposts alone, and an owner rotates their own
+Outpost's key in the round they see any reader lose a device, so the new key is sealed only to the
+devices the reader still has.
+
+**Cost:** one key rotation on the owner's Outpost for each round in which a reader lost a device, and its
+grants to every reader.
+
+**Built** 2026-10-31; `ARemovedDeviceAndTheOutpostsItReadTests` passes in the package suite. Not run
+over iCloud.
+
+<!-- COPY END 7f1a1fab -->
+
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 
 ### Tapping two phones swaps codes

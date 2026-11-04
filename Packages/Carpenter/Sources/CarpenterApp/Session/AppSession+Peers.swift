@@ -331,7 +331,16 @@ extension AppSession {
         return held > shown.count + EpochChain.mostNumbersTheLogHasNotShown
     }
 
-    private func outpostOwner(of room: RoomID) -> ParticipantID? {
+    func readerLostADevice(from before: Replica, to after: Replica) -> Bool {
+        guard let me = enrolment?.identity.id, chains[outpostRoom(for: me)] != nil else { return false }
+        return outpostReaders().contains { reader in
+            let was = before.registry(for: reader)?.activeDevices ?? []
+            let now = after.registry(for: reader)?.activeDevices ?? []
+            return !was.isSubset(of: now)
+        }
+    }
+
+    func outpostOwner(of room: RoomID) -> ParticipantID? {
         guard let me = enrolment?.identity.id else { return nil }
         if room == outpostRoom(for: me) { return me }
         return replica.knownParticipants.first { outpostRoom(for: $0) == room }
