@@ -514,7 +514,7 @@ public struct SyncSession: Sendable {
             introduce(meeting, writingIn: delivery, into: &replica, newcomers: &report.newcomersMet)
 
             var rejected = 0
-            for certificate in delivery.certificates.prefix(mostCredentialsInAPacket)
+            for certificate in Array(delivery.certificates.prefix(mostCredentialsInAPacket)).approversFirst
             where replica.registry(for: certificate.participant) != nil {
                 do { try replica.admit(certificate, storedAt: packet.storedAt) } catch {
                     rejected += 1

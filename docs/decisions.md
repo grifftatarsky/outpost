@@ -625,8 +625,9 @@ receiving replica introduces only the authors of entries in that packet, at most
 for anybody else in the packet is skipped and holds nothing up. Until 2026-10-31 a packet carried
 everybody the sender knew and a replica kept all of it, so one contact's packet of made-up identities
 went into every message its receiver sent, past the size of a record, and on to their contacts. A
-person's devices are capped at `DeviceRegistry.mostDevices`, so a person's own certificates cannot do
-the same.
+person's certificates and removals are kept within allowances per signer in `DeviceRegistry`, so a
+person's own certificates cannot do the same: see
+[the allowances](#each-device-that-signs-has-its-own-allowance-in-a-registry).
 
 **Why it had to.** A replica refuses a certificate for a participant it has never been introduced
 to, so vouching for Alice's devices to a member who has never met Alice achieved nothing: the
@@ -648,6 +649,37 @@ they arrive, and a person named by an invitation is read from the invitation. Wh
 introduce is narrower since 2026-11-04: see the next entry.
 
 <!-- COPY END 61d93524 -->
+
+<!-- COPY BEGIN cc18c5ad [NEEDS HUMAN REVIEW] -->
+
+### Each device that signs has its own allowance in a registry
+
+**PROPOSED 2026-11-04.** A registry kept the first 256 certificates and the first 256 removals it was
+given and dropped the rest. Anybody holding the identity key, which a removed device and a thief both
+do, could mint that many from a device that still counted, and then every contact silently dropped
+the member's removal of the stolen phone, her next approved phone and her restore with the recovery
+key. So the places now belong to whoever signed. A certificate signed by the recovery key, which only
+the member holds, has a place among `mostDevices` recovery certificates. A certificate whose approver
+counted when it was stored, with a valid approval from that approver, takes one of the approver's
+`mostApprovalsByOneDevice` (16) places, and one of `mostDevices` in the newest restore's lineage. A
+removal whose remover counted when it was stored, signed by the remover, takes one of the remover's
+`mostRemovalsByOneDevice` (16) places. Anything else (an approver nobody has seen yet, an approval that
+does not verify, a certificate signed by the identity alone) shares `mostDevices` places that count
+for nothing. A batch of certificates is admitted approvers first (`approversFirst`), so the order a
+packet or a saved file holds them in does not move a certificate into the shared places.
+
+So nothing the thief signs takes a place of the member's phone, and the member's removal and her
+restore are never refused for want of room. A restore also starts a lineage with its own 256 places.
+
+**Cost:** a device that approves more than 16 devices, or removes more than 16, has the rest refused.
+What a thief can still do by approving through devices of its own is
+[an open question](open-questions.md#a-thief-can-still-fill-the-places-a-members-new-devices-need).
+Measured in tests, not on the rig.
+
+**What would change it:** a removal that names the devices that stay letting go of every device it
+leaves out that has written nothing this phone holds.
+
+<!-- COPY END cc18c5ad -->
 
 <!-- COPY BEGIN 8e6b24ba [NEEDS HUMAN REVIEW] -->
 

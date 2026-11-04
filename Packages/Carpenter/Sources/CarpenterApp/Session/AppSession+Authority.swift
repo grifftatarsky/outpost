@@ -77,7 +77,7 @@ extension AppSession {
     ) async -> Bool {
         guard enrolment != nil else { return false }
         keepUnpublishedAfter(storedAt)
-        for certificate in certificates {
+        for certificate in certificates.approversFirst {
             do {
                 try replica.admit(certificate, storedAt: storedAt)
             } catch {

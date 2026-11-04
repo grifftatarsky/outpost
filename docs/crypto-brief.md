@@ -258,6 +258,14 @@ only when present. A contact removes, at the removal's stored time, every device
 approved, directly or through others, that the list leaves out and that still counts
 (`ADeviceTheRemovedOneApprovedTests`).
 
+**How much a registry keeps** (since 2026-11-04). Whoever holds the identity can mint certificates and
+removals, so a registry keeps them by who signed them: up to 16 approvals and 16 removals for each
+device that counted when the event was stored, 256 devices in the newest restore's lineage, and 256
+recovery certificates, which only the recovery key signs. Whatever has no signer that counted shares
+256 places of its own. A stolen phone therefore cannot use up a place of the member's own phone, and
+her removal and her restore are always kept (`AFullRegistryStillTakesARemovalTests`). What it can still
+do through devices it approves is in [Open questions](open-questions.md).
+
 **Outposts a removed device read** (since 2026-10-31). Only an Outpost's owner can change its key, so
 removing a device rotates the key of every room the member is in and of their own Outpost, and leaves
 other people's alone. Each owner rotates their Outpost's key the round they see one of its readers lose

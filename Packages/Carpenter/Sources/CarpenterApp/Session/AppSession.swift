@@ -428,7 +428,7 @@ public final class AppSession {
         roomHeads = [:]
 
         for keys in persisted.knownKeys { replica.introduce(keys) }
-        for certificate in persisted.certificates {
+        for certificate in persisted.certificates.approversFirst {
             guard let at = storedTime(for: certificate.digest, claimed: certificate.issuedAt) else {
                 Diagnostics.identity.error("authority: a saved certificate had no stored time and was left out")
                 continue

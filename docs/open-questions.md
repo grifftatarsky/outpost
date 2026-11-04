@@ -17,6 +17,26 @@ worth keeping to the [Inbox](inbox.md).
 {:toc}
 <!-- COPY END f917ea56 -->
 
+<!-- COPY BEGIN 754e3ba8 [NEEDS HUMAN REVIEW] -->
+
+## A thief can still fill the places a member's new devices need
+
+Since 2026-11-04 every device that signs has its own allowance in a registry, so a stolen phone
+cannot take a place of the member's own phone, and her removal of it and her restore are never
+refused for want of room. But a stolen phone that still counts can approve 16 devices and have each
+of them approve 16. That uses the 256 places the lineage has, and every contact then refuses a device
+the member approves next, until she restores with the recovery key. Removing the stolen phone does
+not give the places back, because if a removal did, a thief could approve and remove in turn and grow
+the registry without end. Measured in a test on 2026-11-04 (two levels of 16 approvals, then the
+member's phone approving a new one: refused); not run on the rig.
+
+**Recommendation: let a removal that names the devices that stay drop every device it leaves out that
+has written nothing this phone holds.** Dropping, not just stopping, keeps the registry bounded
+however often a thief approves and removes, and a device that wrote nothing has no history to check.
+It needs the replica to tell the registry which devices wrote what it holds.
+
+<!-- COPY END 754e3ba8 -->
+
 <!-- COPY BEGIN 2648f0dc [NEEDS HUMAN REVIEW] -->
 
 ## Nobody signs the link back to a room's older key

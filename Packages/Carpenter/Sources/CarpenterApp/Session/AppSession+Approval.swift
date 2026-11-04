@@ -71,7 +71,7 @@ extension AppSession {
         let arrived = record.modified ?? clock.now
         var check = Replica()
         check.introduce(identity.publicKeys)
-        for certificate in approval.certificates {
+        for certificate in approval.certificates.approversFirst {
             try? check.admit(certificate, storedAt: approval.stored[certificate.digest] ?? arrived)
         }
         for revocation in approval.revocations {

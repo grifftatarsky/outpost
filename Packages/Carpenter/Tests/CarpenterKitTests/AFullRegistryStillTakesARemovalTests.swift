@@ -123,4 +123,61 @@ struct AFullRegistryStillTakesARemovalTests {
             try replica.integrate(afterwards)
         }
     }
+
+    private func claimingThePhone(from house: Household) throws -> DeviceCertificate {
+        let made = DeviceKeys.generate()
+        var certificate = DeviceCertificate(
+            participant: house.identity.id, device: made.id, devicePublicKey: made.publicKey, issuedAt: t0 + 20,
+            signature: Data(), approvedBy: house.phone.id, approval: Data())
+        certificate.signature = try house.identity.sign(certificate.signingPayload)
+        certificate.approval = try house.thief.sign(certificate.signingPayload)
+        return certificate
+    }
+
+    @Test("Certificates that falsely name the member's phone, or an approver nobody has seen, leave the phone's approvals alone")
+    func madeUpApprovalsTakeNoPlaceOfThePhones() throws {
+        var house = try household()
+        for _ in 0..<DeviceRegistry.mostDevices {
+            try house.registry.admit(claimingThePhone(from: house), storedAt: t0 + 20)
+            try house.registry.admit(
+                DeviceCertificate.issue(
+                    for: DeviceKeys.generate(), by: house.identity, at: t0 + 20, approvedBy: DeviceKeys.generate()),
+                storedAt: t0 + 20)
+        }
+        let newPhones = (0..<(DeviceRegistry.mostApprovalsByOneDevice - 1)).map { _ in DeviceKeys.generate() }
+        for newPhone in newPhones {
+            try house.registry.admit(
+                DeviceCertificate.issue(for: newPhone, by: house.identity, at: t0 + 500, approvedBy: house.phone),
+                storedAt: t0 + 500)
+        }
+
+        let counting = newPhones.filter { house.registry.counts($0.id, storedAt: t0 + 600) }.count
+        #expect(counting == newPhones.count, "only \(counting) of the phones the member approved count")
+    }
+
+    @Test("Every list the registry keeps stays bounded however much one identity holder sends")
+    func everythingKeptIsBounded() throws {
+        var house = try household()
+        try flood(&house)
+        for _ in 0..<DeviceRegistry.mostDevices {
+            try house.registry.admit(claimingThePhone(from: house), storedAt: t0 + 20)
+        }
+
+        let kept = house.registry.deviceIDs.count
+        #expect(kept <= 2 + DeviceRegistry.mostApprovalsByOneDevice, "the registry counts \(kept) devices")
+        #expect(house.registry.knownRevocations.count <= DeviceRegistry.mostRemovalsByOneDevice)
+    }
+
+    @Test("A batch that lists a device before the device that approved it is admitted approvers first")
+    func aBatchIsAdmittedApproversFirst() throws {
+        let identity = Identity.generate()
+        let root = DeviceKeys.generate()
+        let middle = DeviceKeys.generate()
+        let last = DeviceKeys.generate()
+        let first = try DeviceCertificate.recovered(for: root, by: identity, at: t0)
+        let second = try DeviceCertificate.issue(for: middle, by: identity, at: t0 + 1, approvedBy: root)
+        let third = try DeviceCertificate.issue(for: last, by: identity, at: t0 + 2, approvedBy: middle)
+
+        #expect([third, second, first].approversFirst.map(\.device) == [root.id, middle.id, last.id])
+    }
 }
