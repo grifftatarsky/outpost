@@ -15,10 +15,21 @@ extension Projection {
     private struct Claim {
         let entry: RenderedEntry
         let subject: ParticipantID
-        let line: Set<EntryHash>
+        var line: Set<EntryHash>
 
         func cuts(_ other: RenderedEntry) -> Bool {
             other.author == subject && other.id != entry.id && !line.contains(other.id)
+        }
+    }
+
+    private static let namesWhatItSaw: Set<PayloadType> = [.readReceipt, .epochChange, .soloCheck]
+
+    private static func entriesNamed(by payload: Payload) -> [EntryHash] {
+        switch payload.type {
+        case .readReceipt: (try? payload.decode(ReadReceiptBody.self)).map { [$0.target] } ?? []
+        case .epochChange: (try? payload.decode(EpochChangeBody.self))?.heads ?? []
+        case .soloCheck: (try? payload.decode(SoloCheckBody.self))?.answering.map { [$0] } ?? []
+        default: []
         }
     }
 
@@ -39,7 +50,8 @@ extension Projection {
         for entry in entries(in: room) where Self.readForStanding.contains(entry.type) {
             payloads[entry.id] = opening(entry)
         }
-        let claims: [Claim] = entries(in: room).compactMap { claim($0, payloads[$0.id]) }
+        let named: [Claim] = entries(in: room).compactMap { claim($0, payloads[$0.id], in: room, opening: opening) }
+        let claims: [Claim] = named.map { keepingAnsweredInvitations(of: $0, in: room, payloads: payloads, besides: named) }
         let notes: [Note] = entries(in: room).compactMap { note($0, payloads[$0.id]) }
         let authors = Dictionary(
             claims.map { ($0.entry.id, $0.entry.author) }, uniquingKeysWith: { first, _ in first })
@@ -100,17 +112,73 @@ extension Projection {
         return Note(entry: entry, removal: body.removal, storedAt: body.storedAt)
     }
 
-    private func claim(_ entry: RenderedEntry, _ payload: Payload?) -> Claim? {
+    private func claim(
+        _ entry: RenderedEntry, _ payload: Payload?, in room: RoomID, opening: (RenderedEntry) -> Payload?
+    ) -> Claim? {
         switch payload?.type {
         case .removal?:
             guard let body = try? payload?.decode(RemovalBody.self) else { return nil }
-            return Claim(entry: entry, subject: body.removed, line: chains.line(through: body.heads))
+            let seen = entries(of: body.removed, namedBeforehandBy: entry, in: room, opening: opening)
+            return Claim(entry: entry, subject: body.removed, line: chains.line(through: body.heads + seen))
         case .departure?:
             guard let body = try? payload?.decode(DepartureBody.self) else { return nil }
-            return Claim(entry: entry, subject: entry.author, line: chains.line(through: body.heads))
+            return Claim(entry: entry, subject: entry.author, line: chains.line(through: body.heads + [entry.id]))
         default:
             return nil
         }
+    }
+
+    private func entries(
+        of subject: ParticipantID, namedBeforehandBy claim: RenderedEntry, in room: RoomID,
+        opening: (RenderedEntry) -> Payload?
+    ) -> [EntryHash] {
+        var seen: [EntryHash] = []
+        for entry in entries(in: room)
+        where entry.feedKey == claim.feedKey && entry.seq < claim.seq && Self.namesWhatItSaw.contains(entry.type) {
+            guard let payload = opening(entry) else { continue }
+            seen += Self.entriesNamed(by: payload).filter { hash in
+                positionByID[hash].map { rendered[$0].author == subject } ?? false
+            }
+        }
+        return seen
+    }
+
+    private func keepingAnsweredInvitations(
+        of claim: Claim, in room: RoomID, payloads: [EntryHash: Payload], besides claims: [Claim]
+    ) -> Claim {
+        var offered: [Data: (entry: EntryHash, joiner: ParticipantID)] = [:]
+        var relayed: [Data: [EntryHash]] = [:]
+        var answers: [(invitation: Data, by: RenderedEntry)] = []
+        for entry in entries(in: room) {
+            guard let payload = payloads[entry.id] else { continue }
+            switch payload.type {
+            case .joinRequest where entry.author == claim.subject:
+                guard let attestation = (try? payload.decode(JoinRequestBody.self))?.attestation else { continue }
+                offered[attestation.signature] = (entry.id, attestation.joiner)
+            case .joinConfirmed:
+                guard let body = try? payload.decode(JoinConfirmedBody.self) else { continue }
+                if entry.author == claim.subject {
+                    relayed[body.invitation, default: []].append(entry.id)
+                } else {
+                    answers.append((body.invitation, entry))
+                }
+            case .admission where entry.author != claim.subject:
+                guard let invitation = (try? payload.decode(AdmissionBody.self))?.invitation else { continue }
+                answers.append((invitation, entry))
+            default:
+                continue
+            }
+        }
+        var kept = claim
+        for answer in answers {
+            guard let offer = offered[answer.invitation], answer.by.author != offer.joiner,
+                answer.by.clock[claim.entry.feedKey] < claim.entry.seq,
+                !claims.contains(where: { $0.cuts(answer.by) })
+            else { continue }
+            kept.line.insert(offer.entry)
+            kept.line.formUnion(relayed[answer.invitation] ?? [])
+        }
+        return kept
     }
 
     private func walk(_ room: RoomID, claims: [Claim], cutting: Set<Int>, payloads: [EntryHash: Payload]) -> Walk {

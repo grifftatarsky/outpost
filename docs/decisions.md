@@ -3642,8 +3642,10 @@ numbered in one sequence across all their rooms, so the numbers they used in roo
 gaps you never hold, and a removed person or device could sign a new entry under one of them and have
 it count as written before the removal. Two ways were weighed. A removal listing a fingerprint of each
 entry the remover held would give the remover a new power: a modified app could leave any of the
-removed person's earlier messages off the list and hide it, where today a remover can only cut off the
-newest ones; and an honest remover who never received some old history would hide it by accident. The
+removed person's earlier messages off the list and hide it, where with the chain a remover can only cut
+off the newest ones (corrected 2026-10-31: a removal naming nothing cut everything the person ever wrote,
+see [What a removal cannot cut](#what-a-removal-cannot-cut)); and an honest remover who never received
+some old history would hide it by accident. The
 room chain adds no power: each entry names its author's previous entry in the same room, the removal
 names the last one it saw, and only that chain counts. It changes the log's format, the careful way
 older entries require: the new field is signed only when present, so every existing entry keeps its
@@ -3681,6 +3683,29 @@ who was in the room at that point, so a removed person cannot rename it
 (`TheRoomsListBelievesOnlyThePeopleInTheRoomTests`).
 
 <!-- COPY END d920b620 -->
+
+<!-- COPY BEGIN 7ba6e22b [NEEDS HUMAN REVIEW] -->
+
+### What a removal cannot cut
+
+**PROPOSED by Claude, 2026-10-31** — a default, not a constraint. He has not ruled on this.
+
+The ruling above sets the line at what the remover's device had received, and the removal says what
+that was. A modified app could say nothing (`heads: []`), and every phone then dropped everything the
+person had ever written in the room, and everybody they had let in. The line now also reaches back
+from every entry of theirs that the remover's own device named by hash in that room before the removal:
+the target of a read receipt, the heads a key change lists, the check a Solo answer replies to. Those
+are signed statements of what that device had received, so they add nothing it had not, and nothing
+written after them. A departure also keeps the chain of the device that wrote it, so leaving cannot take
+back what that phone wrote before. And an invitation the removed person made stays, with the
+confirmations they passed on for it, when another member had answered it (a vote or a passed-on
+confirmation naming it) before seeing the removal, unless that answer is itself something a removal
+cut. Positions in the log are not used, because a removed person can sign a new entry under a number
+they used in a room the remover is not in. Built 2026-10-31, and the package suite passes
+(`ARemovalCannotTakeBackWhatTheRemoverSawTests`); not run over iCloud. What is still open is in
+[Open questions](open-questions.md#a-remover-who-never-said-what-they-had-seen-can-still-cut-everything).
+
+<!-- COPY END 7ba6e22b -->
 
 <!-- COPY BEGIN 676b4912 [NEEDS HUMAN REVIEW] -->
 
