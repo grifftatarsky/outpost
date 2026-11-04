@@ -311,7 +311,7 @@ line by line on 2026-09-14. This is what each ordering assumes and what checks i
 | `writeDownWhatIsOwed` before `session.acknowledge` | a failed write throws, so nothing is acknowledged | `aRefusedWriteLeavesThePacketOutstanding` |
 | `entriesNotWrittenDown` filled the moment `integrate` returns | `integrate` already put them in the replica, so a round that stops short for any reason, and the next round, would otherwise acknowledge an entry no disk holds | `aKeyThatWillNotSaveLeavesTheMessagesOwed` |
 | `epochsNotSaved` set before the keychain write | a replay finds the key already in the chain and does not save it | `aKeyThatWillNotSaveLeavesTheMessagesOwed` |
-| `syncedFrontier.observe` only for `report.written` | an entry counts as sent only if its packet landed | `partialFailureIsNotLoss` |
+| `noteWhatIsStillOwed` right after `session.send`, before anything else awaits | an entry stays in `entriesOwed` for each person whose packet did not land, including a person skipped while their removal waits, and `syncedFrontier` only moves past an entry once it is either landed or owed for everybody it is for | `partialFailureIsNotLoss`, `AMessageReachesEveryoneItIsForTests` |
 | `outstandingPackets` filtered by `pendingDeliveries`, then this round's added | a collected packet stops counting as undelivered before new ones go in | `collectionIsReportedWhenItHappens` |
 | `viewMayBeStale` set after the peer loop, before anything is sent, and only in a full round | this round's `withholdsKeys` reads what this round refused, and a read-only round uses up no wait | `ARefusedPacketHoldsKeysOnceTests` |
 | `persisted.certificates = knownCertificates()` after the peer loop | a certificate that arrived this round is saved | nothing |

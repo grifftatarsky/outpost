@@ -11,7 +11,10 @@ extension AppSession {
         }
         let feed = FeedKey(author: enrolment.identity.id, device: enrolment.device.id)
         let sent = persisted.syncedFrontier[feed]
-        let unsent = replica.allEntries.contains { $0.room == room && $0.feedKey == feed && $0.seq > sent }
+        let owed = persisted.entriesOwed.values.reduce(into: Set<EntryHash>()) { $0.formUnion($1) }
+        let unsent = replica.allEntries.contains {
+            $0.room == room && $0.feedKey == feed && ($0.seq > sent || owed.contains($0.hash))
+        }
         return unsent ? .departureNotSent : .allowed
     }
 

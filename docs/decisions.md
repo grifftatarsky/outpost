@@ -3955,9 +3955,12 @@ guess.
 
 `PROPOSED` — Claude, 2026-09-13, from the rig.
 
-An entry goes into a packet once. `syncedFrontier` is the sender's record of what it has already
-written out, and it is not per-recipient, so a peer that has already delivered an entry to a member
-will never offer it again — not to that member's new device, not to anything. That is the right
+An entry goes into a packet once per person. `syncedFrontier` is the sender's record of what it has
+already handed out, and it is not per-recipient; what a failed write still owes one person is kept
+beside it, per person (see
+[What a failed write owes is kept per person](#what-a-failed-write-owes-is-kept-per-person)). So a
+peer that has already delivered an entry to a member will never offer it again — not to that
+member's new device, not to anything. That is the right
 behavior for the ordinary case and it is exactly wrong after a recovery: measured across two Apple
 Accounts, the restored device logged `entriesReceived=0` on every round while the peer logged
 `unsent=0`, and nothing the peer held ever came back.
@@ -3981,6 +3984,38 @@ fires on a named hole — a gap *between* entries a device holds. A restored dev
 frontier is simply short, and a feed it has never seen cannot be a gap.
 
 <!-- COPY END 8f0e3c78 -->
+
+<!-- COPY BEGIN 43cd7bf5 [NEEDS HUMAN REVIEW] -->
+
+### What a failed write owes is kept per person
+
+`PROPOSED` — Claude, 2026-10-31. Built.
+
+A round writes one person at a time, so a round where some writes land and one fails is the ordinary
+kind of failure. Until 2026-10-31 the sender moved `syncedFrontier` past an entry as soon as any one
+person's packet carrying it landed, so the person whose write failed never got it unless somebody
+else relayed it or a later entry showed them a gap. The same was true of a person left out of the
+round while their removal waited to reach the room, and of a removal sent first in a batch, whose
+number moved the frontier past a later batch that failed. A change to the member's own devices was
+counted as announced to everybody if anybody's packet landed.
+
+Now `PersistedState.entriesOwed` holds, per person, the entries a write still owes them, and
+`authorityOwed` the people not yet told about a change to the member's devices. An entry is owed to
+a person until a packet carrying it to them lands, or until it becomes something they must never be
+sent (an entry in a room after they were removed from it or left it). Something held back only until
+a removal reaches the room stays owed. The frontier moves past an entry only once every person it is
+for has it or owes it. A message owed to a member of its room is never drawn as collected, and the
+room cannot be deleted while the member's departure is owed to anybody.
+
+What it costs: the owed lists sit in the state file, one hash per entry per person, so a member whose
+writes have failed for a long time keeps a list as long as what they wrote in that time, for each
+person. A retry of a change to the member's devices writes to every peer, not only the ones who
+missed it, because a packet goes to everybody when it announces. A person met for the first time is
+owed nothing written before; they get earlier history by asking, as before.
+
+What would change it: a per-person frontier, if the owed lists grow large enough to matter.
+
+<!-- COPY END 43cd7bf5 -->
 
 <!-- COPY BEGIN f75fc044 [NEEDS HUMAN REVIEW] -->
 

@@ -204,6 +204,7 @@ struct ASecondMembersNoteTests {
 
         let answer = try t.samAnswers(as: seen)
         _ = try t.sam.replica.integrate(answer)
+        t.sam.persisted.entriesOwed[daveID]?.remove(removal)
         await lines.sam.reachesEveryone()
         try await t.sam.sync(through: lines.sam, media: t.mailbox)
         try await dave.sync(through: t.mailbox, media: t.mailbox)

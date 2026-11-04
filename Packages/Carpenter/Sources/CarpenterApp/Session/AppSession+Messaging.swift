@@ -258,19 +258,19 @@ extension AppSession {
             .filter { $0 != me }
             .map { person in
                 let holding: WaitingOnPerson.Holding
+                var missing = unsent.union((persisted.entriesOwed[person] ?? []).intersection(mine))
                 if let pending = pendingRecipients, pairwiseSecret(with: person) != nil {
                     let theirs = Set(
                         secrets(with: person).flatMap { secret in
                             (oldest...current).map { secret.recipientTag(window: $0, for: person) }
                         })
-                    var missing = unsent
                     for (packet, tags) in pending where !tags.isDisjoint(with: theirs) {
                         missing.formUnion(
                             (persisted.outstandingPackets[packet] ?? []).intersection(mine))
                     }
                     holding = missing.isEmpty ? .everything : .missing(missing.count)
                 } else {
-                    holding = unsent.isEmpty ? .notCheckedYet : .missing(unsent.count)
+                    holding = missing.isEmpty ? .notCheckedYet : .missing(missing.count)
                 }
                 return WaitingOnPerson(
                     member: projected.member(person), holding: holding,
@@ -419,12 +419,12 @@ extension AppSession {
     }
 
     private func deliveryMarks(in room: RoomID, of projected: Projection) -> (Message) -> Message {
-        let unsent = enrolment.map {
+        let hasSomebodyToReach = self.hasSomebodyToReach
+        let undelivered = undeliveredEntries()
+        let notYetWritten = enrolment.map {
             projected.unsent(in: room, by: $0.identity.id, past: persisted.syncedFrontier)
         } ?? []
-        let hasSomebodyToReach = self.hasSomebodyToReach
-
-        let undelivered = undeliveredEntries()
+        let unsent = notYetWritten.union(owedToMembers(of: room).subtracting(undelivered))
         let evidence = readEvidence(in: room, of: projected)
         let reporting = reportingMembers(in: room, of: projected)
             .subtracting([enrolment?.identity.id].compactMap(\.self))
@@ -448,6 +448,13 @@ extension AppSession {
                 isWithdrawn: message.isWithdrawn,
                 revisions: message.revisions,
                 media: message.media)
+        }
+    }
+
+    private func owedToMembers(of room: RoomID) -> Set<EntryHash> {
+        guard !persisted.entriesOwed.isEmpty else { return [] }
+        return roster(of: room).members.reduce(into: Set<EntryHash>()) { owed, member in
+            owed.formUnion(persisted.entriesOwed[member] ?? [])
         }
     }
 

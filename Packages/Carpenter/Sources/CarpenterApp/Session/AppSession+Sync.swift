@@ -23,7 +23,6 @@ extension AppSession {
         if mode == .full { await pairUp(through: mailbox) }
 
         var report = SyncReport()
-        var sending: [Entry] = []
         for peer in everyPeer() {
             try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
         }
@@ -41,8 +40,7 @@ extension AppSession {
             if addressBook.hasExpired(at: now) { await changeAddressBook { $0.forgetExpired(at: now) } }
             await rotateIfARemovalNeverChangedIt()
             await announceAddresses(through: session)
-            let sent: SyncReport
-            (sent, sending) = try await sendWhatIsOwed(through: session)
+            let sent = try await sendWhatIsOwed(through: session)
             report = report.adding(sent)
             report = report.adding(await tellTheRemoved(after: sent, through: session))
         }
@@ -57,7 +55,7 @@ extension AppSession {
         }
 
         try await recordWhatArrived(report)
-        await recordWhatWasSent(report, sending: sending, mailbox: mailbox, mode: mode)
+        recordWhatWasSent(report)
         if mode == .full {
             await doWhatIsOwed(after: report, through: session)
         }
@@ -72,7 +70,7 @@ extension AppSession {
         return report
     }
 
-    private func sendWhatIsOwed(through session: SyncSession) async throws -> (report: SyncReport, sending: [Entry]) {
+    private func sendWhatIsOwed(through session: SyncSession) async throws -> SyncReport {
         var report = SyncReport()
         let owedGrants = try grantsOwed()
         let owedConfirmations = confirmationsOwed()
@@ -80,38 +78,52 @@ extension AppSession {
             Diagnostics.sync.notice(
                 "mailbox sync: owe \(owedGrants.count, privacy: .public) epoch key(s) to peers; sending")
         }
-        let sending = removalsFirst(unsentEntries())
-        let authority = ownAuthorityDigest()
-        let announcing = authority != persisted.authorityAnnounced
+        let fresh = unsentEntries()
+        let sending = removalsFirst(fresh + entriesOwedToSomebody(besides: fresh))
+        let freshHashes = Set(fresh.map(\.hash))
+        let (held, forGood, owedTo) = (heldBack(), heldBackForGood(), persisted.entriesOwed)
+        let withholding: @Sendable (Entry, ParticipantID) -> Bool = { entry, person in
+            held(entry, person)
+                || (!freshHashes.contains(entry.hash) && owedTo[person]?.contains(entry.hash) != true)
+        }
 
-        let reachable = peers().count
-        if reachable == 0
+        let authority = ownAuthorityDigest()
+        if authority != persisted.authorityAnnounced {
+            persisted.authorityAnnounced = authority
+            persisted.authorityOwed = Set(everyPeer().map(\.them))
+        }
+        let reachable = peers()
+        let announcingTo = reachable.filter { persisted.authorityOwed.contains($0.them) }
+        let announcing = !announcingTo.isEmpty
+
+        if reachable.isEmpty
             || (sending.isEmpty && owedGrants.isEmpty && owedConfirmations.isEmpty && !announcing)
         {
             let unsent = sending.count
             let owed = owedGrants.count
             Diagnostics.sync.notice(
                 """
-                mailbox sync: writing nothing — peers=\(reachable, privacy: .public) \
+                mailbox sync: writing nothing — peers=\(reachable.count, privacy: .public) \
                 unsent=\(unsent, privacy: .public) grantsOwed=\(owed, privacy: .public)
                 """)
         }
 
         let ringingRooms = roomsWithUnsentMessages.intersection(Set(sending.compactMap(\.room)))
-
-        let ringingWall = peersToRingForWall(carrying: sending)
+        var rung: Set<ParticipantID> = []
+        let ringing = (peersToRing(in: ringingRooms) + peersToRingForWall(carrying: sending) + announcingTo)
+            .filter { rung.insert($0.them).inserted }
 
         let wishes = wallsToBeToldAbout()
         let sayingWishes = notifyWallsSent == wishes ? nil : wishes
 
         do {
             report = try await session.send(
-                sending, to: membersFirst(peers(), carrying: sending), certificates: knownCertificates(),
+                sending, to: membersFirst(reachable, carrying: sending), certificates: knownCertificates(),
                 revocations: persisted.revocations,
                 granting: owedGrants.map { (to: $0.to, grant: $0.grant) }, at: clock.now,
-                ringing: announcing ? peers() : peersToRing(in: ringingRooms) + ringingWall,
+                ringing: ringing,
                 identities: knownIdentities(), notifyWalls: sayingWishes,
-                confirming: owedConfirmations.map(\.body), announcing: announcing, withholding: heldBack())
+                confirming: owedConfirmations.map(\.body), announcing: announcing, withholding: withholding)
         } catch let refused as MailboxFailure {
             cannotSend = refused
             Diagnostics.sync.error(
@@ -119,14 +131,11 @@ extension AppSession {
             refresh()
             throw refused
         }
+        noteWhatIsStillOwed(after: report, sending: sending, fresh: freshHashes, heldBackForGood: forGood)
 
         if report.packetsWritten > 0 {
             let landed = Set(report.written.flatMap(\.grants))
             for owed in owedGrants where landed.contains(owed.grant) { issuedGrants.insert(owed.receipt) }
-            if announcing {
-                persisted.authorityAnnounced = authority
-                Diagnostics.sync.notice("round: told every peer about a change to this member's devices")
-            }
         }
         if report.packetsWritten > 0, report.sendFailure == nil {
             roomsWithUnsentMessages.subtract(ringingRooms)
@@ -134,7 +143,36 @@ extension AppSession {
             wallsWrittenOn.removeAll()
             if sayingWishes != nil { notifyWallsSent = wishes }
         }
-        return (report, sending)
+        return report
+    }
+
+    private func noteWhatIsStillOwed(
+        after report: SyncReport, sending: [Entry], fresh: Set<EntryHash>,
+        heldBackForGood forGood: (Entry, ParticipantID) -> Bool
+    ) {
+        var landed: [ParticipantID: Set<EntryHash>] = [:]
+        for wrote in report.written {
+            if let person = wrote.to { landed[person, default: []].formUnion(wrote.entries) }
+        }
+        let before = persisted.entriesOwed
+        var owed: [ParticipantID: Set<EntryHash>] = [:]
+        var handedOut: Set<EntryHash> = []
+        let everyone = Set(everyPeer().map(\.them))
+        for person in everyone {
+            let theirs = sending.filter { entry in
+                (fresh.contains(entry.hash) || before[person]?.contains(entry.hash) == true) && !forGood(entry, person)
+            }
+            let hashes = Set(theirs.map(\.hash))
+            handedOut.formUnion(hashes)
+            let still = hashes.subtracting(landed[person] ?? [])
+            if !still.isEmpty { owed[person] = still }
+        }
+        update(\.persisted.entriesOwed, to: owed)
+        for entry in sending where fresh.contains(entry.hash) && handedOut.contains(entry.hash) {
+            persisted.syncedFrontier.observe(entry.feedKey, seq: entry.seq)
+        }
+        let told = Set(landed.keys)
+        update(\.persisted.authorityOwed, to: persisted.authorityOwed.subtracting(told).intersection(everyone))
     }
 
     private func takeWhatArrived(
@@ -320,14 +358,7 @@ extension AppSession {
         update(\.persisted.spentEntries, to: replica.spentEntries)
     }
 
-    private func recordWhatWasSent(
-        _ report: SyncReport, sending: [Entry], mailbox: any Mailbox, mode: SyncMode
-    ) async {
-        let writtenEntries = Set(report.written.flatMap(\.entries))
-        for entry in sending where writtenEntries.contains(entry.hash) {
-            persisted.syncedFrontier.observe(entry.feedKey, seq: entry.seq)
-        }
-
+    private func recordWhatWasSent(_ report: SyncReport) {
         if !report.written.isEmpty {
             let resent = Set(report.written.flatMap(\.entries))
             if !persisted.resend.isDisjoint(with: resent) { persisted.resend.subtract(resent) }
@@ -384,6 +415,13 @@ extension AppSession {
         guard !persisted.resend.isEmpty else { return unsent }
         let already = Set(unsent.map(\.hash))
         return unsent + replica.allEntries.filter { persisted.resend.contains($0.hash) && !already.contains($0.hash) }
+    }
+
+    func entriesOwedToSomebody(besides fresh: [Entry]) -> [Entry] {
+        let owed = persisted.entriesOwed.values.reduce(into: Set<EntryHash>()) { $0.formUnion($1) }
+        guard !owed.isEmpty else { return [] }
+        let already = Set(fresh.map(\.hash))
+        return replica.allEntries.filter { owed.contains($0.hash) && !already.contains($0.hash) }
     }
 
     func noteWritten(_ report: SyncReport) {

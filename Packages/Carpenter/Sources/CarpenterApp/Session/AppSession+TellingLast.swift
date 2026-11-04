@@ -5,6 +5,11 @@ import Foundation
 
 extension AppSession {
     func heldBack() -> @Sendable (Entry, ParticipantID) -> Bool {
+        let (forGood, untilTold) = (heldBackForGood(), heldBackUntilTold())
+        return { entry, person in forGood(entry, person) || untilTold(entry, person) }
+    }
+
+    func heldBackForGood() -> @Sendable (Entry, ParticipantID) -> Bool {
         let held = entriesByHash
         let projected = projection
         var ends: [ParticipantID: [RoomID: [Entry]]] = [:]
@@ -15,16 +20,21 @@ extension AppSession {
                 if let end, let entry = held[end] { ends[person, default: [:]][room, default: []].append(entry) }
             }
         }
-        let inside = untold.compactMap { room, told in held[told.entry].map { ($0, roster(of: room).members) } }
         let (knownEnds, knownNotes) = (ends, projected.removalNoteIDs)
         return { entry, person in
-            guard !knownNotes.contains(entry.hash) else { return false }
-            let outsideTheRoom = inside.contains { removal, members in
-                !members.contains(person) && Self.follows(entry, removal)
-            }
-            if outsideTheRoom { return true }
-            guard let room = entry.room, let known = knownEnds[person]?[room] else { return false }
+            guard !knownNotes.contains(entry.hash), let room = entry.room, let known = knownEnds[person]?[room]
+            else { return false }
             return known.contains { Self.follows(entry, $0) }
+        }
+    }
+
+    private func heldBackUntilTold() -> @Sendable (Entry, ParticipantID) -> Bool {
+        let held = entriesByHash
+        let inside = untold.compactMap { room, told in held[told.entry].map { ($0, roster(of: room).members) } }
+        let knownNotes = projection.removalNoteIDs
+        return { entry, person in
+            !knownNotes.contains(entry.hash)
+                && inside.contains { removal, members in !members.contains(person) && Self.follows(entry, removal) }
         }
     }
 

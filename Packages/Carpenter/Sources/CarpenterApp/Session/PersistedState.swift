@@ -74,9 +74,11 @@ struct PersistedState: Codable, Equatable, Sendable {
     var authorityIsLegacy = false
     var authorityPublished: Set<Data> = []
     var authorityAnnounced: Data?
+    var authorityOwed: Set<ParticipantID> = []
     var restoredWithTheRecoveryKey = false
     var rekeyBeforeWriting: Set<RoomID> = []
     var resend: Set<EntryHash> = []
+    var entriesOwed: [ParticipantID: Set<EntryHash>] = [:]
     var claimTimes: [EntryHash: Date] = [:]
     var removalsTold: Set<EntryHash> = []
     var grantsWaiting: [ForwardedGrant] = []
@@ -178,10 +180,13 @@ struct PersistedState: Codable, Equatable, Sendable {
         }
         authorityPublished = try container.decodeIfPresent(Set<Data>.self, forKey: .authorityPublished) ?? []
         authorityAnnounced = try container.decodeIfPresent(Data.self, forKey: .authorityAnnounced)
+        authorityOwed = try container.decodeIfPresent(Set<ParticipantID>.self, forKey: .authorityOwed) ?? []
         restoredWithTheRecoveryKey =
             try container.decodeIfPresent(Bool.self, forKey: .restoredWithTheRecoveryKey) ?? false
         rekeyBeforeWriting = try container.decodeIfPresent(Set<RoomID>.self, forKey: .rekeyBeforeWriting) ?? []
         resend = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .resend) ?? []
+        entriesOwed =
+            try container.decodeIfPresent([ParticipantID: Set<EntryHash>].self, forKey: .entriesOwed) ?? [:]
         claimTimes = try container.decodeIfPresent([EntryHash: Date].self, forKey: .claimTimes) ?? [:]
         removalsTold = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .removalsTold) ?? []
         grantsWaiting = try container.decodeIfPresent([ForwardedGrant].self, forKey: .grantsWaiting) ?? []
