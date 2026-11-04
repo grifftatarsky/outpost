@@ -116,6 +116,35 @@ struct ADeviceLeftBehindByARestoreTests {
         #expect(replica.allEntries.count == 3, "the restored device refused its member's own history")
     }
 
+    @Test("The member's restored device refuses a backdated entry the left-behind device signed after the restore")
+    func theRestoredDeviceRefusesTheThief() throws {
+        let friend = Identity.generate()
+        let friendsPhone = DeviceKeys.generate()
+        var replica = Replica()
+        replica.introduce(identity.publicKeys)
+        replica.introduce(friend.publicKeys)
+        try replica.admit(DeviceCertificate.recovered(for: friendsPhone, by: friend, at: start), storedAt: start)
+        try replica.admit(try newRoot(), storedAt: restoredAt + 1)
+        for certificate in try oldCertificates() { try replica.admit(certificate, storedAt: certificate.issuedAt) }
+        replica.fixSupersededLines(sparing: identity.id)
+
+        let history = try feed(3)
+        var seen = VectorClock()
+        seen.observe(history[2].feedKey, seq: history[2].seq)
+        let friendSaw = try Entry.append(
+            to: nil, author: friend.id, device: friendsPhone, clock: seen, wallTime: start + 400, room: nil,
+            payload: try Payload.post("seen"), at: .initial, sealedWith: chain)
+        for entry in history + [friendSaw] { try replica.integrate(entry) }
+        try #require(replica.allEntries.count == 4, "precondition: the restored device takes the history its friends saw")
+
+        let thief = try feed(1, from: history[2], dated: start + 200)
+        #expect(
+            throws: (any Error).self,
+            "the member's own restored device took an entry the left-behind phone signed after the restore and dated before it") {
+                try replica.integrate(thief[0])
+            }
+    }
+
     @Test("A line kept on disk is put back before the log is read, so a relaunch draws it the same")
     func aRestoredLineHolds() throws {
         var before = try contact()
