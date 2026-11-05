@@ -216,15 +216,22 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
             if partials.contains(where: { $0.code == .zoneNotFound || $0.code == .userDeletedZone }) {
                 return .empty
             }
-            return partials.map { occupancy(for: $0) }.contains(.offline) ? .offline : .undetermined
+            let answers = Set(partials.map { occupancy(for: $0) })
+            return [.signedOut, .restricted, .offline].first(where: answers.contains) ?? .undetermined
         }
 
         switch ckError.code {
         case .zoneNotFound, .userDeletedZone:
             return .empty
 
-        case .networkUnavailable, .networkFailure, .notAuthenticated, .managedAccountRestricted:
+        case .networkUnavailable, .networkFailure:
             return .offline
+
+        case .notAuthenticated:
+            return .signedOut
+
+        case .managedAccountRestricted:
+            return .restricted
 
         case .serviceUnavailable, .requestRateLimited, .zoneBusy, .accountTemporarilyUnavailable,
             .internalError, .serverResponseLost, .operationCancelled:

@@ -64,6 +64,12 @@ public struct RegistrationStalledView: View {
             .padding(.top, 6)
             // COPY END fa05dc81
 
+            if settingsCanFixIt {
+                OpenSettingsButton()
+                    .font(CarpenterFont.button)
+                    .quietActionButton()
+            }
+
             // COPY BEGIN c1d22f7a [HUMAN REVIEWED, UNVERIFIED]
             if let onRestore, offersARecoveryKey {
                 Button(action: onRestore) {
@@ -117,7 +123,14 @@ public struct RegistrationStalledView: View {
     private var offersARecoveryKey: Bool {
         switch stall {
         case .accountUnreadable, .accountOffline: true
-        case .keychainUnreadable, .heldBySecurity: false
+        case .signedOut, .restricted, .keychainUnreadable, .heldBySecurity: false
+        }
+    }
+
+    private var settingsCanFixIt: Bool {
+        switch stall {
+        case .signedOut, .restricted: true
+        case .accountUnreadable, .accountOffline, .keychainUnreadable, .heldBySecurity: false
         }
     }
 
@@ -133,13 +146,17 @@ public struct RegistrationStalledView: View {
     }
     // COPY END 7f30cac5
 
-    // COPY BEGIN 4f8229af [HUMAN REVIEWED, UNVERIFIED]
+    // COPY BEGIN 4f8229af [NEEDS HUMAN REVIEW]
     private var headline: Text {
         switch stall {
         case .accountUnreadable:
-            Text("Apple Account cannot be used", bundle: .module)
+            Text("iCloud did not answer", bundle: .module)
         case .accountOffline:
             Text("Could not reach iCloud", bundle: .module)
+        case .signedOut:
+            Text("Signed out of iCloud", bundle: .module)
+        case .restricted:
+            Text("iCloud is restricted on this device", bundle: .module)
         case .keychainUnreadable:
             Text("Keychain would not answer", bundle: .module)
         case .heldBySecurity:
@@ -148,16 +165,24 @@ public struct RegistrationStalledView: View {
     }
     // COPY END 4f8229af
 
-    // COPY BEGIN 682b13fe [HUMAN REVIEWED, UNVERIFIED]
+    // COPY BEGIN 682b13fe [NEEDS HUMAN REVIEW]
     private var detail: Text {
         switch stall {
         case .accountUnreadable:
             Text(
-                "iCloud is unreadable.",
+                "iCloud would not say whether this account already has a member, so nothing has been set up. This is often brief.",
                 bundle: .module)
         case .accountOffline:
             Text(
-                "iCloud is offline. Check your settings and return here.",
+                "This phone could not reach iCloud. Check that it is online, then check again.",
+                bundle: .module)
+        case .signedOut:
+            Text(
+                "Everything this app keeps lives in your own iCloud. Sign in at the top of the Settings app, then come back.",
+                bundle: .module)
+        case .restricted:
+            Text(
+                "Screen Time, or whoever manages this device, keeps this app out of iCloud. Change that in Settings, then come back.",
                 bundle: .module)
         case .heldBySecurity:
             heldDetail

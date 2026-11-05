@@ -41,6 +41,8 @@
                 AwaitingApprovalView(code: "7K3M9Q", onRecoveryKey: {})
             case .stalledOffline:
                 RegistrationStalledView(stall: .accountOffline, onRetry: {}, onRestore: {})
+            case .stalledSignedOut:
+                RegistrationStalledView(stall: .signedOut, onRetry: {}, onRestore: {})
             case .roomsCannotSend:
                 RootView.demo(
                     tab: .rooms,

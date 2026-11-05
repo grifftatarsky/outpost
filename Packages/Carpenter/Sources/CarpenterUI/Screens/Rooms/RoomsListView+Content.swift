@@ -22,6 +22,8 @@ extension RoomsListView {
                                 .foregroundStyle(palette.destructive)
                         }
                         .padding(.vertical, 2)
+                        OpenSettingsButton()
+                            .foregroundStyle(palette.accentColor)
                     } header: {
                         Text("Nothing is going out", bundle: .module).sectionHeading()
                     }

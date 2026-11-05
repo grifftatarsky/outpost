@@ -153,6 +153,14 @@ extension AppSession {
                 Diagnostics.identity.notice(
                     "load: iCloud could not be reached; stopping rather than offering a member")
                 state = .registrationStalled(.accountOffline)
+            } else if occupancy == .signedOut {
+                Diagnostics.identity.notice(
+                    "load: this device is signed out of iCloud; stopping rather than offering a member")
+                state = .registrationStalled(.signedOut)
+            } else if occupancy == .restricted {
+                Diagnostics.identity.notice(
+                    "load: a restriction keeps this account out of iCloud; stopping rather than offering a member")
+                state = .registrationStalled(.restricted)
             } else {
                 Diagnostics.identity.notice(
                     "load: the account could not be read; stopping rather than offering a member")

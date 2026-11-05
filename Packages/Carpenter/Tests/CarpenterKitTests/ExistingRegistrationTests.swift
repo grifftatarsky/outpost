@@ -92,6 +92,16 @@ struct ExistingRegistrationTests {
         #expect(app.state == .needsIdentity, "once iCloud answered, the fresh start never came")
     }
 
+    @Test("A signed-out or restricted account stops with its own reason, and offers nobody a member")
+    func signedOutAndRestrictedSayWhy() async {
+        for (answer, stall) in [(AccountOccupancy.signedOut, RegistrationStall.signedOut), (.restricted, .restricted)] {
+            let app = session(registry: StubAccountRegistry(answer))
+            await app.load()
+            await app.settleRegistration(attempts: 2)
+            #expect(app.state == .registrationStalled(stall), "\(answer) stalled as \(app.state)")
+        }
+    }
+
     @Test("A session that was never given a way to ask the account does not offer a member")
     func noRegistryWaits() async {
         let app = AppSession(storage: TestSession.storage(), clock: TestClock(now: TestSession.now))

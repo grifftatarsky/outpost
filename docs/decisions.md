@@ -5122,6 +5122,22 @@ format buttons are 8 points apart, so their reaches overlap by at most 2 points.
 
 <!-- COPY END 8e62b07f -->
 
+<!-- COPY BEGIN 61411125 [NEEDS HUMAN REVIEW] -->
+
+### Signed out and restricted are told apart from offline
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 6.
+
+The account check read CloudKit's `notAuthenticated` and `managedAccountRestricted` as offline, so a
+signed-out member was told to check their connection. They are now their own answers
+(`AccountOccupancy.signedOut`, `.restricted`) with their own words and an *Open Settings* button. An
+app can only open its own page in Settings, not the Apple Account at the top, so the words say where
+to sign in.
+
+**What it costs.** One tap back from the app's page to the top of Settings.
+
+<!-- COPY END 61411125 -->
+
 <!-- COPY BEGIN fa3b6480 [NEEDS HUMAN REVIEW] -->
 
 ### The accent retint fades, and the tab bar leads it
