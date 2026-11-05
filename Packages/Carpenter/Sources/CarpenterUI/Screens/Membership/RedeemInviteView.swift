@@ -325,8 +325,8 @@ public struct RedeemInviteView: View {
                 "Confirming tells them the characters matched, and lets your phone collect what they send you. The room appears once whoever is in it has let you in.",
                 bundle: .module
             )
-            .font(CarpenterFont.caption)
-            .foregroundStyle(palette.quaternaryText)
+            .font(CarpenterFont.footnote)
+            .foregroundStyle(palette.secondaryText)
             // COPY END 38a05363
         }
     }
