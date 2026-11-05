@@ -4246,6 +4246,18 @@ this phone's copy and nothing anybody else holds (`Vault`, `SealedDocumentStore`
 Enclave, so the package suite proves the composition against a fake and the real one is compiled
 only.
 
+Four hazards in it were fixed on 2026-11-05, before anything uses it. Making an enclave key used to
+delete the one before it first, so a change that failed between the two left a sealing nothing could
+open; every wrapping now makes a key of its own under a fresh name, and the old one is removed only
+by `Vault.retire`, after the new sealing has been kept. Changing the code had no path but sealing
+again from nothing; `Vault.changingCode` wraps the same key under a new enclave key and a new salt
+and leaves Face ID's wrapping alone. A phone that was locked read as one whose key was gone, which
+is the difference between "wait" and "this copy is lost"; it is `HardwareKeyError.locked` now. And
+no erase removed the enclave keys; each is labelled with its keychain service, and erasing this
+phone's keychain items removes them with the rest, so `SecureEnclaveKeys` must be given the same
+service as the session's keychain when it is wired. The real enclave half of all four is compiled,
+not run.
+
 **Built 2026-09-28 for the phone's lock: the package suite passes on Griff's Mac, the keychain half
 passes on the simulator, and on an iPhone files are written with the protection it names. Not yet tried
 with the phone locked.** iOS already ties its own keys to the passcode and the phone's hardware, so this choice asks

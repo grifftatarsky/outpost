@@ -15,7 +15,6 @@ public struct SecureEnclaveKeys: HardwareKeys {
 
     public func make(_ id: HardwareKeyID, requiringBiometrics: Bool) async throws -> Data {
         guard Self.isAvailable else { throw HardwareKeyError.unavailable }
-        try? await remove(id)
         var error: Unmanaged<CFError>?
         let flags: SecAccessControlCreateFlags =
             requiringBiometrics ? [.privateKeyUsage, .biometryCurrentSet] : [.privateKeyUsage]
@@ -30,6 +29,7 @@ public struct SecureEnclaveKeys: HardwareKeys {
             kSecPrivateKeyAttrs as String: [
                 kSecAttrIsPermanent as String: true,
                 kSecAttrApplicationTag as String: tag(id),
+                kSecAttrLabel as String: service,
                 kSecAttrAccessControl as String: control,
             ],
         ]
@@ -44,12 +44,18 @@ public struct SecureEnclaveKeys: HardwareKeys {
     }
 
     public func publicKey(of id: HardwareKeyID) async throws -> Data? {
-        guard let key = find(id, reason: nil), let publicKey = SecKeyCopyPublicKey(key) else { return nil }
+        let key: SecKey
+        do {
+            key = try find(id, reason: nil)
+        } catch HardwareKeyError.noSuchKey {
+            return nil
+        }
+        guard let publicKey = SecKeyCopyPublicKey(key) else { return nil }
         return SecKeyCopyExternalRepresentation(publicKey, nil) as Data?
     }
 
     public func agree(_ id: HardwareKeyID, with publicKey: Data, reason: String) async throws -> Data {
-        guard let key = find(id, reason: reason.isEmpty ? nil : reason) else { throw HardwareKeyError.noSuchKey }
+        let key = try find(id, reason: reason.isEmpty ? nil : reason)
         let theirs = try P256.KeyAgreement.PublicKey(x963Representation: publicKey)
         guard let peer = SecKeyCreateWithData(
             theirs.x963Representation as CFData,
@@ -74,7 +80,7 @@ public struct SecureEnclaveKeys: HardwareKeys {
         ] as CFDictionary)
     }
 
-    private func find(_ id: HardwareKeyID, reason: String?) -> SecKey? {
+    private func find(_ id: HardwareKeyID, reason: String?) throws -> SecKey {
         var query: [String: Any] = [
             kSecClass as String: kSecClassKey,
             kSecAttrApplicationTag as String: tag(id),
@@ -87,8 +93,16 @@ public struct SecureEnclaveKeys: HardwareKeys {
             query[kSecUseAuthenticationContext as String] = context
         }
         var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess else { return nil }
-        return (item as! SecKey?)
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        switch status {
+        case errSecSuccess:
+            guard let item, CFGetTypeID(item) == SecKeyGetTypeID() else { throw HardwareKeyError.unavailable }
+            return item as! SecKey
+        case errSecItemNotFound: throw HardwareKeyError.noSuchKey
+        case errSecInteractionNotAllowed: throw HardwareKeyError.locked
+        case errSecUserCanceled, errSecAuthFailed: throw HardwareKeyError.refused
+        default: throw HardwareKeyError.unavailable
+        }
     }
 
     private func tag(_ id: HardwareKeyID) -> Data {

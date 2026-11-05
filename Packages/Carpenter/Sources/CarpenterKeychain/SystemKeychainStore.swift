@@ -167,6 +167,12 @@ public struct SystemKeychainStore: KeychainStore {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError(status: status)
         }
+        guard scope == .device else { return }
+        let hardware = SecItemDelete(
+            [kSecClass as String: kSecClassKey, kSecAttrLabel as String: service] as CFDictionary)
+        guard hardware == errSecSuccess || hardware == errSecItemNotFound else {
+            throw KeychainError(status: hardware)
+        }
     }
 
     private func match(_ key: KeychainKey, in group: String?, synchronized: Bool?) -> [String: Any] {
