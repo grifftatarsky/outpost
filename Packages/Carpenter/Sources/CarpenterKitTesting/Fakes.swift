@@ -155,6 +155,7 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     public struct Ring: Hashable, Sendable {
         public let from: ParticipantID
         public let to: ParticipantID
+        public let reached: Set<String>
     }
 
     private let clock: any Clock
@@ -265,6 +266,12 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
 
     public func close(_ peer: ParticipantID, in pairs: Pairs) { store.close(peer, in: pairs, as: seat(pairs)) }
 
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) {
+        store.stopSharing(with: peer, in: pairs, as: seat(pairs))
+    }
+
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) { store.leave(peer, in: pairs, as: seat(pairs)) }
+
     // MARK: Packets
 
     public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) throws {
@@ -278,8 +285,8 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     }
 
     public func ring(_ peer: ParticipantID, in pairs: Pairs) throws {
-        try store.ring(peer, in: pairs, as: seat(pairs), at: clock.now)
-        rings.append(Ring(from: pairs.me, to: peer))
+        let reached = try store.ring(peer, in: pairs, as: seat(pairs), at: clock.now)
+        rings.append(Ring(from: pairs.me, to: peer, reached: reached))
     }
 
     public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) -> [SyncPacket] {
@@ -468,6 +475,8 @@ public actor FailingMailbox: Mailbox, MediaMailbox {
     }
     public func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool { throw Refused() }
     public func close(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
     public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
     public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
     public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) async throws

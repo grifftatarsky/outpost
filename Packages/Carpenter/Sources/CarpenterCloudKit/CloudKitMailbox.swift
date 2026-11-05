@@ -262,6 +262,14 @@ public actor PairIndex {
 
     func remember(reader: String, of zone: CKRecordZone.ID) { readers[zone] = reader }
 
+    func forgetReader(of zone: CKRecordZone.ID) { readers[zone] = nil }
+
+    func joined(_ hint: PairHint) -> [CKRecordZone.ID] { theirs.filter { $0.value.hint == hint }.map(\.key) }
+
+    func forget(theirs zones: [CKRecordZone.ID]) {
+        for zone in zones { theirs[zone] = nil }
+    }
+
     func known(_ zone: CKRecordZone.ID, naming reader: String?) -> URL? {
         guard reader == nil || readers[zone] == reader else { return nil }
         return links[zone]

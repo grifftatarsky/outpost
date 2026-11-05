@@ -31,6 +31,14 @@ public struct SignedInMailbox: Mailbox {
         await base.acting(as: account) { $0.close(peer, in: pairs) }
     }
 
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) async throws {
+        await base.acting(as: account) { $0.stopSharing(with: peer, in: pairs) }
+    }
+
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) async throws {
+        await base.acting(as: account) { $0.leave(peer, in: pairs) }
+    }
+
     public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws {
         try await base.acting(as: account) { try $0.put(packet, to: peer, in: pairs) }
     }

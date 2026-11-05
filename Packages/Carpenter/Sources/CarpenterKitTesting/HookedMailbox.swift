@@ -67,6 +67,12 @@ public actor HookedMailbox: Mailbox {
 
     public func close(_ peer: ParticipantID, in pairs: Pairs) async throws { await inner.close(peer, in: pairs) }
 
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) async throws {
+        await inner.stopSharing(with: peer, in: pairs)
+    }
+
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) async throws { await inner.leave(peer, in: pairs) }
+
     public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws { try await inner.ring(peer, in: pairs) }
 
     public func acknowledge(

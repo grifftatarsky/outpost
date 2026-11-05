@@ -383,12 +383,39 @@ On the build of `overnight-2026-10-31` at 1483934, two accounts, both reset firs
   she unblocked. Bea's rounds wrote packets at 10:45:22, 10:45:29, 10:45:52 and 10:45:56, including
   *Bea after unblock*. Ada ran rounds throughout and logged `entriesReceived=0` from the block until
   10:47:08, and her message stayed not collected. Bea's round at 10:45:22 logged `met 1 new peer(s)`.
-  One run, not repeated, and the cause is not known.
+  Repeated on 2026-11-05 and the cause found; see below.
 - **Running the suite on bullet stopped its account.** As the test host launched at 10:47:57, cloudd
   began failing every request with `AuthTokenError` (2011), and the device showed *Apple Account
   Verification*. The prompt was left for Griff. Whether the run caused it is not known.
 
 <!-- COPY END c16c17ef -->
+
+<!-- COPY BEGIN ba46c2cf [NEEDS HUMAN REVIEW] -->
+
+### Blocking and unblocking, 2026-11-05
+
+**On the build of `overnight-2026-10-31` at fc09845, before the fix.** Both accounts reset first. Ada
+(bullet) invited Bea (iPhone 17) to a room of two, and a message crossed each way. Bea blocked Ada at
+01:44:39. Ada wrote twice during the block, and Bea's rounds showed `peers=0`. Bea unblocked at about
+01:47:15, and both of Ada's messages appeared on Bea's screen. Bea wrote *Bea after unblock* and her
+rounds wrote packets at 01:47:26, 01:47:33 and 01:47:41. Ada logged `entriesReceived=0` from the
+block until 01:49:06, when the run was stopped, while Ada's *Ada after unblock* reached Bea. So the
+person who blocked stops reaching the person they blocked, the same as 2026-11-04.
+
+The cause is in the code, not CloudKit: blocking deleted Bea's space for Ada and unblocking made a
+new one, and the link to the new one can only reach Ada through a space of Bea's that Ada reads. In
+a room of two there is none. The fix is in [Decisions](decisions.md#blocking-takes-a-person-off-your-space-and-you-off-theirs).
+Screenshots are in the session's `rig-shots/blocking/base-*`.
+
+**The fix has not run on the rig.** Both accounts were reset again at 01:49 for a fresh pair. At
+06:31 bullet asked for its Apple Account password and iPhone 17 offered to approve the device for a
+member the account held again, so neither could start a member.
+
+Ringing could not be measured either way here: a push from the other account has never reached a
+simulator on this rig (see [What a simulator can actually do](#what-a-simulator-can-actually-do)), so "no banner" on a
+simulator proves nothing.
+
+<!-- COPY END ba46c2cf -->
 
 <!-- COPY BEGIN b526cfb5 [NEEDS HUMAN REVIEW] -->
 

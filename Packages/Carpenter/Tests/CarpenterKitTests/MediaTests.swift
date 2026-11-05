@@ -374,7 +374,7 @@ struct BlockingTests {
         #expect(try await bob.attachmentData(for: theirs, sentBy: aliceID, through: mailbox) == nil)
     }
 
-    @Test("Nothing said while blocked is lost; unblocking and a round bring it back")
+    @Test("Nothing said while blocked is lost; unblocking and a round on each side bring it back")
     func unblockingShowsWhatWasHeld() async throws {
         let (alice, bob, room, mailbox) = try await joined()
         let aliceID = try #require(alice.enrolment?.identity.id)
@@ -387,13 +387,14 @@ struct BlockingTests {
         await bob.unblock(aliceID)
         #expect(bob.blockedPeople.isEmpty)
 
+        try await alice.sync(through: mailbox, media: mailbox)
         try await bob.sync(through: mailbox, media: mailbox)
 
         #expect(
             bob.messages(in: room).contains { $0.body == "while blocked" },
             """
             Something said while this member had the sender blocked did not come back after they \
-            unblocked them and synced. Blocking must cost the sender delivery, never cost this \
+            unblocked them and both synced. Blocking must cost the sender delivery, never cost this \
             member the words when they change their mind.
             """)
     }

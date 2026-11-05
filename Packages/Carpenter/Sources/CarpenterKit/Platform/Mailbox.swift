@@ -250,6 +250,10 @@ public protocol Mailbox: Sendable {
 
     func close(_ peer: ParticipantID, in pairs: Pairs) async throws
 
+    func stopSharing(with peer: ParticipantID, in pairs: Pairs) async throws
+
+    func leave(_ peer: ParticipantID, in pairs: Pairs) async throws
+
     func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws
 
     func ring(_ peer: ParticipantID, in pairs: Pairs) async throws
