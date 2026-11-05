@@ -1,5 +1,11 @@
 import CarpenterKit
 import SwiftUI
+import UniformTypeIdentifiers
+
+#if os(iOS)
+    import LinkPresentation
+    import UIKit
+#endif
 
 public struct RecoveryKeyView: View {
     @Environment(\.palette) private var palette
@@ -10,6 +16,7 @@ public struct RecoveryKeyView: View {
 
     @State private var shared = false
     @State private var confirming = false
+    @State private var exporting = false
 
     public init(text: String, fingerprint: String, onSaved: @escaping () async -> Void) {
         self.text = text
@@ -50,16 +57,11 @@ public struct RecoveryKeyView: View {
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
-                // COPY BEGIN d46cf88c [HUMAN REVIEWED, UNVERIFIED]
-                ShareLink(
-                    item: text,
-                    preview: SharePreview(
-                        Text("\(Branding.displayName) recovery key", bundle: .module))
-                ) {
+                // COPY BEGIN d46cf88c [NEEDS HUMAN REVIEW]
+                Button(action: save) {
                     Text("Save key", bundle: .module).primaryAction()
                 }
                 .prominentActionButton()
-                .simultaneousGesture(TapGesture().onEnded { shared = true })
                 // COPY END d46cf88c
 
                 // COPY BEGIN a0892d83 [NEEDS HUMAN REVIEW]
@@ -98,8 +100,81 @@ public struct RecoveryKeyView: View {
         }
         // COPY END 74d78710
         .interactiveDismissDisabled()
+        #if os(macOS)
+            .fileExporter(
+                isPresented: $exporting, item: text, contentTypes: [.plainText], defaultFilename: Self.title
+            ) { result in
+                if case .success = result { shared = true }
+            }
+        #endif
+    }
+
+    // COPY BEGIN 40676436 [NEEDS HUMAN REVIEW]
+    private static var title: String {
+        String(localized: "\(Branding.displayName) recovery key", bundle: .module)
+    }
+    // COPY END 40676436
+
+    private func save() {
+        #if os(iOS)
+            KeySharing.present(text, titled: Self.title) { completed in
+                if completed { shared = true }
+            }
+        #else
+            exporting = true
+        #endif
     }
 }
+
+#if os(iOS)
+    @MainActor
+    enum KeySharing {
+        static func present(_ text: String, titled title: String, finished: @escaping @MainActor (Bool) -> Void) {
+            guard
+                let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive }),
+                var top = scene.keyWindow?.rootViewController
+            else {
+                finished(false)
+                return
+            }
+            while let presented = top.presentedViewController { top = presented }
+            let sheet = UIActivityViewController(
+                activityItems: [KeyItem(text: text, title: title)], applicationActivities: nil)
+            sheet.completionWithItemsHandler = { _, completed, _, _ in
+                Task { @MainActor in finished(completed) }
+            }
+            sheet.popoverPresentationController?.sourceView = top.view
+            top.present(sheet, animated: true)
+        }
+    }
+
+    private final class KeyItem: NSObject, UIActivityItemSource {
+        let text: String
+        let title: String
+
+        init(text: String, title: String) {
+            self.text = text
+            self.title = title
+        }
+
+        func activityViewControllerPlaceholderItem(_ controller: UIActivityViewController) -> Any { text }
+
+        func activityViewController(
+            _ controller: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?
+        ) -> Any? { text }
+
+        func activityViewController(
+            _ controller: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?
+        ) -> String { title }
+
+        func activityViewControllerLinkMetadata(_ controller: UIActivityViewController) -> LPLinkMetadata? {
+            let metadata = LPLinkMetadata()
+            metadata.title = title
+            return metadata
+        }
+    }
+#endif
 
 #if DEBUG
     #Preview("Recovery key") {

@@ -157,6 +157,11 @@ final class RigChecks: XCTestCase {
         XCTAssertFalse(saved.isEnabled, "the key could be marked saved before it was saved anywhere")
         XCTAssertTrue(tapIfThere(app, "Save key"), "no way to save the key")
         sleep(2)
+        app.swipeDown()
+        sleep(1)
+        XCTAssertFalse(saved.isEnabled, "closing the share sheet without saving let the member go on")
+        XCTAssertTrue(tapIfThere(app, "Save key"), "the key could not be saved a second time")
+        sleep(2)
         shoot(app, "lock-2-share-sheet")
         let copy = app.buttons["Copy"].firstMatch
         if copy.waitForExistence(timeout: 5) { copy.tap() } else { app.swipeDown() }

@@ -3256,6 +3256,18 @@ recovery key or an approval by a device that counts lets a device in. See the
   already true for getting back in.
 - **The creating device keeps the key until the member confirms they saved it.** Closing the app
   mid-way would otherwise lose it for good.
+- **"I've saved it" opens only after a save finished** (2026-11-05). It used to open the moment
+  *Save key* was tapped, so a member who opened the share sheet and closed it again could confirm, and
+  the key, which no device keeps after that, was gone without having been saved anywhere. Now it opens
+  when the share sheet reports that a destination finished with the key (on a Mac, when the file was
+  written), and the key stays on this device and can be saved again until then. A destination
+  finishing is the strongest thing iOS tells an app: it says the Files app wrote the file, or Messages
+  sent it, not that the place is safe, so the confirmation that follows still asks. Copying counts as
+  finishing, because pasting into a password manager is a real way to keep it. The control stays a
+  labelled button rather than the Share symbol the HIG names for an activity view
+  ([Activity views](https://developer.apple.com/design/human-interface-guidelines/activity-views)),
+  because what the member must do here is save, and sharing is only how; that departure predates this
+  change. Built; the rig check that closes the sheet without saving is written and not run.
 
 **What it costs.** Restoring from an iPhone backup no longer brings this app back; the recovery key
 does. A lost recovery key and every device lost is the end of that identity.
