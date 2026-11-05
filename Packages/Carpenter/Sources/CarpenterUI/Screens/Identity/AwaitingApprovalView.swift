@@ -5,10 +5,19 @@ public struct AwaitingApprovalView: View {
     @Environment(\.palette) private var palette
 
     private let code: String
+    private let askFailed: Bool
+    private let onAskAgain: () async -> Void
     private let onRecoveryKey: () -> Void
 
-    public init(code: String, onRecoveryKey: @escaping () -> Void) {
+    @State private var asking = false
+
+    public init(
+        code: String, askFailed: Bool = false, onAskAgain: @escaping () async -> Void = {},
+        onRecoveryKey: @escaping () -> Void
+    ) {
         self.code = code
+        self.askFailed = askFailed
+        self.onAskAgain = onAskAgain
         self.onRecoveryKey = onRecoveryKey
     }
 
@@ -29,8 +38,23 @@ public struct AwaitingApprovalView: View {
                     .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
                     .foregroundStyle(palette.primaryText)
                     .accessibilityLabel(Text(verbatim: code.map(String.init).joined(separator: " ")))
+                if askFailed {
+                    Text("This device could not reach iCloud to ask. Check that it is online, then ask again.", bundle: .module)
+                } else {
+                    Text("If your other device said no, or nothing appears on it, ask again.", bundle: .module)
+                }
             }
         } actions: {
+            Button {
+                Task {
+                    asking = true
+                    await onAskAgain()
+                    asking = false
+                }
+            } label: {
+                Text("Ask again", bundle: .module)
+            }
+            .disabled(asking)
             Button(action: onRecoveryKey) {
                 Text("I have a recovery key", bundle: .module)
             }

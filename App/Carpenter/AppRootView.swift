@@ -279,7 +279,9 @@ struct AppRootView: View {
                 ready
 
             case .awaitingApproval:
-                AwaitingApprovalView(code: session.approvalCode ?? "", onRecoveryKey: { restoring = true })
+                AwaitingApprovalView(
+                    code: session.approvalCode ?? "", askFailed: session.askedForApproval == false,
+                    onAskAgain: { await session.askForApprovalAgain() }, onRecoveryKey: { restoring = true })
                     .themed(.default)
                     .sheet(isPresented: $restoring) { restoreSheet }
                     .task {
