@@ -18,12 +18,13 @@ public enum VideoPreparer {
         let asset = AVURLAsset(url: url)
         let duration = try await readableDuration(of: asset)
 
+        let source = try await pictureAndSound(of: asset)
         var output = try ScratchSpace.shared.newFile("prepared", extension: "mp4")
         do {
-            try await export(asset, to: output.url, preset: AVAssetExportPresetPassthrough)
+            try await export(source, to: output.url, preset: AVAssetExportPresetPassthrough)
         } catch {
             output = try ScratchSpace.shared.newFile("prepared", extension: "mp4")
-            try await export(asset, to: output.url, preset: AVAssetExportPresetHEVCHighestQuality)
+            try await export(source, to: output.url, preset: AVAssetExportPresetHEVCHighestQuality)
         }
         try output.protect()
 
@@ -314,7 +315,24 @@ public enum VideoPreparer {
         (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? 0
     }
 
-    static func export(_ asset: AVURLAsset, to output: URL, preset: String) async throws {
+    static func pictureAndSound(of asset: AVURLAsset) async throws -> AVMutableComposition {
+        let composition = AVMutableComposition()
+        for kind in [AVMediaType.video, .audio] {
+            for track in try await asset.loadTracks(withMediaType: kind) {
+                guard
+                    let copy = composition.addMutableTrack(
+                        withMediaType: kind, preferredTrackID: kCMPersistentTrackID_Invalid)
+                else { throw Failure.unreadable }
+                let (range, transform) = try await track.load(.timeRange, .preferredTransform)
+                try copy.insertTimeRange(range, of: track, at: range.start)
+                copy.preferredTransform = transform
+            }
+        }
+        guard !composition.tracks(withMediaType: .video).isEmpty else { throw Failure.unreadable }
+        return composition
+    }
+
+    static func export(_ asset: AVAsset, to output: URL, preset: String) async throws {
         guard let session = AVAssetExportSession(asset: asset, presetName: preset) else {
             throw Failure.exportFailed("no export session for \(preset)")
         }
@@ -357,6 +375,9 @@ public enum VideoPreparer {
         var items = try await asset.load(.metadata)
         for format in try await asset.load(.availableMetadataFormats) {
             items += try await asset.loadMetadata(for: format)
+        }
+        for track in try await asset.load(.tracks) where track.mediaType != .video && track.mediaType != .audio {
+            found.append("track:\(track.mediaType.rawValue)")
         }
         for item in items {
             guard let identifier = item.identifier?.rawValue else { continue }

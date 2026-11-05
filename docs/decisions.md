@@ -447,9 +447,13 @@ We'll mimic tik tok there."
 **RULED 2026-09-27 by Griff:** "No setting for video size—instead, if a user recieves a 'your video
 is too big' or whatever, offer to encode it so it fits."
 
-A video is the same entry, sent as it was recorded: its streams are copied into a new file through
-Apple's `forSharing()` metadata filter with no metadata written, so no location or device tag
-survives. It is re-encoded only when its own format cannot be copied into the file (ProRes, for
+A video is the same entry, sent as it was recorded: its picture and sound tracks, and nothing else,
+are copied into a new file through Apple's `forSharing()` metadata filter with no metadata written,
+so no location or device tag survives. Only those two kinds of track are put into the file
+(`VideoPreparer.pictureAndSound`, since 2026-11-05), because a recording can carry a timed track of
+location or camera state, and Apple documents the filter for metadata items without saying it
+reaches such a track. On a Mac the copy dropped the track before this change as well; on an iPhone
+that was never checked, so the app no longer depends on it (`VideoPreparerTests`). It is re-encoded only when its own format cannot be copied into the file (ProRes, for
 one), and then at Apple's highest-quality HEVC preset, not smaller. Its first frame is the preview and its length is in the entry.
 There is no limit on its length; the file may be up to 287 MB. A clip over that is flagged in the
 composer the moment it is picked, with its size and a *Make it fit* button, and it is not made

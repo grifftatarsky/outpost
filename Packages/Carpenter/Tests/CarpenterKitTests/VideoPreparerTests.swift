@@ -46,14 +46,23 @@ struct VideoPreparerTests {
         defer { try? FileManager.default.removeItem(at: original) }
         let carried = try await AVURLAsset(url: original).loadTracks(withMediaType: .metadata)
         try #require(!carried.isEmpty, "the fixture carries no timed metadata, so this test proves nothing")
+        #expect(
+            try await VideoPreparer.identifyingMetadata(of: original).contains("track:\(AVMediaType.metadata.rawValue)"),
+            "the contract a clip is held to cannot see a track of timed location")
 
         let prepared = try await VideoPreparer.prepare(original)
         let file = try #require(prepared.file)
         defer { try? FileManager.default.removeItem(at: file) }
         let tracks = try await AVURLAsset(url: file).load(.tracks)
+        let picture = try #require(try await AVURLAsset(url: file).loadTracks(withMediaType: .video).first)
+        let codec = try await picture.load(.formatDescriptions).first.map(CMFormatDescriptionGetMediaSubType)
+        #expect(
+            codec == kCMVideoCodecType_H264,
+            "the clip was re-encoded, so this proves nothing about what a clip sent as recorded carries")
         #expect(
             tracks.allSatisfy { $0.mediaType == .video || $0.mediaType == .audio },
             "a clip went out with tracks other than picture and sound: \(tracks.map(\.mediaType.rawValue))")
+        #expect(try await VideoPreparer.identifyingMetadata(of: file).isEmpty)
 
         let fitted = try await VideoPreparer.prepareToFit(original, limit: 200_000)
         let fittedFile = try #require(fitted.file)
