@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 
 public struct PreparedDeathmark: Codable, Hashable, Sendable {
     public let mark: Data

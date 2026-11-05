@@ -1,6 +1,7 @@
 import CloudKit
 import CarpenterKit
 import Foundation
+import os
 
 // MARK: Photos and clips: one copy in the space of each person they are for, sealed for that pair
 

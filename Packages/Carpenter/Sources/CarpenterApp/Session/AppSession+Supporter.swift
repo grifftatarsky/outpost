@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 
 extension AppSession {
     public var supporterStanding: SupporterStanding {

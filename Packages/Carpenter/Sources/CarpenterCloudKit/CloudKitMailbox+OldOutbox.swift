@@ -1,6 +1,7 @@
 import CloudKit
 import CarpenterKit
 import Foundation
+import os
 
 // MARK: The single outbox every member used before, read and written only while contacts move over
 

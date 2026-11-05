@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: Filling a hole in what was said, and the way back to a peer's outbox
 

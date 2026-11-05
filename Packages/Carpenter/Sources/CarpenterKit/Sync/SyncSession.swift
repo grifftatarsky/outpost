@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public struct SyncReport: Hashable, Sendable {
     public var packetsWritten: Int = 0

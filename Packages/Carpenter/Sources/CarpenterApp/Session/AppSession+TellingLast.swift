@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 
 // MARK: What a removal changes beyond the log: who is sent a room, and when the removed person hears
 

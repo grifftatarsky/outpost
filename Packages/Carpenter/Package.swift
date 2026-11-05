@@ -3,6 +3,7 @@ import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
     .swiftLanguageMode(.v6),
+    .enableUpcomingFeature("MemberImportVisibility"),
     .treatWarning("UnnecessaryEffectMarker", as: .error),
 ]
 

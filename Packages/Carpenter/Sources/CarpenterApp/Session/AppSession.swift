@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 public struct SessionStorage: Sendable {
     public let keychain: any KeychainStore

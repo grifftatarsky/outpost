@@ -1,6 +1,7 @@
 import CloudKit
 import CarpenterKit
 import Foundation
+import os
 
 public struct CloudKitMailbox: Mailbox, MediaMailbox {
     public static let legacyZoneName = "Outbox"

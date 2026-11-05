@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public struct FocusFilter: Hashable, Sendable, Codable {
     public var rooms: Set<RoomID>
