@@ -59,11 +59,7 @@ extension AppRootView {
             },
             comments: { session.comments(on: $0) },
             onComment: { post, text in
-                // COPY BEGIN de96aee0 [NEEDS HUMAN REVIEW]
-                await attempting(
-                    String(localized: "That comment did not go through"), "comment"
-                ) { try await session.comment(on: post, text: text) }
-                // COPY END de96aee0
+                await reporting("comment") { try await session.comment(on: post, text: text) }
             },
             onAttachPost: { picked, caption in await post(picked, caption: caption) },
             postActions: PostActions(
