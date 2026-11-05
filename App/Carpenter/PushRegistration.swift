@@ -70,7 +70,7 @@ class PushDesk: NSObject, UNUserNotificationCenterDelegate {
     ) async {
         let thread = response.notification.request.content.threadIdentifier
         Diagnostics.sync.notice(
-            "push: opened from a notification (thread \(thread.isEmpty ? "none" : thread, privacy: .public))")
+            "push: opened from a notification (\(thread.isEmpty ? "naming no thread" : "naming a thread", privacy: .public))")
         PushArrivals.shared.open(thread: thread)
         await PushArrivals.shared.arrived()
     }
