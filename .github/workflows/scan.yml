@@ -15,7 +15,7 @@ concurrency:
 jobs:
   sanitizers:
     name: Package suite under ${{ matrix.step }}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -23,7 +23,7 @@ jobs:
         step: [thread-sanitizer, address-sanitizer]
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/xcode-26
+      - uses: ./.github/actions/xcode-27
       - name: Run
         env:
           CHECK_LOGS: ${{ runner.temp }}/scan
