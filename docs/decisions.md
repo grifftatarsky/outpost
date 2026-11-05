@@ -1242,8 +1242,15 @@ before, so one old device keeps the old behavior for everybody.
 A removal is signed by the device that made it as well as by the identity, and a removal made by a
 device that was itself removed earlier does not count, so a removed device can't remove yours.
 
-A removed device learns about it from its sibling's state record, erases its room keys, its own
-device key, its messages and its local state, and shows a screen that says it was removed. It stays
+A removed device learns about it from its sibling's state record, erases everything the phone keeps
+for the member, and shows a screen that says it was removed. "Everything" is the same erase that
+*Erase everything*, the wrong-code limit, a deathmark and a forgotten code run, since 2026-11-05: the
+keychain items this phone holds, the log, the state, photos and clips, every avatar, the Focus room
+list and filter, the scratch folder, the copies left from before the shared container, and the list of
+photos the member chose to reveal (`AppSession.eraseWhatThisPhoneKeeps`, `WhatErasingAPhoneLeavesTests`).
+Before that date a removed device ran a shorter erase of its own and kept the avatars, the Focus room
+list and those old copies. The places come from the same list the protection setting walks
+(`SessionStorage.locations`), so a place added for one is added for both. It stays
 removed across relaunches, and the recovery key brings it back as a new device. After a restore
 from the recovery key, the app offers to remove all or some of the member's other devices.
 

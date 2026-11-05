@@ -32,17 +32,19 @@ extension SessionStorage {
                 url: directory.appending(path: StorageLocation.stateName), protection: protection),
             media: FileMediaStore(directory: FileMediaStore.url(inDirectory: directory), protection: protection),
             protection: protection,
-            locations: keptLocations(container: container, directory: directory, shared: profile == nil)
+            locations: keptLocations(container: container, directory: directory, shared: profile == nil),
+            settings: profile == nil ? keptSettings : []
         )
     }
 
     private static func keptLocations(container: String, directory: URL, shared: Bool) -> [URL] {
-        let fallback = StorageLocation.fallback(container: container)
-        let own = [
-            directory, fallback.appending(path: StorageLocation.logName),
-            fallback.appending(path: StorageLocation.stateName),
-        ]
+        let own = [directory, StorageLocation.fallback(container: container)]
         guard shared else { return own }
         return own + [FocusFilterStore.directory, ScratchSpace.shared.directory].compactMap { $0 }
     }
+
+    private static let keptSettings = [
+        KeptSetting(key: MediaLoader.revealedKey),
+        KeptSetting(suite: AppGroup.identifier, key: FocusFilterStore.filterKey),
+    ]
 }

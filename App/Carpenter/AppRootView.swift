@@ -427,7 +427,10 @@ struct AppRootView: View {
             #endif
             await finishOpening()
         }
-        .onChange(of: session.state) { _, _ in startDeviceSync() }
+        .onChange(of: session.state) { _, state in
+            startDeviceSync()
+            if state == .removed { Task { await dropWhatTheErasedSessionShowed() } }
+        }
         .task(id: session.state) { await settleDistribution() }
         .task { PushArrivals.shared.onArrival { await syncNow() } }
         .task {

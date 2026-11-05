@@ -9,11 +9,12 @@ public struct SessionStorage: Sendable {
     public let media: any MediaStore
     public let protection: ProtectionDial
     public let locations: [URL]
+    public let settings: [KeptSetting]
 
     public init(
         keychain: any KeychainStore, log: any LogStore, documents: any DocumentStore,
         media: any MediaStore = MemoryMediaStore(), protection: ProtectionDial = ProtectionDial(),
-        locations: [URL] = []
+        locations: [URL] = [], settings: [KeptSetting] = []
     ) {
         self.keychain = keychain
         self.log = log
@@ -21,6 +22,7 @@ public struct SessionStorage: Sendable {
         self.media = media
         self.protection = protection
         self.locations = locations
+        self.settings = settings
     }
 
     public var readOnly: SessionStorage {

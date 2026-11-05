@@ -77,7 +77,7 @@ public final class MediaLoader {
     private let clipSource: ClipSource?
     private let screen: (any MediaScreen)?
     private let defaults: UserDefaults
-    private static let revealedKey = "media.revealed"
+    nonisolated public static let revealedKey = "media.revealed"
 
     private var states: [AttachmentID: MediaLoadState] = [:]
     private var tasks: [AttachmentID: Task<Void, Never>] = [:]

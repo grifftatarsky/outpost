@@ -1405,8 +1405,8 @@ notification says only that something arrived.
 **What actually happens.** No new cryptography: the app asks iOS for its strongest protection, which
 iOS already ties to the passcode and to the phone's own hardware key.
 
-- **Files.** The log, the state, photos and clips, every avatar, the Focus room list, the old copies of
-  the log and state left in Application Support, and the scratch folder are written and kept
+- **Files.** The log, the state, photos and clips, every avatar, the Focus room list, the rest of the
+  app's folder in Application Support, and the scratch folder are written and kept
   as `FileProtectionType.complete`, which Apple describes as "stored in an encrypted format on disk
   and cannot be read from or written to while the device is locked or booting"
   ([Apple](https://developer.apple.com/documentation/foundation/fileprotectiontype/complete)). Apple's

@@ -342,4 +342,11 @@ If the App Group is unavailable, the extension falls back to a directory inside 
 container, not the app's. That is a second private copy that is always behind, and it looks exactly
 like a slow process. Both processes log which container they resolved.
 
+The log and the state file started out in the app's own Application Support folder. The first launch
+with the App Group copies them across, through a hidden name that is renamed only once the copy reads
+back byte for byte, and then deletes the old ones, so a member's history is never in two places. If
+either copy cannot be made, nothing is deleted, what was copied is taken back, and the app goes on
+reading its own folder (`StorageLocation.resolved`, `StorageLocationTests`). Before 2026-11-05 the old
+copies stayed for good, and a failed copy left the app reading an empty shared folder.
+
 <!-- COPY END 8aa03a7e -->
