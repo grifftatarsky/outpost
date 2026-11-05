@@ -520,11 +520,11 @@ struct AppRootView: View {
                         #if os(iOS)
                             handBack(issued, to: joinerCode)
                         #endif
-                        return issued
+                        return .issued(issued)
                     } catch {
                         Diagnostics.identity.error(
                             "invite failed: \(String(describing: error), privacy: .public)")
-                        return nil
+                        return .refused(SessionProblem.sentence(for: error))
                     }
                 },
                 preferences: roomsListPreferences,

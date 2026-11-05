@@ -81,7 +81,7 @@
             case .addSomeone:
                 AddSomeoneView(
                     rooms: { [Fixtures.hangar7, Fixtures.zeppelinEnthusiasts] }, code: "demo",
-                    onAdd: { _, _ in nil }, preferences: RoomsListPreferences())
+                    onAdd: { _, _ in .refused("") }, preferences: RoomsListPreferences())
             case .removeMember:
                 RemoveMemberView(member: Fixtures.hastur, roomName: Fixtures.hangar7.name, onRemove: {})
             case .checkingRegistration:

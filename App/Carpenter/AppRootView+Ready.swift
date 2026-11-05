@@ -239,9 +239,14 @@ extension AppRootView {
             onDecideJoin: { room, join, admit in
                 let candidates =
                     session.pendingJoins(in: room) + session.awaitingConfirmation(in: room)
-                guard let attestation = candidates.first(where: { $0.joiner == join.id })
-                else { return }
                 // COPY BEGIN 364edb99 [NEEDS HUMAN REVIEW]
+                guard let attestation = candidates.first(where: { $0.joiner == join.id }) else {
+                    problem = ActionProblem(
+                        title: String(localized: "That answer did not go through"),
+                        detail: String(
+                            localized: "That invitation is no longer waiting for an answer: it was answered, taken back or ran out."))
+                    return
+                }
                 await attempting(
                     String(localized: "That answer did not go through"), "answer a join"
                 ) {
