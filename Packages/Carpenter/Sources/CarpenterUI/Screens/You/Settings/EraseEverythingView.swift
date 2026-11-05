@@ -97,7 +97,7 @@ public struct EraseEverythingView: View {
                 Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
             } message: {
                 Text(
-                    "Your identity goes from this device. Your other devices keep theirs until you erase them too. There is no undo and nobody can restore this for you.",
+                    "This device erases now. Your other devices erase themselves when they next reach iCloud, and one that never does keeps what it has. There is no undo.",
                     bundle: .module)
             // COPY END a12e6eb2
             }
