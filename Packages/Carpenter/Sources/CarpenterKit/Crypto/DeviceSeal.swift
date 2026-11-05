@@ -3,49 +3,64 @@ import Foundation
 
 public struct DeviceRecipient: Hashable, Sendable {
     public let device: DeviceID
-    public let agreementKey: Data
+    public let sealingKey: Data
 
-    public init(device: DeviceID, agreementKey: Data) {
+    public init(device: DeviceID, sealingKey: Data) {
         self.device = device
-        self.agreementKey = agreementKey
+        self.sealingKey = sealingKey
     }
 }
 
 public struct DeviceSeal: Hashable, Sendable, Codable {
     public let device: DeviceID
-    public let ephemeral: Data
+    public let encapsulated: Data
     public let sealed: Data
 
+    public static let encapsulatedByteCount = 1_120
+
     public static func seal(_ plaintext: Data, to recipient: DeviceRecipient, context: Data) throws -> DeviceSeal {
-        let ephemeral = Curve25519.KeyAgreement.PrivateKey()
-        let theirs = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: recipient.agreementKey)
-        let shared = try ephemeral.sharedSecretFromKeyAgreement(with: theirs)
-        let ephemeralPublic = ephemeral.publicKey.rawRepresentation
-        let box = try ChaChaPoly.seal(
-            plaintext,
-            using: key(shared, device: recipient.device, ephemeral: ephemeralPublic, context: context),
-            authenticating: context)
-        return DeviceSeal(device: recipient.device, ephemeral: ephemeralPublic, sealed: box.combined)
+        var sender = try HPKE.Sender(
+            recipientKey: try XWingMLKEM768X25519.PublicKey(rawRepresentation: recipient.sealingKey),
+            ciphersuite: suite, info: info(device: recipient.device, context: context))
+        let sealed = try sender.seal(plaintext)
+        return DeviceSeal(device: recipient.device, encapsulated: sender.encapsulatedKey, sealed: sealed)
     }
 
     public func open(with device: DeviceKeys, context: Data) throws -> Data {
         guard device.id == self.device,
-            let theirs = try? Curve25519.KeyAgreement.PublicKey(rawRepresentation: ephemeral),
-            let shared = try? device.agreementKey.sharedSecretFromKeyAgreement(with: theirs),
-            let box = try? ChaChaPoly.SealedBox(combined: sealed),
-            let plaintext = try? ChaChaPoly.open(
-                box, using: Self.key(shared, device: self.device, ephemeral: ephemeral, context: context),
-                authenticating: context)
+            var recipient = try? HPKE.Recipient(
+                privateKey: device.sealingKey, ciphersuite: Self.suite,
+                info: Self.info(device: self.device, context: context), encapsulatedKey: encapsulated),
+            let plaintext = try? recipient.open(sealed)
         else { throw CryptoError.openFailed }
         return plaintext
     }
 
-    private static func key(_ shared: SharedSecret, device: DeviceID, ephemeral: Data, context: Data) -> SymmetricKey {
-        shared.hkdfDerivedSymmetricKey(
-            using: SHA256.self,
-            salt: Data(Domain.deviceSeal.utf8),
-            sharedInfo: CanonicalBytes.payload(
-                domain: Domain.deviceSeal, fields: [device.rawValue, ephemeral, context]),
-            outputByteCount: 32)
+    private static let suite = HPKE.Ciphersuite.XWingMLKEM768X25519_SHA256_AES_GCM_256
+
+    private static func info(device: DeviceID, context: Data) -> Data {
+        CanonicalBytes.payload(domain: Domain.deviceSeal, fields: [device.rawValue, context])
+    }
+
+    init(device: DeviceID, encapsulated: Data, sealed: Data) {
+        self.device = device
+        self.encapsulated = encapsulated
+        self.sealed = sealed
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case device, encapsulated, sealed
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        device = try container.decode(DeviceID.self, forKey: .device)
+        encapsulated = try container.decodeIfPresent(Data.self, forKey: .encapsulated) ?? Data()
+        sealed = try container.decode(Data.self, forKey: .sealed)
+        guard encapsulated.count <= Self.encapsulatedByteCount, sealed.count <= MailboxRules.recordByteCeiling
+        else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .sealed, in: container, debugDescription: "a device seal larger than a record can hold")
+        }
     }
 }

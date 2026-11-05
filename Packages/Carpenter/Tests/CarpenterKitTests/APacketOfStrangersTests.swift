@@ -39,7 +39,8 @@ struct APacketOfStrangersTests {
         let made = try strangers(2_000)
 
         try await writePacket(
-            from: t.sam, to: t.carol, through: t.mailbox, identities: made.identities, certificates: made.certificates)
+            from: t.sam, to: t.carol, through: t.mailbox, identities: made.identities,
+            certificates: Array(made.certificates.prefix(300)))
         let round = try await t.carol.sync(through: t.mailbox, media: t.mailbox)
 
         #expect(t.carol.replica.knownParticipants == before, "an identity nothing needed was kept")

@@ -29,7 +29,7 @@ struct PerDeviceKeysTests {
         try certificate.verify(against: identity.publicKeys)
     }
 
-    @Test("The device key and the approver are each named in what the identity signs")
+    @Test("The sealing key and the approver are each named in what the identity signs, the sealing key last")
     func theNewFieldsAreTagged() throws {
         let identity = Identity.generate()
         let (device, approver) = (DeviceKeys.generate(), DeviceKeys.generate())
@@ -42,39 +42,86 @@ struct PerDeviceKeysTests {
         let written = field(Data("carpenter.device-certificate.v1".utf8))
             + field(identity.id.rawValue) + field(device.id.rawValue) + field(device.publicKey)
             + field(withUnsafeBytes(of: milliseconds.bigEndian) { Data($0) })
-            + field(Data("agreement-key".utf8)) + field(device.agreementPublicKey)
             + field(Data("approved-by".utf8)) + field(approver.id.rawValue)
+            + field(Data("sealing-key".utf8)) + field(device.sealingPublicKey)
 
         #expect(certificate.signingPayload == written)
         #expect(certificate.isApproved(byKey: approver.publicKey))
         #expect(!certificate.isApproved(byKey: device.publicKey))
     }
 
-    @Test("A certificate carrying a device key verifies, and changing the key breaks it")
-    func theDeviceKeyIsSigned() throws {
+    @Test("A certificate from before the sealing key, carrying an X25519 key, signs the bytes it always did")
+    func aCertificateWithAnAgreementKeyKeepsItsBytes() throws {
         let identity = Identity.generate()
-        let device = DeviceKeys.generate()
-        var certificate = try DeviceCertificate.issue(for: device, by: identity, at: issued)
-        try certificate.verify(against: identity.publicKeys)
+        let (device, approver) = (DeviceKeys.generate(), DeviceKeys.generate())
+        let agreementKey = Data(repeating: 9, count: 32)
+        var certificate = DeviceCertificate(
+            participant: identity.id, device: device.id, devicePublicKey: device.publicKey, issuedAt: issued,
+            signature: Data(), agreementKey: agreementKey, approvedBy: approver.id)
 
-        certificate.agreementKey = DeviceKeys.generate().agreementPublicKey
-        #expect(throws: CryptoError.self) { try certificate.verify(against: identity.publicKeys) }
+        func field(_ bytes: Data) -> Data {
+            withUnsafeBytes(of: UInt32(bytes.count).bigEndian) { Data($0) } + bytes
+        }
+        let milliseconds = UInt64(issued.timeIntervalSince1970 * 1_000)
+        let written = field(Data("carpenter.device-certificate.v1".utf8))
+            + field(identity.id.rawValue) + field(device.id.rawValue) + field(device.publicKey)
+            + field(withUnsafeBytes(of: milliseconds.bigEndian) { Data($0) })
+            + field(Data("agreement-key".utf8)) + field(agreementKey)
+            + field(Data("approved-by".utf8)) + field(approver.id.rawValue)
+
+        #expect(
+            certificate.signingPayload == written,
+            "adding the sealing key changed what every certificate with an X25519 key was signed over")
+        certificate.signature = try identity.sign(written)
+        certificate.approval = try approver.sign(written)
+        try certificate.verify(against: identity.publicKeys)
+        #expect(certificate.isApproved(byKey: approver.publicKey))
     }
 
-    @Test("An older certificate is replaced by one with a device key, and keeps the day it was added")
-    func anOldCertificateIsUpgraded() throws {
+    @Test("A certificate carrying a sealing key verifies, and changing or spoiling the key breaks it")
+    func theSealingKeyIsSigned() throws {
         let identity = Identity.generate()
         let device = DeviceKeys.generate()
+        let certificate = try DeviceCertificate.issue(for: device, by: identity, at: issued)
+        try certificate.verify(against: identity.publicKeys)
+
+        var swapped = certificate
+        swapped.sealingKey = DeviceKeys.generate().sealingPublicKey
+        #expect(throws: CryptoError.badSignature) { try swapped.verify(against: identity.publicKeys) }
+
+        var cut = try DeviceCertificate.issue(
+            for: device.publicKey, sealingKey: Data(device.sealingPublicKey.dropLast()), by: identity, at: issued)
+        #expect(throws: CryptoError.malformedKey) { try cut.verify(against: identity.publicKeys) }
+        cut.sealingKey = nil
+        #expect(throws: CryptoError.badSignature) { try cut.verify(against: identity.publicKeys) }
+    }
+
+    @Test("A device's certificate is never replaced, so nobody holding the identity can give it another key")
+    func aCertificateIsNeverReplaced() throws {
+        let identity = Identity.generate()
+        let device = DeviceKeys.generate()
+        let thief = DeviceKeys.generate()
         var registry = DeviceRegistry(identity: identity.publicKeys)
-        try registry.admit(try DeviceCertificate.recovered(for: device.publicKey, by: identity, at: issued))
-        #expect(registry.agreementKey(for: device.id) == nil)
+        let real = try DeviceCertificate.recovered(for: device, by: identity, at: issued)
+        try registry.admit(real)
+        #expect(registry.sealingKey(for: device.id) == device.sealingPublicKey)
 
-        try registry.admit(try DeviceCertificate.recovered(for: device, by: identity, at: issued.addingTimeInterval(60)))
-        #expect(registry.agreementKey(for: device.id) == nil, "a certificate with a later date was allowed to move the device's start")
+        var forged = DeviceCertificate(
+            participant: identity.id, device: device.id, devicePublicKey: device.publicKey, issuedAt: issued,
+            signature: Data(), agreementKey: Data(repeating: 1, count: 32), sealingKey: thief.sealingPublicKey)
+        forged.signature = try identity.sign(forged.signingPayload)
+        try registry.admit(forged)
 
-        try registry.admit(try DeviceCertificate.recovered(for: device, by: identity, at: issued))
-        #expect(registry.agreementKey(for: device.id) == device.agreementPublicKey)
+        #expect(
+            registry.sealingKey(for: device.id) == device.sealingPublicKey,
+            "a certificate signed by the identity alone gave the device a key the thief holds")
+        #expect(registry.certificates == [real])
         #expect(registry.standing(of: device.id)?.addedAt == issued)
+
+        let silent = DeviceKeys.generate()
+        try registry.admit(try DeviceCertificate.recovered(for: silent.publicKey, by: identity, at: issued))
+        try registry.admit(try DeviceCertificate.recovered(for: silent, by: identity, at: issued))
+        #expect(registry.sealingKey(for: silent.id) == nil, "a device with no sealing key was given one afterwards")
     }
 
     @Test("A room key sealed to a member's devices opens on each of them and on nothing else")
@@ -88,7 +135,7 @@ struct PerDeviceKeysTests {
 
         let grant = try EpochGrant.issue(
             secret, at: .initial, in: RoomID(), link: nil, to: pairwise,
-            devices: [phone, tablet].map { DeviceRecipient(device: $0.id, agreementKey: $0.agreementPublicKey) })
+            devices: [phone, tablet].map { DeviceRecipient(device: $0.id, sealingKey: $0.sealingPublicKey) })
 
         #expect(try grant.open(with: theirs, as: phone) == secret)
         #expect(try grant.open(with: theirs, as: tablet) == secret)
@@ -107,7 +154,7 @@ struct PerDeviceKeysTests {
         let pairwise = try PairwiseSecret.derive(mine: sender, theirs: member.publicKeys)
         let grant = try EpochGrant.issue(
             EpochSecret.random(), at: .initial, in: RoomID(), link: nil, to: pairwise,
-            devices: [DeviceRecipient(device: phone.id, agreementKey: phone.agreementPublicKey)])
+            devices: [DeviceRecipient(device: phone.id, sealingKey: phone.sealingPublicKey)])
 
         let stranger = try PairwiseSecret.derive(mine: Identity.generate(), theirs: sender.publicKeys)
         #expect(throws: (any Error).self) { try grant.open(with: stranger, as: phone) }

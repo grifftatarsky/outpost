@@ -32,7 +32,7 @@ struct AnAddressOnlyYourDevicesKnowTests {
     }
 
     private func recipients(of house: Household) -> [DeviceRecipient] {
-        [house.phone, house.tablet].map { DeviceRecipient(device: $0.id, agreementKey: $0.agreementPublicKey) }
+        [house.phone, house.tablet].map { DeviceRecipient(device: $0.id, sealingKey: $0.sealingPublicKey) }
     }
 
     @Test("Nobody with a salt means the secret every build has always made")

@@ -133,3 +133,36 @@ passcode.* The alternative is to refuse Outpost's own lock unless the phone has 
 makes the setting nearly pointless, since the phone's lock is then available and stronger.
 
 <!-- COPY END 5d82a14a -->
+
+<!-- COPY BEGIN 6836a24f [NEEDS HUMAN REVIEW] -->
+
+## The record a member's devices share grows with every device the member knows
+
+The state record a member's devices write for each other carries the certificate of every device of
+everybody the member knows, and since 2026-11-05 each certificate carries a 1,216-byte X-Wing key.
+Measured in the package on 2026-11-05: one certificate is 2,171 bytes of JSON, against 578 with the
+X25519 key, and a sealed state record with 200 certificates is 294,411 bytes, against 49,963. CloudKit
+holds at most 1 MB in a record outside its assets, so at that rate, about 680 known devices, the state
+record would stop being written. Mail and catch-ups carry the same certificates, and nothing splits a
+record between a member's devices by size. Not measured on the rig.
+
+**Recommendation: keep only the member's own certificates and removals in the state record.** Other
+people's certificates already arrive in their own packets, and a new device gets them in its catch-up.
+
+<!-- COPY END 6836a24f -->
+
+<!-- COPY BEGIN 4f2530e3 [NEEDS HUMAN REVIEW] -->
+
+## Does X-Wing change the export self-classification?
+
+The export finding rests on everything being standard cryptography
+([App Store](app-store.md#the-finding-that-everything-else-rests-on)). Since 2026-11-05 the app also
+uses HPKE (RFC 9180), ML-KEM-768 (NIST FIPS 203), AES-256-GCM, and X-Wing, which is an individual
+Internet-Draft in the Independent Submission stream, not adopted by the IETF. The definition quoted
+there counts as non-standard only what is neither adopted by a recognised body nor otherwise
+published, and X-Wing is published. All of it is CryptoKit.
+
+**Recommendation: it stays standard; record X-Wing in the self-classification as published, not
+adopted.** This is a reading of the rule, not legal advice.
+
+<!-- COPY END 4f2530e3 -->

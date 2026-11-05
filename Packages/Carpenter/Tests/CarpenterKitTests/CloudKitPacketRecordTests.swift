@@ -19,7 +19,7 @@ struct CloudKitPacketRecordTests {
         let bobsDevice = DeviceKeys.generate()
         let grant = try EpochGrant.issue(
             secret, at: .initial, in: room, link: nil, to: toBob,
-            devices: [DeviceRecipient(device: bobsDevice.id, agreementKey: bobsDevice.agreementPublicKey)])
+            devices: [DeviceRecipient(device: bobsDevice.id, sealingKey: bobsDevice.sealingPublicKey)])
 
         let packet = try SyncEngine.pack(
             [], for: [peerToBob], granting: [(to: peerToBob, grant: grant)], window: 0)

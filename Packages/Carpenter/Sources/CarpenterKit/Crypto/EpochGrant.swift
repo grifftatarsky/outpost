@@ -67,7 +67,7 @@ public struct EpochGrant: Hashable, Sendable, Codable {
         fields += links.map(link)
         fields.append(CanonicalBytes.sequence(UInt64(sealedFor.count)))
         fields += sealedFor.map {
-            CanonicalBytes.payload(domain: Domain.deviceSeal, fields: [$0.device.rawValue, $0.ephemeral, $0.sealed])
+            CanonicalBytes.payload(domain: Domain.deviceSeal, fields: [$0.device.rawValue, $0.encapsulated, $0.sealed])
         }
         return CanonicalBytes.payload(domain: Domain.epochGrantSignature, fields: fields)
     }

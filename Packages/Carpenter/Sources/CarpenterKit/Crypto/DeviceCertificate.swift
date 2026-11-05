@@ -11,6 +11,7 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
     public var approvedBy: DeviceID?
     public var approval: Data?
     public var recoverySignature: Data?
+    public var sealingKey: Data?
 
     public init(
         participant: ParticipantID,
@@ -21,7 +22,8 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         agreementKey: Data? = nil,
         approvedBy: DeviceID? = nil,
         approval: Data? = nil,
-        recoverySignature: Data? = nil
+        recoverySignature: Data? = nil,
+        sealingKey: Data? = nil
     ) {
         self.participant = participant
         self.device = device
@@ -32,10 +34,11 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         self.approvedBy = approvedBy
         self.approval = approval
         self.recoverySignature = recoverySignature
+        self.sealingKey = sealingKey
     }
 
     public static func issue(
-        for devicePublicKey: Data, agreementKey: Data? = nil, by identity: Identity, at issuedAt: Date,
+        for devicePublicKey: Data, sealingKey: Data? = nil, by identity: Identity, at issuedAt: Date,
         approvedBy approver: DeviceKeys? = nil
     ) throws -> DeviceCertificate {
         var certificate = DeviceCertificate(
@@ -44,8 +47,8 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
             devicePublicKey: devicePublicKey,
             issuedAt: issuedAt,
             signature: Data(),
-            agreementKey: agreementKey,
-            approvedBy: approver?.id
+            approvedBy: approver?.id,
+            sealingKey: sealingKey
         )
         certificate.signature = try identity.sign(certificate.signingPayload)
         if let approver {
@@ -59,7 +62,7 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         approvedBy approver: DeviceKeys? = nil
     ) throws -> DeviceCertificate {
         try issue(
-            for: device.publicKey, agreementKey: device.agreementPublicKey, by: identity, at: issuedAt,
+            for: device.publicKey, sealingKey: device.sealingPublicKey, by: identity, at: issuedAt,
             approvedBy: approver)
     }
 
@@ -67,11 +70,11 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         for device: DeviceKeys, by identity: Identity, at issuedAt: Date
     ) throws -> DeviceCertificate {
         try recovered(
-            for: device.publicKey, agreementKey: device.agreementPublicKey, by: identity, at: issuedAt)
+            for: device.publicKey, sealingKey: device.sealingPublicKey, by: identity, at: issuedAt)
     }
 
     public static func recovered(
-        for devicePublicKey: Data, agreementKey: Data? = nil, by identity: Identity, at issuedAt: Date
+        for devicePublicKey: Data, sealingKey: Data? = nil, by identity: Identity, at issuedAt: Date
     ) throws -> DeviceCertificate {
         guard let recovery = identity.recovery else { throw CryptoError.notAuthorized }
         var certificate = DeviceCertificate(
@@ -80,8 +83,8 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
             devicePublicKey: devicePublicKey,
             issuedAt: issuedAt,
             signature: Data(),
-            agreementKey: agreementKey,
-            recoverySignature: Data()
+            recoverySignature: Data(),
+            sealingKey: sealingKey
         )
         certificate.signature = try identity.sign(certificate.signingPayload)
         certificate.recoverySignature = try recovery.sign(certificate.signingPayload)
@@ -100,6 +103,7 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         if let agreementKey { fields += [Data("agreement-key".utf8), agreementKey] }
         if let approvedBy { fields += [Data("approved-by".utf8), approvedBy.rawValue] }
         if recoverySignature != nil { fields += [Data(Domain.recoveryReset.utf8)] }
+        if let sealingKey { fields += [Data("sealing-key".utf8), sealingKey] }
         return CanonicalBytes.payload(domain: Domain.deviceCertificate, fields: fields)
     }
 
@@ -115,6 +119,9 @@ public struct DeviceCertificate: Hashable, Sendable, Codable {
         }
         guard approvedBy == nil || recoverySignature == nil else {
             throw CryptoError.badSignature
+        }
+        if let sealingKey, (try? XWingMLKEM768X25519.PublicKey(rawRepresentation: sealingKey)) == nil {
+            throw CryptoError.malformedKey
         }
         guard try identityKeys.isValidSignature(signature, for: signingPayload) else {
             throw CryptoError.badSignature

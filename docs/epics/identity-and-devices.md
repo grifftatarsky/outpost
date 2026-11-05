@@ -745,6 +745,43 @@ support it, so that the people I talk to can see it if I want them to.
 
 <!-- COPY END 68559ce0 -->
 
+<!-- COPY BEGIN 8db04389 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="keys-handed-to-a-device-sealed-with-x-wing">
+<summary><b>Keys handed to a device sealed with X-Wing</b> — Built, not yet on a phone</summary>
+
+**Story.** As a member, I want what sits in my iCloud today to stay unreadable when quantum computers
+can break X25519, so that a copy taken now cannot be read later.
+
+**What it must guarantee.** A recording of every record in iCloud cannot later yield a room key, an
+address salt or a member's identity unless ML-KEM-768 is broken as well as X25519, so it yields no
+message, photo or comment in a room. A seal opens only on the device it names, under the room, epoch
+and purpose it was made for. A seal in the old X25519 form is never opened. What the recording still
+yields is in [The crypto, written down](../crypto-brief.md#what-a-recording-of-icloud-can-open-later).
+
+**Acceptance criteria**
+
+- **Done.** `DeviceSeal` is HPKE with X-Wing; each device's X-Wing key comes from its signing seed and is
+  in its certificate, appended only when present, with both older layouts pinned by hand.
+- **Done.** Grants, grants passed on, mail, catch-ups, a restore's hand-off, approvals and address
+  announcements all go through it; a new device's request carries its X-Wing key and the code covers it.
+- **Done.** An old-form seal decodes and does not open; a certificate is never replaced; an oversized seal
+  or a malformed key is refused.
+- **Open.** Two accounts on the rig exchanging room keys with this build, after both accounts are reset.
+- **Open.** Packets and everything else under the pair's secret
+  ([The crypto, written down](../crypto-brief.md#what-a-recording-of-icloud-can-open-later)).
+
+**Testing**
+
+- Suite: `AKeyHandedToADeviceIsSealedWithXWingTests` (round trip, wrong device, wrong binding,
+  tampering, the old form, sizes, grants, requests, approvals) and `PerDeviceKeysTests`. Each guard
+  was taken out once and its test failed.
+- Not run over iCloud.
+
+</details>
+
+<!-- COPY END 8db04389 -->
+
 <!-- COPY BEGIN ebcdaefd [NEEDS HUMAN REVIEW] -->
 
 ## Test plan

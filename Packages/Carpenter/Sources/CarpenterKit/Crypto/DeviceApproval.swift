@@ -3,22 +3,22 @@ import Foundation
 
 public struct DeviceRequest: Hashable, Sendable, Codable {
     public let devicePublicKey: Data
-    public let agreementKey: Data
+    public let sealingKey: Data
 
-    public init(devicePublicKey: Data, agreementKey: Data) {
+    public init(devicePublicKey: Data, sealingKey: Data) {
         self.devicePublicKey = devicePublicKey
-        self.agreementKey = agreementKey
+        self.sealingKey = sealingKey
     }
 
     public init(for device: DeviceKeys) {
-        self.init(devicePublicKey: device.publicKey, agreementKey: device.agreementPublicKey)
+        self.init(devicePublicKey: device.publicKey, sealingKey: device.sealingPublicKey)
     }
 
     public var device: DeviceID { DeviceID(publicKey: devicePublicKey) }
 
     public var code: String {
         let transcript = CanonicalBytes.payload(
-            domain: Domain.deviceApprovalCode, fields: [devicePublicKey, agreementKey])
+            domain: Domain.deviceApprovalCode, fields: [devicePublicKey, sealingKey])
         var code = ""
         var block = UInt64(0)
         while code.count < Self.codeLength {
@@ -48,7 +48,7 @@ public struct DeviceRequest: Hashable, Sendable, Codable {
         guard case .request = record.name.kind,
             let decoded = try? JSONDecoder().decode(DeviceRequest.self, from: record.sealed.ciphertext),
             decoded.device == record.name.writer,
-            (try? Curve25519.KeyAgreement.PublicKey(rawRepresentation: decoded.agreementKey)) != nil
+            (try? XWingMLKEM768X25519.PublicKey(rawRepresentation: decoded.sealingKey)) != nil
         else { return nil }
         self = decoded
     }
@@ -95,7 +95,7 @@ public struct DeviceApproval: Hashable, Sendable, Codable {
     private static func context(approver: DeviceID, request: DeviceRequest) -> Data {
         CanonicalBytes.payload(
             domain: Domain.deviceApproval,
-            fields: [approver.rawValue, request.devicePublicKey, request.agreementKey])
+            fields: [approver.rawValue, request.devicePublicKey, request.sealingKey])
     }
 
     public func record(from approver: DeviceID, to request: DeviceRequest) throws -> SiblingRecord {
@@ -103,7 +103,7 @@ public struct DeviceApproval: Hashable, Sendable, Codable {
         encoder.outputFormatting = .sortedKeys
         let seal = try DeviceSeal.seal(
             try encoder.encode(self),
-            to: DeviceRecipient(device: request.device, agreementKey: request.agreementKey),
+            to: DeviceRecipient(device: request.device, sealingKey: request.sealingKey),
             context: Self.context(approver: approver, request: request))
         return SiblingRecord(
             name: SiblingRecord.Name(writer: approver, kind: .approval(for: request.device)),

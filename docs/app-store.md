@@ -148,7 +148,9 @@ cryptographic functionality, including encryption algorithms or protocols that h
 or approved by a duly recognized international standards body (e.g. IEEE, IETF, ISO, ITU, ETSI,
 3GPP, TIA, and GSMA) and have not otherwise been published."
 
-Everything the app uses is an IETF standard, and none of it is implemented here — it is all CryptoKit:
+Everything the app uses is an IETF or NIST standard except X-Wing, which is published but not adopted
+([Open questions](open-questions.md#does-x-wing-change-the-export-self-classification)), and none of it
+is implemented here — it is all CryptoKit:
 
 | Primitive | Standard |
 |---|---|
@@ -156,6 +158,10 @@ Everything the app uses is an IETF standard, and none of it is implemented here 
 | Ed25519 | RFC 8032 |
 | X25519 | RFC 7748 |
 | HKDF-SHA256 | RFC 5869 |
+| HPKE | [RFC 9180](https://www.rfc-editor.org/rfc/rfc9180) |
+| ML-KEM-768 | [NIST FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) |
+| AES-256-GCM | [NIST SP 800-38D](https://csrc.nist.gov/pubs/sp/800/38/d/final) |
+| X-Wing (ML-KEM-768 with X25519) | [draft-connolly-cfrg-xwing-kem](https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/), an individual Internet-Draft |
 
 This keeps the project out of 740.17(b)(3)(ii), the non-standard lane, which requires a
 classification request to BIS before export. That is the expensive path and Outpost is not on it.

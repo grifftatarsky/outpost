@@ -43,7 +43,7 @@ struct MailToADeviceWithoutAReceivingKeyTests {
         let older = DeviceKeys.generate()
         try session.replica.admit(
             DeviceCertificate.issue(
-                for: older.publicKey, agreementKey: nil, by: enrolment.identity, at: clock.now,
+                for: older.publicKey, sealingKey: nil, by: enrolment.identity, at: clock.now,
                 approvedBy: enrolment.device))
         for sibling in [receiving.id, older.id] {
             session.persisted.siblingMail.noteState(from: sibling, cursors: [], at: clock.now, me: enrolment.device.id)

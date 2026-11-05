@@ -50,7 +50,7 @@ struct LiveSiblingFeedTests {
             name: SiblingRecord.Name(writer: device, kind: .mail(number)),
             sealed: try SealedSiblingFeed.seal(
                 feed(carrying: material), for: identity, on: device, as: .mail(number),
-                to: [DeviceRecipient(device: mailReader.id, agreementKey: mailReader.agreementPublicKey)]))
+                to: [DeviceRecipient(device: mailReader.id, sealingKey: mailReader.sealingPublicKey)]))
     }
 
     @Test("What reaches the server is ciphertext, and the epoch secret is not in it")

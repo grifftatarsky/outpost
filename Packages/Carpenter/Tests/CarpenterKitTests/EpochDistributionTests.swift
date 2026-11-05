@@ -18,7 +18,7 @@ struct EpochDistributionTests {
     private let device = DeviceKeys.generate()
 
     private func to(_ devices: DeviceKeys...) -> [DeviceRecipient] {
-        devices.map { DeviceRecipient(device: $0.id, agreementKey: $0.agreementPublicKey) }
+        devices.map { DeviceRecipient(device: $0.id, sealingKey: $0.sealingPublicKey) }
     }
 
     @Test("A grant opens under the pairwise secret it was issued to")

@@ -89,7 +89,7 @@ public struct AddressAnnouncement: Hashable, Sendable, Codable {
     ) -> Data {
         var fields = [member.rawValue, recipient.rawValue, CanonicalBytes.sequence(UInt64(number)), device.rawValue]
         for seal in seals.sorted(by: { $0.device.rawValue.lexicographicallyPrecedes($1.device.rawValue) }) {
-            fields.append(contentsOf: [seal.device.rawValue, seal.ephemeral, seal.sealed])
+            fields.append(contentsOf: [seal.device.rawValue, seal.encapsulated, seal.sealed])
         }
         return CanonicalBytes.payload(domain: Domain.addressAnnouncementSignature, fields: fields)
     }

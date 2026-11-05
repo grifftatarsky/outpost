@@ -134,14 +134,8 @@ public struct DeviceRegistry: Hashable, Sendable {
             guard existing.devicePublicKey == certificate.devicePublicKey else {
                 throw CryptoError.deviceMismatch
             }
-            let upgrade =
-                existing.agreementKey == nil && certificate.agreementKey != nil
-                && existing.issuedAt == certificate.issuedAt && existing.approvedBy == certificate.approvedBy
-            guard upgrade else {
-                recompute()
-                return
-            }
-            if let earlier = stored[existing.digest] { note(certificate.digest, earlier) }
+            recompute()
+            return
         }
         submitted[certificate.device] = certificate
         recompute()
@@ -219,8 +213,8 @@ public struct DeviceRegistry: Hashable, Sendable {
         return certificate.approvedBy != nil || certificate.isRecovery
     }
 
-    public func agreementKey(for device: DeviceID) -> Data? {
-        standings[device] == nil ? nil : submitted[device]?.agreementKey
+    public func sealingKey(for device: DeviceID) -> Data? {
+        standings[device] == nil ? nil : submitted[device]?.sealingKey
     }
 
     public var activeDevices: Set<DeviceID> {
