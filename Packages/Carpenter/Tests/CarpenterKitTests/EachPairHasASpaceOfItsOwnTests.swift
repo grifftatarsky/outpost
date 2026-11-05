@@ -152,7 +152,7 @@ struct EachPairHasASpaceOfItsOwnTests {
             "closing Bob's space cut off Carol")
     }
 
-    @Test("Blocking somebody closes the space kept for them, and unblocking them opens a new one")
+    @Test("Blocking somebody closes the space kept for them, and unblocking opens it to them again")
     func blockingClosesTheirSpace() async throws {
         let t = try await three()
         let bobs = LocalPairStore.account(of: t.bobID)

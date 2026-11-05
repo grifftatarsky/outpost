@@ -270,7 +270,8 @@ access to all of yours and touches nobody else's; only the sender decides what w
   sealed room entry passed on by whoever talks to both, who cannot open it.
 - **Done.** A link counts only from a device that still counts, and a contact is read only from
   accounts such links name (added 2026-09-28 after a review of the build).
-- **Done.** Blocking somebody closes the space kept for them; unblocking makes a new one.
+- **Done.** Blocking somebody takes them off the space kept for them and you off theirs; unblocking
+  opens both again (changed 2026-11-05, `BlockingInARoomOfTwoTests`).
 - **Built, proof on two accounts owed** (2026-09-28; the package suite passes). Each person's copy of a photo is
   sealed apart for their pair and named from its secret, and nothing in iCloud names the photo
   (`PhotoCopiesAreSealedApartTests`; ruled by Griff the same day).

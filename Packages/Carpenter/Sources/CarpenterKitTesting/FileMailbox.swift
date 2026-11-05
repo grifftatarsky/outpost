@@ -41,6 +41,14 @@ public actor FileMailbox: Mailbox {
 
     public func close(_ peer: ParticipantID, in pairs: Pairs) throws { try change { $0.close(peer, in: pairs, as: self.account(in: pairs)) } }
 
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) throws {
+        try change { $0.stopSharing(with: peer, in: pairs, as: self.account(in: pairs)) }
+    }
+
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) throws {
+        try change { $0.leave(peer, in: pairs, as: self.account(in: pairs)) }
+    }
+
     public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) throws {
         try change { try $0.put(packet, to: peer, in: pairs, as: self.account(in: pairs), at: Date()) }
     }

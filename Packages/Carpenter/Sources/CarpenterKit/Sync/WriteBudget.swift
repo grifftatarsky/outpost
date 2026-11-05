@@ -95,6 +95,14 @@ public actor BudgetedMailbox: Mailbox {
         try await underlying.close(peer, in: pairs)
     }
 
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) async throws {
+        try await underlying.stopSharing(with: peer, in: pairs)
+    }
+
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) async throws {
+        try await underlying.leave(peer, in: pairs)
+    }
+
     public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) async throws -> [SyncPacket] {
         try await underlying.fetch(from: peer, for: tags, in: pairs)
     }

@@ -112,6 +112,40 @@ extension CloudKitMailbox {
         await index.dropMine(zone)
     }
 
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) async throws {
+        let hint = try pairs.hint(for: peer)
+        try await refresh()
+        guard let zone = await index.mineFor(hint) else { return }
+        await index.forgetReader(of: zone)
+        let share = try await share(of: zone)
+        let others = share.participants.filter { $0.role != .owner }
+        guard !others.isEmpty else { return }
+        for participant in others { share.removeParticipant(participant) }
+        _ = try await container.privateCloudDatabase.modifyRecords(
+            saving: [share], deleting: [], savePolicy: .changedKeys)
+        Diagnostics.sync.notice("pairs: took \(others.count, privacy: .public) reader(s) off a space")
+    }
+
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) async throws {
+        let hint = try pairs.hint(for: peer)
+        try await refresh()
+        let zones = await index.joined(hint)
+        guard !zones.isEmpty else { return }
+        let shares = zones.map { CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: $0) }
+        let result = try await container.sharedCloudDatabase.modifyRecords(saving: [], deleting: shares)
+        for (_, outcome) in result.deleteResults {
+            do {
+                try outcome.get()
+            } catch let error as CKError
+                where [.unknownItem, .zoneNotFound, .userDeletedZone].contains(error.code)
+            {
+                continue
+            }
+        }
+        await index.forget(theirs: zones)
+        Diagnostics.sync.notice("pairs: left \(zones.count, privacy: .public) space(s) of somebody blocked")
+    }
+
     func zone(for peer: ParticipantID, in pairs: Pairs) async throws -> CKRecordZone.ID {
         let hint = try pairs.hint(for: peer)
         try await refresh()
@@ -160,7 +194,7 @@ extension CloudKitMailbox {
     private func name(_ reader: String, in share: CKShare) async throws {
         let others = share.participants.filter { $0.role != .owner }
         if others.count == 1, others[0].userIdentity.userRecordID?.recordName == reader,
-            others[0].permission == .readOnly, share.publicPermission == .none
+            others[0].permission == .readOnly, others[0].acceptanceStatus != .removed, share.publicPermission == .none
         {
             return
         }
@@ -171,6 +205,7 @@ extension CloudKitMailbox {
         share.publicPermission = .none
         _ = try await container.privateCloudDatabase.modifyRecords(
             saving: [share], deleting: [], savePolicy: .changedKeys)
+        Diagnostics.sync.notice("pairs: named the reader of a space")
     }
 
     private func participant(for account: String) async throws -> CKShare.Participant {

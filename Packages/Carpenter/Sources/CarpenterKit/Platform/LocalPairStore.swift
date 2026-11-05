@@ -119,6 +119,20 @@ public struct LocalPairStore: Codable, Sendable {
         discard(url)
     }
 
+    public mutating func stopSharing(with peer: ParticipantID, in pairs: Pairs, as account: String) {
+        guard let url = mine(for: peer, in: pairs, as: account) else { return }
+        spaces[url]?.named = nil
+        spaces[url]?.joined = []
+    }
+
+    public mutating func leave(_ peer: ParticipantID, in pairs: Pairs, as account: String) {
+        guard let hint = pairs.hints[peer] else { return }
+        for url in spaces.keys where spaces[url]?.hint == hint && spaces[url]?.joined.contains(account) == true {
+            spaces[url]?.joined.remove(account)
+            spaces[url]?.named = nil
+        }
+    }
+
     private mutating func discard(_ url: URL) {
         for name in spaces[url]?.order ?? [] {
             if let id = UUID(uuidString: name) { packetOrder.removeAll { $0.rawValue == id } }
@@ -205,8 +219,10 @@ extension LocalPairStore {
         notePacket(packet.id)
     }
 
-    public mutating func ring(_ peer: ParticipantID, in pairs: Pairs, as account: String, at now: Date) throws {
+    @discardableResult
+    public mutating func ring(_ peer: ParticipantID, in pairs: Pairs, as account: String, at now: Date) throws -> Set<String> {
         try write(PairWire.ringRecord, [PairWire.ring: .string(PairWire.ringValue())], to: peer, in: pairs, as: account, at: now)
+        return mine(for: peer, in: pairs, as: account).flatMap { spaces[$0]?.joined } ?? []
     }
 
     public mutating func fetch(

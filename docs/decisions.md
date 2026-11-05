@@ -3681,8 +3681,11 @@ messages went:
   out. Until a device knows any link for a contact, it reads every space its account has joined for
   them; each packet is checked for the sender's device signature either way.
 - A link in a code or an invite is taken only for somebody the device holds no link for.
-- Blocking somebody closes the space kept for them at the next round; unblocking makes a new one.
-  The deny list hides people and closes nothing.
+- Blocking somebody closes the space kept for them at the next round; unblocking opens the same
+  space to them again. The deny list hides people and closes nothing. *Changed on 2026-11-05 by
+  Claude, not by Griff: this line said "unblocking makes a new one", and a new one could not be
+  reached. See [Blocking takes a person off your space, and you off
+  theirs](#blocking-takes-a-person-off-your-space-and-you-off-theirs).*
 - A device joins a contact's space again whenever it cannot read it, because a reader who is removed
   from a share and named again has to accept again.
 
@@ -3700,6 +3703,57 @@ run: both rig accounts were asking for their passwords, and `LivePairTests` is r
 accounts.
 
 <!-- COPY END cd3e5ba0 -->
+
+<!-- COPY BEGIN 43664413 [NEEDS HUMAN REVIEW] -->
+
+### Blocking takes a person off your space, and you off theirs
+
+**PROPOSED 2026-11-05 by Claude.** Griff has not been asked. It changes one line of the rules he
+ruled on 2026-09-28, above, and says why here.
+
+**What blocking and unblocking guarantee.** While you block somebody, they cannot read anything new
+you write, and nothing they write can make your phone ring. Everything is kept: their messages wait
+in their own iCloud and yours wait in yours. When you unblock them, messages cross both ways again
+without anybody swapping a code, and what they wrote during the block arrives. It has to hold against
+the blocked person running a modified app: they cannot put themselves back on your space, and they
+cannot ring you.
+
+**Why the space is no longer deleted.** Blocking used to delete your space for them and unblocking
+made a new one. The link to a new space travels as a room entry, and a room entry reaches somebody
+only through a space of yours they read. In a room of two the only such space is the one blocking
+deleted, so the link never arrived and everything you wrote after unblocking stopped. It happened on
+the rig on 2026-11-04 and again on 2026-11-05 ([the rig notes](simulator-rig.md)). In a larger room
+another member would carry the link, which is why the suite of three never saw it. So blocking now
+takes them off the space instead of deleting it, and unblocking names them on it again. Their
+device, which joins a contact's space again whenever it cannot read it, accepts the same link it
+already holds.
+
+**Why you leave their space.** Your phone is told about every space shared with you by one watch on
+all of them; iCloud refuses a watch on a single shared space (measured 2026-09-27, above). So while
+you are a reader of their space, each message they write rings your phone, and the notification
+extension, finding nothing it may show, draws the generic banner with a sound. Leaving their space
+is the only way to stop it. Apple's documentation says that when a participant deletes a share,
+CloudKit removes them from it
+([CKShare](https://developer.apple.com/documentation/cloudkit/ckshare)), so getting back in needs
+the owner to name you again. Their app already does that whenever the reader it means to name is
+missing, so on unblock your device joins again the next time it tries.
+
+**What it costs.** Their iCloud now records that you left their space, which an honest app never
+shows but a modified one could read. That says no more than what a modified app could already work
+out, because your phone stops collecting their packets the moment you block them. Packets you wrote
+for them before the block stay in your space and reach them after you unblock, where deleting the
+space used to throw them away. They were addressed to that person before you blocked them. And what they wrote during the block
+reaches you only after their app has run a round since you left, because only their app can name you
+on their space again. Anything they write after you unblock comes with such a round; what they wrote
+before waits for their next one.
+
+**What would change it.** Apple letting an app watch one shared space, or drop a notification
+without showing it.
+
+**Built 2026-11-05.** `BlockingInARoomOfTwoTests`, with the fake mailbox taking a reader who leaves
+off the space until its owner names them again. Over iCloud, see [the rig notes](simulator-rig.md).
+
+<!-- COPY END 43664413 -->
 
 <!-- COPY BEGIN 6a65aac1 [NEEDS HUMAN REVIEW] -->
 

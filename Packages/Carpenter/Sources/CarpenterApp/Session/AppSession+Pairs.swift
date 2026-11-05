@@ -65,12 +65,17 @@ extension AppSession {
         await settleCodeClaims(through: mailbox, in: pairs)
 
         noteWhoIsStillShared()
-        let closing = persisted.preferences.blockedPeople.union(outOfTouch())
+        let blocked = persisted.preferences.blockedPeople
+        let closing = blocked.union(outOfTouch())
         for peer in closing where persisted.pairBook[peer]?.shut != true && pairs.hints[peer] != nil {
             do {
-                try await mailbox.close(peer, in: pairs)
+                if blocked.contains(peer) {
+                    try await standApart(from: peer, through: mailbox, in: pairs)
+                } else {
+                    try await mailbox.close(peer, in: pairs)
+                    persisted.pairBook[peer]?.announced = nil
+                }
                 persisted.pairBook[peer, default: PairBookEntry()].shut = true
-                persisted.pairBook[peer]?.announced = nil
             } catch {
                 Diagnostics.sync.error(
                     """
@@ -104,6 +109,12 @@ extension AppSession {
                 persisted.pairBook[peer, default: PairBookEntry()].announced = url
             }
         }
+    }
+
+    private func standApart(from peer: ParticipantID, through mailbox: any Mailbox, in pairs: Pairs) async throws {
+        try await mailbox.stopSharing(with: peer, in: pairs)
+        try await mailbox.leave(peer, in: pairs)
+        persisted.pairBook[peer]?.joinedSpace = nil
     }
 
     private func noteWhoIsStillShared() {
