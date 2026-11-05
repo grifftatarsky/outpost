@@ -56,8 +56,11 @@
             (jonah, "📚", .blue), (mae, "🎈", .red), (rafi, "🎸", .teal), (ines, "🥾", .green),
         ]
 
-        @MainActor static let avatars: [ParticipantID: Image] = Dictionary(
-            uniqueKeysWithValues: faces.compactMap { person, emoji, color in
+        @MainActor static let avatars: [ParticipantID: Image] = renderAvatars()
+
+        @MainActor private static func renderAvatars() -> [ParticipantID: Image] {
+            var rendered: [ParticipantID: Image] = [:]
+            for (person, emoji, color) in faces {
                 let renderer = ImageRenderer(
                     content: Text(verbatim: emoji)
                         .font(.system(size: 64))
@@ -65,8 +68,10 @@
                         .background(LinearGradient(
                             colors: [color.opacity(0.55), color.opacity(0.9)], startPoint: .top, endPoint: .bottom)))
                 renderer.scale = 2
-                return renderer.cgImage.map { (person.id, Image(decorative: $0, scale: 2)) }
-            })
+                if let image = renderer.cgImage { rendered[person.id] = Image(decorative: image, scale: 2) }
+            }
+            return rendered
+        }
 
         static let zeppelinEnthusiasts = RoomSummary(
             name: "Zeppelin Enthusiasts",

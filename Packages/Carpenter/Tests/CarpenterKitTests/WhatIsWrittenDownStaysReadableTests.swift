@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-private final class StopsBeforeTheSwap: FileManager, @unchecked Sendable {
+private final class StopsBeforeTheSwap: FileManager {
     override func replaceItem(
         at originalItemURL: URL, withItemAt newItemURL: URL, backupItemName: String?,
         options: FileManager.ItemReplacementOptions = [],

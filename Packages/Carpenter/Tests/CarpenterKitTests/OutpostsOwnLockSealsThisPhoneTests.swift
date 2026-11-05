@@ -37,7 +37,7 @@ struct OutpostsOwnLockSealsThisPhoneTests {
     @Test("Every code is worth a guess on the phone itself and nowhere else")
     func everyCodeCanOnlyBeTriedHere() async throws {
         let hardware = FakeHardwareKeys()
-        let (_, sealed) = try await Vault.create(
+        let (key, sealed) = try await Vault.create(
             code: "1234", usingBiometrics: false, hardware: hardware, rounds: rounds)
 
         let thief = FakeHardwareKeys()
@@ -47,9 +47,8 @@ struct OutpostsOwnLockSealsThisPhoneTests {
                 _ = try await Vault.open(sealed, with: String(format: "%04d", guess), hardware: thief, reason: "")
             }
         }
-        #expect(
-            try await Vault.open(sealed, with: "1234", hardware: hardware, reason: "") != nil,
-            "the phone that made it can still open it")
+        let opened = try await Vault.open(sealed, with: "1234", hardware: hardware, reason: "")
+        #expect(opened == key, "the phone that made it opens it with the right code, after forty guesses elsewhere")
     }
 
     @Test("Face ID releases the key, and refusing it releases nothing")
