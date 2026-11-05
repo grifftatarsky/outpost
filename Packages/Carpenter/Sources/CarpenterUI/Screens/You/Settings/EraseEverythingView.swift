@@ -24,7 +24,7 @@ public struct EraseEverythingView: View {
                         Text("Your member identity and every room key are erased from this device.", bundle: .module))
                     fact(
                         "icloud",
-                        Text("Every feed, every packet and every photo in flight that this Apple Account holds in iCloud is deleted.", bundle: .module))
+                        Text("Everything this app keeps in your iCloud is deleted, including messages and photos nobody has collected yet.", bundle: .module))
                     fact(
                         "internaldrive",
                         Text("Your history on this device goes with it, photos and clips included.", bundle: .module))

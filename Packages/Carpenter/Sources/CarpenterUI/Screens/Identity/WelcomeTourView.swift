@@ -22,9 +22,9 @@ public struct WelcomeTourView: View {
         [
             Panel(
                 id: 0,
-                title: "You do not have a key",
+                title: "There is no account",
                 body:
-                    "Your key is your identity, and it lives in your own Keychain. There is no account, and no one can look you up.",
+                    "Your key is your identity, and it stays on your own devices. There is no sign-up, and no one can look you up.",
                 icon: "key"),
             Panel(
                 id: 1,
