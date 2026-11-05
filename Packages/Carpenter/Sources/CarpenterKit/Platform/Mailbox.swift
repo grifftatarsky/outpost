@@ -197,16 +197,18 @@ public struct SentPacket: Hashable, Sendable {
     public let receipts: [SealedReceipt]
     public let createdAt: Date?
     public let contentDigest: Data?
+    public let receiptStoredAt: Date?
 
     public init(
         to: ParticipantID, recipients: Set<RecipientTag>, receipts: [SealedReceipt], createdAt: Date?,
-        contentDigest: Data? = nil
+        contentDigest: Data? = nil, receiptStoredAt: Date? = nil
     ) {
         self.to = to
         self.recipients = recipients
         self.receipts = receipts
         self.createdAt = createdAt
         self.contentDigest = contentDigest
+        self.receiptStoredAt = receiptStoredAt
     }
 }
 

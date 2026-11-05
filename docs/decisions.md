@@ -2712,6 +2712,47 @@ which to draw. Nothing orders history by a clock; `CausalOrder` does that.
 
 <!-- COPY END 5def8c6a -->
 
+<!-- COPY BEGIN 644ab578 [NEEDS HUMAN REVIEW] -->
+
+### Each person's collected time is when iCloud stored their receipt
+
+`PROPOSED` — Claude, 2026-11-05, building Griff's request that message detail list each member with
+their delivery mark and the time they received it.
+
+Message detail lists everybody else in the room, or the one person in a solo. Each row shows the
+paper plane, filled once that person collected the message, with the time; and, only for somebody
+who reports when a message is shown, the eye with that time. The marks are the bubble's own symbols
+(`DeliveryGlyph` draws both), so the two never disagree about what a filled plane means.
+
+**What a time is.** A recipient signs for a packet by writing a receipt record into their own space
+for the sender. When the sender's round finds every receipt the packet needs and takes the packet
+back, it keeps, for each of its own messages in that packet, the time iCloud stored that receipt
+(`PersistedState.collectedAt`, earliest wins). It is iCloud's time, so the recipient cannot choose
+it and neither device's clock is in it. Nothing else lights the plane: a row shows *No receipt yet*
+until this device has seen that person's receipt, and *Not collected in 9 days* once the copy was
+taken back. A message sent from another of the member's devices, or before 2026-11-05, has no
+receipt on this device and says so, even where the bubble's mark is filled, because the bubble's
+rule is "nothing is still waiting in iCloud", which is a different and weaker fact.
+
+**Why per message and not per packet.** The question the screen asks is about one message, and a
+message can travel in more than one packet (a resend, history sent to somebody who joined later).
+Keeping the earliest time per message answers it directly; keeping packets would need the packet
+contents kept forever to answer it.
+
+**The bound.** One date per message this device wrote, per person in the room it was written in. A
+receipt can only add a date for an entry the device wrote itself, in a room that person is in
+(`WhenEachPersonCollectedItTests`), so nothing a peer sends can grow it beyond what this device
+holds. It grows with the member's own history: 76 bytes of encoded state per person per message,
+measured on 2026-11-05 before the state is sealed, so 10,000 messages in a room of five is about
+3 MB rewritten whenever the state is saved. That is the cost, and a separate document for these
+times is what would change it if it shows up in a profile.
+
+**Not verified on the rig.** The receipt record's stored time is CloudKit's `creationDate`, which
+CloudKit keeps through a rewrite. The fake models that, and the suite holds the rule; it has not
+run over real iCloud.
+
+<!-- COPY END 644ab578 -->
+
 <!-- COPY BEGIN 73c8ed6d [NEEDS HUMAN REVIEW] -->
 
 ### A message is only pending when nobody has it

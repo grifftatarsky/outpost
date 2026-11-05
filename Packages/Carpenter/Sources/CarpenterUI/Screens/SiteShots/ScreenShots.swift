@@ -120,15 +120,20 @@
         private static var detailMessage: Message {
             Message(
                 id: Fixtures.fixtureMessageID(90), author: Fixtures.cassilda,
-                body: "The hangar doors open at six. Bring the long ropes.", sentAt: Fixtures.ago(minutes: 42),
-                isMine: true, delivery: .displayed(at: Fixtures.ago(minutes: 30)))
+                body: "The hangar doors open at six. Bring the long ropes.", sentAt: .now.addingTimeInterval(-42 * 60),
+                isMine: true, delivery: .displayed(at: .now.addingTimeInterval(-30 * 60)))
         }
 
         private static var readers: [ReadBy] {
             [
-                ReadBy(member: Fixtures.hastur, report: .displayed(at: Fixtures.ago(minutes: 30))),
-                ReadBy(member: Fixtures.camilla, report: .nothingYet),
-                ReadBy(member: Fixtures.yhtill, report: .doesNotReport),
+                ReadBy(
+                    member: Fixtures.hastur, collection: .collected(at: .now.addingTimeInterval(-41 * 60)),
+                    report: .displayed(at: .now.addingTimeInterval(-30 * 60))),
+                ReadBy(
+                    member: Fixtures.camilla, collection: .collected(at: .now.addingTimeInterval(-38 * 60)),
+                    report: .nothingYet),
+                ReadBy(member: Fixtures.thale, collection: .notCollected, report: .doesNotReport),
+                ReadBy(member: Fixtures.yhtill, collection: .noReceipt, report: .doesNotReport),
             ]
         }
     }

@@ -50,7 +50,6 @@ public enum ReadReport: Hashable, Sendable {
     case displayed(at: Date)
     case nothingYet
     case doesNotReport
-    case notCollected
 
     public var wasDisplayed: Bool {
         if case .displayed = self { return true }
@@ -58,14 +57,27 @@ public enum ReadReport: Hashable, Sendable {
     }
 }
 
+public enum CollectionReport: Hashable, Sendable {
+    case collected(at: Date)
+    case noReceipt
+    case notCollected
+
+    public var collectedAt: Date? {
+        if case .collected(let instant) = self { return instant }
+        return nil
+    }
+}
+
 public struct ReadBy: Hashable, Sendable, Identifiable {
     public let member: Member
+    public let collection: CollectionReport
     public let report: ReadReport
 
     public var id: ParticipantID { member.id }
 
-    public init(member: Member, report: ReadReport) {
+    public init(member: Member, collection: CollectionReport = .noReceipt, report: ReadReport) {
         self.member = member
+        self.collection = collection
         self.report = report
     }
 }

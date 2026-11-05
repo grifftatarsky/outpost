@@ -257,10 +257,12 @@ extension LocalPairStore {
                     let packet = PacketWire.packet(from: record.fields)
                 else { continue }
                 let id = PacketID(rawValue: uuid)
-                let receipts = answers[PairWire.receiptName(for: id)].flatMap { PacketWire.receipt(from: $0.fields) }
+                let answer = answers[PairWire.receiptName(for: id)]
+                let receipts = answer.flatMap { PacketWire.receipt(from: $0.fields) }
                 sent[id] = SentPacket(
                     to: peer, recipients: packet.recipients, receipts: receipts.map { [$0] } ?? [],
-                    createdAt: record.storedAt, contentDigest: packet.contentDigest)
+                    createdAt: record.storedAt, contentDigest: packet.contentDigest,
+                    receiptStoredAt: receipts == nil ? nil : answer?.storedAt)
             }
         }
         return sent
@@ -342,10 +344,12 @@ extension LocalPairStore {
                     let packet = PacketWire.packet(from: record.fields)
                 else { continue }
                 let id = PacketID(rawValue: uuid)
-                let receipt = other?.records[PairWire.receiptName(for: id)].flatMap { PacketWire.receipt(from: $0.fields) }
+                let answer = other?.records[PairWire.receiptName(for: id)]
+                let receipt = answer.flatMap { PacketWire.receipt(from: $0.fields) }
                 sent[id] = SentPacket(
                     to: other?.owner ?? space.owner, recipients: packet.recipients, receipts: receipt.map { [$0] } ?? [],
-                    createdAt: record.storedAt, contentDigest: packet.contentDigest)
+                    createdAt: record.storedAt, contentDigest: packet.contentDigest,
+                    receiptStoredAt: receipt == nil ? nil : answer?.storedAt)
             }
         }
         return sent

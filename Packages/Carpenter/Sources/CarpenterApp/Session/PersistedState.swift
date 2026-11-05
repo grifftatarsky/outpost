@@ -82,6 +82,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var resend: Set<EntryHash> = []
     var entriesOwed: [ParticipantID: Set<EntryHash>] = [:]
     var notCollected: [ParticipantID: Set<EntryHash>] = [:]
+    var collectedAt: [ParticipantID: [EntryHash: Date]] = [:]
     var claimTimes: [EntryHash: Date] = [:]
     var removalsTold: Set<EntryHash> = []
     var grantsWaiting: [ForwardedGrant] = []
@@ -195,6 +196,8 @@ struct PersistedState: Codable, Equatable, Sendable {
             try container.decodeIfPresent([ParticipantID: Set<EntryHash>].self, forKey: .entriesOwed) ?? [:]
         notCollected =
             try container.decodeIfPresent([ParticipantID: Set<EntryHash>].self, forKey: .notCollected) ?? [:]
+        collectedAt =
+            try container.decodeIfPresent([ParticipantID: [EntryHash: Date]].self, forKey: .collectedAt) ?? [:]
         claimTimes = try container.decodeIfPresent([EntryHash: Date].self, forKey: .claimTimes) ?? [:]
         removalsTold = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .removalsTold) ?? []
         grantsWaiting = try container.decodeIfPresent([ForwardedGrant].self, forKey: .grantsWaiting) ?? []
