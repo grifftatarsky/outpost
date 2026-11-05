@@ -53,8 +53,6 @@
                 }
             case .tapTrouble:
                 TapToSwapView(phase: .looking(closest: nil), number: nil, trouble: .notAllowed, onAccept: {})
-            case .otherDevices:
-                OtherDevicesAfterRestoreView(devices: Fixtures.devices, onRevoke: { _ in }, onDone: {})
             case .devices:
                 NavigationStack { DeviceListView(devices: Fixtures.devices + [removedDevice]) }
             case .postThread:

@@ -45,7 +45,6 @@
         case roomsCannotSend = "rooms-cannot-send"
         case messageDetail = "message-detail"
         case tapTrouble = "tap-trouble"
-        case otherDevices = "other-devices"
         case devices = "devices"
         case postThread = "post-thread"
         case postComposer = "post-composer"
@@ -56,10 +55,10 @@
         case removeMember = "remove-member"
         case checkingRegistration = "checking-registration"
         case approveDevice = "approve-device"
+        case dataProblem = "data-problem"
         case membersCheck = "members-check"
         case personActions = "person-actions"
         case stalledSignedOut = "stalled-signed-out"
-        case dataProblem = "data-problem"
 
         public static let argument = "--copy-shot"
 

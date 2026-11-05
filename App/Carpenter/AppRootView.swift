@@ -34,7 +34,6 @@ struct AppRootView: View {
     @State var lockOfferOpen = false
     @AppStorage("siri.donationsForgotten") var siriDonationsForgotten = false
     @State var appLock = AppLockController(store: AppRootView.appLockStore)
-    @State var otherDevicesAsked = false
     @State var syncing = false
     @State var syncAgain = false
     @State var lastSync = Date.distantPast
@@ -271,15 +270,6 @@ struct AppRootView: View {
                 ) {
                     syncedSplashSeen = true
                 }
-                .themed(.default)
-
-            case .ready
-            where session.cameBackFromARecoveryKey && !otherDevicesAsked
-                && session.devices.contains(where: { $0.isActive && !$0.isCurrent }):
-                OtherDevicesAfterRestoreView(
-                    devices: session.devices, onRevoke: { await revokeDevices($0) },
-                    onDone: { otherDevicesAsked = true }
-                )
                 .themed(.default)
 
             case .ready where session.needsPrivacyCheckup:
