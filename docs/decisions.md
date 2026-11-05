@@ -5107,6 +5107,21 @@ as the shortcut.
 
 <!-- COPY END 75aaa449 -->
 
+<!-- COPY BEGIN 8e62b07f [NEEDS HUMAN REVIEW] -->
+
+### A small control keeps its drawing and gains a 44-point reach
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 12.
+
+[Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility) gives
+44 by 44 points as the default size for a control on iOS and 28 by 28 as the minimum. The staged
+photo's remove button was 22 points, the send arrows 30, and the post composer's format buttons 38 by
+34. Each keeps the size it is drawn at and its hit area grows to 44 (`reachable(width:height:)`),
+because growing the drawing would make the composer taller than the field it holds. Neighbouring
+format buttons are 8 points apart, so their reaches overlap by at most 2 points.
+
+<!-- COPY END 8e62b07f -->
+
 <!-- COPY BEGIN fa3b6480 [NEEDS HUMAN REVIEW] -->
 
 ### The accent retint fades, and the tab bar leads it

@@ -61,4 +61,14 @@ extension View {
         frame(minWidth: CarpenterMetrics.hitTarget, minHeight: CarpenterMetrics.hitTarget)
             .contentShape(Rectangle())
     }
+
+    public func reachable(width: CGFloat, height: CGFloat) -> some View {
+        let across = max(0, (CarpenterMetrics.hitTarget - width) / 2)
+        let down = max(0, (CarpenterMetrics.hitTarget - height) / 2)
+        return padding(.horizontal, across)
+            .padding(.vertical, down)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -across)
+            .padding(.vertical, -down)
+    }
 }

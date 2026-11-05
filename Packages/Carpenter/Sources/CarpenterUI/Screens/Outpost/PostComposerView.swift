@@ -326,6 +326,7 @@ public struct PostComposerView: View {
                     .foregroundStyle(.white)
                     .frame(width: 22, height: 22)
                     .background(Color.black.opacity(0.55), in: Circle())
+                    .reachable(width: 22, height: 22)
             }
             .buttonStyle(.plain)
             .padding(4)
@@ -347,6 +348,7 @@ public struct PostComposerView: View {
                         .background(
                             palette.neutralFill,
                             in: .rect(cornerRadius: 9, style: .continuous))
+                        .reachable(width: 38, height: 34)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(onAttach != nil ? palette.primaryText : palette.quaternaryText)
@@ -370,6 +372,7 @@ public struct PostComposerView: View {
                         .background(
                             showsMarkers ? palette.accentTint : palette.neutralFill,
                             in: .rect(cornerRadius: 9, style: .continuous))
+                        .reachable(width: 38, height: 34)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(showsMarkers ? palette.accentColor : palette.primaryText)
@@ -384,6 +387,7 @@ public struct PostComposerView: View {
                             .font(CarpenterFont.button)
                             .frame(height: 34)
                             .padding(.horizontal, 10)
+                            .reachable(width: 44, height: 34)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(palette.accentColor)
@@ -409,6 +413,7 @@ public struct PostComposerView: View {
                 .background(
                     palette.neutralFill,
                     in: .rect(cornerRadius: 9, style: .continuous))
+                .reachable(width: 38, height: 34)
         }
         .buttonStyle(.plain)
         .foregroundStyle(hasSelection ? palette.primaryText : palette.quaternaryText)

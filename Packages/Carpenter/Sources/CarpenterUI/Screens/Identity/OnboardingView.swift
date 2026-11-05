@@ -81,6 +81,7 @@ public struct OnboardingView: View {
                         Text("How \(Branding.displayName) works", bundle: .module)
                             .font(CarpenterFont.footnote)
                             .underline()
+                            .tappable()
                     }
                     .foregroundStyle(palette.secondaryText)
                     // COPY END 60beeaec

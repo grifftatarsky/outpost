@@ -198,6 +198,7 @@ public struct PostThreadView: View {
                         .foregroundStyle(.white)
                         .frame(width: 30, height: 30)
                         .background(palette.accentFill, in: .circle)
+                        .reachable(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 4)
