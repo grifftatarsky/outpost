@@ -3300,7 +3300,18 @@ back, and on Writing Tools being switched back on.
 
 **What it costs.** Banners no longer carry the sender's face, and Focus decides by app rather than by
 person, so a member cannot let only certain people through a Focus. The Focus filter stays: it only
-tells the app which rooms to announce during a Focus, and it hands nothing to Siri.
+tells the app which rooms to announce during a Focus. Until 2026-11-05 it was discoverable, the
+default for an App Intent, which Apple says lets "Siri, Spotlight, and the Shortcuts app" find and
+use it ([isDiscoverable](https://developer.apple.com/documentation/appintents/appintent/isdiscoverable));
+the metadata the build hands the system said so (`isDiscoverable: true` in
+`Metadata.appintents/extract.actionsdata`). It is marked not discoverable now, and the lint fails on
+an App Intent that is not. What the system still sees: the room entity and its query stay in that
+metadata as discoverable, because iOS offers no switch for an entity, but no discoverable action
+uses them and none conforms to an assistant schema. When the member picks rooms for a Focus in
+Settings, iOS asks the app for every room's name to show the list, and keeps the ones chosen in the
+Focus's settings, outside anything the app seals. Whether it carries them to the member's other
+devices with *Share Across Devices* has not been checked
+([Open questions](open-questions.md#the-focus-filter-shows-room-names-to-the-systems-settings)).
 
 **What is not the app's to control.** A member can turn on Apple Intelligence notification
 summaries in Settings; iOS offers no switch for an app to refuse them. The words a summary would

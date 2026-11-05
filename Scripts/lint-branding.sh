@@ -427,6 +427,11 @@ siri=$(
 if [ -n "$siri" ]; then
     report "error: a Siri or intent surface is back — the app donates nothing to Siri:" "$siri"
 fi
+for intent in $(grep -lE ':[[:space:]]*(AppIntent|SetFocusFilterIntent)[[:space:]]*\{' $sources 2>/dev/null); do
+    if ! grep -q 'static let isDiscoverable = false' "$intent"; then
+        report "error: an App Intent Siri, Spotlight and Shortcuts can discover (2026-11-05):" "$intent"
+    fi
+done
 if ! grep -q 'writingToolsBehavior(.disabled)' Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift; then
     report "error: Writing Tools are no longer turned off in the theme:" "Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift"
 fi

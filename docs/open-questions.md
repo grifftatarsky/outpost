@@ -113,6 +113,24 @@ for.
 
 <!-- COPY END 8f4c521a -->
 
+<!-- COPY BEGIN 29bd829c [NEEDS HUMAN REVIEW] -->
+
+## The Focus filter shows room names to the system's settings
+
+Choosing which rooms may notify during a Focus happens in Settings, so iOS asks the app for the name
+of every room to draw the list, and keeps the rooms the member picks, with their names, in that
+Focus's settings, where nothing the app seals reaches and erasing the app does not clear them. Since
+2026-11-05 the filter is hidden from Siri, Spotlight and Shortcuts (`isDiscoverable = false`), which
+Apple documents; it does not say whether the Focus settings still list a filter marked that way, and
+nobody has looked on a phone.
+
+**Recommendation: look on the rig first.** If the filter is still listed, keep it and say on the
+Focus page that the chosen rooms' names are kept by iOS. If it is gone, the choice is between a
+filter that names rooms to the system and no filter: drop the room list and keep only *Show what was
+said*, which names nothing.
+
+<!-- COPY END 29bd829c -->
+
 <!-- COPY BEGIN 5d82a14a [NEEDS HUMAN REVIEW] -->
 
 ## Outpost's own lock cannot seal the identity, because the other phones need it
