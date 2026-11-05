@@ -4143,7 +4143,17 @@ Settings under App lock. See the [crypto brief](crypto-brief.md#the-app-lock).
   Deleting the app does not clear the keychain, so without this a forgotten code would lock the member
   out for good. It gives a thief nothing: coming back needs another device's approval or the recovery
   key.
-- **The app switcher sees a cover the moment the app is not in front**, whatever the grace time.
+- **The app switcher sees a cover the moment the app is not in front**, whatever the grace time, and
+  so does a phone with [Advanced On Device Security](#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)
+  on and no lock (2026-11-05). The cover goes up when the app stops being active, not only when it
+  goes to the background: Apple says the snapshot is taken after the app enters the background and
+  that nothing sensitive may be in it ([Preparing your UI to run in the background](https://developer.apple.com/documentation/uikit/preparing-your-ui-to-run-in-the-background)),
+  and becoming inactive always comes first, so covering then also hides the screen behind Control
+  Center and system alerts. While the cover or the lock is up, the app's own windows are hidden
+  rather than drawn underneath it, so nothing of a conversation is rendered even for a frame the
+  cover takes to appear. A cover with no lock behind it draws only the background, never "locked",
+  because nothing is. What it costs: with either setting on, pulling down Control Center or a system
+  alert blanks the app and puts away the keyboard. Built; not yet seen on the rig.
 
 **What it costs.** A member who keeps showing notifications has them readable on a locked app. One who
 forgets the code and has neither another device nor the recovery key loses what was on that phone,

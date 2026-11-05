@@ -20,6 +20,14 @@ public struct AppLockScreen: View {
     private var isDigits: Bool { controller.lock?.code == .digits }
 
     public var body: some View {
+        if controller.isLocked || controller.erasing {
+            lockScreen
+        } else {
+            palette.background.ignoresSafeArea()
+        }
+    }
+
+    private var lockScreen: some View {
         VStack(spacing: 24) {
             Spacer()
             Image(systemName: "lock.fill")

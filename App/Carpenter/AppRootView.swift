@@ -478,6 +478,9 @@ struct AppRootView: View {
         .onChange(of: appLock.isCovered, initial: true) { _, covered in
             coverForLock(covered)
         }
+        .onChange(of: session.sealsWhileLocked, initial: true) { _, sealed in
+            appLock.coversWhenAway = sealed
+        }
         .task {
             configureAppLock()
             await appLock.load()

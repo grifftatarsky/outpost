@@ -248,6 +248,42 @@ struct AppLockControllerTests {
         #expect(!controller.isCovered)
     }
 
+    @Test("With Advanced On Device Security on and no lock, the app is covered whenever it is not in front")
+    func sealedPhoneIsCoveredWithoutALock() async {
+        let controller = AppLockController(
+            store: AppLockStore(keychain: InMemoryKeychainStore()), biometrics: Faces(enrolled: Data([1]), matches: true))
+        await controller.load()
+        controller.coversWhenAway = true
+        #expect(!controller.isCovered)
+
+        for phase in [ScenePhase.inactive, .background] {
+            controller.sceneChanged(to: phase)
+            #expect(controller.isCovered, "the app switcher could see the screen with no lock set")
+            #expect(!controller.isLocked, "a cover with no lock asked for a code")
+        }
+        controller.sceneChanged(to: .active)
+        #expect(!controller.isCovered)
+    }
+
+    @Test("With neither a lock nor Advanced On Device Security, nothing covers the app")
+    func nothingCoversAnOrdinaryPhone() async {
+        let controller = AppLockController(
+            store: AppLockStore(keychain: InMemoryKeychainStore()), biometrics: Faces(enrolled: Data([1]), matches: true))
+        await controller.load()
+        controller.sceneChanged(to: .background)
+        #expect(!controller.isCovered)
+    }
+
+    @Test("Turning the lock off while away keeps the cover a sealed phone asks for")
+    func turningTheLockOffKeepsTheSealedCover() async throws {
+        let (controller, _, _) = try await controller()
+        controller.coversWhenAway = true
+        await controller.unlock(with: "482913")
+        controller.sceneChanged(to: .inactive)
+        controller.forget()
+        #expect(controller.isCovered, "forgetting the lock uncovered a sealed phone that was not in front")
+    }
+
     @Test("Nothing that weakens the lock happens without the code, entered just before")
     func weakeningNeedsTheCode() async throws {
         let (controller, _, uptime) = try await controller(faces: Faces(enrolled: Data([2]), matches: true))
