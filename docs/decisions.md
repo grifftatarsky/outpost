@@ -5107,6 +5107,24 @@ as the shortcut.
 
 <!-- COPY END 75aaa449 -->
 
+<!-- COPY BEGIN 1b36147d [NEEDS HUMAN REVIEW] -->
+
+### A problem raised under a sheet is shown on the sheet
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 9.
+
+The app's one problem alert was attached to the root view. SwiftUI presents an alert from the view
+it is attached to, and a view with a sheet over it cannot present one, so a failed admission from the
+join sheet, or a failed removal from the members sheet, was not shown while the member was looking
+at it. The problem now travels in the environment (`reportedProblem`), and the members and join
+sheets present it themselves (`presentingReportedProblems()`); the root still presents it when
+nothing is over it.
+
+**What it costs.** A sheet that should show failures has to opt in with one modifier. The two that
+decide who is in a room do.
+
+<!-- COPY END 1b36147d -->
+
 <!-- COPY BEGIN 8e62b07f [NEEDS HUMAN REVIEW] -->
 
 ### A small control keeps its drawing and gains a 44-point reach

@@ -157,6 +157,7 @@ extension RootView {
                         personPage: { person, actions in personPage(person, actions: actions) }
                     )
                 }
+                .presentingReportedProblems()
                 .environment(\.leavingThisRoom, leaving(room))
             }
             .sheet(item: $starting) { room in
@@ -234,6 +235,7 @@ extension RootView {
                         await onDecideJoin(room, join, admit)
                     }
                 )
+                .presentingReportedProblems()
             }
         }
     }

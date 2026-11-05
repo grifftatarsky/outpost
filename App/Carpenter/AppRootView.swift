@@ -140,17 +140,8 @@ struct AppRootView: View {
     // COPY BEGIN 7740e80c [NEEDS HUMAN REVIEW]
     var body: some View {
         content
-            .alert(
-                Text(problem?.title ?? ""),
-                isPresented: Binding(
-                    get: { problem != nil },
-                    set: { showing in if !showing { problem = nil } }),
-                presenting: problem
-            ) { _ in
-                Button { problem = nil } label: { Text("OK") }
-            } message: { problem in
-                Text(problem.detail)
-            }
+            .environment(\.reportedProblem, $problem)
+            .presentingProblems($problem)
             .approvingDevices(
                 session.state == .ready ? session.deviceRequests.first : nil,
                 onApprove: { request in
@@ -164,11 +155,7 @@ struct AppRootView: View {
     }
     // COPY END 7740e80c
 
-    struct ActionProblem: Identifiable {
-        let id = UUID()
-        let title: String
-        let detail: String
-    }
+    typealias ActionProblem = ReportedProblem
 
     func reporting(_ log: String, _ action: () async throws -> Void) async -> String? {
         do {
