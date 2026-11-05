@@ -134,6 +134,50 @@ makes the setting nearly pointless, since the phone's lock is then available and
 
 <!-- COPY END 5d82a14a -->
 
+<!-- COPY BEGIN 2983233d [NEEDS HUMAN REVIEW] -->
+
+## A recording of iCloud still opens everything under the pair's secret
+
+Since 2026-11-05 every key handed to a device is sealed with X-Wing, so a recording of iCloud cannot
+later yield a room key or the words in a room unless ML-KEM-768 is broken too
+([Decisions](decisions.md#a-key-handed-to-a-device-is-sealed-with-x-wing)). The pair's secret is still
+X25519 between the two identities' agreement keys, and packets, receipts, links to each other's spaces,
+photo copies and the comment copy for a wall's owner are sealed under it. Whoever records them and
+later breaks X25519 learns who talks to whom, which rooms people share and when they wrote, and reads
+the words of a comment or reaction left on somebody's Outpost from outside its room.
+
+One way to close it gives each identity an ML-KEM key from the recovery secret and mixes an
+encapsulation into the pair's secret. A KEM is not an agreement both sides can compute alone, so one
+side still has to send the other a ciphertext, and the identity's new public key has to be in the
+`ParticipantID`. Every ID would change, so every account, room membership and signed entry would be
+reset; codes would grow by about 1,200 bytes, which is a much denser QR code; and the invitation
+phrase and every comparison code would change. A removed device keeps the identity, so the address
+salt would still be needed on top.
+
+The other way leaves identities alone. Each member's device makes a random 32-byte seed for each
+contact and sends it the way an address salt goes now: sealed with X-Wing to each of the contact's
+devices, signed by a device, and adopted only from a device that counted when iCloud stored it. The
+pair's secret becomes HKDF over the X25519 output and both people's seeds, and a pair with no seeds
+keeps the current secret byte for byte, so it can be turned on pair by pair. `ParticipantID`, codes,
+phrases and comparison codes do not change, because the seed is vouched for by a device signature that
+leads back to the identity the two people already compared. What it still leaves: the first packets
+between two people, before a seed has arrived, go under X25519 alone; a restore loses the member's own
+seeds, so contacts re-send theirs and the member makes new ones; the comment copy for a wall's owner
+is kept in the log for good, so it can only use the commenter's seed, which the commenter re-sends
+after the owner restores; and signatures stay Ed25519, which is a question about a future forger, not
+about a recording. Nothing recorded before it becomes any safer. It costs one announcement per contact
+whenever either person's devices change, about 1.6 KB per receiving device (a grant sealed for two
+devices measured 3,751 bytes of JSON), a seed per contact in the keychain, and more rules in the
+address code, which already has the subtlest ones: the nine-day overlap, the stored-time order, and
+re-sending until signed for.
+
+**Recommendation: the second way, with a seed per pair.** Reusing the per-member address salt is
+cheaper but not enough, because every contact learns a member's salt: somebody in touch with both
+people who could also break X25519 could work out their secret. The first packet to a new contact
+should carry the seed, so X25519 alone covers one exchange.
+
+<!-- COPY END 2983233d -->
+
 <!-- COPY BEGIN 6836a24f [NEEDS HUMAN REVIEW] -->
 
 ## The record a member's devices share grows with every device the member knows

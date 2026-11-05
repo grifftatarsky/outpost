@@ -1017,6 +1017,8 @@ Every path a key travels, and what a recording of it yields once X25519 is broke
 After an address change, packets travel under a secret that mixes in address salts, and those travel
 only under X-Wing. This brief does not count that as protection: a first contact, a pair whose members
 never changed address, and the original address everybody keeps listening at all use X25519 alone.
+How to put the pair's secret under ML-KEM too is an
+[open question](open-questions.md#a-recording-of-icloud-still-opens-everything-under-the-pairs-secret).
 Two things never reach iCloud and are not covered: tapping two phones (X25519 between the two phones,
 carrying codes, which are public) and the Secure Enclave key behind Outpost's own lock, which stays on
 the phone.

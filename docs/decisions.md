@@ -1599,7 +1599,8 @@ weak, and HPKE rather than the hand-written seal it replaces because it is a pub
 that CryptoKit implements, on the app's minimum of iOS 26. The `info` binds the device and each
 purpose's own context (room and epoch for a grant, and so on), in one place rather than split between
 `info` and associated data. What stays X25519 alone is everything under the pair's secret, listed in
-[the crypto brief](crypto-brief.md#what-a-recording-of-icloud-can-open-later).
+[the crypto brief](crypto-brief.md#what-a-recording-of-icloud-can-open-later); how to close it is an
+[open question](open-questions.md#a-recording-of-icloud-still-opens-everything-under-the-pairs-secret).
 
 The device's X25519 receiving key is replaced by the X-Wing key rather than kept beside it, because
 X-Wing already contains an X25519 key, and a second key would sit in every certificate and request

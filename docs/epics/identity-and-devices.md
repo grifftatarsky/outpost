@@ -769,7 +769,7 @@ yields is in [The crypto, written down](../crypto-brief.md#what-a-recording-of-i
   or a malformed key is refused.
 - **Open.** Two accounts on the rig exchanging room keys with this build, after both accounts are reset.
 - **Open.** Packets and everything else under the pair's secret
-  ([The crypto, written down](../crypto-brief.md#what-a-recording-of-icloud-can-open-later)).
+  ([Open questions](../open-questions.md#a-recording-of-icloud-still-opens-everything-under-the-pairs-secret)).
 
 **Testing**
 
