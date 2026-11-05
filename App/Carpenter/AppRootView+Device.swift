@@ -89,7 +89,7 @@ extension AppRootView {
             report.failure = "Make it fit returned no file"
             return report
         }
-        defer { try? FileManager.default.removeItem(at: file) }
+        defer { withExtendedLifetime(prepared) {} }
         report.fittedBytes = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.intValue ?? 0
         report.width = prepared.width
         report.height = prepared.height
@@ -162,6 +162,7 @@ extension AppRootView {
             try await cloud.eraseEverySpace()
         }
         try await deathmarkBoard?.eraseEverythingElse()
+        try await session.eraseSynchronizedKeys()
 
         await eraseThisDevice()
     }
@@ -228,56 +229,9 @@ extension AppRootView {
     func eraseThisDevice() async {
         deviceSync = nil
         startedSyncFor = nil
-        askingOutpostNotifications = false
-        explainingNotifications = false
-        redeeming = false
         restoring = false
-        try? await INInteraction.deleteAll()
-
-        let container = worldContainer
-        try? await SystemKeychainStore(
-            service: container, accessGroup: SharedKeychain.group
-        ).removeAll()
-
-        try? FileManager.default.removeItem(
-            at: URL.applicationSupportDirectory.appending(
-                path: container, directoryHint: .isDirectory))
-        try? FileManager.default.removeItem(at: StorageLocation.directory(container: container))
-        FocusFilterStore.shared.writeRooms([], as: session.protection.current)
-
-        do {
-            try FileManager.default.removeItem(
-                at: FileMediaStore.url(
-                    inDirectory: StorageLocation.directory(container: container)))
-        } catch let error as CocoaError where error.code == .fileNoSuchFile {
-        } catch {
-            Diagnostics.sync.error(
-                "wipe: could not remove the photos (\(String(describing: error), privacy: .public))")
-        }
-
-        do {
-            try avatarStore.remove()
-        } catch {
-            Diagnostics.sync.error(
-                "wipe: could not remove the avatar (\(String(describing: error), privacy: .public))")
-        }
-        ownAvatar = nil
-        do {
-            try personAvatarStore.removeAll()
-        } catch {
-            Diagnostics.sync.error(
-                "wipe: could not remove the photos kept for other people (\(String(describing: error), privacy: .public))")
-        }
-        do {
-            try outpostAvatarStore.remove()
-        } catch {
-            Diagnostics.sync.error(
-                "wipe: could not remove the Outpost picture (\(String(describing: error), privacy: .public))")
-        }
-        ownOutpostAvatar = nil
-        personAvatars = [:]
-        sharedAvatars = [:]
-        outpostAvatars = [:]
+        await session.eraseWhatThisPhoneKeeps()
+        await dropWhatTheErasedSessionShowed()
 
         session = AppSession(storage: .onDisk(profile: testSession?.profile), clock: UITestMode.clock)
         session.enforcesDenyList = safety.blocksKnownAbusers
@@ -285,6 +239,18 @@ extension AppRootView {
         session.checkAccount(with: accountRegistry)
         await openSession()
         await session.settleRegistration()
+    }
+
+    func dropWhatTheErasedSessionShowed() async {
+        askingOutpostNotifications = false
+        explainingNotifications = false
+        redeeming = false
+        try? await INInteraction.deleteAll()
+        ownAvatar = nil
+        ownOutpostAvatar = nil
+        personAvatars = [:]
+        sharedAvatars = [:]
+        outpostAvatars = [:]
     }
 
     static var engineStateURL: URL {

@@ -42,7 +42,8 @@ public struct SystemBiometrics: Biometrics {
 public final class AppLockController {
     public private(set) var lock: AppLock?
     public private(set) var isLocked = false
-    public private(set) var isCovered = false
+    public private(set) var isAway = false
+    public var coversWhenAway = false
     public private(set) var problem: AppLockProblem?
     public private(set) var checking = false
     public private(set) var loaded = false
@@ -75,6 +76,8 @@ public final class AppLockController {
 
     public var biometricName: String? { biometrics.name }
 
+    public var isCovered: Bool { isLocked || (isAway && (lock != nil || coversWhenAway)) }
+
     public var offersBiometrics: Bool {
         guard let lock, lock.usesBiometrics, biometrics.name != nil else { return false }
         return lock.allowsBiometrics(currentState: biometrics.state())
@@ -94,13 +97,12 @@ public final class AppLockController {
             unreadable = true
             isLocked = true
         }
-        isCovered = isLocked
         loaded = true
     }
 
     public func sceneChanged(to phase: ScenePhase) {
+        isAway = phase != .active
         guard let lock else {
-            isCovered = unreadable
             if unreadable, phase == .active { Task { await load() } }
             return
         }
@@ -111,19 +113,16 @@ public final class AppLockController {
                 if away >= lock.delay { isLocked = true }
             }
             self.leftAt = nil
-            isCovered = isLocked
         case .background:
             if leftAt == nil { leftAt = moment() }
-            isCovered = true
         default:
-            isCovered = true
+            break
         }
     }
 
     public func unlock(with code: String) async {
         guard await check(code) else { return }
         isLocked = false
-        isCovered = false
     }
 
     public func confirm(_ code: String) async -> Bool {
@@ -193,7 +192,6 @@ public final class AppLockController {
         try? await store.save(lock)
         problem = nil
         isLocked = false
-        isCovered = false
     }
 
     @discardableResult
@@ -262,7 +260,6 @@ public final class AppLockController {
         problem = nil
         if new == nil {
             isLocked = false
-            isCovered = false
         }
         return true
     }
@@ -287,7 +284,6 @@ public final class AppLockController {
         unreadable = false
         lock = nil
         isLocked = false
-        isCovered = false
         problem = nil
         leftAt = nil
         confirmedAt = nil

@@ -12,31 +12,10 @@ extension AppSession {
     func eraseAfterRemoval() async {
         guard enrolment != nil else { return }
         Diagnostics.identity.notice("this device was removed by another of your devices; erasing what it holds")
-        enrolment = nil
         state = .removed
-
-        incomingTask?.cancel()
-        incomingTask = nil
-        deviceSync = nil
-
-        chains = [:]
-        unsavedRecoveryKey = nil
-        let store = IdentityStore(keychain: storage.keychain)
-        do {
-            try await storage.keychain.removeAll()
-        } catch {
-            Diagnostics.identity.error(
-                "removal: the Keychain would not empty (\(String(describing: error), privacy: .public))")
-        }
+        await eraseWhatThisPhoneKeeps()
         await persistOrReport("the mark that this device was removed") {
-            try await store.markRemoved()
+            try await IdentityStore(keychain: storage.keychain).markRemoved()
         }
-        try? await storage.log.removeAll()
-        try? await storage.media.removeAll()
-
-        replica = Replica()
-        persisted = PersistedState()
-        rooms = []
-        try? await saveState()
     }
 }

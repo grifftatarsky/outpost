@@ -1,3 +1,4 @@
+import CarpenterKit
 import SwiftUI
 import TipKit
 
@@ -15,6 +16,7 @@ struct CarpenterMain: App {
 
     init() {
         try? Tips.configure()
+        try? ScratchSpace.shared.empty()
     }
 
     @ViewBuilder private var root: some View {

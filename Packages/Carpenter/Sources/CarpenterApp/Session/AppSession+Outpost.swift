@@ -521,7 +521,6 @@ extension AppSession {
         _ media: PreparedMedia, to targets: Set<ParticipantID>, through mailbox: any MediaMailbox
     ) async throws -> MediaBody {
         if let file = media.file {
-            defer { try? FileManager.default.removeItem(at: file) }
             return try await uploadInParts(media, from: file, to: targets, through: mailbox)
         }
         let (reference, ciphertext) = try SealedAttachment.seal(media.bytes, kind: media.kind)

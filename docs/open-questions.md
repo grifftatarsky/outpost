@@ -113,14 +113,33 @@ for.
 
 <!-- COPY END 8f4c521a -->
 
+<!-- COPY BEGIN 29bd829c [NEEDS HUMAN REVIEW] -->
+
+## The Focus filter shows room names to the system's settings
+
+Choosing which rooms may notify during a Focus happens in Settings, so iOS asks the app for the name
+of every room to draw the list, and keeps the rooms the member picks, with their names, in that
+Focus's settings, where nothing the app seals reaches and erasing the app does not clear them. Since
+2026-11-05 the filter is hidden from Siri, Spotlight and Shortcuts (`isDiscoverable = false`), which
+Apple documents; it does not say whether the Focus settings still list a filter marked that way, and
+nobody has looked on a phone.
+
+**Recommendation: look on the rig first.** If the filter is still listed, keep it and say on the
+Focus page that the chosen rooms' names are kept by iOS. If it is gone, the choice is between a
+filter that names rooms to the system and no filter: drop the room list and keep only *Show what was
+said*, which names nothing.
+
+<!-- COPY END 29bd829c -->
+
 <!-- COPY BEGIN 5d82a14a [NEEDS HUMAN REVIEW] -->
 
 ## Outpost's own lock cannot seal the identity, because the other phones need it
 
-Outpost's own lock now seals with a key wrapped by the code and by a key the Secure Enclave will not
-hand over, so a copied file opens on no other phone
+Outpost's own lock is meant to seal with a key wrapped by the code and by a key the Secure Enclave
+will not hand over, so a copied file opens on no other phone. That vault is written and tested in the
+package and not yet connected to the lock, which today guards the screens and seals nothing
 ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
-That works for anything this phone alone keeps.
+Once connected it works for anything this phone alone keeps.
 
 It cannot work for the identity. The identity lives in iCloud Keychain so the member's other phones
 have it, and iCloud Keychain protects an item with the phone's own passcode. There is no way to ask

@@ -386,6 +386,32 @@ else
     printf '\nwarning: python3 not found; the copy-marker rule did not run.\n'
 fi
 
+# Every scratch file goes through ScratchSpace (2026-11-05). Picked originals, prepared clips and
+#     sealed upload copies were written straight into the temporary directory, which took the
+#     ordinary protection whatever Advanced On Device Security said, and erasing the phone never
+#     emptied it. ScratchSpace makes one folder with the protection the setting names, protects
+#     each file after it is written, and is emptied at launch and by every erase.
+scratch=$(
+    # shellcheck disable=SC2086
+    grep -nE 'temporaryDirectory|NSTemporaryDirectory' $sources 2>/dev/null \
+        | grep -v '/ScratchSpace\.swift:' | grep -vE '^App/Carpenter(UI)?Tests/'
+)
+if [ -n "$scratch" ]; then
+    report "error: a file is written to the temporary directory outside ScratchSpace:" "$scratch"
+fi
+
+# No field asks to be treated as an account password (2026-11-05). The app lock's fields said
+#     .password and .newPassword, which invites password AutoFill to offer saving the app's code to
+#     the Passwords app and iCloud Keychain, where the phone's passcode opens it. The app has no
+#     account passwords, so neither type has a use anywhere.
+password_fields=$(
+    # shellcheck disable=SC2086
+    grep -nE 'textContentType\(\.(password|newPassword)\)' $sources 2>/dev/null
+)
+if [ -n "$password_fields" ]; then
+    report "error: a field asks password AutoFill to keep what is typed in it:" "$password_fields"
+fi
+
 # No Siri and no Apple Intelligence (Griff, 2026-09-27). The notification extension donated every
 #     banner to Siri as an INSendMessageIntent, which put the sender and conversation into the
 #     system's interaction store, outside anything the app seals; erasing never removed it. Nothing
@@ -401,6 +427,11 @@ siri=$(
 if [ -n "$siri" ]; then
     report "error: a Siri or intent surface is back — the app donates nothing to Siri:" "$siri"
 fi
+for intent in $(grep -lE ':[[:space:]]*(AppIntent|SetFocusFilterIntent)[[:space:]]*\{' $sources 2>/dev/null); do
+    if ! grep -q 'static let isDiscoverable = false' "$intent"; then
+        report "error: an App Intent Siri, Spotlight and Shortcuts can discover (2026-11-05):" "$intent"
+    fi
+done
 if ! grep -q 'writingToolsBehavior(.disabled)' Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift; then
     report "error: Writing Tools are no longer turned off in the theme:" "Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift"
 fi

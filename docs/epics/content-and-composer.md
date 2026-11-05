@@ -133,8 +133,10 @@ block, a deny list in the binary, and the obligations written down in
 
 - **Done.** Any length, up to 287 MB once prepared, sealed and sent in 16 MB pieces (changed
   2026-09-27; it was a minute, sealed whole).
-- **Done.** Sent as recorded, copied through the system's `forSharing()` filter with no metadata
-  written, so no location or device tag survives (changed 2026-09-27; it was re-encoded at 960 × 540).
+- **Done.** Sent as recorded: only the picture and sound tracks are copied, through the system's
+  `forSharing()` filter with no metadata written, so no location or device tag survives, and no timed
+  track of location rides along (changed 2026-09-27; it was re-encoded at 960 × 540. The tracks are
+  chosen by the app since 2026-11-05).
 - **Built, not yet on a phone.** A clip over 287 MB is flagged when it is picked, with its size and
   *Make it fit*; tapping it re-encodes the clip to land just under the limit. Tested in the package
   (`FittingAClipTests`, `VideoPreparerTests`); not yet run on a device or sent between two accounts.

@@ -116,11 +116,13 @@ struct SendingAClipInPiecesTests {
     @Test("A clip bigger than a piece reaches the other member as the same bytes, and the sender's file is gone")
     func aClipCrossesInPieces() async throws {
         let (alice, bob, mailbox, room) = try await joined()
-        let source = TestScratch.root.appending(path: "prepared-\(UUID().uuidString).mp4")
+        let file = try ScratchSpace(directory: TestScratch.root, protection: ProtectionDial())
+            .newFile("prepared", extension: "mp4")
+        let source = file.url
         let original = Data((0..<(SealedAttachment.partPlaintextBytes + 70_000)).map { UInt8(truncatingIfNeeded: $0 &* 13) })
         try original.write(to: source)
         let clip = PreparedMedia(
-            kind: .video, width: 960, height: 540, file: source, preview: Data(repeating: 4, count: 500),
+            kind: .video, width: 960, height: 540, file: file, preview: Data(repeating: 4, count: 500),
             duration: 95)
 
         try await alice.send(clip, to: room, through: mailbox)

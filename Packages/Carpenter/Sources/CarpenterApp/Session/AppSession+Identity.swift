@@ -31,10 +31,7 @@ extension AppSession {
             } catch CryptoError.retiredIdentity {
                 Diagnostics.identity.notice(
                     "load: this device holds an identity from before the recovery key changed; starting over")
-                try await storage.keychain.removeAll()
-                try await storage.log.removeAll()
-                try await storage.media.removeAll()
-                try await storage.documents.save(PersistedState())
+                await eraseWhatThisPhoneKeeps()
                 state = .checkingForRegistration
                 return
             }

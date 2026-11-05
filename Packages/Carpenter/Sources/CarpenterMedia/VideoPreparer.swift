@@ -18,22 +18,19 @@ public enum VideoPreparer {
         let asset = AVURLAsset(url: url)
         let duration = try await readableDuration(of: asset)
 
-        let output = FileManager.default.temporaryDirectory
-            .appending(path: "prepared-\(UUID().uuidString).mp4")
-        var kept = false
-        defer { if !kept { try? FileManager.default.removeItem(at: output) } }
+        let source = try await pictureAndSound(of: asset)
+        var output = try ScratchSpace.shared.newFile("prepared", extension: "mp4")
         do {
-            try await export(asset, to: output, preset: AVAssetExportPresetPassthrough)
+            try await export(source, to: output.url, preset: AVAssetExportPresetPassthrough)
         } catch {
-            try? FileManager.default.removeItem(at: output)
-            try await export(asset, to: output, preset: AVAssetExportPresetHEVCHighestQuality)
+            output = try ScratchSpace.shared.newFile("prepared", extension: "mp4")
+            try await export(source, to: output.url, preset: AVAssetExportPresetHEVCHighestQuality)
         }
+        try output.protect()
 
-        let size = byteCount(of: output)
+        let size = byteCount(of: output.url)
         guard size <= limit else { throw Failure.tooLarge(size) }
-        let prepared = try await finished(output, caption: caption, duration: duration)
-        kept = true
-        return prepared
+        return try await finished(output, caption: caption, duration: duration)
     }
 
     public static func sizeIfTooLarge(_ url: URL, limit: Int = maximumBytes) -> Int? {
@@ -48,32 +45,18 @@ public enum VideoPreparer {
         let duration = try await readableDuration(of: asset)
 
         let base = try await plan(for: asset, duration: duration, limit: limit)
-        var best: (file: URL, size: Int)?
-        var kept = false
-        defer { if !kept, let best { try? FileManager.default.removeItem(at: best.file) } }
+        var best: (file: ScratchFile, size: Int)?
         var search = FitSearch(limit: limit)
         while let quality = search.next {
-            let output = FileManager.default.temporaryDirectory
-                .appending(path: "fitted-\(UUID().uuidString).mp4")
-            do {
-                try await encode(asset, to: output, plan: base.at(quality))
-            } catch {
-                try? FileManager.default.removeItem(at: output)
-                throw error
-            }
-            let size = byteCount(of: output)
-            if size > 0, size <= limit, size > best?.size ?? 0 {
-                if let best { try? FileManager.default.removeItem(at: best.file) }
-                best = (output, size)
-            } else {
-                try? FileManager.default.removeItem(at: output)
-            }
+            let output = try ScratchSpace.shared.newFile("fitted", extension: "mp4")
+            try await encode(asset, to: output.url, plan: base.at(quality))
+            let size = byteCount(of: output.url)
+            if size > 0, size <= limit, size > best?.size ?? 0 { best = (output, size) }
             search.record(quality, size)
         }
         guard let best else { throw Failure.cannotFit }
-        let prepared = try await finished(best.file, caption: caption, duration: duration)
-        kept = true
-        return prepared
+        try best.file.protect()
+        return try await finished(best.file, caption: caption, duration: duration)
     }
 
     public struct FitPlan: Hashable, Sendable {
@@ -309,8 +292,10 @@ public enum VideoPreparer {
         return duration
     }
 
-    private static func finished(_ output: URL, caption: String?, duration: TimeInterval) async throws -> PreparedMedia {
-        let exported = AVURLAsset(url: output)
+    private static func finished(
+        _ output: ScratchFile, caption: String?, duration: TimeInterval
+    ) async throws -> PreparedMedia {
+        let exported = AVURLAsset(url: output.url)
         let poster = try await posterFrame(of: exported)
         let dimensions = try await naturalSize(of: exported)
         let preview = try? ImagePreparer.jpeg(
@@ -330,7 +315,24 @@ public enum VideoPreparer {
         (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? 0
     }
 
-    static func export(_ asset: AVURLAsset, to output: URL, preset: String) async throws {
+    static func pictureAndSound(of asset: AVURLAsset) async throws -> AVMutableComposition {
+        let composition = AVMutableComposition()
+        for kind in [AVMediaType.video, .audio] {
+            for track in try await asset.loadTracks(withMediaType: kind) {
+                guard
+                    let copy = composition.addMutableTrack(
+                        withMediaType: kind, preferredTrackID: kCMPersistentTrackID_Invalid)
+                else { throw Failure.unreadable }
+                let (range, transform) = try await track.load(.timeRange, .preferredTransform)
+                try copy.insertTimeRange(range, of: track, at: range.start)
+                copy.preferredTransform = transform
+            }
+        }
+        guard !composition.tracks(withMediaType: .video).isEmpty else { throw Failure.unreadable }
+        return composition
+    }
+
+    static func export(_ asset: AVAsset, to output: URL, preset: String) async throws {
         guard let session = AVAssetExportSession(asset: asset, presetName: preset) else {
             throw Failure.exportFailed("no export session for \(preset)")
         }
@@ -373,6 +375,9 @@ public enum VideoPreparer {
         var items = try await asset.load(.metadata)
         for format in try await asset.load(.availableMetadataFormats) {
             items += try await asset.loadMetadata(for: format)
+        }
+        for track in try await asset.load(.tracks) where track.mediaType != .video && track.mediaType != .audio {
+            found.append("track:\(track.mediaType.rawValue)")
         }
         for item in items {
             guard let identifier = item.identifier?.rawValue else { continue }

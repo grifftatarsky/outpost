@@ -39,7 +39,7 @@ public struct FocusFilterStore: @unchecked Sendable {
         }
     }
 
-    private static let filterKey = "focusFilter.current"
+    public static let filterKey = "focusFilter.current"
     private static let roomsKey = "focusFilter.rooms"
 
     private let defaults: UserDefaults

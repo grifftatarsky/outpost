@@ -11,12 +11,19 @@ public actor FakeHardwareKeys: HardwareKeys {
 
     public var biometricsSucceed = true
     public var isAvailable = true
+    public private(set) var phoneIsLocked = false
 
     public init() {}
 
     public func allowBiometrics(_ allowed: Bool) { biometricsSucceed = allowed }
 
     public func makeUnavailable() { isAvailable = false }
+
+    public func lockPhone() { phoneIsLocked = true }
+
+    public func unlockPhone() { phoneIsLocked = false }
+
+    public var held: Set<HardwareKeyID> { Set(keys.keys) }
 
     public func forgetEverything() {
         keys = [:]
@@ -32,11 +39,13 @@ public actor FakeHardwareKeys: HardwareKeys {
     }
 
     public func publicKey(of id: HardwareKeyID) async throws -> Data? {
-        keys[id]?.publicKey.x963Representation
+        guard !phoneIsLocked else { throw HardwareKeyError.locked }
+        return keys[id]?.publicKey.x963Representation
     }
 
     public func agree(_ id: HardwareKeyID, with publicKey: Data, reason: String) async throws -> Data {
         guard isAvailable else { throw HardwareKeyError.unavailable }
+        guard !phoneIsLocked else { throw HardwareKeyError.locked }
         guard let key = keys[id] else { throw HardwareKeyError.noSuchKey }
         if needsBiometrics.contains(id) {
             biometricChecks += 1

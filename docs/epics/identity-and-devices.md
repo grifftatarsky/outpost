@@ -503,8 +503,9 @@ sealed on an iPhone. **Not yet tried with the phone locked.**
 - **Built.** Reading a key never changes how it is protected, so the extension cannot undo the choice.
 - **Built.** A switch on its own page under This device, which cannot be turned on without a
   passcode.
-- **Not built, ruled.** Outpost's own lock as the seal, with a PIN, a note on each option and a link to
-  an article; collecting what arrives while locked, so nothing is lost; and sealing the app's
+- **Not built, ruled.** Outpost's own lock as the seal (the lock is built and seals nothing; the vault
+  that would seal with its code is written and tested in the package, and nothing calls it), a note on
+  each option and a link to an article; collecting what arrives while locked, so nothing is lost; and sealing the app's
   preferences ([Decisions](../decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
 - **Owed, on a real iPhone.** With it on: lock the phone, send it a message from the other account, see
   a banner that says only "New message", unlock it and see the message arrive. `FileProtectionTests`

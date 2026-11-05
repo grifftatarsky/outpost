@@ -113,13 +113,16 @@ public actor InMemoryKeychainStore: KeychainStore {
     public func remove(_ key: KeychainKey) async throws {
         local[key] = nil
         protections[key] = nil
-        await synced.set(nil, for: key)
     }
 
-    public func removeAll() async throws {
-        local = [:]
-        protections = [:]
-        await synced.clear()
+    public func removeAll(_ scope: KeychainScope) async throws {
+        switch scope {
+        case .device:
+            local = [:]
+            protections = [:]
+        case .synchronized:
+            await synced.clear()
+        }
     }
 
     public func protect(as protection: StorageProtection) async throws {
@@ -414,7 +417,7 @@ public actor RefusingGroupKeychainStore: KeychainStore {
     }
 
     public func remove(_ key: KeychainKey) throws { items[key] = nil }
-    public func removeAll() throws { items = [:] }
+    public func removeAll(_ scope: KeychainScope) throws { if scope == .device { items = [:] } }
     public func protect(as protection: StorageProtection) throws {}
 }
 
@@ -443,7 +446,7 @@ public actor UnreadableKeychainStore: KeychainStore {
     }
 
     public func remove(_ key: KeychainKey) throws { items[key] = nil }
-    public func removeAll() throws { items = [:] }
+    public func removeAll(_ scope: KeychainScope) throws { if scope == .device { items = [:] } }
 
     public func protect(as protection: StorageProtection) throws {
         guard readable else { throw Refused() }

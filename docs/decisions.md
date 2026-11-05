@@ -447,9 +447,13 @@ We'll mimic tik tok there."
 **RULED 2026-09-27 by Griff:** "No setting for video size—instead, if a user recieves a 'your video
 is too big' or whatever, offer to encode it so it fits."
 
-A video is the same entry, sent as it was recorded: its streams are copied into a new file through
-Apple's `forSharing()` metadata filter with no metadata written, so no location or device tag
-survives. It is re-encoded only when its own format cannot be copied into the file (ProRes, for
+A video is the same entry, sent as it was recorded: its picture and sound tracks, and nothing else,
+are copied into a new file through Apple's `forSharing()` metadata filter with no metadata written,
+so no location or device tag survives. Only those two kinds of track are put into the file
+(`VideoPreparer.pictureAndSound`, since 2026-11-05), because a recording can carry a timed track of
+location or camera state, and Apple documents the filter for metadata items without saying it
+reaches such a track. On a Mac the copy dropped the track before this change as well; on an iPhone
+that was never checked, so the app no longer depends on it (`VideoPreparerTests`). It is re-encoded only when its own format cannot be copied into the file (ProRes, for
 one), and then at Apple's highest-quality HEVC preset, not smaller. Its first frame is the preview and its length is in the entry.
 There is no limit on its length; the file may be up to 287 MB. A clip over that is flagged in the
 composer the moment it is picked, with its size and a *Make it fit* button, and it is not made
@@ -474,8 +478,8 @@ gone; a clip over 287 MB once prepared is refused with its size. Tested in the p
 287 MB itself has not been sent live.
 
 **The one place a member's content sits readable without the Keychain.** `AVPlayer` reads files,
-so a clip is opened into the app's temporary directory under complete file protection when it is
-first drawn, and stays there for the launch; the directory is emptied on the next one. A resource
+so a clip is opened into the app's scratch folder under complete file protection when it is
+first drawn, and stays there for the launch; the folder is emptied on the next one and by any erase. A resource
 loader that decrypts on demand would remove this and is not built. Said here rather than hidden.
 
 **Screened as a file, and not drawn until the verdict is in.** The system's video analysis reads
@@ -1242,8 +1246,15 @@ before, so one old device keeps the old behavior for everybody.
 A removal is signed by the device that made it as well as by the identity, and a removal made by a
 device that was itself removed earlier does not count, so a removed device can't remove yours.
 
-A removed device learns about it from its sibling's state record, erases its room keys, its own
-device key, its messages and its local state, and shows a screen that says it was removed. It stays
+A removed device learns about it from its sibling's state record, erases everything the phone keeps
+for the member, and shows a screen that says it was removed. "Everything" is the same erase that
+*Erase everything*, the wrong-code limit, a deathmark and a forgotten code run, since 2026-11-05: the
+keychain items this phone holds, the log, the state, photos and clips, every avatar, the Focus room
+list and filter, the scratch folder, the copies left from before the shared container, and the list of
+photos the member chose to reveal (`AppSession.eraseWhatThisPhoneKeeps`, `WhatErasingAPhoneLeavesTests`).
+Before that date a removed device ran a shorter erase of its own and kept the avatars, the Focus room
+list and those old copies. The places come from the same list the protection setting walks
+(`SessionStorage.locations`), so a place added for one is added for both. It stays
 removed across relaunches, and the recovery key brings it back as a new device. After a restore
 from the recovery key, the app offers to remove all or some of the member's other devices.
 
@@ -3305,6 +3316,18 @@ recovery key or an approval by a device that counts lets a device in. See the
   already true for getting back in.
 - **The creating device keeps the key until the member confirms they saved it.** Closing the app
   mid-way would otherwise lose it for good.
+- **"I've saved it" opens only after a save finished** (2026-11-05). It used to open the moment
+  *Save key* was tapped, so a member who opened the share sheet and closed it again could confirm, and
+  the key, which no device keeps after that, was gone without having been saved anywhere. Now it opens
+  when the share sheet reports that a destination finished with the key (on a Mac, when the file was
+  written), and the key stays on this device and can be saved again until then. A destination
+  finishing is the strongest thing iOS tells an app: it says the Files app wrote the file, or Messages
+  sent it, not that the place is safe, so the confirmation that follows still asks. Copying counts as
+  finishing, because pasting into a password manager is a real way to keep it. The control stays a
+  labelled button rather than the Share symbol the HIG names for an activity view
+  ([Activity views](https://developer.apple.com/design/human-interface-guidelines/activity-views)),
+  because what the member must do here is save, and sharing is only how; that departure predates this
+  change. Built; the rig check that closes the sheet without saving is written and not run.
 
 **What it costs.** Restoring from an iPhone backup no longer brings this app back; the recovery key
 does. A lost recovery key and every device lost is the end of that identity.
@@ -3333,7 +3356,18 @@ back, and on Writing Tools being switched back on.
 
 **What it costs.** Banners no longer carry the sender's face, and Focus decides by app rather than by
 person, so a member cannot let only certain people through a Focus. The Focus filter stays: it only
-tells the app which rooms to announce during a Focus, and it hands nothing to Siri.
+tells the app which rooms to announce during a Focus. Until 2026-11-05 it was discoverable, the
+default for an App Intent, which Apple says lets "Siri, Spotlight, and the Shortcuts app" find and
+use it ([isDiscoverable](https://developer.apple.com/documentation/appintents/appintent/isdiscoverable));
+the metadata the build hands the system said so (`isDiscoverable: true` in
+`Metadata.appintents/extract.actionsdata`). It is marked not discoverable now, and the lint fails on
+an App Intent that is not. What the system still sees: the room entity and its query stay in that
+metadata as discoverable, because iOS offers no switch for an entity, but no discoverable action
+uses them and none conforms to an assistant schema. When the member picks rooms for a Focus in
+Settings, iOS asks the app for every room's name to show the list, and keeps the ones chosen in the
+Focus's settings, outside anything the app seals. Whether it carries them to the member's other
+devices with *Share Across Devices* has not been checked
+([Open questions](open-questions.md#the-focus-filter-shows-room-names-to-the-systems-settings)).
 
 **What is not the app's to control.** A member can turn on Apple Intelligence notification
 summaries in Settings; iOS offers no switch for an app to refuse them. The words a summary would
@@ -3396,6 +3430,16 @@ and says only that something arrived.
   connection. Everywhere else, the cloud half still comes first: *Erase everything* touches nothing
   local until iCloud has the deathmark.
 - **`--reset-account` leaves no deathmark,** so a development account really is empty afterwards.
+- **Erasing one phone reaches only that phone's keychain** (2026-11-05). A forgotten code, a removal
+  this phone hears about, a deathmark it obeys and the erase that follows wrong codes delete the
+  keychain items this phone keeps for itself and leave alone anything iCloud Keychain carries, because
+  deleting a synchronized item deletes it from every phone signed in to the Apple Account: *Forgot the
+  code?* on one phone could otherwise have reached the member's others. Only *Erase everything*, and
+  the wrong-code limit when it reaches iCloud, also delete the synchronized items, since erasing
+  everywhere is what they promise. Removing a single key never reaches iCloud Keychain. Today's builds
+  write nothing synchronized; the items this protects are ones earlier builds wrote
+  (`ErasingThisPhoneReachesOnlyItsKeychainTests`; the real keychain's half is in `SystemKeychainTests`,
+  written and not run).
 
 **What it costs.** A device that never reaches iCloud again keeps what it has, and the deathmark
 waits for it. Tested with the in-memory board. The board's live test (`LiveDeathmarkTests`) is
@@ -4182,7 +4226,17 @@ Settings under App lock. See the [crypto brief](crypto-brief.md#the-app-lock).
   Deleting the app does not clear the keychain, so without this a forgotten code would lock the member
   out for good. It gives a thief nothing: coming back needs another device's approval or the recovery
   key.
-- **The app switcher sees a cover the moment the app is not in front**, whatever the grace time.
+- **The app switcher sees a cover the moment the app is not in front**, whatever the grace time, and
+  so does a phone with [Advanced On Device Security](#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)
+  on and no lock (2026-11-05). The cover goes up when the app stops being active, not only when it
+  goes to the background: Apple says the snapshot is taken after the app enters the background and
+  that nothing sensitive may be in it ([Preparing your UI to run in the background](https://developer.apple.com/documentation/uikit/preparing-your-ui-to-run-in-the-background)),
+  and becoming inactive always comes first, so covering then also hides the screen behind Control
+  Center and system alerts. While the cover or the lock is up, the app's own windows are hidden
+  rather than drawn underneath it, so nothing of a conversation is rendered even for a frame the
+  cover takes to appear. A cover with no lock behind it draws only the background, never "locked",
+  because nothing is. What it costs: with either setting on, pulling down Control Center or a system
+  alert blanks the app and puts away the keyboard. Built; not yet seen on the rig.
 
 **What it costs.** A member who keeps showing notifications has them readable on a locked app. One who
 forgets the code and has neither another device nor the recovery key loses what was on that phone,
@@ -4239,25 +4293,43 @@ anymore (sigh)."
 
 **Not yet met by the build.** Promise 2: while the phone is locked the app collects nothing, so a
 message that waits longer than nine days is taken back before the phone collects it, and returns only
-through history repair. Promise 1 for the app's preferences, which are not sealed. And Outpost's own
-lock, with the PIN, the note on each option and the link, is not built.
+through history repair. Promise 1 for the app's preferences, which are not sealed. And promise 1 for
+Outpost's own lock: the lock itself is built, with its PIN or passphrase and Face ID (2026-09-27,
+[the entry above](#the-app-lock-is-a-code-the-phone-counts-not-a-key-that-encrypts)), but it guards
+the screens and seals nothing, so what it covers is still protected only by the phone's lock. The
+note on each option and the link are not built.
 
 **What promise 1 needs**, raised when it was confirmed: a code of 4 to 6 digits has at most a million
 values, so a key made from the code alone could be tried against a copied file, every value, off the
 phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
 the phone itself.
 
-**Built 2026-09-30.** What this phone keeps is sealed with a key it holds only while the app is open.
-That key is wrapped by two things at once: the code, stretched by PBKDF2, and a shared secret from a
-P-256 key the Secure Enclave made and will not give up. A copied file opens on no other phone, with
-or without the code, because the other phone cannot reach the enclave key; on this phone every guess
-still costs a PBKDF2. Face ID is a second wrapping under a second enclave key whose access control
-names the current set of faces, so a face releases key material rather than answering yes or no, and
-a face that will not pass leaves the code. Forgetting the code, or losing the enclave keys, loses
-this phone's copy and nothing anybody else holds (`Vault`, `SealedDocumentStore`,
+**The seal is written and not connected (2026-09-30).** The pieces that would seal what this phone
+keeps with the lock's code exist and are tested in the package, and nothing in the app calls them:
+no store the app opens is a `SealedDocumentStore`, and setting the lock makes no vault key. Until
+they are connected, nothing below happens on a phone. As written: what this phone keeps would be
+sealed with a key it holds only while the app is open. That key is wrapped by two things at once:
+the code, stretched by PBKDF2, and a shared secret from a P-256 key the Secure Enclave made and will
+not give up. A copied file would open on no other phone, with or without the code, because the
+other phone cannot reach the enclave key; on this phone every guess would still cost a PBKDF2. Face ID is a second wrapping under a second enclave key whose access
+control names the current set of faces, so a face would release key material rather than answer yes
+or no, and a face that will not pass leaves the code. Forgetting the code, or losing the enclave keys,
+would lose this phone's copy and nothing anybody else holds (`Vault`, `SealedDocumentStore`,
 `OutpostsOwnLockSealsThisPhoneTests`). **The enclave half has never run**: a simulator has no Secure
 Enclave, so the package suite proves the composition against a fake and the real one is compiled
 only.
+
+Four hazards in it were fixed on 2026-11-05, before anything uses it. Making an enclave key used to
+delete the one before it first, so a change that failed between the two left a sealing nothing could
+open; every wrapping now makes a key of its own under a fresh name, and the old one is removed only
+by `Vault.retire`, after the new sealing has been kept. Changing the code had no path but sealing
+again from nothing; `Vault.changingCode` wraps the same key under a new enclave key and a new salt
+and leaves Face ID's wrapping alone. A phone that was locked read as one whose key was gone, which
+is the difference between "wait" and "this copy is lost"; it is `HardwareKeyError.locked` now. And
+no erase removed the enclave keys; each is labelled with its keychain service, and erasing this
+phone's keychain items removes them with the rest, so `SecureEnclaveKeys` must be given the same
+service as the session's keychain when it is wired. The real enclave half of all four is compiled,
+not run.
 
 **Built 2026-09-28 for the phone's lock: the package suite passes on Griff's Mac, the keychain half
 passes on the simulator, and on an iPhone files are written with the protection it names. Not yet tried
@@ -4278,11 +4350,22 @@ iOS for its strongest file and keychain protection rather than making a key of i
   time the app opens if it was interrupted. Two quick changes run one after the other.
 - **Reading a key no longer changes how it is protected.** A read used to move a key to the ordinary
   protection, and the extension reads the same keys, so every push would have undone the choice.
+- **Scratch files follow the setting, and live no longer than whatever holds them** (2026-11-05). A
+  picked clip, a prepared clip, a sealed copy waiting to upload and a clip opened to play are written
+  into one scratch folder with the protection the setting names, not always the strongest: with the
+  setting off, an upload the phone locks in the middle of still has to read its sealed copy, which
+  `complete` would refuse ten seconds after the lock. Each file belongs to the value that carries it
+  (`ScratchFile`) and is deleted when the last holder lets go, so a clip the member drops from the
+  composer, a preparation that fails half way and a post refused for too many pictures leave nothing;
+  a send deletes its prepared file the moment it is done with it, whether it worked or not. The folder
+  is emptied at launch, for anything a killed process left, and by every erase. The rule is one owner
+  per file rather than a list of exit paths, because the list is what was incomplete: the original
+  stayed after every send, and the prepared file after every refused one.
 
-**Not built:** Outpost's own lock as the seal, with the PIN, the note on each option and the link
-ruled above, with Face ID offered as a demoted choice
-([Decisions](#the-app-offers-its-own-face-id-setting-against-the-higs-advice)). The settings page
-offers only what is built.
+**Not built:** Outpost's own lock as the seal. The lock is built and offers a PIN, a passphrase and
+Face ID as a demoted choice ([Decisions](#the-app-offers-its-own-face-id-setting-against-the-higs-advice)),
+but connecting it to the vault, the note on each option and the link ruled above are not. The settings
+page offers only what is built.
 
 <!-- COPY END fd2829c5 -->
 

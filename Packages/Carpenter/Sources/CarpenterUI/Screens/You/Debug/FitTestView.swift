@@ -75,9 +75,9 @@ struct FitTestView: View {
             report = failed
             return
         }
-        defer { try? FileManager.default.removeItem(at: clip.url) }
+        defer { withExtendedLifetime(clip) {} }
         stage = .fitting
-        report = await run(clip.url) { stage = $0 }
+        report = await run(clip.file.url) { stage = $0 }
         stage = nil
     }
 

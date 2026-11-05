@@ -20,7 +20,6 @@ extension AppRootView {
         // COPY BEGIN c7bf5484 [NEEDS HUMAN REVIEW]
         do {
             try await session.send(try await prepare(picked, caption: caption), to: room, through: media)
-            discardSources([picked])
             return nil
         } catch VideoPreparer.Failure.tooLarge(let bytes) {
             let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
@@ -43,7 +42,6 @@ extension AppRootView {
                 prepared.append(try await prepare(one, caption: index == 0 ? caption : nil))
             }
             try await session.post(prepared, through: media)
-            discardSources(picked)
             return nil
         } catch VideoPreparer.Failure.tooLarge(let bytes) {
             let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
@@ -66,10 +64,10 @@ extension AppRootView {
             return try await Task.detached(priority: .userInitiated) {
                 try ImagePreparer.prepare(data, caption: caption)
             }.value
-        case .video(let url):
-            return try await VideoPreparer.prepare(url, caption: caption)
-        case .videoToFit(let url):
-            return try await VideoPreparer.prepareToFit(url, caption: caption)
+        case .video(let clip):
+            return try await VideoPreparer.prepare(clip.url, caption: caption)
+        case .videoToFit(let clip):
+            return try await VideoPreparer.prepareToFit(clip.url, caption: caption)
         }
     }
 
@@ -78,13 +76,6 @@ extension AppRootView {
         localized: "This video is too long to make small enough to send.",
         comment: "Even at the smallest size the app will draw, a clip is over the limit")
     // COPY END d4b9aefa
-
-    private func discardSources(_ picked: [PickedMedia]) {
-        for one in picked {
-            guard let url = one.clip else { continue }
-            try? FileManager.default.removeItem(at: url)
-        }
-    }
 
     func makeMediaLoader() -> MediaLoader {
         let loader = MediaLoader(

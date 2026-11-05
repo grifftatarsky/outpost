@@ -1466,6 +1466,14 @@ counts only when `LAContext.domainState.biometry.stateHash` matches the one take
 turned on or the code was last entered, so a face enrolled since, by somebody who knows the phone's
 passcode, does not open it.
 
+The fields the code is typed into declare no content type (since 2026-11-05). They used to say
+`.password` and `.newPassword`, which tells iOS's password AutoFill the field holds an account
+password and invites it to offer saving the code to the Passwords app, and from there to iCloud
+Keychain, where the phone's passcode opens it: the one thing the app's code exists to be different
+from. A secure field already keeps what is typed out of the keyboard's learned words. Whether iOS
+still shows its Passwords key above the keyboard on a secure field with no type has not been looked
+at on a phone; the lint refuses either type coming back.
+
 **What it does not do.** Somebody who can read the phone's storage directly, with a forensic tool or
 a modified app, is not stopped by it: the store is protected by iOS's file protection and the
 keychain, as it is without the lock. A 4-digit code's verifier could be tried against all 10,000
@@ -1494,8 +1502,8 @@ notification says only that something arrived.
 **What actually happens.** No new cryptography: the app asks iOS for its strongest protection, which
 iOS already ties to the passcode and to the phone's own hardware key.
 
-- **Files.** The log, the state, photos and clips, every avatar, the Focus room list, the old copies of
-  the log and state left in Application Support, and the app's temporary folder are written and kept
+- **Files.** The log, the state, photos and clips, every avatar, the Focus room list, the rest of the
+  app's folder in Application Support, and the scratch folder are written and kept
   as `FileProtectionType.complete`, which Apple describes as "stored in an encrypted format on disk
   and cannot be read from or written to while the device is locked or booting"
   ([Apple](https://developer.apple.com/documentation/foundation/fileprotectiontype/complete)). Apple's
@@ -1503,6 +1511,15 @@ iOS already ties to the passcode and to the phone's own hardware key.
   when it asks for the passcode immediately
   ([Apple Platform Security](https://support.apple.com/guide/security/data-protection-classes-secb010e978a/web)).
   Every store reads the setting at the moment it writes (`ProtectionDial`, `ProtectedFiles`).
+- **Scratch files.** A picked clip, a clip being prepared, a sealed copy waiting to upload and a clip
+  opened for playing are written into one folder, `ScratchSpace`, and nowhere else; the lint fails on
+  any other use of the temporary directory. The folder is made with the protection the setting names
+  and each file is given it again once written, because a file copied in or written by AVFoundation
+  does not reliably take its folder's class: Apple's own engineer says a new item takes its parent's
+  class, and that an atomic write or a copy can keep the class of wherever it started
+  ([Apple Developer Forums](https://developer.apple.com/forums/thread/24483)). The folder is emptied at
+  launch and by every erase. On an iPhone, `FileProtectionTests` checks a copied file ends up
+  `complete`; it has not been run since it was written.
 - **Keys.** Every keychain item is `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`: "can be accessed
   only while the device is unlocked by the user"
   ([Apple](https://developer.apple.com/documentation/security/ksecattraccessiblewhenunlockedthisdeviceonly)).
@@ -1528,7 +1545,10 @@ iOS already ties to the passcode and to the phone's own hardware key.
   ([Apple](https://developer.apple.com/documentation/uikit/encrypting-your-app-s-files)). The switch
   cannot be turned on while the iPhone has none.
 - **Nothing against somebody who knows the passcode.** Outpost's own lock as the seal is the choice
-  that would. It is ruled and not built yet ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
+  that would. The lock is built and guards the screens, and seals nothing ([The app lock](#the-app-lock)).
+  The vault that would seal with its code, `Vault` with `SealedDocumentStore`, is written and tested in
+  the package and nothing in the app calls it, so today what the lock covers is protected only by the
+  phone's lock ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
 - **Not everything the app keeps.** Its preferences (theme, favourite emoji, which rooms a Focus lets
   through and which photos you chose to show, each by a random identifier) and the device-sync
   engine's bookkeeping stay readable once the phone has been unlocked after it starts. None of them is

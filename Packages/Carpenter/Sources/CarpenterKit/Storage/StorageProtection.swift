@@ -23,6 +23,8 @@ public enum StorageProtection: String, Hashable, Sendable, Codable {
 }
 
 public final class ProtectionDial: Sendable {
+    public static let main = ProtectionDial()
+
     private let setting: Mutex<StorageProtection>
 
     public init(_ protection: StorageProtection = .afterFirstUnlock) {

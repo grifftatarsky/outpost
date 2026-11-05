@@ -58,6 +58,7 @@ extension AppSession {
     public func send(
         _ media: PreparedMedia, to room: RoomID, through mailbox: any MediaMailbox
     ) async throws {
+        defer { media.discardFile() }
         guard let enrolment else { throw AppSessionError.noIdentity }
         let me = enrolment.identity.id
         let roster = roster(of: room)
@@ -76,6 +77,7 @@ extension AppSession {
     }
 
     public func post(_ media: [PreparedMedia], through mailbox: any MediaMailbox) async throws {
+        defer { for one in media { one.discardFile() } }
         guard !media.isEmpty else { return }
         guard media.count <= MediaBody.galleryLimit else { throw AppSessionError.tooManyPictures }
 

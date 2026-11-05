@@ -120,8 +120,8 @@ from a real loss. `IntegrityReport` counts it as *Carried for other people* on t
 Not read on the rig yet.
 
 **A clip plays from a readable file for the length of a launch.** `AVPlayer` reads files, so an opened
-clip sits in the temporary directory, under complete file protection, until the next launch clears
-it. A resource loader that decrypts ranges on demand would end it.
+clip sits in the scratch folder, under complete file protection, until the next launch or an erase
+clears it. A resource loader that decrypts ranges on demand would end it.
 
 **A stolen unlocked phone gives up everything that phone holds.** The in-app lock was canceled because
 iOS locks apps behind Face ID better than the app could. What is still missing is a sentence where the
@@ -523,8 +523,5 @@ machine's load. See [how the suite holds up](testing.md#how-the-package-suite-ho
   every key it writes in the app's own group, where the notification extension cannot read it. The
   next process that reads the key moves it back, so nothing is lost, but banners can be plain until
   then. Not measured.
-- **Picked clips are copied into the temporary folder and not deleted.** `PickedClip` copies what the
-  photo picker hands over, and only the debug fit test removes its copy. iOS empties the folder
-  eventually. With Advanced On Device Security on, the folder is sealed like the rest.
 
 <!-- COPY END 4165cfd0 -->

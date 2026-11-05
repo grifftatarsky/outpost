@@ -20,6 +20,14 @@ public struct AppLockScreen: View {
     private var isDigits: Bool { controller.lock?.code == .digits }
 
     public var body: some View {
+        if controller.isLocked || controller.erasing {
+            lockScreen
+        } else {
+            palette.background.ignoresSafeArea()
+        }
+    }
+
+    private var lockScreen: some View {
         VStack(spacing: 24) {
             Spacer()
             Image(systemName: "lock.fill")
@@ -52,7 +60,6 @@ public struct AppLockScreen: View {
                 #if !os(macOS)
                     .keyboardType(isDigits ? .numberPad : .default)
                 #endif
-                .textContentType(.password)
                 .multilineTextAlignment(.center)
                 .font(.title3.monospaced())
                 .padding(.vertical, 12)
@@ -325,7 +332,6 @@ public struct AppLockSetupView: View {
                 #if !os(macOS)
                     .keyboardType(kind == .digits ? .numberPad : .default)
                 #endif
-                .textContentType(.newPassword)
                 .focused($focus, equals: .code)
                 SecureField(text: $again) {
                     Text("Again", bundle: .module)
@@ -333,7 +339,6 @@ public struct AppLockSetupView: View {
                 #if !os(macOS)
                     .keyboardType(kind == .digits ? .numberPad : .default)
                 #endif
-                .textContentType(.newPassword)
                 .focused($focus, equals: .again)
                 if let biometricName {
                     Toggle(isOn: $biometrics) {
@@ -704,7 +709,7 @@ private struct EraseChoice: Identifiable {
         }
         func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) throws {}
         func remove(_ key: KeychainKey) throws {}
-        func removeAll() throws {}
+        func removeAll(_ scope: KeychainScope) throws {}
         func protect(as protection: StorageProtection) throws {}
     }
 #endif

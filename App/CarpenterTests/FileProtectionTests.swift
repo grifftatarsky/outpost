@@ -44,4 +44,20 @@ struct FileProtectionTests {
         #expect(ProtectedFiles.reprotect([folder], as: .afterFirstUnlock).isEmpty)
         #expect(try protection(of: file) == .completeUntilFirstUserAuthentication)
     }
+
+    @Test("With Advanced On Device Security on, a file copied into the scratch space opens only while unlocked")
+    func scratchIsSealed() throws {
+        let space = ScratchSpace(directory: scratch(), protection: ProtectionDial(.whileUnlocked))
+        let source = scratch().appending(path: "picked.mov")
+        try FileManager.default.createDirectory(
+            at: source.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data([1, 2, 3]).write(to: source, options: .completeFileProtectionUntilFirstUserAuthentication)
+
+        let copy = try space.newFile("picked", extension: "mov")
+        try FileManager.default.copyItem(at: source, to: copy.url)
+        try copy.protect()
+
+        #expect(try protection(of: space.directory) == .complete)
+        #expect(try protection(of: copy.url) == .complete)
+    }
 }

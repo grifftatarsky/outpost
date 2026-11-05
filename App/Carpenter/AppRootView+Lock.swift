@@ -12,7 +12,9 @@ import SwiftUI
         static let shared = LockWindow()
 
         private var window: UIWindow?
-        private var covered: [UIWindow] = []
+        private var hidden: [UIWindow] = []
+        private var silenced: [UIWindow] = []
+        private weak var wasKey: UIWindow?
 
         func show(_ controller: AppLockController, onForget: @escaping () async -> Void) {
             guard window == nil,
@@ -25,15 +27,22 @@ import SwiftUI
             window.accessibilityViewIsModal = true
             window.rootViewController = UIHostingController(
                 rootView: AppLockScreen(controller: controller, onForget: onForget).themed(.default))
-            covered = scene.windows.filter { $0 !== window && !$0.accessibilityElementsHidden }
-            for other in covered { other.accessibilityElementsHidden = true }
+            wasKey = scene.keyWindow
+            let others = scene.windows.filter { $0 !== window }
+            hidden = others.filter { $0.windowLevel == .normal && !$0.isHidden }
+            silenced = others.filter { $0.windowLevel != .normal && !$0.accessibilityElementsHidden }
             window.makeKeyAndVisible()
             self.window = window
+            for other in hidden { other.isHidden = true }
+            for other in silenced { other.accessibilityElementsHidden = true }
         }
 
         func hide() {
-            for other in covered { other.accessibilityElementsHidden = false }
-            covered = []
+            for other in hidden { other.isHidden = false }
+            for other in silenced { other.accessibilityElementsHidden = false }
+            (wasKey ?? hidden.first)?.makeKey()
+            hidden = []
+            silenced = []
             window?.isHidden = true
             window = nil
         }
@@ -44,7 +53,7 @@ extension AppRootView {
     static let appLockStore = AppLockStore(
         keychain: SystemKeychainStore(
             service: TestProfileWorld.container(for: nil), accessGroup: SharedKeychain.group,
-            protection: SessionStorage.mainProtection))
+            protection: .main))
 
     func coverForLock(_ covered: Bool) {
         #if canImport(UIKit)

@@ -28,7 +28,7 @@ struct OutpostsOwnLockSealsThisPhoneTests {
             code: "824193", usingBiometrics: false, hardware: hardware, rounds: rounds)
 
         let thief = FakeHardwareKeys()
-        _ = try await thief.make(.code, requiringBiometrics: false)
+        _ = try await thief.make(sealed.byCode.hardware, requiringBiometrics: false)
         await #expect(throws: VaultError.wrongCode) {
             _ = try await Vault.open(sealed, with: "824193", hardware: thief, reason: "")
         }
@@ -41,7 +41,7 @@ struct OutpostsOwnLockSealsThisPhoneTests {
             code: "1234", usingBiometrics: false, hardware: hardware, rounds: rounds)
 
         let thief = FakeHardwareKeys()
-        _ = try await thief.make(.code, requiringBiometrics: false)
+        _ = try await thief.make(sealed.byCode.hardware, requiringBiometrics: false)
         for guess in 0..<40 {
             await #expect(throws: VaultError.wrongCode) {
                 _ = try await Vault.open(sealed, with: String(format: "%04d", guess), hardware: thief, reason: "")
@@ -81,7 +81,7 @@ struct OutpostsOwnLockSealsThisPhoneTests {
         let (key, sealed) = try await Vault.create(
             code: "824193", usingBiometrics: true, hardware: hardware, rounds: rounds)
 
-        let without = try await Vault.withoutBiometrics(sealed, hardware: hardware)
+        let without = Vault.withoutBiometrics(sealed)
         #expect(!without.usesBiometrics)
         await #expect(throws: VaultError.biometricsNotSet) {
             _ = try await Vault.openWithBiometrics(without, hardware: hardware, reason: "")
@@ -91,6 +91,55 @@ struct OutpostsOwnLockSealsThisPhoneTests {
         let again = try await Vault.addingBiometrics(to: without, key: key, hardware: hardware)
         #expect(try await Vault.openWithBiometrics(again, hardware: hardware, reason: "") == key)
         #expect(try await Vault.open(again, with: "824193", hardware: hardware, reason: "") == key)
+    }
+
+    @Test("A new code opens it and the old one stops, once the old sealing is retired")
+    func changingTheCode() async throws {
+        let hardware = FakeHardwareKeys()
+        let (key, old) = try await Vault.create(
+            code: "824193", usingBiometrics: true, hardware: hardware, rounds: rounds)
+
+        let new = try await Vault.changingCode(of: old, key: key, to: "570226", hardware: hardware)
+        #expect(try await Vault.open(new, with: "570226", hardware: hardware, reason: "") == key)
+        await #expect(throws: VaultError.wrongCode) {
+            _ = try await Vault.open(new, with: "824193", hardware: hardware, reason: "")
+        }
+        #expect(try await Vault.openWithBiometrics(new, hardware: hardware, reason: "") == key)
+
+        try await Vault.retire(old, keeping: new, hardware: hardware)
+        await #expect(throws: HardwareKeyError.noSuchKey) {
+            _ = try await Vault.open(old, with: "824193", hardware: hardware, reason: "")
+        }
+        #expect(await hardware.held == new.hardwareKeys, "retiring left an enclave key nothing uses, or took one in use")
+    }
+
+    @Test("Changing the code takes nothing away until the new sealing is kept, so a change that dies half way loses nothing")
+    func aChangeThatIsNotKeptLosesNothing() async throws {
+        let hardware = FakeHardwareKeys()
+        let (key, old) = try await Vault.create(
+            code: "824193", usingBiometrics: false, hardware: hardware, rounds: rounds)
+
+        _ = try await Vault.changingCode(of: old, key: key, to: "570226", hardware: hardware)
+        _ = try await Vault.create(code: "111111", usingBiometrics: true, hardware: hardware, rounds: rounds)
+
+        #expect(
+            try await Vault.open(old, with: "824193", hardware: hardware, reason: "") == key,
+            "making a new key deleted the one the kept sealing still needs")
+    }
+
+    @Test("A locked phone reads as locked, never as a key that is gone")
+    func lockedIsNotGone() async throws {
+        let hardware = FakeHardwareKeys()
+        let (_, sealed) = try await Vault.create(
+            code: "824193", usingBiometrics: false, hardware: hardware, rounds: rounds)
+
+        await hardware.lockPhone()
+        await #expect(throws: HardwareKeyError.locked) {
+            _ = try await Vault.open(sealed, with: "824193", hardware: hardware, reason: "")
+        }
+        await #expect(throws: HardwareKeyError.locked) {
+            _ = try await hardware.publicKey(of: sealed.byCode.hardware)
+        }
     }
 
     @Test("Forgetting the code loses this phone's copy and nothing else")
