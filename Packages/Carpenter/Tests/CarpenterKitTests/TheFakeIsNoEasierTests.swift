@@ -162,11 +162,11 @@ struct TheFakeIsNoEasierTests {
         let pair = try await linked(mailbox)
         let tag = pair.toBob.outgoingTag(window: 1)
         try await mailbox.put(SyncPacket(wraps: [tag: Data(count: 8)], ciphertext: Data(count: 8)), to: pair.toBob.them, in: pair.alice)
-        #expect(try await mailbox.fetch(from: pair.toBob.me, for: [tag], in: pair.bob).count == 1)
+        #expect(await mailbox.fetch(from: pair.toBob.me, for: [tag], in: pair.bob).count == 1)
 
         _ = try await mailbox.space(for: pair.toBob.them, naming: "_somebody-else", in: pair.alice)
         #expect(
-            try await mailbox.fetch(from: pair.toBob.me, for: [tag], in: pair.bob).isEmpty,
+            await mailbox.fetch(from: pair.toBob.me, for: [tag], in: pair.bob).isEmpty,
             "the person named before still read the space")
     }
 
@@ -183,7 +183,7 @@ struct TheFakeIsNoEasierTests {
             packet.id, from: pair.toBob.me, with: SealedReceipt(tag: tag, sealed: Data([1])), in: pair.bob)
 
         #expect(await mailbox.everySentPacket[packet.id]?.contentDigest == before, "a reader's receipt changed the packet")
-        #expect(try await mailbox.sentPackets(in: pair.alice)[packet.id]?.receipts.count == 1)
+        #expect(await mailbox.sentPackets(in: pair.alice)[packet.id]?.receipts.count == 1)
     }
 }
 

@@ -1,6 +1,11 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
+let swiftSettings: [SwiftSetting] = [
+    .swiftLanguageMode(.v6),
+    .treatWarning("UnnecessaryEffectMarker", as: .error),
+]
+
 let package = Package(
     name: "Carpenter",
     defaultLocalization: "en",
@@ -18,39 +23,39 @@ let package = Package(
         .target(
             name: "CarpenterKit",
             resources: [.process("Resources")],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CarpenterKitTesting",
             dependencies: ["CarpenterKit"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CarpenterCloudKit",
             dependencies: ["CarpenterKit"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CarpenterKeychain",
             dependencies: ["CarpenterKit"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CarpenterUI",
             dependencies: ["CarpenterKit", "CarpenterMedia"],
             resources: [.process("Resources")],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CarpenterApp",
             dependencies: ["CarpenterKit"],
             resources: [.process("Resources")],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CarpenterMedia",
             dependencies: ["CarpenterKit"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "CarpenterKitTests",
@@ -58,7 +63,7 @@ let package = Package(
                 "CarpenterKit", "CarpenterKitTesting", "CarpenterApp", "CarpenterUI",
                 "CarpenterCloudKit", "CarpenterMedia",
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: swiftSettings
         ),
     ]
 )

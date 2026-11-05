@@ -15,4 +15,5 @@ INFOPLIST_KEY_CFBundleName = $(APP_DISPLAY_NAME)
 SWIFT_VERSION = 6.0
 SWIFT_STRICT_CONCURRENCY = complete
 SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES
+OTHER_SWIFT_FLAGS = $(inherited) -Werror UnnecessaryEffectMarker
 //######################################################################
