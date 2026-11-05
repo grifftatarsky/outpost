@@ -37,6 +37,26 @@
         case welcome4 = "welcome-4"
         case welcome5 = "welcome-5"
         case welcome6 = "welcome-6"
+        case members = "members"
+        case joinCheck = "join-check"
+        case eraseEverything = "erase-everything"
+        case awaitingApproval = "awaiting-approval"
+        case stalledOffline = "stalled-offline"
+        case roomsCannotSend = "rooms-cannot-send"
+        case messageDetail = "message-detail"
+        case tapTrouble = "tap-trouble"
+        case otherDevices = "other-devices"
+        case devices = "devices"
+        case postThread = "post-thread"
+        case postComposer = "post-composer"
+        case onboarding = "onboarding"
+        case redeem = "redeem"
+        case invite = "invite"
+        case addSomeone = "add-someone"
+        case removeMember = "remove-member"
+        case checkingRegistration = "checking-registration"
+        case approveDevice = "approve-device"
+        case dataProblem = "data-problem"
 
         public static let argument = "--copy-shot"
 
@@ -149,6 +169,8 @@
                 NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", at: .confirming) {} }
             case .lockSetupTyping:
                 NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }) }
+            default:
+                ScreenShots.view(of: shot)
             }
         }
 

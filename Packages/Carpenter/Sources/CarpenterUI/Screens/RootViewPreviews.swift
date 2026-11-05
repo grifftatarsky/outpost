@@ -10,9 +10,11 @@ import SwiftUI
 
         static func demo(
             tab: PhoneTab, supporter: SupporterSettings? = nil, awaiting: [AwaitingAdmission] = [],
-            privacyNote: Bool = false, density: RoomsListDensity = .comfortable
+            privacyNote: Bool = false, density: RoomsListDensity = .comfortable, cannotSend: String? = nil
         ) -> some View {
-            Demo(tab: tab, supporter: supporter, awaiting: awaiting, privacyNote: privacyNote, density: density)
+            Demo(
+                tab: tab, supporter: supporter, awaiting: awaiting, privacyNote: privacyNote, density: density,
+                cannotSend: cannotSend)
         }
 
         private struct Demo: View {
@@ -21,6 +23,7 @@ import SwiftUI
             let awaiting: [AwaitingAdmission]
             let privacyNote: Bool
             let density: RoomsListDensity
+            let cannotSend: String?
             @State private var organisation = Fixtures.organisation
             @State private var preferences = RoomsListPreferences()
 
@@ -43,6 +46,7 @@ import SwiftUI
                     devices: Fixtures.devices,
                     awaitingAdmission: awaiting,
                     viewer: Fixtures.cassilda.id,
+                    cannotSend: cannotSend,
                     supporter: supporter,
                     outpostSettings: Fixtures.outpostSettings
                 )
