@@ -135,10 +135,11 @@ said*, which names nothing.
 
 ## Outpost's own lock cannot seal the identity, because the other phones need it
 
-Outpost's own lock now seals with a key wrapped by the code and by a key the Secure Enclave will not
-hand over, so a copied file opens on no other phone
+Outpost's own lock is meant to seal with a key wrapped by the code and by a key the Secure Enclave
+will not hand over, so a copied file opens on no other phone. That vault is written and tested in the
+package and not yet connected to the lock, which today guards the screens and seals nothing
 ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
-That works for anything this phone alone keeps.
+Once connected it works for anything this phone alone keeps.
 
 It cannot work for the identity. The identity lives in iCloud Keychain so the member's other phones
 have it, and iCloud Keychain protects an item with the phone's own passcode. There is no way to ask

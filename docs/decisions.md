@@ -4237,22 +4237,28 @@ anymore (sigh)."
 
 **Not yet met by the build.** Promise 2: while the phone is locked the app collects nothing, so a
 message that waits longer than nine days is taken back before the phone collects it, and returns only
-through history repair. Promise 1 for the app's preferences, which are not sealed. And Outpost's own
-lock, with the PIN, the note on each option and the link, is not built.
+through history repair. Promise 1 for the app's preferences, which are not sealed. And promise 1 for
+Outpost's own lock: the lock itself is built, with its PIN or passphrase and Face ID (2026-09-27,
+[the entry above](#the-app-lock-is-a-code-the-phone-counts-not-a-key-that-encrypts)), but it guards
+the screens and seals nothing, so what it covers is still protected only by the phone's lock. The
+note on each option and the link are not built.
 
 **What promise 1 needs**, raised when it was confirmed: a code of 4 to 6 digits has at most a million
 values, so a key made from the code alone could be tried against a copied file, every value, off the
 phone. The key has to be tied to this phone's hardware as well, so that a copy can only be tried on
 the phone itself.
 
-**Built 2026-09-30.** What this phone keeps is sealed with a key it holds only while the app is open.
-That key is wrapped by two things at once: the code, stretched by PBKDF2, and a shared secret from a
-P-256 key the Secure Enclave made and will not give up. A copied file opens on no other phone, with
-or without the code, because the other phone cannot reach the enclave key; on this phone every guess
-still costs a PBKDF2. Face ID is a second wrapping under a second enclave key whose access control
-names the current set of faces, so a face releases key material rather than answering yes or no, and
-a face that will not pass leaves the code. Forgetting the code, or losing the enclave keys, loses
-this phone's copy and nothing anybody else holds (`Vault`, `SealedDocumentStore`,
+**The seal is written and not connected (2026-09-30).** The pieces that would seal what this phone
+keeps with the lock's code exist and are tested in the package, and nothing in the app calls them:
+no store the app opens is a `SealedDocumentStore`, and setting the lock makes no vault key. Until
+they are connected, nothing below happens on a phone. As written: what this phone keeps would be
+sealed with a key it holds only while the app is open. That key is wrapped by two things at once:
+the code, stretched by PBKDF2, and a shared secret from a P-256 key the Secure Enclave made and will
+not give up. A copied file would open on no other phone, with or without the code, because the
+other phone cannot reach the enclave key; on this phone every guess would still cost a PBKDF2. Face ID is a second wrapping under a second enclave key whose access
+control names the current set of faces, so a face would release key material rather than answer yes
+or no, and a face that will not pass leaves the code. Forgetting the code, or losing the enclave keys,
+would lose this phone's copy and nothing anybody else holds (`Vault`, `SealedDocumentStore`,
 `OutpostsOwnLockSealsThisPhoneTests`). **The enclave half has never run**: a simulator has no Secure
 Enclave, so the package suite proves the composition against a fake and the real one is compiled
 only.
@@ -4300,10 +4306,10 @@ iOS for its strongest file and keychain protection rather than making a key of i
   per file rather than a list of exit paths, because the list is what was incomplete: the original
   stayed after every send, and the prepared file after every refused one.
 
-**Not built:** Outpost's own lock as the seal, with the PIN, the note on each option and the link
-ruled above, with Face ID offered as a demoted choice
-([Decisions](#the-app-offers-its-own-face-id-setting-against-the-higs-advice)). The settings page
-offers only what is built.
+**Not built:** Outpost's own lock as the seal. The lock is built and offers a PIN, a passphrase and
+Face ID as a demoted choice ([Decisions](#the-app-offers-its-own-face-id-setting-against-the-higs-advice)),
+but connecting it to the vault, the note on each option and the link ruled above are not. The settings
+page offers only what is built.
 
 <!-- COPY END fd2829c5 -->
 

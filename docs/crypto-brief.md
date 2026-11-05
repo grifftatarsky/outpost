@@ -1456,7 +1456,10 @@ iOS already ties to the passcode and to the phone's own hardware key.
   ([Apple](https://developer.apple.com/documentation/uikit/encrypting-your-app-s-files)). The switch
   cannot be turned on while the iPhone has none.
 - **Nothing against somebody who knows the passcode.** Outpost's own lock as the seal is the choice
-  that would. It is ruled and not built yet ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
+  that would. The lock is built and guards the screens, and seals nothing ([The app lock](#the-app-lock)).
+  The vault that would seal with its code, `Vault` with `SealedDocumentStore`, is written and tested in
+  the package and nothing in the app calls it, so today what the lock covers is protected only by the
+  phone's lock ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
 - **Not everything the app keeps.** Its preferences (theme, favourite emoji, which rooms a Focus lets
   through and which photos you chose to show, each by a random identifier) and the device-sync
   engine's bookkeeping stay readable once the phone has been unlocked after it starts. None of them is
