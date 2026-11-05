@@ -56,6 +56,11 @@ public struct TapToSwapView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityElement(children: .combine)
                 Spacer()
+                if trouble != nil {
+                    OpenSettingsButton()
+                        .font(CarpenterFont.button)
+                        .quietActionButton()
+                }
                 if phase == .touching, trouble == nil, number != nil {
                     // COPY BEGIN 2cdcc344 [NEEDS HUMAN REVIEW]
                     Button(action: onAccept) {
@@ -142,11 +147,11 @@ public struct TapToSwapView: View {
         switch (trouble, phase) {
         case (.notAllowed?, _):
             Text(
-                "Turn on Nearby Interaction for the app in Settings, under Privacy & Security, so it can tell which phone yours is touching.",
+                "Turn on Nearby Interaction for this app in Settings, so it can tell which phone yours is touching.",
                 bundle: .module)
         case (.noLocalNetwork?, _):
             Text(
-                "Turn on Local Network for the app in Settings, under Privacy & Security, so the two phones can find each other.",
+                "Turn on Local Network for this app in Settings, so the two phones can find each other.",
                 bundle: .module)
         case (nil, .looking):
             Text(
