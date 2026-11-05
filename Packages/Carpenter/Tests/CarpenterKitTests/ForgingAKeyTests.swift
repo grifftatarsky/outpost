@@ -27,7 +27,7 @@ struct SigningARoomKeyTests {
         let pairwise = try PairwiseSecret.derive(mine: member, theirs: friend.publicKeys)
         return try EpochGrant.issue(
             EpochSecret.random(), at: .initial.next, in: RoomID(), link: nil, to: pairwise,
-            devices: [DeviceRecipient(device: friendsDevice.id, agreementKey: friendsDevice.agreementPublicKey)]
+            devices: [DeviceRecipient(device: friendsDevice.id, sealingKey: friendsDevice.sealingPublicKey)]
         ).signed(by: device, from: member.id, to: recipient ?? friend.id)
     }
 
@@ -62,7 +62,7 @@ struct SigningARoomKeyTests {
         let pairwise = try PairwiseSecret.derive(mine: member, theirs: friend.publicKeys)
         let unsigned = try EpochGrant.issue(
             EpochSecret.random(), at: .initial, in: RoomID(), link: nil, to: pairwise,
-            devices: [DeviceRecipient(device: friendsDevice.id, agreementKey: friendsDevice.agreementPublicKey)])
+            devices: [DeviceRecipient(device: friendsDevice.id, sealingKey: friendsDevice.sealingPublicKey)])
         #expect(!unsigned.isSigned(from: member.id, to: friend.id, by: registry, storedAt: start + 200))
     }
 }
@@ -171,7 +171,7 @@ struct ARemovedDeviceCannotWriteToSiblingsTests {
         let feed = SiblingFeed(
             entries: [], certificates: [], epochs: [HeldEpoch(room: room, epoch: before.next, material: made.material)],
             member: identity.id, writtenAt: clock.now, preferences: preferences)
-        let toPhone = [DeviceRecipient(device: phoneKeys.id, agreementKey: phoneKeys.agreementPublicKey)]
+        let toPhone = [DeviceRecipient(device: phoneKeys.id, sealingKey: phoneKeys.sealingPublicKey)]
 
         let asLaptop = try SealedSiblingFeed.seal(feed, for: identity, on: laptopID, as: .mail(900), to: toPhone)
         try await relay.place(SiblingRecord.Name(writer: laptopID, kind: .mail(900)), asLaptop)

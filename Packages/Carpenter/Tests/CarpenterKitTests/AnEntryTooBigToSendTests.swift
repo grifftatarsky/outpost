@@ -268,7 +268,7 @@ struct OversizedEntryFromAContactTests {
         let small = try #require(friend.replica.allEntries.last)
         let enrolment = try #require(phone.enrolment)
         let writer = try #require(tablet.enrolment?.device)
-        let toPhone = [DeviceRecipient(device: enrolment.device.id, agreementKey: enrolment.device.agreementPublicKey)]
+        let toPhone = [DeviceRecipient(device: enrolment.device.id, sealingKey: enrolment.device.sealingPublicKey)]
         func mail(_ number: Int) async throws {
             let feed = SiblingFeed(
                 entries: [oversized, small], certificates: [], member: enrolment.identity.id,

@@ -302,7 +302,7 @@ extension AppSession {
         guard let registry = replica.registry(for: participant) else { return [] }
         let devices = registry.activeDevices.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
         return devices.compactMap { device in
-            registry.agreementKey(for: device).map { DeviceRecipient(device: device, agreementKey: $0) }
+            registry.sealingKey(for: device).map { DeviceRecipient(device: device, sealingKey: $0) }
         }
     }
 

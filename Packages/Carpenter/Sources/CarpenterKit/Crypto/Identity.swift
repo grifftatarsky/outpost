@@ -184,7 +184,8 @@ public struct DeviceKeys: Hashable, Sendable {
     public let signingSeed: Data
     public let publicKey: Data
     public let id: DeviceID
-    public let agreementPublicKey: Data
+    public let sealingPublicKey: Data
+    let sealingKey: XWingMLKEM768X25519.PrivateKey
 
     public init(signingSeed: Data) throws {
         guard let signing = try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed) else {
@@ -201,21 +202,26 @@ public struct DeviceKeys: Hashable, Sendable {
         signingSeed = signing.rawRepresentation
         publicKey = signing.publicKey.rawRepresentation
         id = DeviceID(publicKey: publicKey)
-        agreementPublicKey = Self.agreementKey(from: signingSeed).publicKey.rawRepresentation
+        sealingKey = Self.sealingKey(from: signingSeed)
+        sealingPublicKey = sealingKey.publicKey.rawRepresentation
     }
 
-    public var agreementKey: Curve25519.KeyAgreement.PrivateKey {
-        Self.agreementKey(from: signingSeed)
+    public static func == (lhs: DeviceKeys, rhs: DeviceKeys) -> Bool {
+        lhs.signingSeed == rhs.signingSeed
     }
 
-    private static func agreementKey(from signingSeed: Data) -> Curve25519.KeyAgreement.PrivateKey {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    private static func sealingKey(from signingSeed: Data) -> XWingMLKEM768X25519.PrivateKey {
         let seed = HKDF<SHA256>.deriveKey(
             inputKeyMaterial: SymmetricKey(data: signingSeed),
-            salt: Data(Domain.deviceAgreement.utf8),
-            info: Data(Domain.deviceAgreement.utf8),
+            salt: Data(Domain.deviceSealing.utf8),
+            info: Data(Domain.deviceSealing.utf8),
             outputByteCount: 32)
-        return try! Curve25519.KeyAgreement.PrivateKey(
-            rawRepresentation: seed.withUnsafeBytes { Data($0) })
+        return try! XWingMLKEM768X25519.PrivateKey(
+            seedRepresentation: seed.withUnsafeBytes { Data($0) }, publicKey: nil)
     }
 
     public func sign(_ message: Data) throws -> Data {
@@ -245,8 +251,8 @@ enum Domain {
     static let recoveryReset = "carpenter.recovery-reset.v2"
     static let deviceID = "carpenter.device-id.v1"
     static let deviceCertificate = "carpenter.device-certificate.v1"
-    static let deviceAgreement = "carpenter.device-agreement.v1"
-    static let deviceSeal = "carpenter.device-seal.v1"
+    static let deviceSealing = "carpenter.device-sealing-key.v1"
+    static let deviceSeal = "carpenter.device-seal.v2"
     static let deviceApproval = "carpenter.device-approval.v1"
     static let deviceApprovalCode = "carpenter.device-approval-code.v1"
     static let deviceRevocation = "carpenter.device-revocation.v1"

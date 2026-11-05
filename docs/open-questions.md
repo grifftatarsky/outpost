@@ -133,3 +133,80 @@ passcode.* The alternative is to refuse Outpost's own lock unless the phone has 
 makes the setting nearly pointless, since the phone's lock is then available and stronger.
 
 <!-- COPY END 5d82a14a -->
+
+<!-- COPY BEGIN 2983233d [NEEDS HUMAN REVIEW] -->
+
+## A recording of iCloud still opens everything under the pair's secret
+
+Since 2026-11-05 every key handed to a device is sealed with X-Wing, so a recording of iCloud cannot
+later yield a room key or the words in a room unless ML-KEM-768 is broken too
+([Decisions](decisions.md#a-key-handed-to-a-device-is-sealed-with-x-wing)). The pair's secret is still
+X25519 between the two identities' agreement keys, and packets, receipts, links to each other's spaces,
+photo copies and the comment copy for a wall's owner are sealed under it. Whoever records them and
+later breaks X25519 learns who talks to whom, which rooms people share and when they wrote, and reads
+the words of a comment or reaction left on somebody's Outpost from outside its room.
+
+One way to close it gives each identity an ML-KEM key from the recovery secret and mixes an
+encapsulation into the pair's secret. A KEM is not an agreement both sides can compute alone, so one
+side still has to send the other a ciphertext, and the identity's new public key has to be in the
+`ParticipantID`. Every ID would change, so every account, room membership and signed entry would be
+reset; codes would grow by about 1,200 bytes, which is a much denser QR code; and the invitation
+phrase and every comparison code would change. A removed device keeps the identity, so the address
+salt would still be needed on top.
+
+The other way leaves identities alone. Each member's device makes a random 32-byte seed for each
+contact and sends it the way an address salt goes now: sealed with X-Wing to each of the contact's
+devices, signed by a device, and adopted only from a device that counted when iCloud stored it. The
+pair's secret becomes HKDF over the X25519 output and both people's seeds, and a pair with no seeds
+keeps the current secret byte for byte, so it can be turned on pair by pair. `ParticipantID`, codes,
+phrases and comparison codes do not change, because the seed is vouched for by a device signature that
+leads back to the identity the two people already compared. What it still leaves: the first packets
+between two people, before a seed has arrived, go under X25519 alone; a restore loses the member's own
+seeds, so contacts re-send theirs and the member makes new ones; the comment copy for a wall's owner
+is kept in the log for good, so it can only use the commenter's seed, which the commenter re-sends
+after the owner restores; and signatures stay Ed25519, which is a question about a future forger, not
+about a recording. Nothing recorded before it becomes any safer. It costs one announcement per contact
+whenever either person's devices change, about 1.6 KB per receiving device (a grant sealed for two
+devices measured 3,751 bytes of JSON), a seed per contact in the keychain, and more rules in the
+address code, which already has the subtlest ones: the nine-day overlap, the stored-time order, and
+re-sending until signed for.
+
+**Recommendation: the second way, with a seed per pair.** Reusing the per-member address salt is
+cheaper but not enough, because every contact learns a member's salt: somebody in touch with both
+people who could also break X25519 could work out their secret. The first packet to a new contact
+should carry the seed, so X25519 alone covers one exchange.
+
+<!-- COPY END 2983233d -->
+
+<!-- COPY BEGIN 6836a24f [NEEDS HUMAN REVIEW] -->
+
+## The record a member's devices share grows with every device the member knows
+
+The state record a member's devices write for each other carries the certificate of every device of
+everybody the member knows, and since 2026-11-05 each certificate carries a 1,216-byte X-Wing key.
+Measured in the package on 2026-11-05: one certificate is 2,171 bytes of JSON, against 578 with the
+X25519 key, and a sealed state record with 200 certificates is 294,411 bytes, against 49,963. CloudKit
+holds at most 1 MB in a record outside its assets, so at that rate, about 680 known devices, the state
+record would stop being written. Mail and catch-ups carry the same certificates, and nothing splits a
+record between a member's devices by size. Not measured on the rig.
+
+**Recommendation: keep only the member's own certificates and removals in the state record.** Other
+people's certificates already arrive in their own packets, and a new device gets them in its catch-up.
+
+<!-- COPY END 6836a24f -->
+
+<!-- COPY BEGIN 4f2530e3 [NEEDS HUMAN REVIEW] -->
+
+## Does X-Wing change the export self-classification?
+
+The export finding rests on everything being standard cryptography
+([App Store](app-store.md#the-finding-that-everything-else-rests-on)). Since 2026-11-05 the app also
+uses HPKE (RFC 9180), ML-KEM-768 (NIST FIPS 203), AES-256-GCM, and X-Wing, which is an individual
+Internet-Draft in the Independent Submission stream, not adopted by the IETF. The definition quoted
+there counts as non-standard only what is neither adopted by a recognised body nor otherwise
+published, and X-Wing is published. All of it is CryptoKit.
+
+**Recommendation: it stays standard; record X-Wing in the self-classification as published, not
+adopted.** This is a reading of the rule, not legal advice.
+
+<!-- COPY END 4f2530e3 -->

@@ -58,8 +58,9 @@ worth attacking.
 |---|---|---|
 | `Curve25519.Signing` (Ed25519) | `Identity`, `DeviceKeys` | every signature in the system |
 | `Curve25519.KeyAgreement` (X25519) | `Identity.sharedSecret` | the one secret each pair of people share |
-| `ChaChaPoly` (RFC 8439 AEAD) | `Pairwise`, `DeviceSeal`, `EpochChain`, `SealedPayload`, `SealedAttachment`, `Deathmark`, `SyncEngine`, `SiblingFeed` | every piece of ciphertext in the system |
-| `HKDF<SHA256>` | `EpochChain`, `Pairwise`, `SealedSiblingFeed` | turning one secret into several unrelated keys |
+| `HPKE` with `XWingMLKEM768X25519_SHA256_AES_GCM_256` (RFC 9180 base mode; X-Wing, which is ML-KEM-768 with X25519; HKDF-SHA256; AES-256-GCM) | `DeviceSeal` | everything handed to one device: room keys, address salts, mail between a member's devices, and the identity a new device is approved with |
+| `ChaChaPoly` (RFC 8439 AEAD) | `Pairwise`, `EpochChain`, `SealedPayload`, `SealedAttachment`, `Deathmark`, `SyncEngine`, `SiblingFeed` | every other piece of ciphertext in the system |
+| `HKDF<SHA256>` | `EpochChain`, `Pairwise`, `SealedSiblingFeed`, `DeviceKeys` | turning one secret into several unrelated keys |
 | `HMAC<SHA256>` | `Pairwise`, `PhotoCopy` | the rotating addresses, which space is whose, and the names of photo copies |
 | `SHA256` | `Identity`, `Entry`, `SealedAttachment`, `ShortAuthenticationString` | identifiers, content hashes, fingerprints |
 | `SymmetricKey(size: .bits256)` | `EpochSecret.random`, `SealedAttachment.seal`, `SyncEngine.pack` | all random key material |
@@ -170,12 +171,22 @@ back-dating visible rather than preventing it, and that removing the device rota
 remaining devices, so it stops reading anything *new* regardless of what it claims to have written. This is the classic distributed-clock problem and it is not solved here; it is
 bounded.
 
-**Each device also has a key for receiving** (since 2026-09-26). `DeviceKeys.agreementKey` is an
-X25519 key derived from the device's signing seed with HKDF, so it lives only where the signing key
-does. Its public half is in the certificate as `agreementKey`, appended to the signed fields only
-when present, so every older certificate signs exactly the bytes it always did
-(`PerDeviceKeysTests` pins it). A device's certificate from before this is re-issued with the same
-`issuedAt`, and `DeviceRegistry` accepts the replacement only when the date matches.
+**Each device also has a key for receiving** (since 2026-09-26; X-Wing since 2026-11-05).
+`DeviceKeys.sealingKey` is an X-Wing key (ML-KEM-768 with X25519) made from a 32-byte seed that
+HKDF-SHA256 derives from the device's signing seed under `carpenter.device-sealing-key.v1`, so it
+lives only where the signing key does. Its 1,216-byte public half is in the certificate as
+`sealingKey`, appended last to the signed fields and only when present, so every older certificate
+signs exactly the bytes it always did (`PerDeviceKeysTests` pins both older layouts by hand). A
+certificate whose sealing key is not a well-formed X-Wing public key is refused, because one bad key
+would make every seal to that member's devices fail. Until 2026-11-05 the receiving key was an X25519
+key, `agreementKey`; a certificate carrying one still verifies, and nothing is sealed to it any more.
+
+**A certificate is never replaced** (since 2026-11-05). Until then a registry took a second
+certificate for a device in place of the first if it had the same date and added a receiving key.
+Nothing in the app issued one, and once new certificates stopped carrying the X25519 key, anybody
+holding the identity could have used that rule to replace a restored device's certificate with one
+signed by the identity alone, naming a key of their own. A second certificate for a device a registry
+already holds is now ignored (`aCertificateIsNeverReplaced`).
 
 **A device other than the first is approved by another device** (since 2026-09-26). Its certificate
 names `approvedBy` and carries `approval`, a signature by that device's key over the same bytes the
@@ -279,11 +290,13 @@ signed in to the Apple Account deleting records, which delays the member's other
 removal (erasing it with Find My signs it out). A removed device can no longer add a device of its
 own: the identity alone lets nobody in.
 
-**How a new device gets in.** It writes a `request` record holding only its two public keys, the one
-record in the zone that isn't sealed, because the device doesn't have the identity yet. The approving
-device answers with an `approval` record: the identity seeds, the certificates and the removals,
-sealed to the new device's receiving key with `DeviceSeal`. The six-character code both devices show
-is derived from the request's public keys (`DeviceRequest.code`).
+**How a new device gets in.** It writes a `request` record holding only its two public keys, its
+signing key and its X-Wing key, the one record in the zone that isn't sealed, because the device
+doesn't have the identity yet. The approving device answers with an `approval` record: the identity
+seeds, the certificates and the removals, sealed to the new device's X-Wing key with `DeviceSeal`. The
+six-character code both devices show is derived from both public keys (`DeviceRequest.code`), so a
+request with a substituted X-Wing key shows a different code. A request carrying an X25519 key instead
+is refused.
 
 ---
 
@@ -442,8 +455,10 @@ wrapped: try peer.wrap(secret.material, context: Self.context(room: room, epoch:
 boundary in code form — whatever is left out of that array is history the recipient cannot reach.
 
 The pairwise-wrapped secret is sealed again to each of the recipient's devices that counts and has a
-receiving key (`DeviceSeal`: a fresh X25519 key, HKDF-SHA256, ChaChaPoly, with the room, epoch and
-device bound in), and the plain pairwise copy is left empty. Opening needs the pairwise secret and the
+receiving key (`DeviceSeal`: HPKE in base mode with X-Wing, HKDF-SHA256 and AES-256-GCM, its `info`
+binding the device and the room and epoch; see [What a recording of iCloud can open
+later](#what-a-recording-of-icloud-can-open-later)), and the plain pairwise copy is left empty.
+Opening needs the pairwise secret and the
 device key, so a removed device, which still has the identity, gets nothing. A grant with no device
 seals is never sent and is refused if one arrives (since 2026-09-27; until then a recipient with one
 device lacking a receiving key got a copy anybody with the identity could open). A device that finds
@@ -954,6 +969,80 @@ JSON. See below.
 ---
 
 <!-- COPY END 3f67ec76 -->
+
+<!-- COPY BEGIN 40915bb2 [NEEDS HUMAN REVIEW] -->
+
+## What a recording of iCloud can open later
+
+**In plain words.** Somebody who copies what sits in your iCloud today, Apple or anybody who gets
+into the account, could keep it until a quantum computer can break the maths behind most of this
+app's keys. Since 2026-11-05, every key handed to one of your devices is locked with a key made from
+two kinds of maths at once, the kind used before and a newer kind a quantum computer is not known to
+break, and opening it needs both broken. So that copy will not give up a room key, and without a room key nobody reads a message, a photo or a
+comment in a room. It will still give up who you talk to, when, and which rooms you share, and the
+words of a comment you leave on somebody's Outpost from outside its room.
+
+**What actually happens.** `DeviceSeal` is HPKE ([RFC 9180](https://www.rfc-editor.org/rfc/rfc9180))
+in base mode with CryptoKit's `XWingMLKEM768X25519_SHA256_AES_GCM_256`, confirmed in the iOS 27.1
+SDK's CryptoKit interface and in [Apple's
+article](https://developer.apple.com/documentation/cryptokit/enhancing-your-app-s-privacy-and-security-with-quantum-secure-workflows).
+X-Wing ([draft-connolly-cfrg-xwing-kem](https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/),
+an individual Internet-Draft, not an RFC) combines ML-KEM-768 ([FIPS
+203](https://csrc.nist.gov/pubs/fips/203/final)) with X25519, so its secret holds while either one
+does. The `info` is `"carpenter.device-seal.v2" ‖ device ‖ context`, where the context is each
+purpose's own canonical bytes: the room and epoch for a grant, the member, recipient and number for an
+address announcement, the member, writer and kind for a record between a member's devices, the
+approver and the request's keys for an approval. A seal opens only on the device it names and only
+under the context it was made with (`AKeyHandedToADeviceIsSealedWithXWingTests`). A seal carries a
+1,120-byte encapsulation and a 16-byte tag; the X25519 form carried a 32-byte key, a 12-byte nonce
+and a 16-byte tag.
+
+Every path a key travels, and what a recording of it yields once X25519 is broken:
+
+| What travels | What it carries | Sealed with | Once X25519 falls |
+|---|---|---|---|
+| A grant in a packet (`EpochGrant`) | a room's or an Outpost's key | the pair's secret, then X-Wing to each device | needs ML-KEM-768 too |
+| A grant passed on between a member's devices (`ForwardedGrant`) | the same | its own X-Wing seals, inside mail | needs ML-KEM-768 too |
+| Mail and catch-ups between a member's devices | room keys, address salts, forwarded grants, entries, settings | a key from the identity's seeds, then a content key sealed with X-Wing to each device | needs ML-KEM-768 too |
+| What a device removed by a restore leaves for the restored one | its entries and room keys | the same as a catch-up | needs ML-KEM-768 too |
+| An approval (`DeviceApproval`) | the identity's seeds, certificates and removals | X-Wing, to the key in the new device's request | needs ML-KEM-768 too |
+| An address announcement | a new address salt | X-Wing to each of the contact's devices | needs ML-KEM-768 too |
+| The state record between a member's devices | certificates, removals, people, photos held | a key from both identity seeds | needs the signing seed, which Ed25519 hashes before use ([RFC 8032](https://www.rfc-editor.org/rfc/rfc8032#section-5.1.5)), so no public key gives it up; it travels only in an approval |
+| A packet (`SyncEngine.pack`) | each entry's author, device, room, numbers, times and signature; certificates; repair; confirmations; photo asks | the pair's secret, from X25519 | opens; the entries' words need the room key |
+| Receipts for packets and photos | which device signed for what | the pair's secret | opens |
+| A photo's copy and its label | the photo, still sealed under its own key, which travels inside a room entry | the pair's secret | the copy's wrapper opens; the photo needs the room key |
+| A comment or reaction on somebody's Outpost from outside its room (`alsoFor`) | the words | the pair's secret | **opens** |
+| Links to each other's spaces | where to read a person | the pair's secret | opens |
+
+After an address change, packets travel under a secret that mixes in address salts, and those travel
+only under X-Wing. This brief does not count that as protection: a first contact, a pair whose members
+never changed address, and the original address everybody keeps listening at all use X25519 alone.
+How to put the pair's secret under ML-KEM too is an
+[open question](open-questions.md#a-recording-of-icloud-still-opens-everything-under-the-pairs-secret).
+Two things never reach iCloud and are not covered: tapping two phones (X25519 between the two phones,
+carrying codes, which are public) and the Secure Enclave key behind Outpost's own lock, which stays on
+the phone.
+
+**What it does not change.** Every signature is still Ed25519. A future attacker with a quantum
+computer could forge them, which matters for what they could do then, not for reading what was
+recorded. Everything recorded before 2026-11-05 used X25519 alone; the app has not reached TestFlight
+and the test accounts were reset, so no member's words are in it.
+
+**A seal in the old X25519 form is refused** (`PROPOSED`, see
+[Decisions](decisions.md#a-key-handed-to-a-device-is-sealed-with-x-wing)). It still decodes, so a
+stored grant or a packet that carries one keeps everything else, and opening it fails. A device whose
+certificate has no X-Wing key, one enrolled by an earlier build, is left out of every seal, as a device
+with no receiving key always was; it has to be removed and approved again.
+
+**Sizes from a peer.** An encapsulation longer than 1,120 bytes, or a sealed part longer than the
+1,000,000-byte record ceiling (`MailboxRules.recordByteCeiling`), is refused when the seal is decoded:
+no X-Wing encapsulation is longer and no record holds more. Walking a list of seals is linear in the
+bytes this device fetched.
+
+**Not run over iCloud.** The package suite holds every rule above. No seal of this kind has crossed
+CloudKit between two accounts.
+
+<!-- COPY END 40915bb2 -->
 
 <!-- COPY BEGIN 346c1b82 [NEEDS HUMAN REVIEW] -->
 
@@ -1520,9 +1609,12 @@ Stated so that nobody mistakes its silence for a clean bill.
   is heavily unit-tested against intended behavior, and has not been fuzzed or attacked.
 - **Three-party cryptographic cases are unproven over the real transport**, and genuinely need a
   third Apple Account — see [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
-- **No post-quantum anything.** X25519 and Ed25519 are classical. Harvest-now-decrypt-later applies
-  to everything this app has ever sealed. Apple's own protocols are moving to PQ3-style hybrids; this
-  is not, and nothing in the product should imply otherwise.
+- **Post-quantum only for what is handed to one device.** Since 2026-11-05 every key handed to a
+  device is sealed with X-Wing, so a recording of iCloud cannot later yield a room key, and with it
+  any message, without breaking ML-KEM-768. Everything sealed under the pair's secret is still X25519
+  alone, every signature is still Ed25519, and everything recorded before 2026-11-05 is X25519 alone.
+  [What a recording of iCloud can open later](#what-a-recording-of-icloud-can-open-later) has the map,
+  and nothing in the product should claim more than it.
 
 ---
 
@@ -1547,7 +1639,8 @@ In the order a person is most likely to find something:
    produces, it cannot fail the way the real one fails.
 
 The tests worth reading alongside: `SealBindingTests` (pins the wire format by hand),
-`SiblingFeedIsSealedTests`, `EpochDistributionTests`, `DeviceTrustTests`, `CanonicalBytesTests`, and
+`SiblingFeedIsSealedTests`, `EpochDistributionTests`, `DeviceTrustTests`, `CanonicalBytesTests`,
+`AKeyHandedToADeviceIsSealedWithXWingTests`, and
 `App/CarpenterTests/LiveSiblingFeedTests.swift`, which fetches a record back off real CloudKit and
 asserts it contains no epoch secret.
 

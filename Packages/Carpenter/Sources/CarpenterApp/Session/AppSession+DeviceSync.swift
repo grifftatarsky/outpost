@@ -293,7 +293,7 @@ extension AppSession {
         case .catchUp(let target): devices = [target]
         }
         return devices.compactMap { device in
-            registry.agreementKey(for: device).map { DeviceRecipient(device: device, agreementKey: $0) }
+            registry.sealingKey(for: device).map { DeviceRecipient(device: device, sealingKey: $0) }
         }
     }
 

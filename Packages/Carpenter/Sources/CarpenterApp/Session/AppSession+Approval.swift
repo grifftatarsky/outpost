@@ -20,7 +20,7 @@ extension AppSession {
     public func approveDevice(_ request: DeviceRequest) async throws {
         guard let enrolment, let deviceSync else { throw AppSessionError.noIdentity }
         let certificate = try DeviceCertificate.issue(
-            for: request.devicePublicKey, agreementKey: request.agreementKey, by: enrolment.identity,
+            for: request.devicePublicKey, sealingKey: request.sealingKey, by: enrolment.identity,
             at: clock.now, approvedBy: enrolment.device)
         try replica.admit(certificate, storedAt: authorityNow())
         recordAuthority()

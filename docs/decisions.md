@@ -1575,10 +1575,66 @@ what broke every signature once before. And `RandomSource` is a seam nothing in 
 uses, parked in the [Inbox](inbox.md).
 
 **What the brief does not cover, stated so its silence is not mistaken for a clean bill:** no formal
-analysis, no side-channel work on the composition, no fuzzing of the membership state machine, no
-post-quantum anything, and the three-party cryptographic cases still need a third Apple Account.
+analysis, no side-channel work on the composition, no fuzzing of the membership state machine,
+post-quantum protection only for keys handed to a device (since 2026-11-05, below), and the
+three-party cryptographic cases still need a third Apple Account.
 
 <!-- COPY END 9952a160 -->
+
+<!-- COPY BEGIN d3027cfe [NEEDS HUMAN REVIEW] -->
+
+### A key handed to a device is sealed with X-Wing
+
+`PROPOSED` by Claude, 2026-11-05, on Griff's request that a recording of today's iCloud traffic not be
+readable once quantum computers can break X25519. The request is his; the choices below are Claude's.
+Built 2026-11-05; the package suite passes; not run over iCloud.
+
+Everything handed to one device goes through `DeviceSeal`, and `DeviceSeal` is now HPKE (RFC 9180)
+in base mode with CryptoKit's X-Wing suite: ML-KEM-768 with X25519, HKDF-SHA256 and AES-256-GCM. That
+covers grants, grants passed on between a member's devices, mail and catch-ups, what a removed device
+leaves for a restored one, approvals and address announcements, so a recording of iCloud cannot later
+yield a room key, or the identity a new device is approved with, unless ML-KEM-768 is broken too.
+X-Wing rather than ML-KEM alone because a hybrid is at least as strong as X25519 if ML-KEM turns out
+weak, and HPKE rather than the hand-written seal it replaces because it is a published composition
+that CryptoKit implements, on the app's minimum of iOS 26. The `info` binds the device and each
+purpose's own context (room and epoch for a grant, and so on), in one place rather than split between
+`info` and associated data. What stays X25519 alone is everything under the pair's secret, listed in
+[the crypto brief](crypto-brief.md#what-a-recording-of-icloud-can-open-later); how to close it is an
+[open question](open-questions.md#a-recording-of-icloud-still-opens-everything-under-the-pairs-secret).
+
+The device's X25519 receiving key is replaced by the X-Wing key rather than kept beside it, because
+X-Wing already contains an X25519 key, and a second key would sit in every certificate and request
+doing nothing. The X-Wing key comes from a seed HKDF-SHA256 derives from the device's signing seed, as
+the X25519 key did, so it needs no new keychain item and lives only where the signing key lives. It
+goes in the certificate as a new field, appended last and only when present; certificates without it,
+and certificates carrying the old X25519 key, sign exactly the bytes they always did, pinned by hand.
+
+A seal in the old X25519 form is refused rather than opened, because the app has not reached
+TestFlight, the test accounts were reset, and keeping a classical path would leave a second way in on
+every device for nobody's benefit. It still decodes, because grants wait in stored state, and one old
+seal failing to decode would have made the whole stored state unreadable. A device enrolled by an
+earlier build has no X-Wing key and is left out of every seal, so it has to be removed and approved
+again, and the rig's accounts have to be reset before two devices on this build can exchange keys.
+
+A certificate is never replaced once a registry holds it. The registry used to take a second
+certificate with the same date if it added a receiving key; nothing issued one, and with new
+certificates carrying no X25519 key that rule would have let anybody holding the identity replace a
+restored device's certificate with one of their own. A certificate with a malformed X-Wing key is
+refused, because one bad key would make every seal to that member's devices fail. A seal whose
+encapsulation is longer than X-Wing's 1,120 bytes, or whose sealed part is longer than the 1,000,000-byte
+record ceiling, is refused on decoding: nothing honest is larger.
+
+What it costs: each seal carries a 1,120-byte encapsulation where the X25519 form carried 60 bytes of
+overhead, and each certificate carries a 1,216-byte key. Measured in the package: a certificate is
+2,171 bytes of JSON against 578, and a grant sealed for two devices is 3,751; what that does to the
+record a member's devices share is an
+[open question](open-questions.md#the-record-a-members-devices-share-grows-with-every-device-the-member-knows). X-Wing
+is an individual Internet-Draft, not an RFC; if Apple's implementation ever followed a later draft that
+changed its bytes, seals between two iOS versions would stop opening, which nothing in the app could
+see coming. What would change this: Apple withdrawing the suite, or ML-KEM-768 being broken, which
+leaves X25519's strength and no worse.
+
+<!-- COPY END d3027cfe -->
 
 <!-- COPY BEGIN 270f2119 [NEEDS HUMAN REVIEW] -->
 

@@ -108,7 +108,7 @@ extension AppSession {
         guard let enrolment, let deviceSync,
             let registry = replica.registry(for: enrolment.identity.id),
             let standing = registry.standing(of: enrolment.device.id), standing.removedByRecovery,
-            let restored = standing.revokedBy, let agreementKey = registry.agreementKey(for: restored)
+            let restored = standing.revokedBy, let sealingKey = registry.sealingKey(for: restored)
         else { return }
         let people = replica.knownParticipants.compactMap { replica.registry(for: $0)?.identity }
         let feed = SiblingFeed(
@@ -121,7 +121,7 @@ extension AppSession {
                 name: SiblingRecord.Name(writer: enrolment.device.id, kind: kind),
                 sealed: try await SealedSiblingFeed.sealInBackground(
                     feed, for: enrolment.identity, on: enrolment.device.id, as: kind,
-                    to: [DeviceRecipient(device: restored, agreementKey: agreementKey)],
+                    to: [DeviceRecipient(device: restored, sealingKey: sealingKey)],
                     signedBy: enrolment.device))
             try await deviceSync.send([record], deleting: [])
             Diagnostics.identity.notice(
