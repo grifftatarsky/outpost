@@ -1,3 +1,4 @@
+import Foundation
 import CarpenterApp
 import CarpenterKit
 import Testing
@@ -67,5 +68,17 @@ struct SessionProblemTests {
     func othersKeepTheirOwn() {
         struct Elsewhere: Error {}
         #expect(SessionProblem.sentence(for: Elsewhere()) == Elsewhere().localizedDescription)
+    }
+
+    @Test("A full disk says the phone is out of space and what to do, however the system put it")
+    func aFullDiskSaysWhatToDo() {
+        for full: any Error in [
+            CocoaError(.fileWriteOutOfSpace), POSIXError(.ENOSPC),
+            NSError(domain: NSPOSIXErrorDomain, code: Int(ENOSPC)),
+        ] {
+            let sentence = SessionProblem.sentence(for: full)
+            #expect(sentence.localizedStandardContains("out of space"), "\(full) read: \(sentence)")
+            #expect(sentence.localizedStandardContains("Settings"), "\(full) said nothing about what to do")
+        }
     }
 }

@@ -88,7 +88,7 @@
                 RootView.demo(tab: .rooms)
                     .approvingDevices(DeviceRequest(for: DeviceKeys.generate()), onApprove: { _ in }, onDecline: { _ in })
             case .dataProblem:
-                DataProblemView(reason: "CarpenterKeychain.KeychainError error 1.")
+                DataProblemView(reason: "CarpenterKeychain.KeychainError error 1.", onTryAgain: {})
             default:
                 EmptyView()
             }

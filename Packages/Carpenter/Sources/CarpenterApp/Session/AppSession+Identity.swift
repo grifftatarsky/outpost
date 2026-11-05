@@ -98,7 +98,7 @@ extension AppSession {
             waitsForUnlock = true
             Diagnostics.identity.notice("load: this phone locked while loading; waiting for it to unlock")
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(SessionProblem.sentence(for: error))
         }
     }
 

@@ -371,8 +371,10 @@ the picker looking for the new room. It should make the room and issue the invit
 **A picture chosen for an Outpost stays on one device**, like a photo chosen for somebody in People.
 
 **A keychain error a member reads says nothing.** When an account went *Temporarily Unavailable* on the
-rig, the app showed "CarpenterKeychain.KeychainError error 1." and loaded fine next launch. Two
-questions: what it should say, and whether one failed keychain read should stop a launch at all.
+rig, the app showed "CarpenterKeychain.KeychainError error 1." and loaded fine next launch. The screen
+has a *Try again* now (2026-11-05), and a full disk has its own sentence; a keychain error still
+shows the raw words. Two questions: what it should say, and whether one failed keychain read should
+stop a launch at all.
 
 **Some readouts hand-roll what a `List` would give them.** `JoinRequestsView` and `IntegrityView`
 would become `Form`s cheaply. The accent and icon pickers are legitimately custom grids.

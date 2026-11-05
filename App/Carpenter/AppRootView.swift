@@ -320,7 +320,11 @@ struct AppRootView: View {
                     }
 
             case .failed(let reason):
-                DataProblemView(reason: reason)
+                DataProblemView(reason: reason) {
+                    await session.load()
+                    await finishOpening()
+                }
+                .themed(.default)
             }
         }
     }
