@@ -151,26 +151,16 @@ struct AppRootView: View {
             } message: { problem in
                 Text(problem.detail)
             }
-            .alert(
-                Text("Approve a new device?"),
-                isPresented: Binding(
-                    get: { session.state == .ready && !session.deviceRequests.isEmpty },
-                    set: { _ in }),
-                presenting: session.deviceRequests.first
-            ) { request in
-                Button {
+            .approvingDevices(
+                session.state == .ready ? session.deviceRequests.first : nil,
+                onApprove: { request in
                     Task {
                         await attempting("That device was not approved", "approve") {
                             try await session.approveDevice(request)
                         }
                     }
-                } label: { Text("Approve") }
-                Button(role: .cancel) {
-                    Task { await session.declineDevice(request) }
-                } label: { Text("Don't approve") }
-            } message: { request in
-                Text("Only approve it if it shows \(request.code).")
-            }
+                },
+                onDecline: { request in Task { await session.declineDevice(request) } })
     }
     // COPY END 7740e80c
 
@@ -330,13 +320,7 @@ struct AppRootView: View {
                     }
 
             case .failed(let reason):
-                // COPY BEGIN 9c1a5749 [NEEDS HUMAN REVIEW]
-                ContentUnavailableView(
-                    "Something is wrong with this device's data",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(reason)
-                )
-                // COPY END 9c1a5749
+                DataProblemView(reason: reason)
             }
         }
     }
