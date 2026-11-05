@@ -44,7 +44,7 @@ extension AppRootView {
     static let appLockStore = AppLockStore(
         keychain: SystemKeychainStore(
             service: TestProfileWorld.container(for: nil), accessGroup: SharedKeychain.group,
-            protection: SessionStorage.mainProtection))
+            protection: .main))
 
     func coverForLock(_ covered: Bool) {
         #if canImport(UIKit)

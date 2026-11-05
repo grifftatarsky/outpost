@@ -89,7 +89,7 @@ extension AppRootView {
             report.failure = "Make it fit returned no file"
             return report
         }
-        defer { try? FileManager.default.removeItem(at: file) }
+        defer { withExtendedLifetime(prepared) {} }
         report.fittedBytes = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.intValue ?? 0
         report.width = prepared.width
         report.height = prepared.height
@@ -244,6 +244,7 @@ extension AppRootView {
                 path: container, directoryHint: .isDirectory))
         try? FileManager.default.removeItem(at: StorageLocation.directory(container: container))
         FocusFilterStore.shared.writeRooms([], as: session.protection.current)
+        try? ScratchSpace.shared.empty()
 
         do {
             try FileManager.default.removeItem(

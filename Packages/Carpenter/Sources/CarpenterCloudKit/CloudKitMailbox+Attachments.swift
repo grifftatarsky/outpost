@@ -6,22 +6,23 @@ import Foundation
 
 extension CloudKitMailbox {
     public func upload(_ copies: PhotoCopies, in pairs: Pairs) async throws {
-        var scratch: [URL] = []
-        defer { for file in scratch { try? FileManager.default.removeItem(at: file) } }
+        var scratch: [ScratchFile] = []
+        defer { withExtendedLifetime(scratch) {} }
 
         var records: [CKRecord] = []
         var written: [(CKRecordZone.ID, String, [String: PacketField])] = []
         for (peer, copy) in copies.copies {
             let zone = try await zone(for: peer, in: pairs)
-            let file = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).sealed")
-            try copy.sealed.write(to: file, options: .atomic)
+            let file = try ScratchSpace.shared.newFile("upload", extension: "sealed")
+            try copy.sealed.write(to: file.url)
+            try file.protect()
             scratch.append(file)
             let record = CKRecord(
                 recordType: AttachmentRecord.type, recordID: CKRecord.ID(recordName: copy.name.recordName, zoneID: zone))
             var fields = AttachmentWire.fields(of: copy)
             fields[AttachmentWire.blob] = nil
             PacketRecord.write(fields, into: record)
-            record[AttachmentWire.blob] = CKAsset(fileURL: file)
+            record[AttachmentWire.blob] = CKAsset(fileURL: file.url)
             records.append(record)
             written.append((zone, copy.name.recordName, fields))
         }

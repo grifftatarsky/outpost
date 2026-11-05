@@ -51,7 +51,7 @@ extension ConversationView {
 
         let picked: PickedMedia?
         if isClip {
-            picked = (try? await item.loadTransferable(type: PickedClip.self)).map { .video($0.url) }
+            picked = (try? await item.loadTransferable(type: PickedClip.self)).map { .video($0.file) }
         } else {
             picked = (try? await item.loadTransferable(type: Data.self)).map { .image($0) }
         }
@@ -71,15 +71,15 @@ extension ConversationView {
                 (try? ImagePreparer.thumbnail(data, edge: 240)).map(DecodedImage.init)
             }.value
             staged.append(StagedAttachment(picked: picked, kind: .image, thumbnail: thumbnail))
-        case .video(let url), .videoToFit(let url):
-            let poster = await MediaLoader.poster(of: url)
-            let duration = try? await VideoPreparer.duration(of: url)
+        case .video(let clip), .videoToFit(let clip):
+            let poster = await MediaLoader.poster(of: clip.url)
+            let duration = try? await VideoPreparer.duration(of: clip.url)
             Diagnostics.sync.notice(
                 "media: staged a clip of \(duration.map { Int($0) } ?? -1, privacy: .public)s")
             staged.append(
                 StagedAttachment(
                     picked: picked, kind: .video, thumbnail: poster, duration: duration,
-                    tooLarge: VideoPreparer.sizeIfTooLarge(url)))
+                    tooLarge: VideoPreparer.sizeIfTooLarge(clip.url)))
         }
     }
 

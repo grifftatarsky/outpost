@@ -31,11 +31,12 @@ extension CloudKitMailbox {
     public func putForTiming(_ id: AttachmentID, _ ciphertext: Data) async throws {
         let database = container.privateCloudDatabase
         _ = try await database.modifyRecordZones(saving: [CKRecordZone(zoneID: timingZone)], deleting: [])
-        let scratch = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).sealed")
-        try ciphertext.write(to: scratch, options: .atomic)
-        defer { try? FileManager.default.removeItem(at: scratch) }
+        let scratch = try ScratchSpace.shared.newFile("timing", extension: "sealed")
+        try ciphertext.write(to: scratch.url)
+        try scratch.protect()
+        defer { withExtendedLifetime(scratch) {} }
         let record = CKRecord(recordType: AttachmentRecord.type, recordID: CKRecord.ID(recordName: id.recordName, zoneID: timingZone))
-        record[AttachmentWire.blob] = CKAsset(fileURL: scratch)
+        record[AttachmentWire.blob] = CKAsset(fileURL: scratch.url)
         try await save([record], in: database)
     }
 

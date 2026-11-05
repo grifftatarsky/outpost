@@ -14,15 +14,13 @@ import SwiftUI
 #endif
 
 extension SessionStorage {
-    static let mainProtection = ProtectionDial()
-
     static func onDisk(profile: TestProfile? = nil) -> SessionStorage {
         let container = TestProfileWorld.container(for: profile)
         let directory = StorageLocation.directory(container: container)
         Diagnostics.sync.notice(
             "storage: \(directory.path, privacy: .public) appGroup=\(AppGroup.available, privacy: .public)")
 
-        let protection = profile == nil ? mainProtection : ProtectionDial()
+        let protection = profile == nil ? ProtectionDial.main : ProtectionDial()
         let system = SystemKeychainStore(
             service: container, accessGroup: SharedKeychain.group, protection: protection)
         let keychain: any KeychainStore = profile == nil ? system : DeviceOnlyKeychainStore(system)
@@ -45,6 +43,6 @@ extension SessionStorage {
             fallback.appending(path: StorageLocation.stateName),
         ]
         guard shared else { return own }
-        return own + [FocusFilterStore.directory, FileManager.default.temporaryDirectory].compactMap { $0 }
+        return own + [FocusFilterStore.directory, ScratchSpace.shared.directory].compactMap { $0 }
     }
 }

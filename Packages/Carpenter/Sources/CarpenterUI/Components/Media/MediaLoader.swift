@@ -98,7 +98,7 @@ public final class MediaLoader {
         }
     }
 
-    nonisolated public static let playingDirectory = FileManager.default.temporaryDirectory
+    nonisolated public static let playingDirectory = ScratchSpace.shared.directory
         .appending(path: "playing", directoryHint: .isDirectory)
 
     public init(

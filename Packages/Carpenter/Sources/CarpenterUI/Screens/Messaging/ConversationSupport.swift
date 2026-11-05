@@ -4,16 +4,16 @@ import PhotosUI
 import SwiftUI
 
 struct PickedClip: Transferable {
-    let url: URL
+    let file: ScratchFile
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(contentType: .movie) { clip in
-            SentTransferredFile(clip.url)
+            SentTransferredFile(clip.file.url)
         } importing: { received in
-            let copy = FileManager.default.temporaryDirectory
-                .appending(path: "picked-\(UUID().uuidString).\(received.file.pathExtension)")
-            try FileManager.default.copyItem(at: received.file, to: copy)
-            return PickedClip(url: copy)
+            let copy = try ScratchSpace.shared.newFile("picked", extension: received.file.pathExtension)
+            try FileManager.default.copyItem(at: received.file, to: copy.url)
+            try copy.protect()
+            return PickedClip(file: copy)
         }
     }
 }

@@ -474,8 +474,8 @@ gone; a clip over 287 MB once prepared is refused with its size. Tested in the p
 287 MB itself has not been sent live.
 
 **The one place a member's content sits readable without the Keychain.** `AVPlayer` reads files,
-so a clip is opened into the app's temporary directory under complete file protection when it is
-first drawn, and stays there for the launch; the directory is emptied on the next one. A resource
+so a clip is opened into the app's scratch folder under complete file protection when it is
+first drawn, and stays there for the launch; the folder is emptied on the next one and by any erase. A resource
 loader that decrypts on demand would remove this and is not built. Said here rather than hidden.
 
 **Screened as a file, and not drawn until the verdict is in.** The system's video analysis reads
@@ -4222,6 +4222,17 @@ iOS for its strongest file and keychain protection rather than making a key of i
   time the app opens if it was interrupted. Two quick changes run one after the other.
 - **Reading a key no longer changes how it is protected.** A read used to move a key to the ordinary
   protection, and the extension reads the same keys, so every push would have undone the choice.
+- **Scratch files follow the setting, and live no longer than whatever holds them** (2026-11-05). A
+  picked clip, a prepared clip, a sealed copy waiting to upload and a clip opened to play are written
+  into one scratch folder with the protection the setting names, not always the strongest: with the
+  setting off, an upload the phone locks in the middle of still has to read its sealed copy, which
+  `complete` would refuse ten seconds after the lock. Each file belongs to the value that carries it
+  (`ScratchFile`) and is deleted when the last holder lets go, so a clip the member drops from the
+  composer, a preparation that fails half way and a post refused for too many pictures leave nothing;
+  a send deletes its prepared file the moment it is done with it, whether it worked or not. The folder
+  is emptied at launch, for anything a killed process left, and by every erase. The rule is one owner
+  per file rather than a list of exit paths, because the list is what was incomplete: the original
+  stayed after every send, and the prepared file after every refused one.
 
 **Not built:** Outpost's own lock as the seal, with the PIN, the note on each option and the link
 ruled above, with Face ID offered as a demoted choice

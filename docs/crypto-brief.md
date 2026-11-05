@@ -1406,7 +1406,7 @@ notification says only that something arrived.
 iOS already ties to the passcode and to the phone's own hardware key.
 
 - **Files.** The log, the state, photos and clips, every avatar, the Focus room list, the old copies of
-  the log and state left in Application Support, and the app's temporary folder are written and kept
+  the log and state left in Application Support, and the scratch folder are written and kept
   as `FileProtectionType.complete`, which Apple describes as "stored in an encrypted format on disk
   and cannot be read from or written to while the device is locked or booting"
   ([Apple](https://developer.apple.com/documentation/foundation/fileprotectiontype/complete)). Apple's
@@ -1414,6 +1414,15 @@ iOS already ties to the passcode and to the phone's own hardware key.
   when it asks for the passcode immediately
   ([Apple Platform Security](https://support.apple.com/guide/security/data-protection-classes-secb010e978a/web)).
   Every store reads the setting at the moment it writes (`ProtectionDial`, `ProtectedFiles`).
+- **Scratch files.** A picked clip, a clip being prepared, a sealed copy waiting to upload and a clip
+  opened for playing are written into one folder, `ScratchSpace`, and nowhere else; the lint fails on
+  any other use of the temporary directory. The folder is made with the protection the setting names
+  and each file is given it again once written, because a file copied in or written by AVFoundation
+  does not reliably take its folder's class: Apple's own engineer says a new item takes its parent's
+  class, and that an atomic write or a copy can keep the class of wherever it started
+  ([Apple Developer Forums](https://developer.apple.com/forums/thread/24483)). The folder is emptied at
+  launch and by every erase. On an iPhone, `FileProtectionTests` checks a copied file ends up
+  `complete`; it has not been run since it was written.
 - **Keys.** Every keychain item is `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`: "can be accessed
   only while the device is unlocked by the user"
   ([Apple](https://developer.apple.com/documentation/security/ksecattraccessiblewhenunlockedthisdeviceonly)).

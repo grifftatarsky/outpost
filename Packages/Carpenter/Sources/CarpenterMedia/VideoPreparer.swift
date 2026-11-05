@@ -18,22 +18,18 @@ public enum VideoPreparer {
         let asset = AVURLAsset(url: url)
         let duration = try await readableDuration(of: asset)
 
-        let output = FileManager.default.temporaryDirectory
-            .appending(path: "prepared-\(UUID().uuidString).mp4")
-        var kept = false
-        defer { if !kept { try? FileManager.default.removeItem(at: output) } }
+        var output = try ScratchSpace.shared.newFile("prepared", extension: "mp4")
         do {
-            try await export(asset, to: output, preset: AVAssetExportPresetPassthrough)
+            try await export(asset, to: output.url, preset: AVAssetExportPresetPassthrough)
         } catch {
-            try? FileManager.default.removeItem(at: output)
-            try await export(asset, to: output, preset: AVAssetExportPresetHEVCHighestQuality)
+            output = try ScratchSpace.shared.newFile("prepared", extension: "mp4")
+            try await export(asset, to: output.url, preset: AVAssetExportPresetHEVCHighestQuality)
         }
+        try output.protect()
 
-        let size = byteCount(of: output)
+        let size = byteCount(of: output.url)
         guard size <= limit else { throw Failure.tooLarge(size) }
-        let prepared = try await finished(output, caption: caption, duration: duration)
-        kept = true
-        return prepared
+        return try await finished(output, caption: caption, duration: duration)
     }
 
     public static func sizeIfTooLarge(_ url: URL, limit: Int = maximumBytes) -> Int? {
@@ -48,32 +44,18 @@ public enum VideoPreparer {
         let duration = try await readableDuration(of: asset)
 
         let base = try await plan(for: asset, duration: duration, limit: limit)
-        var best: (file: URL, size: Int)?
-        var kept = false
-        defer { if !kept, let best { try? FileManager.default.removeItem(at: best.file) } }
+        var best: (file: ScratchFile, size: Int)?
         var search = FitSearch(limit: limit)
         while let quality = search.next {
-            let output = FileManager.default.temporaryDirectory
-                .appending(path: "fitted-\(UUID().uuidString).mp4")
-            do {
-                try await encode(asset, to: output, plan: base.at(quality))
-            } catch {
-                try? FileManager.default.removeItem(at: output)
-                throw error
-            }
-            let size = byteCount(of: output)
-            if size > 0, size <= limit, size > best?.size ?? 0 {
-                if let best { try? FileManager.default.removeItem(at: best.file) }
-                best = (output, size)
-            } else {
-                try? FileManager.default.removeItem(at: output)
-            }
+            let output = try ScratchSpace.shared.newFile("fitted", extension: "mp4")
+            try await encode(asset, to: output.url, plan: base.at(quality))
+            let size = byteCount(of: output.url)
+            if size > 0, size <= limit, size > best?.size ?? 0 { best = (output, size) }
             search.record(quality, size)
         }
         guard let best else { throw Failure.cannotFit }
-        let prepared = try await finished(best.file, caption: caption, duration: duration)
-        kept = true
-        return prepared
+        try best.file.protect()
+        return try await finished(best.file, caption: caption, duration: duration)
     }
 
     public struct FitPlan: Hashable, Sendable {
@@ -309,8 +291,10 @@ public enum VideoPreparer {
         return duration
     }
 
-    private static func finished(_ output: URL, caption: String?, duration: TimeInterval) async throws -> PreparedMedia {
-        let exported = AVURLAsset(url: output)
+    private static func finished(
+        _ output: ScratchFile, caption: String?, duration: TimeInterval
+    ) async throws -> PreparedMedia {
+        let exported = AVURLAsset(url: output.url)
         let poster = try await posterFrame(of: exported)
         let dimensions = try await naturalSize(of: exported)
         let preview = try? ImagePreparer.jpeg(

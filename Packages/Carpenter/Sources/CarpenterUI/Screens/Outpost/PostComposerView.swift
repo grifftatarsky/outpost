@@ -207,12 +207,12 @@ public struct PostComposerView: View {
                 problem = Self.unreadable
                 return
             }
-            let poster = await MediaLoader.poster(of: clip.url)
-            let seconds = try? await VideoPreparer.duration(of: clip.url)
+            let poster = await MediaLoader.poster(of: clip.file.url)
+            let seconds = try? await VideoPreparer.duration(of: clip.file.url)
             photos.append(
                 StagedPhoto(
-                    picked: .video(clip.url), kind: .video, thumbnail: poster, duration: seconds,
-                    tooLarge: VideoPreparer.sizeIfTooLarge(clip.url)))
+                    picked: .video(clip.file), kind: .video, thumbnail: poster, duration: seconds,
+                    tooLarge: VideoPreparer.sizeIfTooLarge(clip.file.url)))
             return
         }
 

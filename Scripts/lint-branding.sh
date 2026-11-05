@@ -386,6 +386,20 @@ else
     printf '\nwarning: python3 not found; the copy-marker rule did not run.\n'
 fi
 
+# Every scratch file goes through ScratchSpace (2026-11-05). Picked originals, prepared clips and
+#     sealed upload copies were written straight into the temporary directory, which took the
+#     ordinary protection whatever Advanced On Device Security said, and erasing the phone never
+#     emptied it. ScratchSpace makes one folder with the protection the setting names, protects
+#     each file after it is written, and is emptied at launch and by every erase.
+scratch=$(
+    # shellcheck disable=SC2086
+    grep -nE 'temporaryDirectory|NSTemporaryDirectory' $sources 2>/dev/null \
+        | grep -v '/ScratchSpace\.swift:' | grep -vE '^App/Carpenter(UI)?Tests/'
+)
+if [ -n "$scratch" ]; then
+    report "error: a file is written to the temporary directory outside ScratchSpace:" "$scratch"
+fi
+
 # No Siri and no Apple Intelligence (Griff, 2026-09-27). The notification extension donated every
 #     banner to Siri as an INSendMessageIntent, which put the sender and conversation into the
 #     system's interaction store, outside anything the app seals; erasing never removed it. Nothing
