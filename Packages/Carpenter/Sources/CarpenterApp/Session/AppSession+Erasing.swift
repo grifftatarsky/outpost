@@ -20,7 +20,7 @@ extension AppSession {
         deviceSync = nil
 
         do {
-            try await storage.keychain.removeAll()
+            try await storage.keychain.removeAll(.device)
         } catch {
             Diagnostics.identity.error(
                 "erase: the keychain would not empty (\(String(describing: error), privacy: .public))")
@@ -36,6 +36,10 @@ extension AppSession {
         replica = Replica()
         persisted = PersistedState()
         rooms = []
+    }
+
+    public func eraseSynchronizedKeys() async throws {
+        try await storage.keychain.removeAll(.synchronized)
     }
 
     private func eraseFiles() async {

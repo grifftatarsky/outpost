@@ -3347,6 +3347,16 @@ and says only that something arrived.
   connection. Everywhere else, the cloud half still comes first: *Erase everything* touches nothing
   local until iCloud has the deathmark.
 - **`--reset-account` leaves no deathmark,** so a development account really is empty afterwards.
+- **Erasing one phone reaches only that phone's keychain** (2026-11-05). A forgotten code, a removal
+  this phone hears about, a deathmark it obeys and the erase that follows wrong codes delete the
+  keychain items this phone keeps for itself and leave alone anything iCloud Keychain carries, because
+  deleting a synchronized item deletes it from every phone signed in to the Apple Account: *Forgot the
+  code?* on one phone could otherwise have reached the member's others. Only *Erase everything*, and
+  the wrong-code limit when it reaches iCloud, also delete the synchronized items, since erasing
+  everywhere is what they promise. Removing a single key never reaches iCloud Keychain. Today's builds
+  write nothing synchronized; the items this protects are ones earlier builds wrote
+  (`ErasingThisPhoneReachesOnlyItsKeychainTests`; the real keychain's half is in `SystemKeychainTests`,
+  written and not run).
 
 **What it costs.** A device that never reaches iCloud again keeps what it has, and the deathmark
 waits for it. Tested with the in-memory board. The board's live test (`LiveDeathmarkTests`) is

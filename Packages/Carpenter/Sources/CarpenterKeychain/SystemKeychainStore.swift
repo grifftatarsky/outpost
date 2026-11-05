@@ -143,7 +143,7 @@ public struct SystemKeychainStore: KeychainStore {
     }
 
     public func remove(_ key: KeychainKey) async throws {
-        let status = SecItemDelete(match(key, in: accessGroup, synchronized: nil) as CFDictionary)
+        let status = SecItemDelete(match(key, in: accessGroup, synchronized: false) as CFDictionary)
         guard
             status == errSecSuccess || status == errSecItemNotFound
                 || status == errSecMissingEntitlement || status == errSecNoAccessForItem
@@ -152,19 +152,17 @@ public struct SystemKeychainStore: KeychainStore {
         }
 
         if accessGroup != nil {
-            SecItemDelete(match(key, in: nil, synchronized: nil) as CFDictionary)
+            SecItemDelete(match(key, in: nil, synchronized: false) as CFDictionary)
         }
     }
 
-    public func removeAll() async throws {
-        var query: [String: Any] = [
+    public func removeAll(_ scope: KeychainScope) async throws {
+        let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecUseDataProtectionKeychain as String: true,
-            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+            kSecAttrSynchronizable as String: scope == .synchronized,
         ]
-        if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
-
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError(status: status)

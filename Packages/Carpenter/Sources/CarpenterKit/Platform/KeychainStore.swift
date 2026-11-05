@@ -18,7 +18,7 @@ public protocol KeychainStore: Sendable {
     func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) async throws
     func remove(_ key: KeychainKey) async throws
 
-    func removeAll() async throws
+    func removeAll(_ scope: KeychainScope) async throws
 
     func protect(as protection: StorageProtection) async throws
 }

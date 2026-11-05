@@ -163,7 +163,7 @@ extension AppRootView {
 
         let container = profile.container(within: TestProfileWorld.base)
         do {
-            try await SystemKeychainStore(service: container, accessGroup: SharedKeychain.group).removeAll()
+            try await SystemKeychainStore(service: container, accessGroup: SharedKeychain.group).removeAll(.device)
         } catch {
             Diagnostics.sync.error(
                 "test profile: could not remove its keys (\(String(describing: error), privacy: .public))")

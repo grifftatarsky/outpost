@@ -340,7 +340,7 @@ private struct RecordUnreadable: KeychainStore {
 
     func remove(_ key: KeychainKey) async throws { try await real.remove(key) }
 
-    func removeAll() async throws { try await real.removeAll() }
+    func removeAll(_ scope: KeychainScope) async throws { try await real.removeAll(scope) }
 
     func protect(as protection: StorageProtection) async throws { try await real.protect(as: protection) }
 }

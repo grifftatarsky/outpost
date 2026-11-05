@@ -159,7 +159,7 @@ struct AppLockControllerTests {
             try await inner.set(data, for: key, scope: scope)
         }
         func remove(_ key: KeychainKey) async throws { try await inner.remove(key) }
-        func removeAll() async throws { try await inner.removeAll() }
+        func removeAll(_ scope: KeychainScope) async throws { try await inner.removeAll(scope) }
         func protect(as protection: StorageProtection) async throws { try await inner.protect(as: protection) }
     }
 
@@ -312,7 +312,7 @@ struct AppLockControllerTests {
             try await inner.set(data, for: key, scope: scope)
         }
         func remove(_ key: KeychainKey) async throws { try await inner.remove(key) }
-        func removeAll() async throws { try await inner.removeAll() }
+        func removeAll(_ scope: KeychainScope) async throws { try await inner.removeAll(scope) }
         func protect(as protection: StorageProtection) async throws { try await inner.protect(as: protection) }
     }
 

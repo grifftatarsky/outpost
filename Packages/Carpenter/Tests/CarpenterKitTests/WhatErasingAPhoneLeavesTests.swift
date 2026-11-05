@@ -91,3 +91,48 @@ struct WhatErasingAPhoneLeavesTests {
         #expect(try await IdentityStore(keychain: phone.keychain).wasRemoved() == false)
     }
 }
+
+@MainActor
+@Suite("Erasing this phone reaches only this phone's keychain", .tags(.storage))
+struct ErasingThisPhoneReachesOnlyItsKeychainTests {
+    private let carried = KeychainKey("carried.by.icloud")
+
+    @Test("Erasing one phone, for a forgotten code or any other reason, leaves what iCloud Keychain carries to the member's other phones")
+    func aSynchronizedItemSurvives() async throws {
+        let phone = InMemoryKeychainStore()
+        let otherPhone = await phone.sibling()
+        try await phone.set(Data([1]), for: carried, scope: .synchronized)
+        let session = TestSession.make(keychain: phone)
+        await session.load()
+        try await session.createIdentity(displayName: "Griff")
+
+        await session.eraseWhatThisPhoneKeeps()
+
+        #expect(try await otherPhone.data(for: carried) == Data([1]), "erasing one phone deleted an item from another")
+        #expect(try await IdentityStore(keychain: phone).loadIdentity() == nil)
+    }
+
+    @Test("Removing one key from this phone leaves iCloud Keychain's copy alone")
+    func removingOneKeyStaysHere() async throws {
+        let phone = InMemoryKeychainStore()
+        let otherPhone = await phone.sibling()
+        try await phone.set(Data([1]), for: carried, scope: .synchronized)
+
+        try await phone.remove(carried)
+
+        #expect(try await otherPhone.data(for: carried) == Data([1]))
+    }
+
+    @Test("Erasing everything everywhere also takes what iCloud Keychain carries")
+    func everywhereTakesItToo() async throws {
+        let phone = InMemoryKeychainStore()
+        let otherPhone = await phone.sibling()
+        try await phone.set(Data([1]), for: carried, scope: .synchronized)
+        let session = TestSession.make(keychain: phone)
+
+        try await session.eraseSynchronizedKeys()
+        await session.eraseWhatThisPhoneKeeps()
+
+        #expect(try await otherPhone.data(for: carried) == nil)
+    }
+}

@@ -121,7 +121,7 @@ struct SystemKeychainTests {
         let keychain = SystemKeychainStore(service: service)
         let keys = [scratchKey(), scratchKey(), scratchKey()]
         for key in keys { try await keychain.set(Data([9]), for: key, scope: .device) }
-        defer { Task { try? await keychain.removeAll() } }
+        defer { Task { try? await keychain.removeAll(.device) } }
 
         try await keychain.protect(as: .whileUnlocked)
         for key in keys {
@@ -171,6 +171,26 @@ struct SystemKeychainTests {
         #expect(SecItemCopyMatching(all as CFDictionary, &result) == errSecSuccess)
         #expect((result as? [[String: Any]])?.count == 1)
         #expect(try await store.data(for: key) == Data([2]))
+    }
+
+    @Test("Erasing this phone's keys leaves an item iCloud Keychain carries, and erasing everywhere takes it")
+    func erasingReachesOnlyWhatItMeans() async throws {
+        let service = "com.microgpt.carpenter.tests.erase.\(UUID().uuidString)"
+        let keychain = SystemKeychainStore(service: service)
+        let here = scratchKey(), carried = scratchKey()
+        try await keychain.set(Data([1]), for: here, scope: .device)
+        try await keychain.set(Data([2]), for: carried, scope: .synchronized)
+        defer { Task { try? await keychain.removeAll(.synchronized) } }
+
+        try await keychain.removeAll(.device)
+        #expect(try await keychain.data(for: here) == nil)
+        #expect(try await keychain.data(for: carried) == Data([2]), "erasing one phone deleted what its other phones read")
+
+        try await keychain.remove(carried)
+        #expect(try await keychain.data(for: carried) == Data([2]), "removing one key reached iCloud Keychain")
+
+        try await keychain.removeAll(.synchronized)
+        #expect(try await keychain.data(for: carried) == nil)
     }
 
     @Test("Removal is idempotent")

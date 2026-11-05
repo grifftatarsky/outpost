@@ -704,7 +704,7 @@ private struct EraseChoice: Identifiable {
         }
         func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) throws {}
         func remove(_ key: KeychainKey) throws {}
-        func removeAll() throws {}
+        func removeAll(_ scope: KeychainScope) throws {}
         func protect(as protection: StorageProtection) throws {}
     }
 #endif

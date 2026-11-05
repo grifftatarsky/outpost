@@ -162,6 +162,7 @@ extension AppRootView {
             try await cloud.eraseEverySpace()
         }
         try await deathmarkBoard?.eraseEverythingElse()
+        try await session.eraseSynchronizedKeys()
 
         await eraseThisDevice()
     }
