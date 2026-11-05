@@ -4,21 +4,17 @@ import CarpenterKeychain
 import CarpenterKit
 import CloudKit
 import OSLog
+import Synchronization
 import UserNotifications
 
-final class NotificationService: UNNotificationServiceExtension, @unchecked Sendable {
-    private let lock = NSLock()
-    private var contentHandler: ((UNNotificationContent) -> Void)?
-    private var bestAttempt: UNMutableNotificationContent?
+final class NotificationService: UNNotificationServiceExtension {
+    private let delivery = Delivery()
 
     override func didReceive(
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
-        lock.withLock {
-            self.contentHandler = contentHandler
-            bestAttempt = request.content.mutableCopy() as? UNMutableNotificationContent
-        }
+        delivery.hold(contentHandler, bestAttempt: request.content.mutableCopy() as? UNMutableNotificationContent)
 
         Diagnostics.sync.notice(
             """
@@ -27,9 +23,9 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
                 .subscriptionID ?? "unknown", privacy: .public)
             """)
 
-        Task {
+        Task { [delivery] in
             let rich = await NotificationService.richCopy()
-            await self.deliver(rich.copy, badge: rich.badge, quietly: rich.quietly)
+            await delivery.deliver(rich.copy, badge: rich.badge, quietly: rich.quietly)
         }
     }
 
@@ -40,35 +36,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
     }
 
     override func serviceExtensionTimeWillExpire() {
-        Task { await deliver(MessageNotification.generic, badge: nil, quietly: false) }
-    }
-
-    private func deliver(_ copy: NotificationCopy, badge: Int?, quietly: Bool) async {
-        let taken: ((UNNotificationContent) -> Void, UNMutableNotificationContent)? = lock.withLock {
-            guard let handler = contentHandler, let content = bestAttempt else { return nil }
-            contentHandler = nil
-            return (handler, content)
-        }
-        guard let (handler, content) = taken else { return }
-
-        if !copy.isGeneric {
-            content.title = copy.title
-            content.subtitle = copy.subtitle
-            content.body = copy.body
-            content.threadIdentifier = copy.threadID
-        }
-        if let badge { content.badge = NSNumber(value: badge) }
-
-        Diagnostics.sync.notice(
-            "nse: badge=\(badge.map(String.init) ?? "unchanged", privacy: .public)")
-        Diagnostics.sync.notice(
-            "nse: delivering \(copy.isGeneric ? "the generic banner" : "a decrypted banner", privacy: .public)")
-
-        if quietly { content.interruptionLevel = .passive }
-
-        if let url = DiagnosticsExport.groupURL { DiagnosticsExport.write(to: url, throttled: false) }
-
-        handler(content)
+        Task { [delivery] in await delivery.deliver(MessageNotification.generic, badge: nil, quietly: false) }
     }
 
     @MainActor
@@ -153,4 +121,45 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
     private static let attempts = 6
 
     private static let sharedKeychainGroup: String? = SharedKeychain.group
+}
+
+private final class Delivery: Sendable {
+    private struct Pending: @unchecked Sendable {
+        var contentHandler: ((UNNotificationContent) -> Void)?
+        var bestAttempt: UNMutableNotificationContent?
+    }
+
+    private let pending = Mutex(Pending())
+
+    func hold(_ contentHandler: @escaping (UNNotificationContent) -> Void, bestAttempt: UNMutableNotificationContent?) {
+        pending.withLock { $0 = Pending(contentHandler: contentHandler, bestAttempt: bestAttempt) }
+    }
+
+    func deliver(_ copy: NotificationCopy, badge: Int?, quietly: Bool) async {
+        let taken: ((UNNotificationContent) -> Void, UNMutableNotificationContent)? = pending.withLock {
+            guard let handler = $0.contentHandler, let content = $0.bestAttempt else { return nil }
+            $0 = Pending()
+            return (handler, content)
+        }
+        guard let (handler, content) = taken else { return }
+
+        if !copy.isGeneric {
+            content.title = copy.title
+            content.subtitle = copy.subtitle
+            content.body = copy.body
+            content.threadIdentifier = copy.threadID
+        }
+        if let badge { content.badge = NSNumber(value: badge) }
+
+        Diagnostics.sync.notice(
+            "nse: badge=\(badge.map(String.init) ?? "unchanged", privacy: .public)")
+        Diagnostics.sync.notice(
+            "nse: delivering \(copy.isGeneric ? "the generic banner" : "a decrypted banner", privacy: .public)")
+
+        if quietly { content.interruptionLevel = .passive }
+
+        if let url = DiagnosticsExport.groupURL { DiagnosticsExport.write(to: url, throttled: false) }
+
+        handler(content)
+    }
 }

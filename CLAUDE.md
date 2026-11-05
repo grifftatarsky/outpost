@@ -425,7 +425,8 @@ Read these before touching sync. Every one cost real time.
   landed. The only signal was `warning: no 'async' operations occur within 'await' expression`, and
   an incremental build does not reprint it — `rm -rf` the derived data after splitting a type across
   files, and read the warnings. The method is `syncNow()` now, because a name libc does not have
-  cannot be shadowed by one it does.
+  cannot be shadowed by one it does. That warning's group, `UnnecessaryEffectMarker`, is an error in
+  every target now, so the same mistake fails the build, incremental or not.
 - **Iterating a dictionary is not an order, and the fake had one.** `recordZoneChanges` hands its
   results back in `modificationResultsByID`, a `Dictionary`, and the mailbox built its array by
   iterating it — so a zone's packets came back in a different order on different runs. Measured

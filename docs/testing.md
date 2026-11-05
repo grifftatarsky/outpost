@@ -120,8 +120,9 @@ Secure Enclave is available before looking for the key, and `SecureEnclaveKeys.a
 key first, so a missing key and an unavailable enclave come back as different errors in the two.
 `StubAccountRegistry` answers whatever it is built with, and the mapping from CloudKit errors to an
 answer is tested on its own in `AccountCheckErrorTests`, which is the right split. And
-`InMemoryEntrySync` lives in `CarpenterKit`, not `CarpenterKitTesting`, so the fake is compiled into
-the app that ships; nothing in the app uses it.
+`InMemoryEntrySync` used to live in `CarpenterKit`, so the fake was compiled into the app that ships
+though nothing in the app used it. It lives in `CarpenterKitTesting` with the other fakes now, and
+`Scripts/check-release-leaves.sh` looks for its name in a Release binary.
 
 **Coverage**, from `swift test --enable-code-coverage` and `llvm-cov`, by lines and by functions:
 
@@ -158,11 +159,20 @@ suite and the release check on any machine without the rig. `scan-for-vulnerabil
 `outpost-27`. All of those were changed the same day: `check-all.sh` defaults to `bullet` and, when
 no simulator was named and `bullet` is not there, takes the newest iPhone simulator, which is also
 what the other two take when they are not given one. The build and test commands in `CLAUDE.md`
-still name `outpost-alpha`'s UDID. CI selects the newest
+still name `outpost-alpha`'s UDID. CI used to select the newest
 Xcode 26 on `macos-26`, which on 2026-11-04 was 26.6 with iOS 26.5 at most
 ([runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md)),
-while every local build is Xcode 27.1 with Swift 6.4, so CI compiles with an older compiler than
-anybody here does and cannot catch what only Xcode 27 reports.
+while every local build is Xcode 27.1 with Swift 6.4, so CI compiled with an older compiler than
+anybody here does and could not catch what only Xcode 27 reports. GitHub's `xcode-27` runner image
+has been generally available since 2026-10-15
+([announcement](https://github.blog/changelog/2026-10-15-xcode-27-runner-image-generally-available)),
+and its image readme on 2026-11-05 lists Xcode 27.2 (a release candidate), 27.1 (the default) and
+27.0 on macOS 27.0.1, with iOS 27 simulators
+([runner image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)).
+Every workflow job now runs on `xcode-27`, and `.github/actions/xcode-27` selects 27.1 by name and
+fails with the list of installed Xcodes if it is not there. None of this has run: CI cannot be run
+from here, so the first push is the test, and the image's iOS 27.0 and 27.1 simulator runtimes are
+older than the iOS 27.2 the local rig uses.
 
 <!-- COPY END c835132c -->
 

@@ -84,10 +84,10 @@ struct InMemoryMailboxTests {
         let t = try await three()
         try await t.mailbox.put(packet("sealed", to: t.toBob), to: t.toBob.them, in: t.alice)
 
-        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 1)], in: t.bob).count == 1)
-        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 2)], in: t.bob).isEmpty)
+        #expect(await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 1)], in: t.bob).count == 1)
+        #expect(await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 2)], in: t.bob).isEmpty)
         #expect(
-            try await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 1)], in: t.carol).isEmpty,
+            await t.mailbox.fetch(from: t.toBob.me, for: [t.asBob.incomingTag(window: 1)], in: t.carol).isEmpty,
             "somebody else read a packet in another person's space")
     }
 
@@ -97,8 +97,8 @@ struct InMemoryMailboxTests {
         try await t.mailbox.put(packet("sealed", to: t.toBob), to: t.toBob.them, in: t.alice)
         let tags: Set = [t.asBob.incomingTag(window: 1)]
 
-        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).count == 1)
-        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).count == 1)
+        #expect(await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).count == 1)
+        #expect(await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).count == 1)
     }
 
     @Test("A receipt sits in its writer's own space; nobody but the sender takes the packet away")
@@ -110,7 +110,7 @@ struct InMemoryMailboxTests {
 
         try await t.mailbox.acknowledge(
             sent.id, from: t.toBob.me, with: SealedReceipt(tag: t.asBob.incomingTag(window: 1), sealed: Data([1])), in: t.bob)
-        #expect(try await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).first?.receipts.count == 1)
+        #expect(await t.mailbox.fetch(from: t.toBob.me, for: tags, in: t.bob).first?.receipts.count == 1)
         #expect(await t.mailbox.storedPacketCount == 1, "a recipient's receipt removed the packet")
 
         await t.mailbox.withdraw(sent.id, in: t.bob)
@@ -130,7 +130,7 @@ struct InMemoryMailboxTests {
         try await t.mailbox.acknowledge(sent.id, from: t.toBob.me, with: receipt, in: t.bob)
         try await t.mailbox.acknowledge(sent.id, from: t.toBob.me, with: receipt, in: t.bob)
 
-        #expect(try await t.mailbox.sentPackets(in: t.alice)[sent.id]?.receipts == [receipt])
+        #expect(await t.mailbox.sentPackets(in: t.alice)[sent.id]?.receipts == [receipt])
     }
 
     @Test("Every write is counted, so the budget in Epic 4 has something to measure")

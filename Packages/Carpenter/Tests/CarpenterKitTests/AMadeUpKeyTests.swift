@@ -274,7 +274,7 @@ struct AStrandedKeyTests {
     @Test("A phone hands on the keys a walk back from its newest one cannot reach, and no others")
     func onlyTheKeysAWalkCannotReach() async throws {
         let t = try await RoomOfThree.make()
-        let before = try #require(t.carol.keysToPassOn(in: t.room))
+        let before = t.carol.keysToPassOn(in: t.room)
         #expect(before.count == 1, "a phone with one key for every number offered more than one")
 
         try await t.turnTheKeyTogether()

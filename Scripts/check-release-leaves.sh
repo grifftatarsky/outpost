@@ -39,7 +39,7 @@ if [ ! -f "$BINARY" ]; then
     exit 1
 fi
 
-# Each of these is a control, a launch argument or a screen that exists only for development.
+# Each of these is a control, a launch argument, a screen or a test fake that exists only for development.
 LEAVES=(
     "site-shot"
     "forget-supporter"
@@ -62,6 +62,7 @@ LEAVES=(
     "Test a contact's space"
     "pair-notify-anything"
     "ask-outpost-notifications"
+    "InMemoryEntrySync"
 )
 
 status=0

@@ -1,6 +1,7 @@
 import CloudKit
 import CarpenterKit
 import Foundation
+import os
 
 // MARK: One space per person, in this member's own iCloud, readable by that person alone
 

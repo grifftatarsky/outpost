@@ -5,6 +5,7 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import Observation
+import os
 import SwiftUI
 
 public struct DecodedImage: @unchecked Sendable, Equatable {

@@ -1,4 +1,5 @@
 import SwiftUI
+import Vision
 
 #if os(iOS)
     import AVFoundation

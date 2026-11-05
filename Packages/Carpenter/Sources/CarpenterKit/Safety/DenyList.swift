@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import os
 
 public struct DenyList: Hashable, Sendable {
     public let version: Int

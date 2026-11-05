@@ -144,7 +144,7 @@ struct EachPairHasASpaceOfItsOwnTests {
         let tags = SyncSession.recentTags(
             for: try #require(t.bob.peers().first { $0.them == t.aliceID }), at: TestSession.now)
         #expect(
-            try await t.mailbox.fetch(from: t.aliceID, for: tags, in: try t.bob.currentPairs()).isEmpty,
+            await t.mailbox.fetch(from: t.aliceID, for: tags, in: try t.bob.currentPairs()).isEmpty,
             "Bob still read Alice's space after she closed it")
         try await t.carol.sync(through: t.mailbox, media: t.mailbox)
         #expect(

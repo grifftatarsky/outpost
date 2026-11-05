@@ -1,0 +1,21 @@
+# Selects the Xcode every local build uses, and says plainly when the runner does not have it.
+#
+# Its own action because three jobs need it and a copied `xcode-select` line is three places for the
+# version to drift. It names 27.1 and not "the newest 27": the image also carries 27.2 as a release
+# candidate, and CI should compile with what the people building here compile with.
+name: Select Xcode 27.1
+description: Points xcode-select at Xcode 27.1.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        app=/Applications/Xcode_27.1.app
+        if [ ! -d "$app" ]; then
+          echo "::error::No Xcode 27.1 on this runner. Local builds use it, and CI must match."
+          echo "Available:"; ls -d /Applications/Xcode*.app 2>/dev/null || echo "  (none)"
+          exit 1
+        fi
+        sudo xcode-select -switch "$app"
+        xcodebuild -version

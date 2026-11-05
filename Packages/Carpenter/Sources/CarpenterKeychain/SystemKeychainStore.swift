@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 import Security
 
 public struct SystemKeychainStore: KeychainStore {

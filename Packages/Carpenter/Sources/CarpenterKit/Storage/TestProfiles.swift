@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public struct TestProfile: Codable, Hashable, Identifiable, Sendable {
     public let id: UUID

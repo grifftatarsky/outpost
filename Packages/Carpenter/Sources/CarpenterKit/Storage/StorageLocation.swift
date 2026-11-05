@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public enum AppGroup {
     public static let identifier = "group.com.microgpt.carpenter"

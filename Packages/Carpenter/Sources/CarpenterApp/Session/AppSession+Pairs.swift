@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 
 struct PairBookEntry: Codable, Equatable, Sendable {
     var theirs: PairLink?

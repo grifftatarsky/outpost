@@ -1,6 +1,7 @@
 import Foundation
 import CarpenterApp
 import CarpenterKit
+import Foundation
 import Testing
 
 @Suite("What a refusal says")

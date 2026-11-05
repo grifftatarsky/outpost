@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 
 // MARK: Deleting a conversation this member is no longer in
 
