@@ -15,7 +15,9 @@ extension View {
             Button { onApprove(request) } label: { Text("Approve", bundle: .module) }
             Button(role: .cancel) { onDecline(request) } label: { Text("Don't approve", bundle: .module) }
         } message: { request in
-            Text("Only approve it if it shows \(request.code).", bundle: .module)
+            Text(
+                "Only approve it if it shows \(request.code). It will be able to read everything you can and send messages as you.",
+                bundle: .module)
         }
         // COPY END b6ce14dd
     }
