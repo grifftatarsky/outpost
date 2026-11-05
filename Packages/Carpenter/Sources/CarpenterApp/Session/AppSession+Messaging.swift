@@ -326,17 +326,16 @@ extension AppSession {
         return roster.members
             .filter { $0 != me }
             .map { who in
+                let collection = collection(of: message.entry, by: who)
                 let report: ReadReport
-                if persisted.notCollected[who]?.contains(message.entry) == true {
-                    report = .notCollected
-                } else if !reporting.contains(who) {
+                if !reporting.contains(who) {
                     report = .doesNotReport
-                } else if let at = evidence[who]?.firstCovering(position) {
+                } else if collection != .notCollected, let at = evidence[who]?.firstCovering(position) {
                     report = .displayed(at: at)
                 } else {
                     report = .nothingYet
                 }
-                return ReadBy(member: projected.member(who), report: report)
+                return ReadBy(member: projected.member(who), collection: collection, report: report)
             }
             .sorted { left, right in
                 switch (left.report, right.report) {
@@ -350,6 +349,12 @@ extension AppSession {
                         .localizedCaseInsensitiveCompare(right.member.displayName) == .orderedAscending
                 }
             }
+    }
+
+    private func collection(of entry: EntryHash, by person: ParticipantID) -> CollectionReport {
+        if persisted.notCollected[person]?.contains(entry) == true { return .notCollected }
+        if let at = persisted.collectedAt[person]?[entry] { return .collected(at: at) }
+        return .noReceipt
     }
 
     func outOfRoom(in room: RoomID, of projected: Projection) -> Set<EntryHash> {

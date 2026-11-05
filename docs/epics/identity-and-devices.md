@@ -411,8 +411,10 @@ silent is not great."
   check-up's `restoreAsks` / `restoreHold` pages.
 - **Done.** History goes by default and waits **only** for somebody who has said to wait. The round stamps
   `RestoreAskRecord(hold: .held)` only when this member holds; everybody else gets `.allowed`.
-- **Done.** After a restore, `OtherDevicesAfterRestoreView` offers to remove all or some of the member's
-  other devices. The lost-or-stolen question is gone (Griff, 2026-09-26).
+- **Done.** A restore removes every other device, so there is nothing left to offer to remove. The
+  screen that offered it (`OtherDevicesAfterRestoreView`) was taken out on 2026-11-05: it could only
+  appear for a device approved after the restore, and then it took over the app and called that new
+  device one "still signed in as you". The lost-or-stolen question is gone (Griff, 2026-09-26).
 
 <!-- COPY END 6fa3803a -->
 

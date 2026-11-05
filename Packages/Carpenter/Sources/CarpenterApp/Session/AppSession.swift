@@ -65,7 +65,9 @@ public final class AppSession {
     var pendingIdentity: Identity?
     var unsavedRecoveryKey: RecoverySecret?
     public internal(set) var deviceRequests: [DeviceRequest] = []
-    var declinedDeviceRequests: Set<DeviceID> = []
+    var declinedDeviceRequests: [DeviceID: Date] = [:]
+    var deviceRequestsStoredAt: [DeviceID: Date] = [:]
+    public internal(set) var askedForApproval: Bool?
 
     public var thisDeviceID: DeviceID? { enrolment?.device.id ?? pendingDevice?.id }
 

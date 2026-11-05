@@ -103,6 +103,29 @@ struct DeviceEnrolmentTests {
         #expect(second.enrolment == nil)
     }
 
+    @Test("A declined device can ask again, and only the newer ask shows again")
+    func aDeclinedDeviceCanAskAgain() async throws {
+        let (keychain, relay) = (InMemoryKeychainStore(), InMemoryEntrySync.Relay())
+        let first = try await firstDevice(keychain, on: relay)
+        let second = await waitingDevice(sharing: keychain, on: relay)
+        await first.settleDeviceSync { !first.deviceRequests.isEmpty }
+        let request = try #require(first.deviceRequests.first)
+        await first.declineDevice(request)
+        await first.settleDeviceSync()
+        try #require(first.deviceRequests.isEmpty)
+
+        let old = SiblingRecord(
+            name: SiblingRecord.Name(writer: request.device, kind: .request),
+            sealed: try request.record().sealed, modified: .distantPast)
+        first.noteRequest(old)
+        #expect(first.deviceRequests.isEmpty, "the declined request came back without anybody asking again")
+
+        #expect(second.askedForApproval == true)
+        await second.askForApprovalAgain()
+        await first.settleDeviceSync { !first.deviceRequests.isEmpty }
+        #expect(first.deviceRequests.map(\.code) == [request.code], "asking again after a decline reached nobody")
+    }
+
     @Test("A device without the member's key in its Keychain is handed it when approved")
     func aDeviceWithoutTheKeyIsHandedIt() async throws {
         let relay = InMemoryEntrySync.Relay()

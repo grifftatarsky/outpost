@@ -15,8 +15,8 @@ public struct CheckingRegistrationView: View {
 
             ProgressView()
 
-            // COPY BEGIN 6ea1adcc [HUMAN REVIEWED, UNVERIFIED]
-            Text("Checking Keychain for existing registration.", bundle: .module)
+            // COPY BEGIN 6ea1adcc [NEEDS HUMAN REVIEW]
+            Text("Checking whether this Apple Account already has you set up.", bundle: .module)
                 .font(CarpenterFont.rowDetail)
                 .foregroundStyle(palette.secondaryText)
                 .multilineTextAlignment(.center)

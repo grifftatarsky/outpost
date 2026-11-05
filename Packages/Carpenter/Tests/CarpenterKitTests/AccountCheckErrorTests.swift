@@ -31,9 +31,22 @@ struct AccountCheckErrorTests {
 
     @Test(
         "Never reaching iCloud reads as offline, so a first run still works",
-        arguments: [CKError.Code.networkUnavailable, .networkFailure, .notAuthenticated])
+        arguments: [CKError.Code.networkUnavailable, .networkFailure])
     func networkFailuresReadAsOffline(code: CKError.Code) {
         #expect(CloudKitEntrySync.occupancy(for: ckError(code)) == .offline)
+    }
+
+    @Test("Being signed out of iCloud is its own answer, because the member has to sign in, not wait for a signal")
+    func signedOutIsNotOffline() {
+        #expect(CloudKitEntrySync.occupancy(for: ckError(.notAuthenticated)) == .signedOut)
+        let zone = CKRecordZone.ID(zoneName: "SiblingFeeds", ownerName: CKCurrentUserDefaultName)
+        let wrapped = ckError(.partialFailure, userInfo: [CKPartialErrorsByItemIDKey: [zone: ckError(.notAuthenticated)]])
+        #expect(CloudKitEntrySync.occupancy(for: wrapped) == .signedOut)
+    }
+
+    @Test("An account a restriction keeps out of iCloud says so, rather than calling it offline")
+    func restrictedIsNotOffline() {
+        #expect(CloudKitEntrySync.occupancy(for: ckError(.managedAccountRestricted)) == .restricted)
     }
 
     @Test(

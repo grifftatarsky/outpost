@@ -57,13 +57,16 @@ public struct RoomMembersView: View {
     private let onRemove: ((ParticipantID) async -> Void)?
     private let onInvite: (() -> Void)?
     private let onRescind: ((ParticipantID) async -> Void)?
-    private let onDecide: ((ParticipantID, Bool) async -> Void)?
+    private let joins: [PendingJoin]
+    private let onDecide: ((PendingJoin, Bool) async -> Void)?
     private let onBlock: ((ParticipantID) async -> Void)?
+    private let personPage: ((ParticipantID, PersonActions?) -> PersonDetailView)?
 
     @State private var removing: Member?
     @State private var blocking: Member?
     @State private var rescinding: InvitedPerson?
-    @State private var showingPhrase: InvitedPerson?
+    @State private var checking: InvitedPerson?
+    @State private var rescindingOnceChecked: InvitedPerson?
 
     public init(
         roomName: String,
@@ -74,7 +77,9 @@ public struct RoomMembersView: View {
         onInvite: (() -> Void)? = nil,
         onBlock: ((ParticipantID) async -> Void)? = nil,
         onRescind: ((ParticipantID) async -> Void)? = nil,
-        onDecide: ((ParticipantID, Bool) async -> Void)? = nil
+        joins: [PendingJoin] = [],
+        onDecide: ((PendingJoin, Bool) async -> Void)? = nil,
+        personPage: ((ParticipantID, PersonActions?) -> PersonDetailView)? = nil
     ) {
         self.roomName = roomName
         self.members = members
@@ -84,7 +89,9 @@ public struct RoomMembersView: View {
         self.onInvite = onInvite
         self.onBlock = onBlock
         self.onRescind = onRescind
+        self.joins = joins
         self.onDecide = onDecide
+        self.personPage = personPage
     }
 
     public var body: some View {
@@ -101,13 +108,12 @@ public struct RoomMembersView: View {
                     switch (onRemove != nil, onBlock != nil) {
                     case (true, true):
                         Text(
-                            "Touch and hold somebody to remove them from this room, or to block them everywhere.",
+                            "Tap somebody to remove them from this room, or to block them everywhere.",
                             bundle: .module)
                     case (true, false):
-                        Text(
-                            "Touch and hold somebody to remove them from this room.", bundle: .module)
+                        Text("Tap somebody to remove them from this room.", bundle: .module)
                     case (false, true):
-                        Text("Touch and hold somebody to block them everywhere.", bundle: .module)
+                        Text("Tap somebody to block them everywhere.", bundle: .module)
                     case (false, false):
                         EmptyView()
                     }
@@ -126,7 +132,7 @@ public struct RoomMembersView: View {
                     Text("Invited, not yet in", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
-                        "Nobody here is in the room yet. Touch and hold one that is still open to read the characters aloud again, or to take the invitation back.",
+                        "Nobody here is in the room yet. Tap one that is still open to read the characters aloud again, to answer them, or to take the invitation back.",
                         bundle: .module)
                 }
                 .groupedRowSurface()
@@ -178,12 +184,42 @@ public struct RoomMembersView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
-        .sheet(item: $showingPhrase) { person in
-            VerificationPhraseSheet(
-                name: person.person.displayName, phrase: person.phrase, confirmedAt: nil)
-                .presentationDetents([.medium])
+        .sheet(
+            item: $checking,
+            onDismiss: {
+                rescinding = rescindingOnceChecked
+                rescindingOnceChecked = nil
+            }
+        ) { person in
+            InvitedPersonSheet(
+                person: person,
+                join: person.awaitsMyApproval && onDecide != nil ? joins.first { $0.id == person.id } : nil,
+                onDecide: { join, admit in
+                    checking = nil
+                    Task { await onDecide?(join, admit) }
+                },
+                onRescind: onRescind.map { _ in
+                    {
+                        rescindingOnceChecked = person
+                        checking = nil
+                    }
+                })
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .navigationDestination(for: PersonRoute.self) { route in
+            personPage?(route.person, actions(for: route.person))
+        }
+    }
+
+    private func actions(for person: ParticipantID) -> PersonActions? {
+        guard person != viewer, let member = members.first(where: { $0.id == person }),
+            onRemove != nil || onBlock != nil
+        else { return nil }
+        return PersonActions(
+            roomName: roomName,
+            remove: onRemove.map { _ in { removing = member } },
+            block: onBlock.map { _ in { blocking = member } })
     }
 
     @ViewBuilder
@@ -246,16 +282,21 @@ public struct RoomMembersView: View {
 
     @ViewBuilder
     private func liveInvitedRow(_ person: InvitedPerson) -> some View {
-        PersonRow(
-            name: person.person.displayName,
-            initials: person.person.initials,
-            id: person.person.id,
-            detail: waiting(person)
-        )
+        Button {
+            checking = person
+        } label: {
+            PersonRow(
+                name: person.person.displayName,
+                initials: person.person.initials,
+                id: person.person.id,
+                detail: waiting(person)
+            )
+        }
+        .foregroundStyle(palette.primaryText)
         .contextMenu {
             // COPY BEGIN da937147 [NEEDS HUMAN REVIEW]
             Button {
-                showingPhrase = person
+                checking = person
             } label: {
                 Label {
                     Text("Show the characters", bundle: .module)
@@ -264,32 +305,6 @@ public struct RoomMembersView: View {
                 }
             }
             // COPY END da937147
-
-            if person.awaitsMyApproval, let onDecide {
-                // COPY BEGIN 072f923a [NEEDS HUMAN REVIEW]
-                Button {
-                    Task { await onDecide(person.id, true) }
-                } label: {
-                    Label {
-                        Text("Let them in", bundle: .module)
-                    } icon: {
-                        Image(systemName: "person.badge.plus")
-                    }
-                }
-                // COPY END 072f923a
-
-                // COPY BEGIN ec57a2a6 [NEEDS HUMAN REVIEW]
-                Button {
-                    Task { await onDecide(person.id, false) }
-                } label: {
-                    Label {
-                        Text("Do not let them in", bundle: .module)
-                    } icon: {
-                        Image(systemName: "hand.raised")
-                    }
-                }
-                // COPY END ec57a2a6
-            }
 
             // COPY BEGIN b43a17c1 [NEEDS HUMAN REVIEW]
             if onRescind != nil {
@@ -433,6 +448,67 @@ struct RescindInvitationView: View {
         }
     }
     // COPY END 7cf63d28
+}
+
+struct InvitedPersonSheet: View {
+    @Environment(\.palette) private var palette
+    @Environment(\.dismiss) private var dismiss
+
+    let person: InvitedPerson
+    let join: PendingJoin?
+    let onDecide: (PendingJoin, Bool) -> Void
+    let onRescind: (() -> Void)?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    if let join {
+                        JoinCheckCard(join: join) { admit in onDecide(join, admit) }
+                    } else {
+                        VerificationPhrase(person.phrase)
+                        // COPY BEGIN ce26d2f9 [NEEDS HUMAN REVIEW]
+                        Text(
+                            "These are the characters you and \(person.person.displayName) were both shown. If what they read to you does not match, somebody else may be holding the invitation: take it back.",
+                            bundle: .module)
+                        // COPY END ce26d2f9
+                            .font(CarpenterFont.footnote)
+                            .foregroundStyle(palette.secondaryText)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if let onRescind {
+                        // COPY BEGIN 0973868b [NEEDS HUMAN REVIEW]
+                        Button(role: .destructive, action: onRescind) {
+                            Label {
+                                Text("Take back the invitation", bundle: .module)
+                            } icon: {
+                                Image(systemName: "trash").foregroundStyle(palette.destructive)
+                            }
+                            .primaryAction()
+                            .enabledLabelColor(palette.destructive)
+                        }
+                        .quietActionButton()
+                        .tint(palette.destructive)
+                        // COPY END 0973868b
+                    }
+                }
+                .padding(.horizontal, CarpenterMetrics.screenMargin)
+                .padding(.vertical, 16)
+            }
+            .background(palette.background)
+            .navigationTitle(Text(verbatim: person.person.displayName))
+            .toolbarTitleDisplayMode(.inline)
+            // COPY BEGIN 3fa21cdd [NEEDS HUMAN REVIEW]
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button { dismiss() } label: { Text("Done", bundle: .module) }
+                }
+            }
+            // COPY END 3fa21cdd
+        }
+    }
 }
 
 #if DEBUG

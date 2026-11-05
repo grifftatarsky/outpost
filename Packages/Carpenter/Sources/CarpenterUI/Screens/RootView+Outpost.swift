@@ -31,16 +31,21 @@ extension RootView {
             postActions: postActions)
     }
 
-    @ViewBuilder func personDestination(_ route: PersonRoute) -> some View {
+    func personDestination(_ route: PersonRoute) -> PersonDetailView {
+        personPage(route.person, actions: nil)
+    }
+
+    func personPage(_ person: ParticipantID, actions: PersonActions?) -> PersonDetailView {
         PersonDetailView(
-            connection: connections.first { $0.id == route.person }
+            connection: connections.first { $0.id == person }
                 ?? Connection(
-                    person: messageActions.member(route.person) ?? .placeholder(route.person),
+                    person: messageActions.member(person) ?? .placeholder(person),
                     sharedRooms: 0, seesTheirOutpost: false),
-            nickname: nickname(route.person),
-            sharedName: sharedName(route.person),
+            nickname: nickname(person),
+            sharedName: sharedName(person),
             onNicknameChange: onNicknameChange,
-            onPersonAvatarChange: onPersonAvatarChange)
+            onPersonAvatarChange: onPersonAvatarChange,
+            actions: actions)
     }
 
     @ViewBuilder func outpostDestination(_ id: ParticipantID) -> some View {

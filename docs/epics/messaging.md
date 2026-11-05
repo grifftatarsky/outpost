@@ -543,10 +543,15 @@ two marks have a place to be explained.
 
 - **Done.** Reached from the message's own actions, never from the marks, which are not controls: it is a
   section on the detail screen the bubble's menu already opens.
-- **Done.** Lists each recipient's state in the words the marks use, and in only three states, because per
-  person that is the whole of what the log knows: **shown** with a time, **nothing yet**, and **does
-  not report**. There is no per-person *delivered* — collection is acknowledged per packet, not per
-  reader, and claiming otherwise would be the app inferring delivery.
+- **Done.** Lists whether each recipient's display was reported in the words the marks use: **shown** with a
+  time, **not shown yet**, and nothing at all for somebody who does not report.
+- **Built 2026-11-05, not verified on the rig.** Lists each recipient's collection with the bubble's
+  plane: **collected** with the time iCloud stored their receipt, **no receipt yet**, or **not
+  collected in 9 days**. Since each pair of people got its own mailbox (2026-09-27) a packet goes to
+  one person and their receipt signs for it, so this is observed per person, not inferred. A message
+  this device did not send, or sent before 2026-11-05, has no receipt here and says so
+  (`WhenEachPersonCollectedItTests`, and [the decision](../decisions.md#each-persons-collected-time-is-when-icloud-stored-their-receipt)).
+- **Built 2026-11-05.** The time it was sent, and edited, sits under the message in one line.
 - **Done.** Shown first, then waiting, then the people who will never report — so the answer a member is
   looking for is at the top and the ones that will never change are at the bottom.
 - **Done.** A room lists everybody else; a solo lists the one person. Griff, 2026-09-12.

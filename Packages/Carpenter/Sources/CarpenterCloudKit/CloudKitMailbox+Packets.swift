@@ -53,10 +53,12 @@ extension CloudKitMailbox {
             let answers = await index.theirZone(for: peer, in: pairs)?.records ?? [:]
             for (name, cached) in mine.records where cached.type == PacketRecord.type {
                 guard let id = PacketID(recordName: name), let packet = PacketWire.packet(from: cached.fields) else { continue }
-                let receipt = answers[PairWire.receiptName(for: id)].flatMap { PacketWire.receipt(from: $0.fields) }
+                let answer = answers[PairWire.receiptName(for: id)]
+                let receipt = answer.flatMap { PacketWire.receipt(from: $0.fields) }
                 sent[id] = SentPacket(
                     to: peer, recipients: packet.recipients, receipts: receipt.map { [$0] } ?? [],
-                    createdAt: cached.created, contentDigest: packet.contentDigest)
+                    createdAt: cached.created, contentDigest: packet.contentDigest,
+                    receiptStoredAt: receipt == nil ? nil : answer?.created)
             }
         }
         return sent

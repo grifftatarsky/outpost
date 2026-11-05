@@ -36,11 +36,18 @@ extension AppSession {
         guard enrolment == nil, let pendingDevice else { return }
         do {
             try await engine.send([try DeviceRequest(for: pendingDevice).record()], deleting: [])
+            askedForApproval = true
             Diagnostics.identity.notice("approval: asked this member's other devices to approve this one")
         } catch {
+            askedForApproval = false
             Diagnostics.identity.error(
                 "approval: could not ask for approval: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    public func askForApprovalAgain() async {
+        guard let deviceSync else { return }
+        await requestApproval(through: deviceSync)
     }
 
     private func take(_ record: SiblingRecord) async {

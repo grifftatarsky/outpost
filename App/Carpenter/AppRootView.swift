@@ -34,7 +34,6 @@ struct AppRootView: View {
     @State var lockOfferOpen = false
     @AppStorage("siri.donationsForgotten") var siriDonationsForgotten = false
     @State var appLock = AppLockController(store: AppRootView.appLockStore)
-    @State var otherDevicesAsked = false
     @State var syncing = false
     @State var syncAgain = false
     @State var lastSync = Date.distantPast
@@ -140,45 +139,22 @@ struct AppRootView: View {
     // COPY BEGIN 7740e80c [NEEDS HUMAN REVIEW]
     var body: some View {
         content
-            .alert(
-                Text(problem?.title ?? ""),
-                isPresented: Binding(
-                    get: { problem != nil },
-                    set: { showing in if !showing { problem = nil } }),
-                presenting: problem
-            ) { _ in
-                Button { problem = nil } label: { Text("OK") }
-            } message: { problem in
-                Text(problem.detail)
-            }
-            .alert(
-                Text("Approve a new device?"),
-                isPresented: Binding(
-                    get: { session.state == .ready && !session.deviceRequests.isEmpty },
-                    set: { _ in }),
-                presenting: session.deviceRequests.first
-            ) { request in
-                Button {
+            .environment(\.reportedProblem, $problem)
+            .presentingProblems($problem)
+            .approvingDevices(
+                session.state == .ready ? session.deviceRequests.first : nil,
+                onApprove: { request in
                     Task {
                         await attempting("That device was not approved", "approve") {
                             try await session.approveDevice(request)
                         }
                     }
-                } label: { Text("Approve") }
-                Button(role: .cancel) {
-                    Task { await session.declineDevice(request) }
-                } label: { Text("Don't approve") }
-            } message: { request in
-                Text("Only approve it if it shows \(request.code).")
-            }
+                },
+                onDecline: { request in Task { await session.declineDevice(request) } })
     }
     // COPY END 7740e80c
 
-    struct ActionProblem: Identifiable {
-        let id = UUID()
-        let title: String
-        let detail: String
-    }
+    typealias ActionProblem = ReportedProblem
 
     func reporting(_ log: String, _ action: () async throws -> Void) async -> String? {
         do {
@@ -296,15 +272,6 @@ struct AppRootView: View {
                 }
                 .themed(.default)
 
-            case .ready
-            where session.cameBackFromARecoveryKey && !otherDevicesAsked
-                && session.devices.contains(where: { $0.isActive && !$0.isCurrent }):
-                OtherDevicesAfterRestoreView(
-                    devices: session.devices, onRevoke: { await revokeDevices($0) },
-                    onDone: { otherDevicesAsked = true }
-                )
-                .themed(.default)
-
             case .ready where session.needsPrivacyCheckup:
                 privacyCheckup
 
@@ -312,7 +279,9 @@ struct AppRootView: View {
                 ready
 
             case .awaitingApproval:
-                AwaitingApprovalView(code: session.approvalCode ?? "", onRecoveryKey: { restoring = true })
+                AwaitingApprovalView(
+                    code: session.approvalCode ?? "", askFailed: session.askedForApproval == false,
+                    onAskAgain: { await session.askForApprovalAgain() }, onRecoveryKey: { restoring = true })
                     .themed(.default)
                     .sheet(isPresented: $restoring) { restoreSheet }
                     .task {
@@ -330,13 +299,11 @@ struct AppRootView: View {
                     }
 
             case .failed(let reason):
-                // COPY BEGIN 9c1a5749 [NEEDS HUMAN REVIEW]
-                ContentUnavailableView(
-                    "Something is wrong with this device's data",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(reason)
-                )
-                // COPY END 9c1a5749
+                DataProblemView(reason: reason) {
+                    await session.load()
+                    await finishOpening()
+                }
+                .themed(.default)
             }
         }
     }
@@ -551,11 +518,11 @@ struct AppRootView: View {
                         #if os(iOS)
                             handBack(issued, to: joinerCode)
                         #endif
-                        return issued
+                        return .issued(issued)
                     } catch {
                         Diagnostics.identity.error(
                             "invite failed: \(String(describing: error), privacy: .public)")
-                        return nil
+                        return .refused(SessionProblem.sentence(for: error))
                     }
                 },
                 preferences: roomsListPreferences,

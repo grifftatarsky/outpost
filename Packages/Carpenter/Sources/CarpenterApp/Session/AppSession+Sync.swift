@@ -503,21 +503,33 @@ extension AppSession {
         }
     }
 
-    private func noteWhetherCollected(_ entries: Set<EntryHash>, by person: ParticipantID, collected: Bool) {
+    private func noteWhetherCollected(
+        _ entries: Set<EntryHash>, by person: ParticipantID, collected: Bool, storedAt: Date?
+    ) {
         if collected {
-            guard persisted.notCollected[person]?.isDisjoint(with: entries) == false else { return }
-            let left = persisted.notCollected[person, default: []].subtracting(entries)
-            persisted.notCollected[person] = left.isEmpty ? nil : left
+            if persisted.notCollected[person]?.isDisjoint(with: entries) == false {
+                let left = persisted.notCollected[person, default: []].subtracting(entries)
+                persisted.notCollected[person] = left.isEmpty ? nil : left
+            }
+            guard let storedAt else { return }
+            for entry in ownEntries(among: entries, inRoomsWith: person) {
+                persisted.collectedAt[person, default: [:]][entry] = min(
+                    persisted.collectedAt[person]?[entry] ?? storedAt, storedAt)
+            }
             return
         }
-        guard let me = enrolment?.identity.id else { return }
+        let theirs = ownEntries(among: entries, inRoomsWith: person)
+        guard !theirs.isEmpty else { return }
+        persisted.notCollected[person, default: []].formUnion(theirs)
+    }
+
+    private func ownEntries(among entries: Set<EntryHash>, inRoomsWith person: ParticipantID) -> Set<EntryHash> {
+        guard let me = enrolment?.identity.id else { return [] }
         let held = entriesByHash
-        let theirs = entries.filter { hash in
+        return entries.filter { hash in
             guard let entry = held[hash], entry.author == me, let room = entry.room else { return false }
             return roster(of: room).members.contains(person)
         }
-        guard !theirs.isEmpty else { return }
-        persisted.notCollected[person, default: []].formUnion(theirs)
     }
 
     private func settleWhatWasSent(
@@ -573,7 +585,8 @@ extension AppSession {
                     if missing.isEmpty { confirmAnnouncement(packet) }
                     persisted.outstandingPackets[packet] = nil
                     persisted.packetsWritten[packet] = nil
-                    noteWhetherCollected(entries, by: record.to, collected: missing.isEmpty)
+                    noteWhetherCollected(
+                        entries, by: record.to, collected: missing.isEmpty, storedAt: record.receiptStoredAt)
                 } catch {
                     Diagnostics.sync.error(
                         "mailbox: could not take back a packet everybody has (\(String(describing: error), privacy: .public))")

@@ -15,6 +15,8 @@ public struct MessageDetailView: View {
     @State private var problem: String?
     @State private var reporting = false
 
+    private let formatter = RelativeTimestampFormatter()
+
     public init(
         message: Message, actions: MessageActions, readers: [ReadBy] = [], isSolo: Bool = false
     ) {
@@ -35,12 +37,13 @@ public struct MessageDetailView: View {
                     .italic(message.isWithdrawn)
             } header: {
                 Text("Message", bundle: .module).sectionHeading()
+            } footer: {
+                sentAndEdited
             }
             .groupedRowSurface()
             // COPY END 4d6bfd04
 
             delivery
-            readBy
             history
             acts
         }
@@ -81,56 +84,36 @@ public struct MessageDetailView: View {
         }
     }
 
-    private var delivery: some View {
-        Section {
-            // COPY BEGIN 7b083304 [NEEDS HUMAN REVIEW]
-            row(Text("Sent", bundle: .module), value: message.sentAt.formatted(date: .abbreviated, time: .shortened))
-            if let editedAt = message.editedAt {
-                row(Text("Edited", bundle: .module), value: editedAt.formatted(date: .abbreviated, time: .shortened))
-            }
-            if let displayedAt = message.delivery.displayedAt {
-                row(Text("Shown on their screen", bundle: .module), value: displayedAt.formatted(date: .abbreviated, time: .shortened))
-            }
-        } header: {
-            Text("Delivery", bundle: .module).sectionHeading()
-        } footer: {
-            if message.isMine, message.delivery.displayedAt == nil {
-                Text(
-                    "A read mark appears only if somebody's device reports one. Its absence is not evidence either way.",
-                    bundle: .module)
-            }
-            // COPY END 7b083304
-        }
-        .groupedRowSurface()
+    // COPY BEGIN 7b083304 [NEEDS HUMAN REVIEW]
+    private var sentAndEdited: Text {
+        let sent = Text("Sent \(formatter.exact(message.sentAt))", bundle: .module)
+        guard let editedAt = message.editedAt else { return sent }
+        return Text("\(sent) · Edited \(formatter.exact(editedAt))", bundle: .module)
     }
+    // COPY END 7b083304
 
     @ViewBuilder
-    private var readBy: some View {
+    private var delivery: some View {
         if message.isMine, !readers.isEmpty {
-            let shown = readers.filter(\.report.wasDisplayed)
-            let quiet = readers.filter { $0.report == .doesNotReport }
-
             Section {
                 ForEach(readers) { reader in
-                    SettingsRow(
-                        icon: reader.report.wasDisplayed
-                            ? "checkmark.circle.fill" : "circle.dotted",
-                        title: Text(verbatim: reader.member.displayName),
-                        detail: detail(of: reader.report))
+                    RecipientRow(reader: reader, formatter: formatter)
                 }
             } header: {
                 // COPY BEGIN 3e540edb [NEEDS HUMAN REVIEW]
-                isSolo
-                    ? Text("Read", bundle: .module).sectionHeading()
-                    : Text("Read by", bundle: .module).sectionHeading()
+                Text("Delivery", bundle: .module).sectionHeading()
             } footer: {
-                if shown.isEmpty && quiet.count == readers.count {
-                    Text(
-                        "Everybody here has read receipts off, which is the default. These marks will never change, and that is the answer rather than a wait.",
-                        bundle: .module)
+                if readers.allSatisfy({ $0.report == .doesNotReport }) {
+                    isSolo
+                        ? Text(
+                            "Collected is when iCloud stored their phone's signed receipt for this message. They do not report when a message is shown, which is the default.",
+                            bundle: .module)
+                        : Text(
+                            "Collected is when iCloud stored each phone's signed receipt for this message. Nobody here reports when a message is shown, which is the default.",
+                            bundle: .module)
                 } else {
                     Text(
-                        "A time is when a device displayed this message, never that somebody read it.",
+                        "Collected is when iCloud stored their phone's signed receipt for this message. Shown is when a phone that reports it displayed the message, never that somebody read it.",
                         bundle: .module)
                 }
                 // COPY END 3e540edb
@@ -138,27 +121,6 @@ public struct MessageDetailView: View {
             .groupedRowSurface()
         }
     }
-
-    // COPY BEGIN 52d2b508 [NEEDS HUMAN REVIEW]
-    private func detail(of report: ReadReport) -> Text {
-        switch report {
-        case .displayed(let at):
-            Text(verbatim: at.formatted(date: .omitted, time: .shortened))
-        case .nothingYet:
-            Text("Nothing yet", bundle: .module)
-        case .doesNotReport:
-            Text("Does not report", bundle: .module)
-        case .notCollected:
-            notCollectedDetail
-        }
-    }
-    // COPY END 52d2b508
-
-    // COPY BEGIN 7591616c [NEEDS HUMAN REVIEW]
-    private var notCollectedDetail: Text {
-        Text("Not collected in ^[\(NotGone.takenBackAfterDays) day](inflect: true)", bundle: .module)
-    }
-    // COPY END 7591616c
 
     @ViewBuilder
     private var history: some View {
@@ -259,18 +221,69 @@ public struct MessageDetailView: View {
         }
         .groupedRowSurface()
     }
+}
 
-    private func row(_ label: Text, value: String) -> some View {
-        HStack {
-            label
-                .font(CarpenterFont.rowDetail)
-                .foregroundStyle(palette.primaryText)
-            Spacer()
-            Text(verbatim: value)
-                .font(CarpenterFont.rowDetail)
-                .foregroundStyle(palette.secondaryText)
+struct RecipientRow: View {
+    @Environment(\.palette) private var palette
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .footnote) private var glyph: CGFloat = 13
+
+    let reader: ReadBy
+    let formatter: RelativeTimestampFormatter
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            if !typeSize.isAccessibilitySize {
+                PersonAvatarView(member: reader.member, diameter: CarpenterMetrics.messageAvatar)
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: reader.member.displayName)
+                    .font(CarpenterFont.rowTitle)
+                    .foregroundStyle(palette.primaryText)
+                Label {
+                    collection.foregroundStyle(palette.secondaryText)
+                } icon: {
+                    DeliveryGlyph(.plane(filled: reader.collection.collectedAt != nil), size: glyph)
+                        .accessibilityHidden(true)
+                }
+                if reader.report != .doesNotReport {
+                    Label {
+                        display.foregroundStyle(palette.secondaryText)
+                    } icon: {
+                        DeliveryGlyph(.eye(filled: reader.report.wasDisplayed), size: glyph)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .font(CarpenterFont.footnote)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+    }
+
+    // COPY BEGIN 52d2b508 [NEEDS HUMAN REVIEW]
+    private var collection: Text {
+        switch reader.collection {
+        case .collected(let at):
+            Text("Collected \(formatter.exact(at))", bundle: .module)
+        case .noReceipt:
+            Text("No receipt yet", bundle: .module)
+        case .notCollected:
+            Text("Not collected in ^[\(NotGone.takenBackAfterDays) day](inflect: true)", bundle: .module)
         }
     }
+
+    private var display: Text {
+        switch reader.report {
+        case .displayed(let at):
+            Text("Shown \(formatter.exact(at))", bundle: .module)
+        case .nothingYet, .doesNotReport:
+            Text("Not shown yet", bundle: .module)
+        }
+    }
+    // COPY END 52d2b508
 }
 
 public struct MessageActions: Sendable {

@@ -2779,6 +2779,47 @@ which to draw. Nothing orders history by a clock; `CausalOrder` does that.
 
 <!-- COPY END 5def8c6a -->
 
+<!-- COPY BEGIN 644ab578 [NEEDS HUMAN REVIEW] -->
+
+### Each person's collected time is when iCloud stored their receipt
+
+`PROPOSED` — Claude, 2026-11-05, building Griff's request that message detail list each member with
+their delivery mark and the time they received it.
+
+Message detail lists everybody else in the room, or the one person in a solo. Each row shows the
+paper plane, filled once that person collected the message, with the time; and, only for somebody
+who reports when a message is shown, the eye with that time. The marks are the bubble's own symbols
+(`DeliveryGlyph` draws both), so the two never disagree about what a filled plane means.
+
+**What a time is.** A recipient signs for a packet by writing a receipt record into their own space
+for the sender. When the sender's round finds every receipt the packet needs and takes the packet
+back, it keeps, for each of its own messages in that packet, the time iCloud stored that receipt
+(`PersistedState.collectedAt`, earliest wins). It is iCloud's time, so the recipient cannot choose
+it and neither device's clock is in it. Nothing else lights the plane: a row shows *No receipt yet*
+until this device has seen that person's receipt, and *Not collected in 9 days* once the copy was
+taken back. A message sent from another of the member's devices, or before 2026-11-05, has no
+receipt on this device and says so, even where the bubble's mark is filled, because the bubble's
+rule is "nothing is still waiting in iCloud", which is a different and weaker fact.
+
+**Why per message and not per packet.** The question the screen asks is about one message, and a
+message can travel in more than one packet (a resend, history sent to somebody who joined later).
+Keeping the earliest time per message answers it directly; keeping packets would need the packet
+contents kept forever to answer it.
+
+**The bound.** One date per message this device wrote, per person in the room it was written in. A
+receipt can only add a date for an entry the device wrote itself, in a room that person is in
+(`WhenEachPersonCollectedItTests`), so nothing a peer sends can grow it beyond what this device
+holds. It grows with the member's own history: 76 bytes of encoded state per person per message,
+measured on 2026-11-05 before the state is sealed, so 10,000 messages in a room of five is about
+3 MB rewritten whenever the state is saved. That is the cost, and a separate document for these
+times is what would change it if it shows up in a profile.
+
+**Not verified on the rig.** The receipt record's stored time is CloudKit's `creationDate`, which
+CloudKit keeps through a rewrite. The fake models that, and the suite holds the rule; it has not
+run over real iCloud.
+
+<!-- COPY END 644ab578 -->
+
 <!-- COPY BEGIN 73c8ed6d [NEEDS HUMAN REVIEW] -->
 
 ### A message is only pending when nobody has it
@@ -5275,6 +5316,79 @@ corrected rather than the control.
 **What it costs.** Apple's audit will go on flagging every disabled prominent button.
 
 <!-- COPY END bd8650f0 -->
+
+<!-- COPY BEGIN 75aaa449 [NEEDS HUMAN REVIEW] -->
+
+### Letting somebody in happens on the card with the characters, never in a menu
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 1.
+
+The members list offered *Let them in* and *Do not let them in* in the long-press menu of an invited
+person, with no characters on screen and no confirmation, one press from giving somebody everything
+the room has ever held. [Context menus](https://developer.apple.com/design/human-interface-guidelines/context-menus)
+says a context menu is hidden by default and its items must also be in the main interface. The
+question that guidance turns on is what the main interface for this decision is, and here the answer
+is the check itself: the characters, read to each other, and the consequence. So tapping an invited
+person opens the same card the join screen draws (`JoinCheckCard`), with Refuse and Admit under the
+characters, and the menu keeps only *Show the characters* and *Take back the invitation*, both of
+which the card also offers. The card now says to admit only if the characters on their screen match.
+
+The same reasoning moved *Remove from room* and *Block everywhere* onto the person's page reached by
+tapping a member, as Mail puts its message menu's commands in the message view; the menu keeps them
+as the shortcut.
+
+**What it costs.** One more tap to let somebody in. That tap is the check.
+
+<!-- COPY END 75aaa449 -->
+
+<!-- COPY BEGIN 1b36147d [NEEDS HUMAN REVIEW] -->
+
+### A problem raised under a sheet is shown on the sheet
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 9.
+
+The app's one problem alert was attached to the root view. SwiftUI presents an alert from the view
+it is attached to, and a view with a sheet over it cannot present one, so a failed admission from the
+join sheet, or a failed removal from the members sheet, was not shown while the member was looking
+at it. The problem now travels in the environment (`reportedProblem`), and the members and join
+sheets present it themselves (`presentingReportedProblems()`); the root still presents it when
+nothing is over it.
+
+**What it costs.** A sheet that should show failures has to opt in with one modifier. The two that
+decide who is in a room do.
+
+<!-- COPY END 1b36147d -->
+
+<!-- COPY BEGIN 8e62b07f [NEEDS HUMAN REVIEW] -->
+
+### A small control keeps its drawing and gains a 44-point reach
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 12.
+
+[Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility) gives
+44 by 44 points as the default size for a control on iOS and 28 by 28 as the minimum. The staged
+photo's remove button was 22 points, the send arrows 30, and the post composer's format buttons 38 by
+34. Each keeps the size it is drawn at and its hit area grows to 44 (`reachable(width:height:)`),
+because growing the drawing would make the composer taller than the field it holds. Neighbouring
+format buttons are 8 points apart, so their reaches overlap by at most 2 points.
+
+<!-- COPY END 8e62b07f -->
+
+<!-- COPY BEGIN 61411125 [NEEDS HUMAN REVIEW] -->
+
+### Signed out and restricted are told apart from offline
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 6.
+
+The account check read CloudKit's `notAuthenticated` and `managedAccountRestricted` as offline, so a
+signed-out member was told to check their connection. They are now their own answers
+(`AccountOccupancy.signedOut`, `.restricted`) with their own words and an *Open Settings* button. An
+app can only open its own page in Settings, not the Apple Account at the top, so the words say where
+to sign in.
+
+**What it costs.** One tap back from the app's page to the top of Settings.
+
+<!-- COPY END 61411125 -->
 
 <!-- COPY BEGIN fa3b6480 [NEEDS HUMAN REVIEW] -->
 

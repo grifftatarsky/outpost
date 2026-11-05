@@ -182,7 +182,7 @@ public struct DeviceListView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(confirming) { device in
                             HStack(spacing: 10) {
-                                Image(systemName: "desktopcomputer")
+                                Image(systemName: "iphone")
                                     .foregroundStyle(palette.tertiaryText)
                                     .accessibilityHidden(true)
                                 Text(verbatim: name(of: device))
@@ -251,7 +251,7 @@ public struct DeviceListView: View {
 
     private func row(_ device: DeviceSummary) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: device.isCurrent ? "iphone" : "desktopcomputer")
+            Image(systemName: "iphone")
                 .font(.title3)
                 .foregroundStyle(device.isActive ? palette.accentColor : palette.quaternaryText)
                 .frame(width: 28)
@@ -326,6 +326,7 @@ public struct DeviceListView: View {
         }
         .padding(.vertical, 4)
         .opacity(device.isActive ? 1 : 0.6)
+        .accessibilityElement(children: .combine)
     }
 }
 

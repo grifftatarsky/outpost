@@ -151,17 +151,13 @@ extension RootView {
                         onBlock: messageActions.block.map { block in { person in await block(person) } },
                         onRescind: roomStanding(room).mayWrite
                             ? { person in await onRescindInvitation(room, person) } : nil,
+                        joins: pendingJoins(room),
                         onDecide: roomStanding(room).mayWrite
-                            ? { person, admit in
-                                guard let join = pendingJoins(room).first(where: { $0.id == person })
-                                else { return }
-                                await onDecideJoin(room, join, admit)
-                            } : nil
+                            ? { join, admit in await onDecideJoin(room, join, admit) } : nil,
+                        personPage: { person, actions in personPage(person, actions: actions) }
                     )
-                    .navigationDestination(for: PersonRoute.self) { route in
-                        personDestination(route)
-                    }
                 }
+                .presentingReportedProblems()
                 .environment(\.leavingThisRoom, leaving(room))
             }
             .sheet(item: $starting) { room in
@@ -239,6 +235,7 @@ extension RootView {
                         await onDecideJoin(room, join, admit)
                     }
                 )
+                .presentingReportedProblems()
             }
         }
     }

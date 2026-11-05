@@ -5,6 +5,7 @@ public enum SessionProblem {
     public static func sentence(for error: any Error) -> String {
         if let membership = error as? MembershipError { return sentence(for: membership) }
         if let mailbox = error as? MailboxFailure { return sentence(for: mailbox) }
+        if isOutOfSpace(error) { return outOfSpace }
         guard let refusal = error as? AppSessionError else { return error.localizedDescription }
 
         switch refusal {
@@ -82,6 +83,23 @@ public enum SessionProblem {
             // COPY END 1248d4d6
         }
     }
+
+    private static func isOutOfSpace(_ error: any Error) -> Bool {
+        let found = error as NSError
+        switch found.domain {
+        case NSCocoaErrorDomain: return found.code == CocoaError.fileWriteOutOfSpace.rawValue
+        case NSPOSIXErrorDomain: return found.code == Int(ENOSPC)
+        default: return false
+        }
+    }
+
+    // COPY BEGIN ced31827 [NEEDS HUMAN REVIEW]
+    private static var outOfSpace: String {
+        String(
+            localized: "This phone is out of space, so the app could not write down what it keeps. Free some space in Settings, then try again.",
+            bundle: .module, comment: "The device's storage is full")
+    }
+    // COPY END ced31827
 
     // COPY BEGIN 9b7ca357 [NEEDS HUMAN REVIEW]
     public static func sentence(for refusal: MailboxFailure) -> String {

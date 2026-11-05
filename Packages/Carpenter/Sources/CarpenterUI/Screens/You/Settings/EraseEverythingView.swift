@@ -24,7 +24,7 @@ public struct EraseEverythingView: View {
                         Text("Your member identity and every room key are erased from this device.", bundle: .module))
                     fact(
                         "icloud",
-                        Text("Every feed, every packet and every photo in flight that this Apple Account holds in iCloud is deleted.", bundle: .module))
+                        Text("Everything this app keeps in your iCloud is deleted, including messages and photos nobody has collected yet.", bundle: .module))
                     fact(
                         "internaldrive",
                         Text("Your history on this device goes with it, photos and clips included.", bundle: .module))
@@ -97,7 +97,7 @@ public struct EraseEverythingView: View {
                 Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
             } message: {
                 Text(
-                    "Your identity goes from this device. Your other devices keep theirs until you erase them too. There is no undo and nobody can restore this for you.",
+                    "This device erases now. Your other devices erase themselves when they next reach iCloud, and one that never does keeps what it has. There is no undo.",
                     bundle: .module)
             // COPY END a12e6eb2
             }

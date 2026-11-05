@@ -290,14 +290,9 @@ public struct RedeemInviteView: View {
                     rejected += 1
                 } label: {
                     Text("They do not match", bundle: .module)
-                        .font(CarpenterFont.button)
-                        .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                        .background(
-                            palette.elevatedSurface,
-                            in: .rect(
-                                cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                        .primaryAction()
                 }
-                .foregroundStyle(palette.primaryText)
+                .quietActionButton()
                 .disabled(accepting)
                 // COPY END 92be2316
 
@@ -322,11 +317,11 @@ public struct RedeemInviteView: View {
 
             // COPY BEGIN 38a05363 [NEEDS HUMAN REVIEW]
             Text(
-                "Confirming tells them the characters matched and opens the way to their outbox. The room appears once whoever is in it has let you in.",
+                "Confirming tells them the characters matched, and lets your phone collect what they send you. The room appears once whoever is in it has let you in.",
                 bundle: .module
             )
-            .font(CarpenterFont.caption)
-            .foregroundStyle(palette.quaternaryText)
+            .font(CarpenterFont.footnote)
+            .foregroundStyle(palette.secondaryText)
             // COPY END 38a05363
         }
     }

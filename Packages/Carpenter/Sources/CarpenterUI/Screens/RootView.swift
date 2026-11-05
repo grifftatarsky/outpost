@@ -75,7 +75,7 @@ public struct RootView: View {
     let outpostAuthors: [Member]
     let onReact: (OutpostPost, String?) async -> Void
     let comments: (OutpostPost) -> [OutpostComment]
-    let onComment: (OutpostPost, String) async -> Void
+    let onComment: (OutpostPost, String) async -> String?
     let onAttachPost: (([PickedMedia], String?) async -> String?)?
     let postActions: PostActions
     let onReactToComment: (OutpostComment, String?) async -> Void
@@ -224,7 +224,7 @@ public struct RootView: View {
         outpostAuthors: [Member] = [],
         onReact: @escaping (OutpostPost, String?) async -> Void = { _, _ in },
         comments: @escaping (OutpostPost) -> [OutpostComment] = { _ in [] },
-        onComment: @escaping (OutpostPost, String) async -> Void = { _, _ in },
+        onComment: @escaping (OutpostPost, String) async -> String? = { _, _ in nil },
         onAttachPost: (([PickedMedia], String?) async -> String?)? = nil,
         postActions: PostActions = PostActions(),
         onReactToComment: @escaping (OutpostComment, String?) async -> Void = { _, _ in },

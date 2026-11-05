@@ -59,11 +59,7 @@ extension AppRootView {
             },
             comments: { session.comments(on: $0) },
             onComment: { post, text in
-                // COPY BEGIN de96aee0 [NEEDS HUMAN REVIEW]
-                await attempting(
-                    String(localized: "That comment did not go through"), "comment"
-                ) { try await session.comment(on: post, text: text) }
-                // COPY END de96aee0
+                await reporting("comment") { try await session.comment(on: post, text: text) }
             },
             onAttachPost: { picked, caption in await post(picked, caption: caption) },
             postActions: PostActions(
@@ -243,9 +239,14 @@ extension AppRootView {
             onDecideJoin: { room, join, admit in
                 let candidates =
                     session.pendingJoins(in: room) + session.awaitingConfirmation(in: room)
-                guard let attestation = candidates.first(where: { $0.joiner == join.id })
-                else { return }
                 // COPY BEGIN 364edb99 [NEEDS HUMAN REVIEW]
+                guard let attestation = candidates.first(where: { $0.joiner == join.id }) else {
+                    problem = ActionProblem(
+                        title: String(localized: "That answer did not go through"),
+                        detail: String(
+                            localized: "That invitation is no longer waiting for an answer: it was answered, taken back or ran out."))
+                    return
+                }
                 await attempting(
                     String(localized: "That answer did not go through"), "answer a join"
                 ) {

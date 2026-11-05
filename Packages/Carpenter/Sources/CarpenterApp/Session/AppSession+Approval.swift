@@ -7,11 +7,14 @@ extension AppSession {
     func noteRequest(_ record: SiblingRecord) {
         guard let enrolment, let request = DeviceRequest(record: record) else { return }
         let registry = replica.registry(for: enrolment.identity.id)
+        let storedAt = record.modified ?? .distantPast
         guard request.device != enrolment.device.id,
             registry?.standing(of: request.device) == nil,
-            !declinedDeviceRequests.contains(request.device),
+            declinedDeviceRequests[request.device].map({ storedAt > $0 }) ?? true,
             !deviceRequests.contains(request)
         else { return }
+        declinedDeviceRequests[request.device] = nil
+        deviceRequestsStoredAt[request.device] = storedAt
         deviceRequests.append(request)
         Diagnostics.identity.notice(
             "approval: a new device asked to join (\(request.code, privacy: .public))")
@@ -41,7 +44,7 @@ extension AppSession {
 
     public func declineDevice(_ request: DeviceRequest) async {
         deviceRequests.removeAll { $0 == request }
-        declinedDeviceRequests.insert(request.device)
+        declinedDeviceRequests[request.device] = deviceRequestsStoredAt[request.device] ?? .distantFuture
         do {
             try await deviceSync?.send(
                 [], deleting: [SiblingRecord.Name(writer: request.device, kind: .request)])

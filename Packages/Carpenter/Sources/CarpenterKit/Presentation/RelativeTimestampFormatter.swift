@@ -57,6 +57,14 @@ public struct RelativeTimestampFormatter: Sendable {
     }
     // COPY END afbe82eb
 
+    public func exact(_ date: Date, now: Date = Date()) -> String {
+        if elapsedDays(from: date, to: now) == 0 { return format(date, .dateTime.hour().minute()) }
+        if calendar.component(.year, from: date) == calendar.component(.year, from: now) {
+            return format(date, .dateTime.month(.abbreviated).day().hour().minute())
+        }
+        return format(date, .dateTime.year().month(.abbreviated).day().hour().minute())
+    }
+
     private func elapsedDays(from date: Date, to now: Date) -> Int {
         let start = calendar.startOfDay(for: date)
         let end = calendar.startOfDay(for: now)

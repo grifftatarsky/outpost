@@ -62,7 +62,7 @@ struct AMessageNobodyCollectedTests {
         let waiting = try #require(alice.waitingOn(in: room).first { $0.id == bobID })
         #expect(waiting.holding == .missing(1), "the waiting-on list said Bob has everything: \(waiting.holding)")
         #expect(waiting.takenBack == 1)
-        #expect(alice.readBy(message, in: room).first { $0.id == bobID }?.report == .notCollected)
+        #expect(alice.readBy(message, in: room).first { $0.id == bobID }?.collection == .notCollected)
     }
 
     @Test("A copy that reaches them later and is signed for moves the mark on to collected")
@@ -77,7 +77,7 @@ struct AMessageNobodyCollectedTests {
         try await alice.sync(through: mailbox)
         let mark = try #require(alice.messages(in: room).first { $0.id == message }?.delivery)
         #expect(mark.isCollected, "Bob signed for the second copy and the bubble still said \(mark)")
-        #expect(alice.readBy(message, in: room).allSatisfy { $0.report != .notCollected })
+        #expect(alice.readBy(message, in: room).allSatisfy { $0.collection != .notCollected })
     }
 
     @Test("Not collected survives a relaunch")

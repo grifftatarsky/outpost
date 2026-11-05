@@ -275,6 +275,7 @@ extension ConversationView {
                             .foregroundStyle(.white)
                             .frame(width: 30, height: 30)
                             .background(palette.accentFill, in: .circle)
+                            .reachable(width: 30, height: 30)
                     }
                     .accessibilityLabel(Text("Send", bundle: .module))
                     .padding(.trailing, 4)
@@ -345,6 +346,7 @@ extension ConversationView {
                     .foregroundStyle(palette.primaryText)
                     .frame(width: 22, height: 22)
                     .background(palette.neutralFillStrong, in: Circle())
+                    .reachable(width: 22, height: 22)
             }
             .buttonStyle(.plain)
             .offset(x: 6, y: -6)

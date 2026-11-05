@@ -530,6 +530,20 @@ the system's permission prompts are not there, and neither is anything that need
 
 <!-- COPY END 84215733 -->
 
+<!-- COPY BEGIN 684b47db [NEEDS HUMAN REVIEW] -->
+
+`UXFindingsTests` opens the copy shots (`--copy-shot <name>`) behind the UX fixes of 2026-11-05 and
+taps through them: admitting somebody is never in a long-press menu, removing somebody is on their
+page, the erase alert agrees with the page under it, and each person in message detail is one
+VoiceOver stop with their collected and shown times. It also photographs every screen those fixes
+touched, and four of them at the largest text size. It runs on any simulator, no account needed:
+
+```bash
+xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=<udid>' -only-testing:CarpenterUITests/UXFindingsTests -resultBundlePath /tmp/ux.xcresult
+```
+
+<!-- COPY END 684b47db -->
+
 <!-- COPY BEGIN 20da20a2 [NEEDS HUMAN REVIEW] -->
 
 ## The copy slideshow
