@@ -1377,6 +1377,14 @@ counts only when `LAContext.domainState.biometry.stateHash` matches the one take
 turned on or the code was last entered, so a face enrolled since, by somebody who knows the phone's
 passcode, does not open it.
 
+The fields the code is typed into declare no content type (since 2026-11-05). They used to say
+`.password` and `.newPassword`, which tells iOS's password AutoFill the field holds an account
+password and invites it to offer saving the code to the Passwords app, and from there to iCloud
+Keychain, where the phone's passcode opens it: the one thing the app's code exists to be different
+from. A secure field already keeps what is typed out of the keyboard's learned words. Whether iOS
+still shows its Passwords key above the keyboard on a secure field with no type has not been looked
+at on a phone; the lint refuses either type coming back.
+
 **What it does not do.** Somebody who can read the phone's storage directly, with a forensic tool or
 a modified app, is not stopped by it: the store is protected by iOS's file protection and the
 keychain, as it is without the lock. A 4-digit code's verifier could be tried against all 10,000

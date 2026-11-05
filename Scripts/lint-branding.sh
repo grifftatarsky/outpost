@@ -400,6 +400,18 @@ if [ -n "$scratch" ]; then
     report "error: a file is written to the temporary directory outside ScratchSpace:" "$scratch"
 fi
 
+# No field asks to be treated as an account password (2026-11-05). The app lock's fields said
+#     .password and .newPassword, which invites password AutoFill to offer saving the app's code to
+#     the Passwords app and iCloud Keychain, where the phone's passcode opens it. The app has no
+#     account passwords, so neither type has a use anywhere.
+password_fields=$(
+    # shellcheck disable=SC2086
+    grep -nE 'textContentType\(\.(password|newPassword)\)' $sources 2>/dev/null
+)
+if [ -n "$password_fields" ]; then
+    report "error: a field asks password AutoFill to keep what is typed in it:" "$password_fields"
+fi
+
 # No Siri and no Apple Intelligence (Griff, 2026-09-27). The notification extension donated every
 #     banner to Siri as an INSendMessageIntent, which put the sender and conversation into the
 #     system's interaction store, outside anything the app seals; erasing never removed it. Nothing

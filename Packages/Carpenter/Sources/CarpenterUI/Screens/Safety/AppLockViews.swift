@@ -52,7 +52,6 @@ public struct AppLockScreen: View {
                 #if !os(macOS)
                     .keyboardType(isDigits ? .numberPad : .default)
                 #endif
-                .textContentType(.password)
                 .multilineTextAlignment(.center)
                 .font(.title3.monospaced())
                 .padding(.vertical, 12)
@@ -325,7 +324,6 @@ public struct AppLockSetupView: View {
                 #if !os(macOS)
                     .keyboardType(kind == .digits ? .numberPad : .default)
                 #endif
-                .textContentType(.newPassword)
                 .focused($focus, equals: .code)
                 SecureField(text: $again) {
                     Text("Again", bundle: .module)
@@ -333,7 +331,6 @@ public struct AppLockSetupView: View {
                 #if !os(macOS)
                     .keyboardType(kind == .digits ? .numberPad : .default)
                 #endif
-                .textContentType(.newPassword)
                 .focused($focus, equals: .again)
                 if let biometricName {
                     Toggle(isOn: $biometrics) {
