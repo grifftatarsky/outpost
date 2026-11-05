@@ -290,14 +290,9 @@ public struct RedeemInviteView: View {
                     rejected += 1
                 } label: {
                     Text("They do not match", bundle: .module)
-                        .font(CarpenterFont.button)
-                        .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                        .background(
-                            palette.elevatedSurface,
-                            in: .rect(
-                                cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                        .primaryAction()
                 }
-                .foregroundStyle(palette.primaryText)
+                .quietActionButton()
                 .disabled(accepting)
                 // COPY END 92be2316
 

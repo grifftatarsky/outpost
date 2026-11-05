@@ -74,14 +74,9 @@ public struct RegistrationStalledView: View {
             if let onRestore, offersARecoveryKey {
                 Button(action: onRestore) {
                     Text("I have a recovery key", bundle: .module)
-                        .font(CarpenterFont.button)
-                        .foregroundStyle(palette.accentColor)
-                        .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                        .background(
-                            palette.elevatedSurface,
-                            in: .rect(cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                        .primaryAction()
                 }
-                .buttonStyle(.plain)
+                .quietActionButton()
                 .padding(.horizontal, 32)
             }
             // COPY END c1d22f7a

@@ -146,14 +146,9 @@ public struct OnboardingView: View {
 
                 // COPY BEGIN d9057934 [HUMAN REVIEWED, UNVERIFIED]
                 Button(action: redeemInvite) {
-                    Text("I have an invite", bundle: .module)
-                        .font(CarpenterFont.button)
-                        .foregroundStyle(palette.accentColor)
-                        .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                        .background(
-                            palette.elevatedSurface,
-                            in: .rect(cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                    Text("I have an invite", bundle: .module).primaryAction()
                 }
+                .quietActionButton()
                 // COPY END d9057934
 
                 // COPY BEGIN ca234160 [NEEDS HUMAN REVIEW]

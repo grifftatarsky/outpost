@@ -71,14 +71,9 @@ public struct InviteView: View {
                     // COPY BEGIN 6e5181ef [NEEDS HUMAN REVIEW]
                     ShareLink(item: shareable) {
                         Text("Send the invite", bundle: .module)
-                            .font(CarpenterFont.button)
-                            .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                            .background(
-                                palette.elevatedSurface,
-                                in: .rect(
-                                    cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                            .primaryAction()
                     }
-                    .foregroundStyle(palette.primaryText)
+                    .quietActionButton()
                     // COPY END 6e5181ef
 
                     // COPY BEGIN b0a732df [NEEDS HUMAN REVIEW]

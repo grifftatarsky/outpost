@@ -79,15 +79,10 @@ struct JoinCheckCard: View {
                     (join.isAlreadyIn
                         ? Text("Does not match", bundle: .module)
                         : Text("Refuse", bundle: .module))
-                        .font(CarpenterFont.button)
-                        .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                        .background(
-                            palette.neutralFill,
-                            in: .rect(
-                                cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                        .primaryAction()
                     // COPY END cbfa08f3
                 }
-                .foregroundStyle(palette.primaryText)
+                .quietActionButton()
 
                 // COPY BEGIN f427f1b3 [NEEDS HUMAN REVIEW]
                 Button {
