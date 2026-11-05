@@ -123,6 +123,18 @@ struct PeopleView: View {
     }
 }
 
+public struct PersonActions {
+    public let roomName: String
+    public let remove: (() -> Void)?
+    public let block: (() -> Void)?
+
+    public init(roomName: String, remove: (() -> Void)?, block: (() -> Void)?) {
+        self.roomName = roomName
+        self.remove = remove
+        self.block = block
+    }
+}
+
 public struct PersonDetailView: View {
     @Environment(\.palette) private var palette
     @Environment(\.personAvatars) private var personAvatars
@@ -132,6 +144,7 @@ public struct PersonDetailView: View {
     let sharedName: String?
     let onNicknameChange: ((ParticipantID, String?) async -> Void)?
     let onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)?
+    let actions: PersonActions?
 
     @State private var name: String
     @State private var picked: PhotosPickerItem?
@@ -141,8 +154,10 @@ public struct PersonDetailView: View {
     public init(
         connection: Connection, nickname: String?, sharedName: String?,
         onNicknameChange: ((ParticipantID, String?) async -> Void)?,
-        onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)?
+        onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)?,
+        actions: PersonActions? = nil
     ) {
+        self.actions = actions
         self.connection = connection
         self.sharedName = sharedName
         self.onNicknameChange = onNicknameChange
@@ -242,6 +257,30 @@ public struct PersonDetailView: View {
                 // COPY END 68c955a2
             }
             .groupedRowSurface()
+
+            if let actions {
+                Section {
+                    // COPY BEGIN 47d51f57 [NEEDS HUMAN REVIEW]
+                    if let remove = actions.remove {
+                        Button(role: .destructive, action: remove) {
+                            SettingsRow(
+                                icon: "person.slash", tone: .destructive,
+                                title: Text("Remove from \(actions.roomName)", bundle: .module))
+                        }
+                        .tint(palette.destructive)
+                    }
+                    if let block = actions.block {
+                        Button(role: .destructive, action: block) {
+                            SettingsRow(
+                                icon: "hand.raised", tone: .destructive,
+                                title: Text("Block everywhere", bundle: .module))
+                        }
+                        .tint(palette.destructive)
+                    }
+                    // COPY END 47d51f57
+                }
+                .groupedRowSurface()
+            }
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)

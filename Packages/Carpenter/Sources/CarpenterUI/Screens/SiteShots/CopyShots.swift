@@ -56,6 +56,9 @@
         case removeMember = "remove-member"
         case checkingRegistration = "checking-registration"
         case approveDevice = "approve-device"
+        case membersCheck = "members-check"
+        case personActions = "person-actions"
+        case stalledSignedOut = "stalled-signed-out"
         case dataProblem = "data-problem"
 
         public static let argument = "--copy-shot"

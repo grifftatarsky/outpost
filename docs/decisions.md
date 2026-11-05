@@ -5083,6 +5083,30 @@ corrected rather than the control.
 
 <!-- COPY END bd8650f0 -->
 
+<!-- COPY BEGIN 75aaa449 [NEEDS HUMAN REVIEW] -->
+
+### Letting somebody in happens on the card with the characters, never in a menu
+
+`PROPOSED` — Claude, 2026-11-05, fixing UX finding 1.
+
+The members list offered *Let them in* and *Do not let them in* in the long-press menu of an invited
+person, with no characters on screen and no confirmation, one press from giving somebody everything
+the room has ever held. [Context menus](https://developer.apple.com/design/human-interface-guidelines/context-menus)
+says a context menu is hidden by default and its items must also be in the main interface. The
+question that guidance turns on is what the main interface for this decision is, and here the answer
+is the check itself: the characters, read to each other, and the consequence. So tapping an invited
+person opens the same card the join screen draws (`JoinCheckCard`), with Refuse and Admit under the
+characters, and the menu keeps only *Show the characters* and *Take back the invitation*, both of
+which the card also offers. The card now says to admit only if the characters on their screen match.
+
+The same reasoning moved *Remove from room* and *Block everywhere* onto the person's page reached by
+tapping a member, as Mail puts its message menu's commands in the message view; the menu keeps them
+as the shortcut.
+
+**What it costs.** One more tap to let somebody in. That tap is the check.
+
+<!-- COPY END 75aaa449 -->
+
 <!-- COPY BEGIN fa3b6480 [NEEDS HUMAN REVIEW] -->
 
 ### The accent retint fades, and the tab bar leads it

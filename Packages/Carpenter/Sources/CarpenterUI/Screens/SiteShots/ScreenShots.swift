@@ -13,7 +13,25 @@
                         roomName: Fixtures.hangar7.name,
                         members: [Fixtures.cassilda, Fixtures.hastur, Fixtures.camilla],
                         invited: invited, viewer: Fixtures.cassilda.id, onRemove: { _ in }, onInvite: {},
-                        onBlock: { _ in }, onRescind: { _ in }, onDecide: { _, _ in })
+                        onBlock: { _ in }, onRescind: { _ in }, joins: [join], onDecide: { _, _ in },
+                        personPage: { person, actions in
+                            PersonDetailView(
+                                connection: Connection(
+                                    person: [Fixtures.cassilda, Fixtures.hastur, Fixtures.camilla]
+                                        .first { $0.id == person } ?? .placeholder(person),
+                                    sharedRooms: 1, seesTheirOutpost: false),
+                                nickname: nil, sharedName: nil, onNicknameChange: nil, onPersonAvatarChange: nil,
+                                actions: actions)
+                        })
+                }
+            case .membersCheck:
+                InvitedPersonSheet(person: invited[0], join: join, onDecide: { _, _ in }, onRescind: {})
+            case .personActions:
+                NavigationStack {
+                    PersonDetailView(
+                        connection: Fixtures.connections[0], nickname: nil, sharedName: "Hastur",
+                        onNicknameChange: nil, onPersonAvatarChange: nil,
+                        actions: PersonActions(roomName: Fixtures.hangar7.name, remove: {}, block: {}))
                 }
             case .joinCheck:
                 JoinRequestsView(roomName: Fixtures.hangar7.name, joins: { [join] }, onDecide: { _, _ in })
