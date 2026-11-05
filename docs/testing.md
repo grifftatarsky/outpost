@@ -120,8 +120,9 @@ Secure Enclave is available before looking for the key, and `SecureEnclaveKeys.a
 key first, so a missing key and an unavailable enclave come back as different errors in the two.
 `StubAccountRegistry` answers whatever it is built with, and the mapping from CloudKit errors to an
 answer is tested on its own in `AccountCheckErrorTests`, which is the right split. And
-`InMemoryEntrySync` lives in `CarpenterKit`, not `CarpenterKitTesting`, so the fake is compiled into
-the app that ships; nothing in the app uses it.
+`InMemoryEntrySync` used to live in `CarpenterKit`, so the fake was compiled into the app that ships
+though nothing in the app used it. It lives in `CarpenterKitTesting` with the other fakes now, and
+`Scripts/check-release-leaves.sh` looks for its name in a Release binary.
 
 **Coverage**, from `swift test --enable-code-coverage` and `llvm-cov`, by lines and by functions:
 
