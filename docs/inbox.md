@@ -393,6 +393,14 @@ stuck behind a sheet.
 
 <!-- COPY END 53ec92bc -->
 
+<!-- COPY BEGIN e43ece3d [NEEDS HUMAN REVIEW] -->
+
+**The reaction bar stays on screen after Details opens.** Holding a message shows the row of
+reactions above its menu; choosing Details pushes the detail page and the row is still drawn over it.
+Seen on bullet 2026-11-05 at 19:20, once. Not chased.
+
+<!-- COPY END e43ece3d -->
+
 <!-- COPY BEGIN 6444fc57 [NEEDS HUMAN REVIEW] -->
 
 ## Accessibility

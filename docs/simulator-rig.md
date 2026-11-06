@@ -407,9 +407,20 @@ new one, and the link to the new one can only reach Ada through a space of Bea's
 a room of two there is none. The fix is in [Decisions](decisions.md#blocking-takes-a-person-off-your-space-and-you-off-theirs).
 Screenshots are in the session's `rig-shots/blocking/base-*`.
 
-**The fix has not run on the rig.** Both accounts were reset again at 01:49 for a fresh pair. At
-06:31 bullet asked for its Apple Account password and iPhone 17 offered to approve the device for a
-member the account held again, so neither could start a member.
+**On the build of `overnight-2026-10-31` with the fix and post-quantum phase 1, at 19:03.** Both
+accounts reset at 18:44 and the app installed fresh. Ada (bullet) and Bea (iPhone 17) onboarded,
+Ada invited Bea to a room of two, both screens read `ABVQ46VT39`, and a message crossed each way.
+Bea blocked Ada from Ada's page at 19:17:21; within four seconds her log read `took 1 reader(s) off
+a space` and `left 1 space(s) of somebody blocked`, and her rounds showed `peers=0`. Ada wrote
+*Ada during block* at 19:17:42. Bea unblocked at about 19:18:53, her log read `named the reader of
+a space` at 19:19:07, and *Ada during block* arrived on her screen. Bea wrote *Bea after unblock*
+at 19:19:33 and Ada's round at 19:19:38 collected it. Message detail on Ada's phone showed Bea with
+a filled plane and *Collected 7:19 PM*. One run, not repeated. Screenshots are in the session's
+`rig-shots/merged/`.
+
+The same run found Block on a person's page did nothing: its confirmation was attached to the
+members list underneath, which cannot present while the page is pushed over it. Fixed in the same
+build before the block above.
 
 Ringing could not be measured either way here: a push from the other account has never reached a
 simulator on this rig (see [What a simulator can actually do](#what-a-simulator-can-actually-do)), so "no banner" on a
