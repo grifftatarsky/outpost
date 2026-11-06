@@ -31,7 +31,7 @@
                     PersonDetailView(
                         connection: Fixtures.connections[0], nickname: nil, sharedName: "Hastur",
                         onNicknameChange: nil, onPersonAvatarChange: nil,
-                        actions: PersonActions(roomName: Fixtures.hangar7.name, remove: {}, block: {}))
+                        actions: PersonActions(roomName: Fixtures.hangar7.name, remove: { _ in }, block: { _ in }))
                 }
             case .joinCheck:
                 JoinRequestsView(roomName: Fixtures.hangar7.name, joins: { [join] }, onDecide: { _, _ in })

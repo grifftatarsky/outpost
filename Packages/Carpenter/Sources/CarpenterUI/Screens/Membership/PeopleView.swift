@@ -125,10 +125,12 @@ struct PeopleView: View {
 
 public struct PersonActions {
     public let roomName: String
-    public let remove: (() -> Void)?
-    public let block: (() -> Void)?
+    public let remove: ((ParticipantID) async -> Void)?
+    public let block: ((ParticipantID) async -> Void)?
 
-    public init(roomName: String, remove: (() -> Void)?, block: (() -> Void)?) {
+    public init(
+        roomName: String, remove: ((ParticipantID) async -> Void)?, block: ((ParticipantID) async -> Void)?
+    ) {
         self.roomName = roomName
         self.remove = remove
         self.block = block
@@ -150,6 +152,8 @@ public struct PersonDetailView: View {
     @State private var picked: PhotosPickerItem?
     @State private var choosing = false
     @State private var pendingSave: Task<Void, Never>?
+    @State private var removing: Member?
+    @State private var blocking: Member?
 
     public init(
         connection: Connection, nickname: String?, sharedName: String?,
@@ -261,16 +265,16 @@ public struct PersonDetailView: View {
             if let actions {
                 Section {
                     // COPY BEGIN 47d51f57 [NEEDS HUMAN REVIEW]
-                    if let remove = actions.remove {
-                        Button(role: .destructive, action: remove) {
+                    if actions.remove != nil {
+                        Button(role: .destructive) { removing = person } label: {
                             SettingsRow(
                                 icon: "person.slash", tone: .destructive,
                                 title: Text("Remove from \(actions.roomName)", bundle: .module))
                         }
                         .tint(palette.destructive)
                     }
-                    if let block = actions.block {
-                        Button(role: .destructive, action: block) {
+                    if actions.block != nil {
+                        Button(role: .destructive) { blocking = person } label: {
                             SettingsRow(
                                 icon: "hand.raised", tone: .destructive,
                                 title: Text("Block everywhere", bundle: .module))
@@ -288,6 +292,8 @@ public struct PersonDetailView: View {
         .navigationTitle(Text(verbatim: person.displayName))
         .toolbarTitleDisplayMode(.inline)
         .croppingPickedPhoto($picked) { await onPersonAvatarChange?(person.id, $0) }
+        .confirmingRemoval($removing, from: actions?.roomName ?? "") { await actions?.remove?($0) }
+        .confirmingBlock($blocking) { await actions?.block?($0) }
         .onDisappear { save(now: true) }
     }
 

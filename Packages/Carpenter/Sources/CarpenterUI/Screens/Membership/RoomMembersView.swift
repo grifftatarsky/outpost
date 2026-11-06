@@ -166,15 +166,7 @@ public struct RoomMembersView: View {
             }
         }
         // COPY END 18e78d15
-        .sheet(item: $removing) { member in
-            RemoveMemberView(
-                member: member,
-                roomName: roomName,
-                onRemove: { await onRemove?(member.id) }
-            )
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-        }
+        .confirmingRemoval($removing, from: roomName) { person in await onRemove?(person) }
         .confirmingBlock($blocking) { person in await onBlock?(person) }
         .sheet(item: $rescinding) { person in
             RescindInvitationView(
@@ -213,13 +205,10 @@ public struct RoomMembersView: View {
     }
 
     private func actions(for person: ParticipantID) -> PersonActions? {
-        guard person != viewer, let member = members.first(where: { $0.id == person }),
+        guard person != viewer, members.contains(where: { $0.id == person }),
             onRemove != nil || onBlock != nil
         else { return nil }
-        return PersonActions(
-            roomName: roomName,
-            remove: onRemove.map { _ in { removing = member } },
-            block: onBlock.map { _ in { blocking = member } })
+        return PersonActions(roomName: roomName, remove: onRemove, block: onBlock)
     }
 
     @ViewBuilder
@@ -371,6 +360,18 @@ public struct RoomMembersView: View {
         }
     }
     // COPY END 93c0f1a5
+}
+
+extension View {
+    func confirmingRemoval(
+        _ member: Binding<Member?>, from roomName: String, onRemove: @escaping (ParticipantID) async -> Void
+    ) -> some View {
+        sheet(item: member) { member in
+            RemoveMemberView(member: member, roomName: roomName, onRemove: { await onRemove(member.id) })
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
 }
 
 struct RemoveMemberView: View {
