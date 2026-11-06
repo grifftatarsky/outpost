@@ -105,9 +105,9 @@ struct BlockingInARoomOfTwoTests {
 
         let adas = try t.ada.currentPairs()
         let link = try #require(t.ada.link(for: t.beaID), "precondition: Ada holds Bea's link")
-        #expect(try await t.mailbox.join(link, of: t.beaID, in: adas) != .joined, "Ada put herself back on Bea's space")
+        #expect(await t.mailbox.join(link, of: t.beaID, in: adas) != .joined, "Ada put herself back on Bea's space")
         let tags = SyncSession.recentTags(for: try #require(t.ada.peers().first { $0.them == t.beaID }), at: TestSession.now)
-        #expect(try await t.mailbox.fetch(from: t.beaID, for: tags, in: adas).isEmpty, "Ada read Bea's space while blocked")
+        #expect(await t.mailbox.fetch(from: t.beaID, for: tags, in: adas).isEmpty, "Ada read Bea's space while blocked")
     }
 
     @Test("What Ada wrote while Bea blocked her arrives once Bea unblocks her")
