@@ -71,7 +71,7 @@
         }
 
         func ring(_ peer: ParticipantID, in pairs: Pairs) throws {
-            try change { try $0.ring(peer, in: pairs, as: self.account(in: pairs), at: Date()) }
+            _ = try change { try $0.ring(peer, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
 
         func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) throws -> [SyncPacket] {
