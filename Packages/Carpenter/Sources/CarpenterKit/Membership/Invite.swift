@@ -5,9 +5,16 @@ public struct Invite: Hashable, Sendable, Codable {
 
     public let pair: SignedPairLink?
 
-    public init(attestation: MembershipAttestation, pair: SignedPairLink? = nil) {
+    public let opening: Data?
+
+    public init(attestation: MembershipAttestation, pair: SignedPairLink? = nil, opening: Data? = nil) {
         self.attestation = attestation
         self.pair = pair
+        self.opening = opening
+    }
+
+    public var verifiedOpening: Data? {
+        opening.flatMap { JoinCommitment.opens($0, attestation.joinerCommitment) ? $0 : nil }
     }
 
     public var verifiedPair: PairLink? { pair?.verified(by: attestation.inviterKeys) }
@@ -22,8 +29,7 @@ public struct Invite: Hashable, Sendable, Codable {
         guard let data = Data(base64URLEncoded: InviteLink.payload(in: text)) else {
             throw MembershipError.malformedInvite
         }
-        if let invite = try? JSONDecoder().decode(Invite.self, from: data) { return invite }
-        return Invite(attestation: try JSONDecoder().decode(MembershipAttestation.self, from: data))
+        return try JSONDecoder().decode(Invite.self, from: data)
     }
 }
 

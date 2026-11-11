@@ -192,6 +192,21 @@ extension AppSession {
         return Invite(attestation: attestation, pair: try await offerOurSpace(to: code, through: mailbox))
     }
 
+    public func invite(
+        _ person: ParticipantID, joining room: RoomID, through mailbox: (any Mailbox)?,
+        lasting lifetime: InvitationLifetime = .aDay
+    ) async throws -> Invite {
+        guard let enrolment, let keys = publicKeys(of: person) else { throw AppSessionError.noIdentity }
+        guard person != enrolment.identity.id else { throw AppSessionError.thatIsYou }
+
+        let opening = JoinCommitment.nonce()
+        let code = JoinerCode(keys: keys, commitment: JoinCommitment.of(opening))
+        remember(opening, opening: code.commitment)
+        let attestation = try await attest(code: code, joining: room, lasting: lifetime)
+        let pair: SignedPairLink? = if let mailbox { await standingOffer(to: person, through: mailbox) } else { nil }
+        return Invite(attestation: attestation, pair: pair, opening: opening)
+    }
+
     func offerOurSpace(to code: JoinerCode, through mailbox: (any Mailbox)?) async throws -> SignedPairLink? {
         guard let enrolment, let mailbox, let theirs = code.verifiedPair else { return nil }
         replica.introduce(code.keys)
@@ -243,6 +258,9 @@ extension AppSession {
         takeOffer(
             invite.verifiedPair, from: invite.attestation.inviterKeys.participantID,
             answering: invite.attestation.joinerCommitment)
+        if let opening = invite.verifiedOpening, nonce(opening: invite.attestation.joinerCommitment) == nil {
+            remember(opening, opening: invite.attestation.joinerCommitment)
+        }
         try await saveState()
         return invite
     }
@@ -501,6 +519,7 @@ extension AppSession {
 
         try await oweKeyRotation(in: room)
         try await append(try Payload.removal(of: person, heads: lastEntries(of: person, in: room)), to: room)
+        timeOwnClaim()
         try await rotateOwedKey(in: room)
     }
 
@@ -512,6 +531,7 @@ extension AppSession {
         }
 
         try await append(try Payload.departure(heads: lastEntries(of: enrolment.identity.id, in: room)), to: room)
+        timeOwnClaim()
     }
 
     func lastEntries(of person: ParticipantID? = nil, in room: RoomID) -> [EntryHash] {
