@@ -329,6 +329,7 @@ extension AppSession {
         let now = clock.now
         return persisted.acceptedInvitations.filter {
             !roomsThisMemberIsIn.contains($0.attestation.room) && $0.attestation.expiresAt > now
+                && roster(of: $0.attestation.room).isOpen($0.attestation)
         }
     }
 
