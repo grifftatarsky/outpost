@@ -5,7 +5,10 @@ import Testing
 @testable import CarpenterApp
 
 extension AppSession {
-    func approveNewDevice(_ newDevice: AppSession, timeout: TimeInterval = TestDeadline.seconds) async throws {
+    func approveNewDevice(
+        _ newDevice: AppSession, timeout: TimeInterval = TestDeadline.seconds,
+        between: () async throws -> Void = { try? await Task.sleep(for: .milliseconds(20)) }
+    ) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         if newDevice.state == .checkingForRegistration {
             newDevice.checkAccount(with: StubAccountRegistry(hasMember: true))
@@ -21,12 +24,12 @@ extension AppSession {
             }
             await newDevice.refreshDeviceSync()
             await refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(20))
+            try await between()
         }
         try #require(approved, "the request from the new device never reached the approving device")
         while newDevice.enrolment == nil, Date() < deadline {
             await newDevice.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(20))
+            try await between()
         }
         try #require(newDevice.enrolment != nil, "the new device never took its approval")
     }

@@ -3,18 +3,41 @@ import Foundation
 
 public actor InMemoryEntrySync: EntrySync {
     public actor Relay {
-        private var members: [UUID: InMemoryEntrySync] = [:]
+        public enum HandOver: Sendable {
+            case always
+            case once
+        }
+
+        public struct Refused: Error {}
+
+        private var members: [(id: UUID, member: InMemoryEntrySync)] = []
         private var records: [String: Data] = [:]
         private var written: [DeviceID: Int] = [:]
         private var created: [String: Date] = [:]
         private var modified: [String: Date] = [:]
         private var serverNow = Date(timeIntervalSince1970: 1_900_000_000)
+        private var handedOver: [String: [String: Date]] = [:]
+        private var sendsToFail: [(storing: Int, silently: Bool)] = []
+        private var refreshesToFail = 0
 
         private let announces: Bool
+        private let clock: (any Clock)?
+        private let handsOver: HandOver
 
-        public init(announces: Bool = true) {
+        public init(announces: Bool = true, clock: (any Clock)? = nil, handsOver: HandOver = .always) {
             self.announces = announces
+            self.clock = clock
+            self.handsOver = handsOver
+            if let clock { serverNow = clock.now.addingTimeInterval(-1) }
         }
+
+        public func failNextSend(storing count: Int = 0, silently: Bool = false) {
+            sendsToFail.append((count, silently))
+        }
+
+        public func failNextRefresh() { refreshesToFail += 1 }
+
+        public var failuresPending: Int { sendsToFail.count + refreshesToFail }
 
         public func bytesWritten(by device: DeviceID) -> Int { written[device, default: 0] }
 
@@ -45,12 +68,20 @@ public actor InMemoryEntrySync: EntrySync {
 
         public func created(_ name: SiblingRecord.Name) -> Date? { created[name.recordName] }
 
+        public func stamps() -> [String] {
+            records.keys.sorted().map { "\($0) \(modified[$0]?.timeIntervalSince1970 ?? 0)" }
+        }
+
         public func sealed(_ name: SiblingRecord.Name) -> SealedSiblingFeed? {
             records[name.recordName].flatMap { try? JSONDecoder().decode(SealedSiblingFeed.self, from: $0) }
         }
 
         private func stamp(_ key: String) {
-            serverNow += 1
+            if let clock {
+                serverNow = max(serverNow.addingTimeInterval(0.001), clock.now)
+            } else {
+                serverNow += 1
+            }
             if created[key] == nil { created[key] = serverNow }
             modified[key] = serverNow
         }
@@ -66,13 +97,21 @@ public actor InMemoryEntrySync: EntrySync {
         }
 
         func join(_ id: UUID, _ member: InMemoryEntrySync) {
-            members[id] = member
+            members.removeAll { $0.id == id }
+            members.append((id, member))
         }
 
         func store(
             _ stored: [(name: SiblingRecord.Name, bytes: Data)], deleting: [SiblingRecord.Name], from sender: UUID
-        ) async -> [SiblingRecord.Name: Date] {
-            for name in deleting { forget(name.recordName) }
+        ) async throws -> [SiblingRecord.Name: Date] {
+            var stored = stored
+            var refused = false
+            if !sendsToFail.isEmpty {
+                let failure = sendsToFail.removeFirst()
+                stored = Array(stored.prefix(failure.storing))
+                refused = !failure.silently
+            }
+            if !refused { for name in deleting { forget(name.recordName) } }
             var firstStored: [SiblingRecord.Name: Date] = [:]
             for record in stored {
                 let key = record.name.recordName
@@ -85,6 +124,7 @@ public actor InMemoryEntrySync: EntrySync {
                 stamp(key)
                 firstStored[record.name] = created[key]
             }
+            if refused { throw Refused() }
             guard announces else { return firstStored }
 
             for (id, member) in members where id != sender {
@@ -103,27 +143,46 @@ public actor InMemoryEntrySync: EntrySync {
             }
         }
 
-        func everything(exceptFrom writers: Set<DeviceID>)
+        func everything(exceptFrom writers: Set<DeviceID>, handedTo reader: String?) throws
             -> [(name: SiblingRecord.Name, bytes: Data, created: Date?, modified: Date?)]
         {
-            records.sorted { $0.key < $1.key }.compactMap { key, bytes in
-                guard let name = SiblingRecord.Name(recordName: key), !writers.contains(name.writer) else {
-                    return nil
-                }
-                return (name, bytes, created[key], modified[key])
+            if refreshesToFail > 0 {
+                refreshesToFail -= 1
+                throw Refused()
             }
+            let all: [(name: SiblingRecord.Name, bytes: Data, created: Date?, modified: Date?)] =
+                records.sorted { $0.key < $1.key }.compactMap { key, bytes in
+                    guard let name = SiblingRecord.Name(recordName: key), !writers.contains(name.writer) else {
+                        return nil
+                    }
+                    return (name, bytes, created[key], modified[key])
+                }
+            guard handsOver == .once, let reader else { return all }
+            var handed = handedOver[reader, default: [:]]
+            let fresh = all.filter { record in
+                guard let modified = record.modified else { return true }
+                return handed[record.name.recordName].map { $0 < modified } ?? true
+            }
+            for record in fresh { handed[record.name.recordName] = record.modified }
+            handedOver[reader] = handed
+            return fresh
         }
     }
 
     private let id = UUID()
     private let relay: Relay
+    private let reader: String?
     private var handler: (@Sendable (SiblingRecord) async -> Void)?
     private var writers: Set<DeviceID> = []
 
     public private(set) var sent: [SiblingRecord] = []
+    private var isCut = false
 
-    public init(relay: Relay) {
+    public func cut() { isCut = true }
+
+    public init(relay: Relay, as reader: String? = nil) {
         self.relay = relay
+        self.reader = reader
     }
 
     public func start() async throws {
@@ -135,7 +194,7 @@ public actor InMemoryEntrySync: EntrySync {
     }
 
     fileprivate func deliver(_ name: SiblingRecord.Name, _ bytes: Data, created: Date?, modified: Date?) async {
-        guard !writers.contains(name.writer),
+        guard !isCut, !writers.contains(name.writer),
             let sealed = try? JSONDecoder().decode(SealedSiblingFeed.self, from: bytes)
         else { return }
         await handler?(SiblingRecord(name: name, sealed: sealed, created: created, modified: modified))
@@ -145,16 +204,18 @@ public actor InMemoryEntrySync: EntrySync {
     public func send(_ records: [SiblingRecord], deleting: [SiblingRecord.Name]) async throws
         -> [SiblingRecord.Name: Date]
     {
+        if isCut { throw Relay.Refused() }
         sent.append(contentsOf: records)
         writers.formUnion(records.map(\.name.writer))
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
-        return await relay.store(
+        return try await relay.store(
             try records.map { ($0.name, try encoder.encode($0.sealed)) }, deleting: deleting, from: id)
     }
 
     public func refresh() async throws {
-        for record in await relay.everything(exceptFrom: writers) {
+        if isCut { throw Relay.Refused() }
+        for record in try await relay.everything(exceptFrom: writers, handedTo: reader) {
             await deliver(record.name, record.bytes, created: record.created, modified: record.modified)
         }
     }

@@ -46,6 +46,7 @@ public actor InMemoryKeychainStore: KeychainStore {
     }
 
     public struct LockedPhone: Error {}
+    public struct ProcessEnded: Error {}
 
     private let synced: Synced
     private let dial: ProtectionDial
@@ -54,6 +55,9 @@ public actor InMemoryKeychainStore: KeychainStore {
 
     public private(set) var writes = 0
     public private(set) var phoneIsLocked = false
+    private var processEnded = false
+
+    public func endProcess() { processEnded = true }
 
     public init(syncingThrough synced: Synced = Synced(), protection dial: ProtectionDial = ProtectionDial()) {
         self.synced = synced
@@ -62,6 +66,19 @@ public actor InMemoryKeychainStore: KeychainStore {
 
     public func sibling() -> InMemoryKeychainStore {
         InMemoryKeychainStore(syncingThrough: synced)
+    }
+
+    private init(
+        synced: Synced, dial: ProtectionDial, local: [KeychainKey: Data], protections: [KeychainKey: StorageProtection]
+    ) {
+        self.synced = synced
+        self.dial = dial
+        self.local = local
+        self.protections = protections
+    }
+
+    public func copy() -> InMemoryKeychainStore {
+        InMemoryKeychainStore(synced: synced, dial: dial, local: local, protections: protections)
     }
 
     public func data(for key: KeychainKey) async throws -> Data? {
@@ -73,6 +90,7 @@ public actor InMemoryKeychainStore: KeychainStore {
     }
 
     public func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) async throws {
+        guard !processEnded else { throw ProcessEnded() }
         guard !(phoneIsLocked && dial.current == .whileUnlocked) else { throw LockedPhone() }
         writes += 1
         switch scope {
@@ -88,11 +106,13 @@ public actor InMemoryKeychainStore: KeychainStore {
     }
 
     public func remove(_ key: KeychainKey) async throws {
+        guard !processEnded else { throw ProcessEnded() }
         local[key] = nil
         protections[key] = nil
     }
 
     public func removeAll(_ scope: KeychainScope) async throws {
+        guard !processEnded else { throw ProcessEnded() }
         switch scope {
         case .device:
             local = [:]
@@ -271,7 +291,77 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
 
     public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) -> [SyncPacket] {
         fetchCount += 1
-        return store.fetch(from: peer, for: tags, in: pairs, as: seat(pairs))
+        let account = seat(pairs)
+        let lastStored = Dictionary(
+            store.records(inSpaceOf: peer, forMe: pairs, as: account).map { ($0.name, $0.record.modifiedAt) },
+            uniquingKeysWith: { first, _ in first })
+        let found = store.fetch(from: peer, for: tags, in: pairs, as: account).map { packet in
+            var packet = packet
+            packet.storedAt = lastStored[packet.id.rawValue.uuidString] ?? packet.storedAt
+            return packet
+        }
+        return inSameInstantOrder(found)
+    }
+
+    public func fetch(
+        from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs, seenIn view: LocalPairStore
+    ) -> [SyncPacket] {
+        fetchCount += 1
+        var seen = view
+        let account = seat(pairs)
+        let lastStored = Dictionary(
+            seen.records(inSpaceOf: peer, forMe: pairs, as: account).map { ($0.name, $0.record.modifiedAt) },
+            uniquingKeysWith: { first, _ in first })
+        return seen.fetch(from: peer, for: tags, in: pairs, as: account).map { packet in
+            var packet = packet
+            packet.storedAt = lastStored[packet.id.rawValue.uuidString] ?? packet.storedAt
+            return packet
+        }
+    }
+
+    public func view() -> LocalPairStore { store }
+
+    public var now: Date { clock.now }
+
+    public func stamps(inSpaceOf peer: ParticipantID, in pairs: Pairs) -> Set<String> {
+        Set(store.records(inSpaceOf: peer, forMe: pairs, as: seat(pairs)).map { "\($0.name) \($0.record.modifiedAt)" })
+    }
+
+    public func grantCount(in packet: PacketID) -> Int {
+        store.allRecords.first { $0.name == packet.rawValue.uuidString }
+            .flatMap { PacketWire.packet(from: $0.record.fields) }?.grants.values.reduce(0) { $0 + $1.count } ?? 0
+    }
+
+    public func sender(of packet: PacketID) -> ParticipantID? {
+        store.allRecords.first { $0.name == packet.rawValue.uuidString }.flatMap { store.spaces[$0.url]?.owner }
+    }
+
+    public func sentPackets(in pairs: Pairs, seenIn view: LocalPairStore) -> [PacketID: SentPacket] {
+        view.sentPackets(in: pairs, as: seat(pairs))
+    }
+
+    private var instant: (window: TimeInterval, generator: SeededGenerator)?
+
+    public func sameInstant(within window: TimeInterval, seed: UInt64) {
+        instant = (window, SeededGenerator(seed: seed))
+    }
+
+    private func inSameInstantOrder(_ packets: [SyncPacket]) -> [SyncPacket] {
+        guard var drawn = instant else { return packets }
+        var ordered: [SyncPacket] = []
+        var group: [SyncPacket] = []
+        for packet in packets {
+            if let first = group.first, let at = packet.storedAt, let start = first.storedAt,
+                at.timeIntervalSince(start) > drawn.window
+            {
+                ordered += group.shuffled(using: &drawn.generator)
+                group = []
+            }
+            group.append(packet)
+        }
+        ordered += group.shuffled(using: &drawn.generator)
+        instant = drawn
+        return ordered
     }
 
     public func acknowledge(
@@ -435,49 +525,6 @@ public actor UnreadableKeychainStore: KeychainStore {
     public func protect(as protection: StorageProtection) throws {
         guard readable else { throw Refused() }
     }
-}
-
-public actor FailingMailbox: Mailbox, MediaMailbox {
-    public struct Refused: Error {}
-
-    public init() {}
-
-    public func account(in pairs: Pairs) async throws -> String { throw Refused() }
-    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL {
-        throw Refused()
-    }
-    public func spaceForACode(in pairs: Pairs) async throws -> URL { throw Refused() }
-    public func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws
-        -> URL
-    { throw Refused() }
-    public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome {
-        throw Refused()
-    }
-    public func reads(_ peer: ParticipantID, in pairs: Pairs) async throws -> Bool { throw Refused() }
-    public func close(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
-    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
-    public func leave(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
-    public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
-    public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws { throw Refused() }
-    public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) async throws
-        -> [SyncPacket]
-    { throw Refused() }
-    public func acknowledge(_ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs)
-        async throws
-    { throw Refused() }
-    public func sentPackets(in pairs: Pairs) async throws -> [PacketID: SentPacket] { throw Refused() }
-    public func withdraw(_ id: PacketID, in pairs: Pairs) async throws { throw Refused() }
-    public func upload(_ copies: PhotoCopies, in pairs: Pairs) async throws { throw Refused() }
-    public func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs)
-        async throws -> Data?
-    { throw Refused() }
-    public func acknowledge(
-        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
-        in pairs: Pairs
-    ) async throws { throw Refused() }
-    public func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) async throws -> Data? { throw Refused() }
-    public func storedCopies(in pairs: Pairs) async throws -> [StoredPhotoCopy] { throw Refused() }
-    public func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) async throws { throw Refused() }
 }
 
 public actor FakeMediaScreen: MediaScreen {
