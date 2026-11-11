@@ -648,15 +648,17 @@ extension AppSession {
     }
 
     public func advanceEpoch(of room: RoomID) async throws {
+        try await rekeyBeforeWriting(room)
         guard let chain = chains[room] else { throw AppSessionError.unknownRoom }
 
         let writing = writingKey(of: room)
         let epoch = writing?.epoch ?? chain.highestKnownEpoch ?? .initial
-        let advanced = try EpochChain.advance(
-            from: try writing?.secret ?? chain.secret(for: epoch), at: epoch, room: room)
+        let replaced = try writing?.secret ?? chain.secret(for: epoch)
+        let advanced = try EpochChain.advance(from: replaced, at: epoch, room: room)
 
         try await append(
-            try Payload.epochChange(advanced.link, heads: lastEntries(in: room), under: advanced.secret), to: room)
+            try Payload.epochChange(advanced.link, heads: lastEntries(in: room), under: advanced.secret), to: room,
+            sealedUnder: (replaced, epoch))
 
         try adopt(secret: advanced.secret, link: advanced.link, at: epoch.next, in: room)
 

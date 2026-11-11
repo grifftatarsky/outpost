@@ -366,7 +366,8 @@ public final class AppSession {
 
     func append(
         _ payload: Payload, to room: RoomID?, isWall: Bool = false,
-        alsoFor extra: PairwiseSecret? = nil, readableAt readable: EpochNumber? = nil
+        alsoFor extra: PairwiseSecret? = nil, readableAt readable: EpochNumber? = nil,
+        sealedUnder chosen: (secret: EpochSecret, epoch: EpochNumber)? = nil
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
 
@@ -401,7 +402,7 @@ public final class AppSession {
             guard let enrolment = self.enrolment, let chain = chains[chainRoom] else {
                 throw AppSessionError.noIdentity
             }
-            let writing = writingKey(of: chainRoom)
+            let writing = chosen ?? writingKey(of: chainRoom).map { ($0.secret, $0.epoch) }
 
             let entry = try Entry.append(
                 after: head,
