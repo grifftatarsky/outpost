@@ -1,3 +1,4 @@
+import CarpenterKit
 import Foundation
 import Testing
 
@@ -17,7 +18,7 @@ enum TestScratch {
     static let keepsProtectionClasses: Bool = {
         let probe = root.appending(path: "protection-probe-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: probe) }
-        return (try? Data([0]).write(to: probe, options: [.atomic, .completeFileProtection])) != nil
+        return (try? ProtectedFiles.write(Data([0]), to: probe, as: .whileUnlocked)) != nil
     }()
 }
 
