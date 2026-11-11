@@ -18,13 +18,13 @@ extension RootView {
         if id == DemoConversation.directRoomID {
             ConversationView(
                 room: DemoConversation.directRoom(),
-                messages: DemoConversation.directMessages(),
+                transcript: DemoConversation.directMessages().map(TranscriptEntry.message),
                 onSend: { _ in DemoConversation.refusal }
             )
         } else {
             ConversationView(
                 room: DemoConversation.room(participants: theme.demoParticipants),
-                messages: DemoConversation.messages(participants: theme.demoParticipants),
+                transcript: DemoConversation.messages(participants: theme.demoParticipants).map(TranscriptEntry.message),
                 onSend: { _ in DemoConversation.refusal }
             )
         }

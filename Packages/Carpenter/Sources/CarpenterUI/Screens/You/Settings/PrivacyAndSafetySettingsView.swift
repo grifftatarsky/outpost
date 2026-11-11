@@ -72,7 +72,7 @@ struct PrivacyAndSafetySettingsView: View {
                 Text("Send", bundle: .module).sectionHeading()
             } footer: {
                 Text(
-                    "Your name goes to the rooms you are in, as the name people see for you, once this is on; off, they see a short code. People you write to get it as the default name for you, and can call you something else on their own phone. Turning it off does not take a name back from a room that has it. Your photo goes the same way, to those rooms and to the people you let read your Outpost, and unlike a name it comes back: off, it is taken down everywhere, and their devices let it go as they next collect. Read receipts tell a sender when their message has been shown on your screen; off, they are told you do not report. Silenced notifications tells the people you write to when a Focus is on, the way Messages does, with the words you choose.",
+                    "Share my name sends your name to the rooms you're in. When it's off, people see a short code, and a room that already has your name keeps it. Share my photo sends your photo to those rooms and to the people you let read your Outpost. Turning it off takes the photo down everywhere. Read receipts tell a sender when their message has been shown on your screen. Sharing when you've silenced notifications tells the people you write to when a Focus is on, with the words you choose.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -93,7 +93,7 @@ struct PrivacyAndSafetySettingsView: View {
                 Text("Receive", bundle: .module).sectionHeading()
             } footer: {
                 Text(
-                    "Off, every other person is shown as a short code and initials from it, even where they shared a name, and no photo of theirs is collected. On, a photo they share is drawn wherever they appear, under any photo you chose for them yourself. Others' silence puts a line over the field in a solo while the other person has a Focus on, where they share that.",
+                    "When names are off, everyone appears as a short code, even if they shared a name. When photos are off, no shared photo is downloaded. A photo you chose for somebody yourself always comes first. Others' silence shows a line above the message field in a solo while the other person has a Focus on, if they share that.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -143,7 +143,7 @@ struct PrivacyAndSafetySettingsView: View {
                         set: { wanted in Task { await onRequiresSoloCheck(wanted) } }))
             } footer: {
                 Text(
-                    "You and anybody you talk to alone already have the same characters, from how you met. On, a conversation stays shut until you have read them to each other — and they are told you asked. Off, it opens as soon as somebody with your code writes.",
+                    "You and anybody you talk to alone share a set of characters from how you met. When this is on, a conversation stays closed until you've read them to each other, and the other person is told you asked. When it's off, a conversation opens as soon as somebody with your code writes.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -181,7 +181,7 @@ struct PrivacyAndSafetySettingsView: View {
                         set: { wanted in Task { await onHoldsHistoryForRestores(wanted) } }))
             } footer: {
                 Text(
-                    "Somebody who loses every device comes back with a recovery key, and their conversations come back from the people who were in them. The first decides whether you are told when one of those asks reaches you, and which conversation it was for. The second holds what was said before they lost their phone until you have read the characters to each other and said they matched — off, it goes as soon as the ask arrives. Either way they are still in your conversations, so anything said from now on still reaches them.",
+                    "Somebody who loses every device comes back with a recovery key, and their conversations come back from the people who were in them. The first setting tells you when one of those requests reaches you, and which conversation it's for. The second holds what was said before they lost their phone until you've read the characters to each other and said they matched. When it's off, your copy is sent as soon as the request arrives. Either way, anything said from now on still reaches them.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -197,7 +197,7 @@ struct PrivacyAndSafetySettingsView: View {
                         set: { wanted in Task { await onAsksPeersForHistory(wanted) } }))
             } footer: {
                 Text(
-                    "This one is about your own history, not anybody else's. If you ever come back from a recovery key, your conversations return empty and this is what asks the people in them for their copy. Off, nobody is asked and nobody is told you set up again — and the only way to change your mind is here.",
+                    "This is about your own history. If you come back with a recovery key, your conversations start empty, and this asks the people in them for their copies. When it's off, nobody is asked and nobody is told you set up again. You can change this only here.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -211,7 +211,7 @@ struct PrivacyAndSafetySettingsView: View {
                     isOn: $otherKeyboards)
             } footer: {
                 Text(
-                    "A keyboard from another app sees everything you type with it. Off, only Apple's keyboards work here. A change applies the next time the app opens.",
+                    "A keyboard from another app can see everything you type with it. A change applies the next time you open the app.",
                     bundle: .module)
             }
             .groupedRowSurface()

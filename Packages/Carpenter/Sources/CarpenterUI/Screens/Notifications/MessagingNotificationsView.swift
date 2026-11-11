@@ -45,7 +45,7 @@ public struct MessagingNotificationsView: View {
                         set: { on in change { $0.wantsMessages = on } }))
             } footer: {
                 Text(
-                    "Off, nothing arrives when somebody writes to you. What a banner says is kept, so turning this back on returns the answer you gave before.",
+                    "When this is off, you get no notification when somebody writes to you. Your banner choices are kept for when you turn it back on.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -110,44 +110,14 @@ public struct MessagingNotificationsView: View {
                 .groupedRowSurface()
             }
 
-            // COPY BEGIN f6b865c9 [NEEDS HUMAN REVIEW]
-            Section {
-                SettingsToggle(
-                    icon: "app.badge.fill",
-                    title: Text("Show on the app icon", bundle: .module),
-                    isOn: Binding(
-                        get: { badges.messages },
-                        set: { on in
-                            var updated = badges
-                            updated.messages = on
-                            Task { await onBadges(updated) }
-                        }))
-            } header: {
-                Text("App icon", bundle: .module).sectionHeading()
-            } footer: {
-                BadgeMeaningLine(meaning: badges.meaning)
+            AppIconBadgeSection(isOn: badges.messages, meaning: badges.meaning) { on in
+                var updated = badges
+                updated.messages = on
+                Task { await onBadges(updated) }
             }
-            .groupedRowSurface()
-            // COPY END f6b865c9
 
             if systemAllows == false {
-                Section {
-                    // COPY BEGIN 3a61f89f [NEEDS HUMAN REVIEW]
-                    if let onOpenSystemSettings {
-                        Button(action: onOpenSystemSettings) {
-                            SettingsRow(
-                                icon: "gear", tone: .device,
-                                title: Text("Turn on notifications", bundle: .module))
-                        }
-                    }
-                } footer: {
-                    Text(
-                        "Notifications are off for \(Branding.displayName) in Settings, so none of these will arrive until that is turned back on. What you choose here is kept either way.",
-                        bundle: .module)
-                        .foregroundStyle(palette.destructive)
-                    // COPY END 3a61f89f
-                }
-                .groupedRowSurface()
+                NotificationsOffSection(onOpenSystemSettings: onOpenSystemSettings)
             }
         }
         .scrollContentBackground(.hidden)

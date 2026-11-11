@@ -226,14 +226,14 @@ struct StepPage: View {
                 icon: "person.text.rectangle.fill",
                 title: Text("Share my name", bundle: .module),
                 paragraph: Text(
-                    "Your name goes to the rooms you are in, as the default name people see for you; they can call you something else on their own phone. Off, they see a short code. Turning it off later does not take a name back from a room that already has it.",
+                    "Sends your name to the rooms you're in, as the name people see for you by default. They can call you something else on their own phone. When this is off, they see a short code. Turning it off later doesn't remove your name from a room that already has it.",
                     bundle: .module))
         case .sharePhoto:
             SettingsHeaderCard(
                 icon: "person.crop.square.fill",
                 title: Text("Share my photo", bundle: .module),
                 paragraph: Text(
-                    "The photo you pick on You goes to the people you share rooms with, and to the people you let read your Outpost, once this is on. Off, it is taken down, and their devices let it go as they next collect.",
+                    "Shares the photo you pick on You with the people you share rooms with and the people you let read your Outpost. When you turn this off, the photo is taken down and their devices remove it the next time they sync.",
                     bundle: .module))
         case .shareFocus:
             SettingsHeaderCard(
@@ -247,7 +247,7 @@ struct StepPage: View {
                 icon: "person.text.rectangle.fill",
                 title: Text("Show others' names", bundle: .module),
                 paragraph: Text(
-                    "People who share their name are drawn by it. Off, everyone is a short code and two characters of it on a disc, whatever they chose to share.",
+                    "Shows people by the name they share. When this is off, everyone appears as a short code, whatever they chose to share.",
                     bundle: .module))
             // COPY END f7d33891
         case .showOthersPhotos:
@@ -256,21 +256,21 @@ struct StepPage: View {
                 icon: "person.crop.square.fill",
                 title: Text("Show others' photos", bundle: .module),
                 paragraph: Text(
-                    "A photo somebody shares is collected and drawn wherever they appear, under any photo you chose for them yourself. Off, nothing of theirs is collected and everyone is initials on a disc.",
+                    "Downloads the photos people share and shows them wherever those people appear. A photo you chose for somebody yourself comes first. When this is off, everyone appears as initials.",
                     bundle: .module))
         case .showOthersFocus:
             SettingsHeaderCard(
                 icon: "moon.fill",
                 title: Text("Show others' silence", bundle: .module),
                 paragraph: Text(
-                    "A line over the field in a solo while the other person has a Focus on, where they share that. Off, nothing is drawn, whatever they share.",
+                    "Shows a line above the message field in a solo while the other person has a Focus on, if they share that.",
                     bundle: .module))
         case .readReceipts:
             SettingsHeaderCard(
                 icon: "eye.fill",
                 title: Text("Read receipts", bundle: .module),
                 paragraph: Text(
-                    "Tells a sender when their message has been shown on your screen. Off, they are told you do not report, rather than left waiting for a mark that never comes.",
+                    "Tells a sender when their message has been shown on your screen. When this is off, senders are told you don't send read receipts.",
                     bundle: .module))
         case .blurSensitive:
             SettingsHeaderCard(
@@ -293,7 +293,7 @@ struct StepPage: View {
                 icon: "person.crop.circle.badge.checkmark",
                 title: Text("One conversation, one person", bundle: .module),
                 paragraph: Text(
-                    "You and anybody you talk to alone already have the same characters, worked out from how you met. Off, a conversation opens as soon as somebody who has your code writes — what Messages does. On, it stays shut until the two of you have read those characters to each other and said they matched. They are told you are waiting, and either of you can ask again at any time.",
+                    "You and anybody you talk to alone share a set of characters, worked out from how you met. When this is off, a conversation opens as soon as somebody who has your code writes. When it's on, it stays closed until the two of you have read those characters to each other and said they matched. They're told you're waiting, and either of you can ask again at any time.",
                     bundle: .module))
         case .restoreAsks:
             SettingsHeaderCard(
@@ -309,14 +309,14 @@ struct StepPage: View {
                 icon: "hand.raised.fingers.spread.fill",
                 title: Text("Before your history goes back", bundle: .module),
                 paragraph: Text(
-                    "Off, your copy goes as soon as the ask arrives — what Messages would do, and what most people want. On, it waits. You are shown the characters the two of you already share, you read them to each other on a line you trust, and none of it goes until you say it matched. This covers what was said before they lost their phone; they are still in your conversations, so anything said from now on still reaches them. The cost is that somebody who has genuinely lost their phone waits for you to pick up.",
+                    "When this is off, your copy of a conversation is sent as soon as somebody requests it, which is what most people want. When it's on, your copy waits until the two of you have read the characters you share to each other, on a line you trust, and you've said they matched. This covers only what was said before they lost their phone. Anything said from now on still reaches them. The cost is that somebody who really has lost their phone waits for you.",
                     bundle: .module))
         case .outpostsOn:
             SettingsHeaderCard(
                 icon: "rectangle.stack.fill",
                 title: Text("Outposts", bundle: .module),
                 paragraph: Text(
-                    "An Outpost is a page of your own. You choose who reads it, one person at a time, and nobody is let in until you say so — sharing a room grants nothing. Off, the tab goes away and nothing is written or fetched for one.",
+                    "An Outpost is a page of your own. You choose who reads it, one person at a time. Sharing a room with somebody doesn't let them in. When this is off, the tab is hidden and nothing is posted or downloaded.",
                     bundle: .module))
             // COPY END 6badc6d4
         case .outpostReach:
@@ -332,14 +332,14 @@ struct StepPage: View {
                 icon: "person.crop.square.fill",
                 title: Text("Your picture on your Outpost", bundle: .module),
                 paragraph: Text(
-                    "The photo you pick on You is drawn at the top of your Outpost as well, without your choosing a second one — and you can choose a different one there whenever you like. Off, your Outpost draws your initials and the rooms you are in are unchanged. Either way a reader is only ever sent a picture where Share my photo is on.",
+                    "Shows the photo you pick on You at the top of your Outpost as well. You can choose a different one there at any time. When this is off, your Outpost shows your initials, and rooms aren't affected. Readers are sent a picture only if Share my photo is on.",
                     bundle: .module))
         case .outpostReview:
             SettingsHeaderCard(
                 icon: "person.crop.circle.badge.questionmark.fill",
                 title: Text("Being asked about people you meet", bundle: .module),
                 paragraph: Text(
-                    "When you end up in a room with somebody new, the room asks once whether to let them read your Outpost. Off, nobody is ever offered it and you add people yourself. Either way nobody is let in until you say so.",
+                    "When you join a room with somebody new, you're asked once whether to let them read your Outpost. When this is off, you add people yourself. Either way, nobody is let in until you say so.",
                     bundle: .module))
             // COPY END 1b74f802
         }
@@ -413,7 +413,7 @@ struct StepPage: View {
                 SoloCheckExample(required: choices.requiresSoloCheck)
             }
         case .restoreAsks:
-            ExampleCard(caption: Text("When one of their asks reaches you", bundle: .module)) {
+            ExampleCard(caption: Text("When one of their requests reaches you", bundle: .module)) {
                 RestoreAskExample(told: choices.toldAboutRestores)
             }
         case .restoreHold:

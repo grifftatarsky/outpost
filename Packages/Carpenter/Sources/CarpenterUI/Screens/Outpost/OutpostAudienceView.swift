@@ -68,7 +68,7 @@ public struct OutpostAudienceView: View {
                 icon: "person.2.badge.key.fill",
                 title: Text("Who sees your Outpost", bundle: .module),
                 paragraph: Text(
-                    "Nobody, until you say so. Being in a room together is not an answer to this. Somebody you let in collects your posts onto their own device, and what they have collected stays theirs if you change your mind.",
+                    "Nobody, until you say so. Sharing a room doesn't let anybody in. Somebody you let in downloads your posts to their device, and keeps what they downloaded if you change your mind.",
                     bundle: .module))
             // COPY END 1c5b22d8
 
@@ -132,7 +132,7 @@ public struct OutpostAudienceView: View {
                     Text("Can see it", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
-                        "Removing somebody stops them collecting anything new. It cannot take back what they already have — no app can reach into somebody else's device, and this one does not pretend to.",
+                        "Removing somebody stops them receiving anything new. It can't take back what they already have. No app can reach into somebody else's device.",
                         bundle: .module)
                 // COPY END 661a8d61
                 }

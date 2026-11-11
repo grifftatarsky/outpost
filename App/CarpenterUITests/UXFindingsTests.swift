@@ -74,7 +74,7 @@ final class UXFindingsTests: XCTestCase {
         open("message-detail")
         let row = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Hastur'")).firstMatch
         let combined = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS 'Hastur' AND label CONTAINS 'Collected'")).firstMatch
+            .matching(NSPredicate(format: "label CONTAINS 'Hastur' AND label CONTAINS 'Received'")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10) || combined.exists)
         XCTAssertTrue(combined.exists, "Hastur's name and when he collected it are separate stops")
         XCTAssertTrue(

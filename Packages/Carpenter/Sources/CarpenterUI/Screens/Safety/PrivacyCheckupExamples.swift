@@ -26,8 +26,8 @@ struct TabExample: View {
     private func item(_ symbol: String, _ label: Text, isOn: Bool) -> some View {
         VStack(spacing: 3) {
             Image(systemName: symbol)
-                .font(.system(size: 17))
-            label.font(.system(size: 10))
+                .font(.body)
+            label.font(.caption2)
         }
         .foregroundStyle(isOn ? palette.accentColor : palette.tertiaryText)
     }

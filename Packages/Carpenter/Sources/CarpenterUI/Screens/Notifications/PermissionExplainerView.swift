@@ -26,7 +26,7 @@ public struct PermissionExplainerView: View {
                 Section {
                     VStack(spacing: 12) {
                         Image(systemName: symbol)
-                            .font(.system(size: 40))
+                            .scaledSystemFont(40)
                             .foregroundStyle(palette.accentColor)
                             .accessibilityHidden(true)
                         title

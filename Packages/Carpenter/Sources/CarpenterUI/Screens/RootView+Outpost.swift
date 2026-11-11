@@ -5,6 +5,47 @@ import SwiftUI
 // MARK: The Outpost tab, and everything it pushes
 
 extension RootView {
+    var outpostFeed: some View {
+        OutpostFeedView(
+            viewer: owner,
+            authors: visibleOutpostAuthors,
+            posts: visibleFeed,
+            onReact: { post, emoji in
+                guard !DemoOutpost.isDemo(post) else { return }
+                await onReact(post, emoji)
+            },
+            onPost: { await onSend($0, nil) },
+            onAttach: onAttachPost,
+            postActions: postActions,
+            unseen: unseenOutposts,
+            showsAllOutposts: true,
+            onSeen: { await onMarkOutpostSeenPost($0) },
+            canJoinIn: canJoinIn
+        )
+        .onAppear { askingConsent = outpostSettings.consent == nil }
+        .sheet(isPresented: $askingConsent) {
+            OutpostConsentSheet { answer in
+                askingConsent = false
+                await outpostSettings.onConsent(answer)
+            }
+        }
+        .navigationDestination(for: AllOutpostsRoute.self) { _ in
+            outpostList
+        }
+        .navigationDestination(for: ParticipantID.self) { id in
+            outpostDestination(id)
+        }
+        .navigationDestination(for: OutpostPost.self) { post in
+            postDestination(post)
+        }
+    }
+
+    var surroundings: RootSurroundings {
+        RootSurroundings(
+            accent: theme.accent, iCloudHold: iCloudHold, showsAvatars: preferences.showsAvatars,
+            blursSensitiveMedia: safety.blursSensitiveMedia, playsHaptics: theme.playsHaptics)
+    }
+
     var outpostList: some View {
         OutpostListView(
             people: visibleOutpostAuthors.filter { $0.id != owner.id },
@@ -104,5 +145,24 @@ extension RootView {
         let real = outpostAuthors.isEmpty ? [owner] : outpostAuthors
         guard debugActions != nil, theme.demoOutpost else { return real }
         return real + DemoOutpost.authors
+    }
+}
+
+struct RootSurroundings: ViewModifier {
+    let accent: Accent
+    let iCloudHold: Bool
+    let showsAvatars: Bool
+    let blursSensitiveMedia: Bool
+    let playsHaptics: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .themed(accent)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if iCloudHold { ICloudHoldBanner() }
+            }
+            .environment(\.showsAvatars, showsAvatars)
+            .environment(\.blursSensitiveMedia, blursSensitiveMedia)
+            .environment(\.hapticsEnabled, playsHaptics)
     }
 }

@@ -123,44 +123,14 @@ public struct OutpostNotificationsView: View {
             .groupedRowSurface()
             // COPY END a72b9fcb
 
-            // COPY BEGIN 989c60d9 [NEEDS HUMAN REVIEW]
-            Section {
-                SettingsToggle(
-                    icon: "app.badge.fill",
-                    title: Text("Show on the app icon", bundle: .module),
-                    isOn: Binding(
-                        get: { badges.outposts },
-                        set: { on in
-                            var updated = badges
-                            updated.outposts = on
-                            Task { await onBadges(updated) }
-                        }))
-            } header: {
-                Text("App icon", bundle: .module).sectionHeading()
-            } footer: {
-                BadgeMeaningLine(meaning: badges.meaning)
+            AppIconBadgeSection(isOn: badges.outposts, meaning: badges.meaning) { on in
+                var updated = badges
+                updated.outposts = on
+                Task { await onBadges(updated) }
             }
-            .groupedRowSurface()
-            // COPY END 989c60d9
 
             if systemAllows == false {
-                Section {
-                    // COPY BEGIN 4e0adfc9 [NEEDS HUMAN REVIEW]
-                    if let onOpenSystemSettings {
-                        Button(action: onOpenSystemSettings) {
-                            SettingsRow(
-                                icon: "gear", tone: .device,
-                                title: Text("Turn on notifications", bundle: .module))
-                        }
-                    }
-                } footer: {
-                    Text(
-                        "Notifications are off for \(Branding.displayName) in Settings, so none of these will arrive until that is turned back on. What you choose here is kept either way.",
-                        bundle: .module)
-                        .foregroundStyle(palette.destructive)
-                    // COPY END 4e0adfc9
-                }
-                .groupedRowSurface()
+                NotificationsOffSection(onOpenSystemSettings: onOpenSystemSettings)
             }
         }
         .scrollContentBackground(.hidden)

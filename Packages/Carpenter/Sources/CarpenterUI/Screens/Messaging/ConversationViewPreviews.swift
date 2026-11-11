@@ -8,7 +8,7 @@ import SwiftUI
         NavigationStack {
             ConversationView(
                 room: Fixtures.zeppelinEnthusiasts,
-                messages: Fixtures.conversation,
+                transcript: Fixtures.conversation.map(TranscriptEntry.message),
             )
         }
         .environment(\.clock, Fixtures.PreviewClock())
@@ -20,7 +20,7 @@ import SwiftUI
         NavigationStack {
             ConversationView(
                 room: Fixtures.zeppelinEnthusiasts,
-                messages: Fixtures.conversation,
+                transcript: Fixtures.conversation.map(TranscriptEntry.message),
             )
         }
         .environment(\.clock, Fixtures.PreviewClock())

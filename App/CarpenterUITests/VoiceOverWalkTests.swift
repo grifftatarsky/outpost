@@ -1,10 +1,11 @@
 import XCTest
 
+@MainActor
 final class VoiceOverWalkTests: XCTestCase {
 
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         continueAfterFailure = true
         app = XCUIApplication()
         app.launchArguments += ["--quiet-for-audit", "-theme.accent", "verdigris"]
@@ -178,11 +179,12 @@ final class VoiceOverWalkTests: XCTestCase {
 
 }
 
+@MainActor
 final class AccessibilityAuditTests: XCTestCase {
 
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         continueAfterFailure = true
         app = XCUIApplication()
         app.launchArguments += ["--quiet-for-audit", "-theme.accent", "verdigris"]

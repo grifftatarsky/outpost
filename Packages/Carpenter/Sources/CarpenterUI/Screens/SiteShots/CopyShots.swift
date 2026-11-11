@@ -152,7 +152,7 @@
             case .welcome1, .welcome2, .welcome3, .welcome4, .welcome5, .welcome6:
                 WelcomeTourView(onContinue: {}, page: Int(String(shot.rawValue.last!))! - 1)
             case .lockSetup:
-                NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }, onNotNow: {}) }
+                NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _, _ in true }, onNotNow: {}) }
             case .solosList:
                 RootView.demo(tab: .messages)
             case .roomsCompact:
@@ -170,7 +170,7 @@
             case .recoveryKeyConfirm:
                 NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", at: .confirming) {} }
             case .lockSetupTyping:
-                NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }) }
+                NavigationStack { AppLockSetupView(biometricName: "Face ID", onLock: { _, _ in true }) }
             default:
                 ScreenShots.view(of: shot)
             }

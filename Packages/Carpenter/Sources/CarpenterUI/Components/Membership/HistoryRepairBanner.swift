@@ -63,7 +63,7 @@ enum RepairCopy {
         let checked = Text("Checked with \(asked).", bundle: .module)
         let refused = status.unverifiable > 0
             ? Text(
-                "^[\(status.unverifiable) entry](inflect: true) will not verify: a device that signed them had stopped being allowed to speak for its member.",
+                "^[\(status.unverifiable) item](inflect: true) can't be verified: the device that signed them was no longer allowed to act for its member.",
                 bundle: .module)
             : nil
         // COPY END 0cd3e4b7
@@ -73,7 +73,7 @@ enum RepairCopy {
             if status.recovered > 0 {
                 let arrived = sentences(
                     checked,
-                    Text("^[\(status.recovered) missing entry](inflect: true) arrived.", bundle: .module))
+                    Text("^[\(status.recovered) missing item](inflect: true) arrived.", bundle: .module))
                 return sentences(arrived, refused ?? Text("Nothing is missing now.", bundle: .module))
             }
             return sentences(checked, refused ?? Text("Nothing is missing.", bundle: .module))
@@ -84,15 +84,15 @@ enum RepairCopy {
         // COPY BEGIN ecebc20c [NEEDS HUMAN REVIEW]
         if status.heldByNobodyAsked == status.stillMissing {
             missing = Text(
-                "^[\(status.stillMissing) entry](inflect: true) still missing, and nobody asked has them.",
+                "^[\(status.stillMissing) item](inflect: true) still missing, and nobody asked has them.",
                 bundle: .module)
         } else if status.sentButNotArrived == status.stillMissing {
             missing = Text(
-                "^[\(status.stillMissing) entry](inflect: true) still missing; \(asked) sent them and they did not arrive. Check again.",
+                "^[\(status.stillMissing) item](inflect: true) still missing; \(asked) sent them and they didn't arrive. Check again.",
                 bundle: .module)
         } else {
             missing = Text(
-                "^[\(status.stillMissing) entry](inflect: true) still missing: \(status.heldByNobodyAsked) nobody asked has, \(status.sentButNotArrived) sent and not arrived. Check again.",
+                "^[\(status.stillMissing) item](inflect: true) still missing: \(status.heldByNobodyAsked) nobody asked has, \(status.sentButNotArrived) sent and not arrived. Check again.",
                 bundle: .module)
         }
         // COPY END ecebc20c

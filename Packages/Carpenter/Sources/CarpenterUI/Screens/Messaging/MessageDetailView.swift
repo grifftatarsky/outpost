@@ -10,7 +10,6 @@ public struct MessageDetailView: View {
     private let readers: [ReadBy]
     private let isSolo: Bool
 
-    @State private var confirmingHide = false
     @State private var explainingHide = false
     @State private var problem: String?
     @State private var reporting = false
@@ -53,24 +52,6 @@ public struct MessageDetailView: View {
         .navigationTitle(Text("Details", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         .alert(
-            Text("Hide this message?", bundle: .module),
-            isPresented: $confirmingHide
-        ) {
-            Button(role: .destructive) {
-                Task { await actions.hide(message.id) }
-                dismiss()
-            } label: {
-                Text("Hide it", bundle: .module)
-            }
-            Button(role: .cancel) { confirmingHide = false } label: {
-                Text("Cancel", bundle: .module)
-            }
-        } message: {
-            Text(
-                "It stops being drawn on your devices. Nobody else is affected and nothing is erased.",
-                bundle: .module)
-        }
-        .alert(
             Text("That did not go through", bundle: .module),
             isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })
         ) {
@@ -106,14 +87,14 @@ public struct MessageDetailView: View {
                 if readers.allSatisfy({ $0.report == .doesNotReport }) {
                     isSolo
                         ? Text(
-                            "Collected is when iCloud stored their phone's signed receipt for this message. They do not report when a message is shown, which is the default.",
+                            "Received is when iCloud stored their phone's signed receipt for this message. They do not report when a message is shown, which is the default.",
                             bundle: .module)
                         : Text(
-                            "Collected is when iCloud stored each phone's signed receipt for this message. Nobody here reports when a message is shown, which is the default.",
+                            "Received is when iCloud stored each phone's signed receipt for this message. Nobody here reports when a message is shown, which is the default.",
                             bundle: .module)
                 } else {
                     Text(
-                        "Collected is when iCloud stored their phone's signed receipt for this message. Shown is when a phone that reports it displayed the message, never that somebody read it.",
+                        "Received is when iCloud stored their phone's signed receipt for this message. Shown is when a phone that reports it displayed the message, never that somebody read it.",
                         bundle: .module)
                 }
                 // COPY END 3e540edb
@@ -144,7 +125,7 @@ public struct MessageDetailView: View {
                 Text("Every wording", bundle: .module).sectionHeading()
             } footer: {
                 Text(
-                    "Each edit is its own entry in the room, so everybody can read what changed.",
+                    "Each edit is saved in the room, so everybody can read what changed.",
                     bundle: .module)
                 // COPY END 8605b99e
             }
@@ -169,16 +150,16 @@ public struct MessageDetailView: View {
             // COPY END 1dadf3f6
 
             // COPY BEGIN 0c0c9dd1 [NEEDS HUMAN REVIEW]
-            Button(role: .destructive) {
-                confirmingHide = true
+            Button {
+                Task { await actions.hide(message.id) }
+                dismiss()
             } label: {
                 Label {
                     Text("Hide for me", bundle: .module)
                 } icon: {
-                    Image(systemName: "eye.slash").foregroundStyle(palette.destructive)
+                    Image(systemName: "eye.slash").foregroundStyle(palette.accentColor)
                 }
             }
-            .tint(palette.destructive)
             // COPY END 0c0c9dd1
 
             // COPY BEGIN 2e314aa0 [NEEDS HUMAN REVIEW]
@@ -198,15 +179,13 @@ public struct MessageDetailView: View {
                 // COPY BEGIN 9de72c36 [NEEDS HUMAN REVIEW]
                 Text(
                     """
-                    Hiding is yours alone. The message stops being drawn on your devices and stays \
-                    exactly where it was for everybody else — it is still in your log too, still \
-                    synced, and you can put it back.
+                    Hiding affects only you. The message stops appearing on your devices and stays \
+                    where it was for everybody else. It's still saved on your devices, and you can \
+                    show it again.
 
-                    It is not the same as withdrawing. Withdrawing is something only the person who \
-                    wrote a message can do, within two minutes, and it takes the words back from \
-                    everybody's view. Even then nothing is erased from anybody's device: the entry \
-                    stays and each copy draws a placeholder instead. Nothing in this app reaches \
-                    into somebody else's copy of a conversation.
+                    Withdrawing is different. Only the person who wrote a message can withdraw it, \
+                    within two minutes, and it removes the words from everybody's view. Nothing is \
+                    erased from anybody's device: each copy shows a placeholder instead.
                     """,
                     bundle: .module
                 )
@@ -267,11 +246,11 @@ struct RecipientRow: View {
     private var collection: Text {
         switch reader.collection {
         case .collected(let at):
-            Text("Collected \(formatter.exact(at))", bundle: .module)
+            Text("Received \(formatter.exact(at))", bundle: .module)
         case .noReceipt:
             Text("No receipt yet", bundle: .module)
         case .notCollected:
-            Text("Not collected in ^[\(NotGone.takenBackAfterDays) day](inflect: true)", bundle: .module)
+            Text("Not received in ^[\(NotGone.takenBackAfterDays) day](inflect: true)", bundle: .module)
         }
     }
 

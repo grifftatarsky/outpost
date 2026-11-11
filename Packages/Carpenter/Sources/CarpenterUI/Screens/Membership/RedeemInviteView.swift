@@ -317,7 +317,7 @@ public struct RedeemInviteView: View {
 
             // COPY BEGIN 38a05363 [NEEDS HUMAN REVIEW]
             Text(
-                "Confirming tells them the characters matched, and lets your phone collect what they send you. The room appears once whoever is in it has let you in.",
+                "Confirming tells them the characters matched and lets your phone receive what they send you. The room appears once the people in it have let you in.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)

@@ -32,11 +32,11 @@ public struct RoomNotGoneChoice: Sendable {
 
 // COPY BEGIN cf606016 [NEEDS HUMAN REVIEW]
 extension NotGone {
-    var takenBackTitle: Text { Text("Not collected", bundle: .module) }
+    var takenBackTitle: Text { Text("Not received", bundle: .module) }
 
     var takenBackExplanation: Text {
         Text(
-            "Somebody in this room did not collect it within ^[\(Self.takenBackAfterDays) day](inflect: true), so the copy waiting for them was taken back from your iCloud. Their phone asks for it once something newer from you reaches them and shows this one is missing.",
+            "Somebody in this room didn't receive it within ^[\(Self.takenBackAfterDays) day](inflect: true), so the copy waiting for them was removed from your iCloud. Their phone requests it again once something newer from you reaches them and shows this one is missing.",
             bundle: .module)
     }
 }
@@ -184,15 +184,15 @@ struct NotGoneExplanation: View {
         switch (notGone.signal, notGone.hasLeftThisDevice) {
         case (.newerMessagesCollected(let count), true):
             Text(
-                "It is waiting in your iCloud. ^[\(count) newer message](inflect: true) you sent here have been collected since, and this one has not — which is more than somebody being away.",
+                "It's waiting in your iCloud. ^[\(count) newer message](inflect: true) you sent here have been received since, and this one hasn't. That's more than somebody being away.",
                 bundle: .module)
         case (.newerMessagesCollected(let count), false):
             Text(
-                "It has not left this phone. ^[\(count) newer message](inflect: true) you sent here have been collected since, and this one has not — which is more than somebody being away.",
+                "It hasn't left this phone. ^[\(count) newer message](inflect: true) you sent here have been received since, and this one hasn't. That's more than somebody being away.",
                 bundle: .module)
         case (.waited(let days), true):
             Text(
-                "It is waiting in your iCloud, and in more than ^[\(days) day](inflect: true) nobody in this room has collected it. People collect messages when they open the app.",
+                "It's waiting in your iCloud, and nobody in this room has received it in more than ^[\(days) day](inflect: true). People receive messages when they open the app.",
                 bundle: .module)
         case (.waited(let days), false):
             Text(
@@ -228,7 +228,7 @@ struct NotGoneWaitView: View {
                 }
             } footer: {
                 Text(
-                    "A message waiting for somebody to open the app is ordinary, so nothing is said at first. It is marked with an orange circle when more than one newer message you sent here has been collected and it has not, or when it has waited this long. Choosing the first option leaves only the newer-messages sign, so somebody who has stopped opening the app is never pointed out.",
+                    "A message often waits until somebody opens the app, so nothing is marked at first. An orange circle appears when more than one newer message you sent here has been received and this one hasn't, or when it has waited this long. The first option keeps only the newer-messages check, so nobody is singled out for not opening the app.",
                     bundle: .module)
             }
             .groupedRowSurface()

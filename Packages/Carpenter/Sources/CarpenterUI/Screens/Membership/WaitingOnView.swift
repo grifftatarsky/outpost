@@ -34,7 +34,7 @@ public struct WaitingOnView: View {
             } footer: {
                 // COPY BEGIN 0bcd12f2 [NEEDS HUMAN REVIEW]
                 Text(
-                    "Nothing here is a fault. A message reaches somebody when their app next opens and collects it, so waiting on somebody who has not opened theirs is the ordinary case. Last heard is the newest thing of theirs this phone holds, and the time is the one their device wrote on it.",
+                    "Nothing here is a fault. A message reaches somebody when they next open the app, so waiting on somebody who hasn't opened it is normal. Last heard is the newest thing of theirs on this phone, with the time their device gave it.",
                     bundle: .module)
                 // COPY END 0bcd12f2
             }
@@ -71,7 +71,7 @@ public struct WaitingOnView: View {
             holding = Text("Has everything you sent here.", bundle: .module)
         case .missing(let count):
             holding = Text(
-                "Has not collected ^[\(count) message](inflect: true) you sent here yet.",
+                "Hasn't received ^[\(count) message](inflect: true) you sent here yet.",
                 bundle: .module)
         case .notCheckedYet:
             holding = Text("Not checked since the app opened.", bundle: .module)

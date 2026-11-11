@@ -121,7 +121,7 @@ public struct OutpostSettingsView: View {
             Text("Your picture", bundle: .module).sectionHeading()
         } footer: {
             Text(
-                "The photo on your You page, at the top of your Outpost, unless you choose a different one here. Off, your Outpost draws your initials and the rooms you are in are unchanged. Either way a reader is only ever sent a picture where Share my photo is on.",
+                "Shows the photo from your You page at the top of your Outpost, unless you choose a different one here. When this is off, your Outpost shows your initials, and rooms aren't affected. Readers are sent a picture only if Share my photo is on.",
                 bundle: .module)
                 // COPY END 3f9ba109
         }
@@ -153,7 +153,7 @@ public struct OutpostSettingsView: View {
             Text("People you have not met", bundle: .module).sectionHeading()
         } footer: {
             Text(
-                "Anybody who comments on an Outpost you both read, but whom you have never shared a room or an Outpost with, is drawn like this — all of them as one person, so there is nothing to follow from thread to thread. This is how your own devices draw them. Nobody else sees it, and nobody is told.",
+                "Anybody who comments on an Outpost you both read, but has never shared a room or an Outpost with you, appears like this. They all look like one person, so nobody can be followed from thread to thread. Only your devices show them this way, and nobody is told.",
                 bundle: .module)
             // COPY END b58d985d
         }
@@ -247,7 +247,7 @@ public struct OutpostSettingsView: View {
             Text("Your own Outpost", bundle: .module).sectionHeading()
         } footer: {
             Text(
-                "When you end up in a room with somebody new, the room asks once whether to let them read your Outpost. Off, nobody is ever offered it and you add people yourself. Either way nobody is let in until you say so.",
+                "When you join a room with somebody new, you're asked once whether to let them read your Outpost. When this is off, you add people yourself. Either way, nobody is let in until you say so.",
                 bundle: .module)
         }
         .groupedRowSurface()

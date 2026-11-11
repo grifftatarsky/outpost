@@ -103,7 +103,7 @@ struct DeliveryMarkView: View {
         case .pending:
             return Text(verbatim: "")
         case .sent:
-            return Text("Sent. Not collected yet.", bundle: .module)
+            return Text("Sent. Not received yet.", bundle: .module)
         case .noRecipients:
             return Text(
                 "Saved. There is nobody in this room to send it to yet — it will go when somebody joins.",
@@ -111,13 +111,13 @@ struct DeliveryMarkView: View {
         case .notCollected:
             return notCollectedLabel
         case .delivered:
-            return Text("Collected. Not yet shown.", bundle: .module)
+            return Text("Received. Not yet shown.", bundle: .module)
         case .notReported:
             return Text(
-                "Collected. This person does not report when a message is shown.", bundle: .module)
+                "Received. This person does not report when a message is shown.", bundle: .module)
         case .displayed(let at):
             return Text(
-                "Collected. Shown \(RelativeTimestampFormatter().readReceipt(at)).", bundle: .module)
+                "Received. Shown \(RelativeTimestampFormatter().readReceipt(at)).", bundle: .module)
         }
         // COPY END c562b6b2
     }
@@ -125,7 +125,7 @@ struct DeliveryMarkView: View {
     // COPY BEGIN 2c05bd49 [NEEDS HUMAN REVIEW]
     private var notCollectedLabel: Text {
         Text(
-            "Not collected by everybody within ^[\(NotGone.takenBackAfterDays) day](inflect: true). The copy that was waiting was taken back from your iCloud.",
+            "Not received by everybody within ^[\(NotGone.takenBackAfterDays) day](inflect: true). The waiting copy was removed from your iCloud.",
             bundle: .module)
     }
     // COPY END 2c05bd49

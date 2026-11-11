@@ -72,7 +72,7 @@ public struct DeviceListView: View {
                 }
             } footer: {
                 Text(
-                    "Anything on this list can send messages as you. Removing one stops it from reading what is said afterwards — but not from having sent what it already sent, because it really was you. Other people stop accepting it as you as their devices collect the removal, which is the next time each of them syncs.",
+                    "Every device on this list can send messages as you. Removing one stops it reading anything said afterwards. What it already sent stays, because it really was you. Other people's devices stop accepting it the next time they sync.",
                     bundle: .module
                 )
                 .fixedSize(horizontal: false, vertical: true)

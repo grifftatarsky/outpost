@@ -228,7 +228,7 @@ public struct PersonDetailView: View {
                     Text("On your phone", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
-                        "A name or photo you set here is yours alone: drawn wherever this person appears, and never sent to anybody — not to them, not to a room. Clear the name to go back to what they shared.",
+                        "A name or photo you set here stays on your devices. It's shown wherever this person appears and is never sent to anybody. Clear the name to go back to what they shared.",
                         bundle: .module)
                     // COPY END fd396c1a
                 }

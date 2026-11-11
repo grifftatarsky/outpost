@@ -395,7 +395,7 @@ struct RemoveMemberView: View {
             MembershipFact(
                 "tray.full",
                 Text(
-                    "Nothing they already collected comes back. Every message they have is still theirs.",
+                    "Nothing they already received comes back. Every message they have is still theirs.",
                     bundle: .module))
             MembershipFact(
                 "eye",

@@ -30,7 +30,7 @@ public struct WelcomeTourView: View {
                 id: 1,
                 title: "Message Delivery",
                 body:
-                    "Messages are delivered straight to their recipients. Your iCloud functions as a mailbox, holding in-flight messages. Everything inside is sealed, and addressed to a rotating key. Once all recipients have collected the message, it's removed, and only on your circle's devices.",
+                    "Messages are delivered straight to their recipients. Your iCloud functions as a mailbox, holding in-flight messages. Everything inside is sealed, and addressed to a rotating key. Once all recipients have received the message, it's removed, and only on your circle's devices.",
                 icon: "tray"),
             Panel(
                 id: 2,
@@ -71,7 +71,7 @@ public struct WelcomeTourView: View {
                             .frame(maxHeight: 120)
 
                         Image(systemName: panel.icon)
-                            .font(.system(size: 44, weight: .light))
+                            .scaledSystemFont(44, weight: .light)
                             .foregroundStyle(palette.accentColor)
                             .frame(height: 56, alignment: .bottom)
 

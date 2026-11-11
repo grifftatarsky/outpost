@@ -30,7 +30,7 @@ public struct IntegrityView: View {
 
                 // COPY BEGIN 33f91dec [NEEDS HUMAN REVIEW]
                 Text(
-                    "A torn or oversized record is cleared from the log at the next write. Nothing else here is repaired automatically. Two versions of the same message are both kept, because there is no honest way to choose between them.",
+                    "A damaged or oversized item is removed from your saved history the next time the app saves. Nothing else here is repaired automatically. If a message has two versions, both are kept.",
                     bundle: .module
                 )
                 .font(CarpenterFont.caption)
@@ -113,7 +113,7 @@ public struct IntegrityView: View {
         card {
             // COPY BEGIN bf1e96ea [NEEDS HUMAN REVIEW]
             Label {
-                Text("Part of the log was unreadable", bundle: .module)
+                Text("Part of your saved history couldn't be read", bundle: .module)
                     .font(CarpenterFont.rowTitle)
             } icon: {
                 Image(systemName: "externaldrive.badge.exclamationmark")
@@ -245,7 +245,7 @@ public struct IntegrityView: View {
 
             // COPY BEGIN 81cb9ee5 [NEEDS HUMAN REVIEW]
             Text(
-                "^[\(report.feedsFromOtherMembers) feed](inflect: true) written by a different member arrived in this Apple Account's storage and was ignored. Nothing of yours is affected, and nothing of theirs was read.",
+                "^[\(report.feedsFromOtherMembers) record](inflect: true) written by a different member arrived in this Apple Account's storage and was ignored. Nothing of yours is affected, and nothing of theirs was read.",
                 bundle: .module
             )
             .font(CarpenterFont.footnote)
@@ -258,13 +258,13 @@ public struct IntegrityView: View {
     private func explanation(for termination: LogTermination) -> LocalizedStringKey {
         switch termination {
         case .complete:
-            "The log was read to the end."
+            "Your saved history was read to the end."
         case .tornTail:
-            "The app stopped part-way through saving, so the last thing written was incomplete. Only that one entry was lost."
+            "The app stopped part-way through saving, so the last thing written was incomplete. Only that one item was lost."
         case .recordTooLarge:
-            "An entry claimed a size past what this app will read. It was refused rather than opened."
+            "One saved item claimed to be larger than this app will read, so it wasn't opened."
         case .undecodableRecord:
-            "A complete entry could not be read. Either it is damaged, or it was written by a newer version."
+            "One saved item couldn't be read. It's damaged, or a newer version of the app wrote it."
         }
     }
     // COPY END 7e67d2e5

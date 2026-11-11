@@ -12,7 +12,7 @@ struct SupporterBar: View {
                 Image(systemName: "exclamationmark.circle.fill")
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(palette.accentFill, .white)
-                    .font(.system(size: 30, weight: .semibold))
+                    .scaledSystemFont(30, weight: .semibold, relativeTo: .title)
 
                 // COPY BEGIN 2231431d [NEEDS HUMAN REVIEW]
                 VStack(alignment: .leading, spacing: 3) {

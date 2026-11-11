@@ -63,7 +63,7 @@
             for (person, emoji, color) in faces {
                 let renderer = ImageRenderer(
                     content: Text(verbatim: emoji)
-                        .font(.system(size: 64))
+                        .scaledSystemFont(64)
                         .frame(width: 120, height: 120)
                         .background(LinearGradient(
                             colors: [color.opacity(0.55), color.opacity(0.9)], startPoint: .top, endPoint: .bottom)))

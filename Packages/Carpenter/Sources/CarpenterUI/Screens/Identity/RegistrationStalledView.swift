@@ -32,7 +32,7 @@ public struct RegistrationStalledView: View {
             Spacer(minLength: 0)
 
             Image(systemName: "person.crop.circle.badge.questionmark")
-                .font(.system(size: 44))
+                .scaledSystemFont(44)
                 .foregroundStyle(palette.tertiaryText)
                 .accessibilityHidden(true)
 

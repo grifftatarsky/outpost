@@ -89,7 +89,7 @@ private struct ReactionOverflowStyleTest: View {
                     ForEach([0, 1, 2, 3], id: \.self) { extra in
                         HStack(spacing: 10) {
                             Text("\(extra)", bundle: .module)
-                                .font(.system(size: 13, design: .monospaced))
+                                .font(.system(.footnote, design: .monospaced))
                                 .foregroundStyle(palette.tertiaryText)
                                 .frame(width: 18, alignment: .trailing)
                             if extra == 0 {

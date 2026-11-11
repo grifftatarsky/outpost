@@ -97,12 +97,12 @@ public struct TapToSwapView: View {
                 .rotationEffect(.degrees(180))
             Image(systemName: "iphone")
         }
-        .font(.system(size: 64, weight: .light))
+        .scaledSystemFont(64, weight: .light)
         .foregroundStyle(phase == .crowded ? palette.secondaryText : palette.accentColor)
         .overlay {
             if phase == .swapped {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 44))
+                    .scaledSystemFont(44)
                     .foregroundStyle(palette.accentColor)
                     .background(Circle().fill(palette.background))
                     .transition(.opacity)

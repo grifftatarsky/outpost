@@ -26,7 +26,7 @@ public struct DeviceSyncedView: View {
             Spacer()
 
             Image(systemName: "checkmark.seal")
-                .font(.system(size: 46, weight: .light))
+                .scaledSystemFont(46, weight: .light)
                 .foregroundStyle(palette.accentColor)
 
             headline

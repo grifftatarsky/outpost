@@ -127,38 +127,7 @@ extension RootView {
             if outpostSettings.consent?.showsOutposts ?? true {
             Tab(value: PhoneTab.outposts) {
                 NavigationStack(path: $outpostPath) {
-                    OutpostFeedView(
-                        viewer: owner,
-                        authors: visibleOutpostAuthors,
-                        posts: visibleFeed,
-                        onReact: { post, emoji in
-                            guard !DemoOutpost.isDemo(post) else { return }
-                            await onReact(post, emoji)
-                        },
-                        onPost: { await onSend($0, nil) },
-                        onAttach: onAttachPost,
-                        postActions: postActions,
-                        unseen: unseenOutposts,
-                        showsAllOutposts: true,
-                        onSeen: { await onMarkOutpostSeenPost($0) },
-                        canJoinIn: canJoinIn
-                    )
-                    .onAppear { askingConsent = outpostSettings.consent == nil }
-                    .sheet(isPresented: $askingConsent) {
-                        OutpostConsentSheet { answer in
-                            askingConsent = false
-                            await outpostSettings.onConsent(answer)
-                        }
-                    }
-                    .navigationDestination(for: AllOutpostsRoute.self) { _ in
-                        outpostList
-                    }
-                    .navigationDestination(for: OutpostPost.self) { post in
-                        postDestination(post)
-                    }
-                    .navigationDestination(for: ParticipantID.self) { id in
-                        outpostDestination(id)
-                    }
+                    outpostFeed
                 }
             } label: {
                 // COPY BEGIN 72881db6 [NEEDS HUMAN REVIEW]
@@ -213,13 +182,7 @@ extension RootView {
             .badge(youNeedsAttention ? Text(verbatim: "!") : nil)
         }
         .tabViewSearchActivation(.searchTabSelection)
-        .themed(theme.accent)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if iCloudHold { ICloudHoldBanner() }
-        }
-        .environment(\.showsAvatars, preferences.showsAvatars)
-        .environment(\.blursSensitiveMedia, safety.blursSensitiveMedia)
-        .environment(\.hapticsEnabled, theme.playsHaptics)
+        .modifier(surroundings)
     }
 
     func moveRooms(from source: IndexSet, to destination: Int) {
