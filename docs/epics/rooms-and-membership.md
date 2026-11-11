@@ -799,6 +799,17 @@ open room rewrites a packet every sync. Widening somebody from *from now* to *ev
 second, wider grant of the same epoch to the same person — recognized as already issued, and never
 written, until the floor went into the key.
 
+**No key from below the floor, and a key change sealed under the key it replaces** (2026-11-11). Two
+faults let a reader let in *from now* read earlier posts. The floor was applied to the links a grant
+carries and not to the keys, so when two of the owner's devices had each made a key at one number,
+the one left behind went to the reader. And a key change could be sealed under a key made in the
+middle of writing it, which the reader held, so the reader opened it and walked back a step. Now no
+key numbered below a reader's floor is sent, and `advanceEpoch` hands `append` the exact key it
+replaced (`WhatAnOutpostReaderIsHandedTests`, `AKeyChangeIsSealedUnderTheKeyItsLinkOpensTests`).
+Both pass in the package suite. Neither has run on two accounts. The first is a trade and not a
+whole fix: a key's number cannot say which of two keys a reader came in at, and
+[the question is Griff's](../open-questions.md#a-reader-let-in-from-now-when-the-owner-posts-from-two-devices).
+
 **A refusal is an answer, and it costs no key.** The review's third answer, and *Allow nobody*,
 write the same `outpostAccess` entry a revocation does — with `isAllowed` false — and that is what
 stops the room asking again. What they do not do is rotate the wall's key: a key is only rotated for

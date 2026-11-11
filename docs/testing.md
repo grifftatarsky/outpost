@@ -39,7 +39,7 @@ Each epic has its own test plan: [Messaging](epics/messaging.md#test-plan),
 
 | Suite | Runs with | Covers |
 |---|---|---|
-| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,009 tests in 348 suites on 2026-11-04. |
+| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,232 tests in 400 suites on 2026-11-11, in about 350 seconds; 127 known issues that run, most of them one fault counted once per case. |
 | App suite, `App/CarpenterTests` | `xcodebuild test … -only-testing:CarpenterTests` | What needs a real app bundle: the system keychain, and the live CloudKit tests, which are off unless asked for. |
 | UI tests, `App/CarpenterUITests` | `xcodebuild test … -only-testing:CarpenterUITests/<class>` | Apple's accessibility audit, a contrast audit per accent, a label check, and the rig steps. |
 
@@ -50,6 +50,42 @@ It proves the logic above the mailbox and cannot prove CloudKit. A run on two ac
 evidence for anything that crosses the network.
 
 <!-- COPY END 4227807f -->
+
+<!-- COPY BEGIN 7df7b9ba [NEEDS HUMAN REVIEW] -->
+
+## Many devices in one process
+
+A story with several people or devices is written on `Gathering`
+(`Tests/CarpenterKitTests/TestGathering.swift`) and runs under `swift test`, with no simulator and no
+account. [Why](decisions.md#a-story-with-many-devices-runs-in-one-process-and-the-simulators-are-a-short-last-check).
+
+```swift
+let g = try await Gathering.of("Alice", "Bob", "Carol")
+let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol"])
+try await g.secondDevice("Bob's tablet", of: "Bob")
+g.away("Carol")
+try await g["Alice"].remove(g.id("Bob"), from: room)
+try await g.settle()
+g.back("Carol")
+```
+
+- **A turn** is one device's round: `g.takeTurns("Alice", "Bob")`. **`settle()`** takes turns until
+  two passes in a row change nothing, and fails by naming what is still changing.
+- **A fault** is set on one device's door, `g.door("Carol")`, and fires where it was set:
+  `fail(call:)`, `stopAnswering(after:)`, `holdView()`, `skip(_:)`. `g.endProcess(of:atCall:)` ends an
+  app at a numbered call and `g.relaunch(_:)` reopens it from the folder and keychain of that instant.
+- **An order or a seed is a test argument**, so a failing case can be run again alone. Keys and
+  identifiers are random on every run, so a tie the app breaks by comparing two of them falls
+  differently each time; a test that depends on one runs it several times and says which way it fell.
+- **No sleeps.** Waiting is counted in yields, so a story takes the same steps when the machine is
+  busy.
+- **A second device is approved the way a real one is**: `g.secondDevice(_:of:)`.
+
+A test that fails on today's code is kept as a known issue, and each one is a question for Griff in
+[open questions](open-questions.md#twelve-faults-the-many-device-tests-found). Fixing the fault means
+deleting the mark.
+
+<!-- COPY END 7df7b9ba -->
 
 <!-- COPY BEGIN d9819eff [NEEDS HUMAN REVIEW] -->
 

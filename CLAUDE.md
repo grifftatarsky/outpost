@@ -136,6 +136,9 @@ types, methods and functions as that allows. Here, that means:
   one before committing.
 - **Verify before reporting.** A claim you did not measure is a claim that will be wrong in front of
   him.
+- **On "pause", or any usage warning, stop every agent and background job**, check that nothing is
+  left running, and start nothing again until Griff says so. On 2026-11-11 two runs kept going after
+  he said pause and used a week of his allowance. Size a run before starting it, and say the size.
 
 ## Commands
 

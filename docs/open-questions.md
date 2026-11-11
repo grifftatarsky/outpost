@@ -172,8 +172,8 @@ again behind the lock, the member's name still there once it opened, and *Forgot
 the phone. Changing the code, Face ID and the recovery key were not walked, and nothing has run on a
 phone.
 
-**What it costs.** Griff accepted 1 and 3 on 2026-11-10; 2, 4 and 5 are still his to accept or
-change.
+**What it costs.** Griff accepted 1 and 3 on 2026-11-10 and answered 4 the same day by ruling the
+two factors (below). 2 and 5 are still his to accept or change.
 
 1. With the lock on, a notification can only say that something arrived. The notification extension
    runs in its own process and never has the key. Accepted: "it does still allow for anon push
@@ -201,18 +201,54 @@ change.
    has no server. What an app can do is make the Secure Enclave refuse to use the vault's key until
    iOS has checked Face ID or the phone's passcode, which the Secure Enclave does count
    ([Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/userpresence)).
-   Today only the Face ID wrapping asks for that; the code's wrapping asks for nothing but an
-   unlocked phone.
+   Until 2026-11-11 only the Face ID wrapping asked for that; the code's wrapping asked for nothing
+   but an unlocked phone.
 5. Left in the clear: the lock's own record, the choice of when files open, and the outside of each
    entry in the history file (which device wrote it, when, and in which room, by number). What each
    entry says, and every photo, is sealed under room keys, which the lock now seals.
 
-**Recommendation for 4, three parts.** Make the code's wrapping ask for the phone's own check
-first (Face ID, or the phone's passcode), so somebody without those gets no guesses at all: that is
-two factors, and it costs a second prompt when Face ID fails. Say beside the code that a passphrase
-is what stops a thief who knows the phone's passcode. Offer *Face ID only*, with the recovery key as
-the one way back, for a member who wants that thief stopped outright. None of it can be run on a
-simulator, so it is built with the first iPhone run.
+**4 was answered.** Griff ruled on 2026-11-10 that the code counts only after Face ID or the phone's
+passcode has passed, and that somebody who knows the phone's passcode is out of scope
+([Decisions](decisions.md#the-locks-code-is-tried-only-after-the-phone-has-checked-face-id-or-its-passcode)).
+It was built on 2026-11-11 and is held by package tests against a stand-in. No note about
+passphrases and no *Face ID only* mode were added. The simulator walk above was made before this
+change and has not been repeated.
+
+**Found while building it, and Griff's to decide.**
+
+1. *A check the phone already passed may be reusable.* Apple lets an app accept a recent unlock of
+   the phone by Touch ID or Face ID in place of a new check, for a period up to a maximum Apple sets
+   ([Apple](https://developer.apple.com/documentation/localauthentication/lacontext/touchidauthenticationallowablereuseduration)).
+   The app does not ask for that. A modified app could, so code running as the app shortly after
+   the owner unlocked the phone might use the code's key with no sheet. Not tested.
+   **Recommendation:** try it on the iPhone first. If it holds, accept it: that person has the
+   phone within minutes of the owner unlocking it and still has every code to guess.
+2. *Turning the phone's passcode off may delete the code's key.* If iOS does that, the code never
+   works on that phone again and the recovery key is the only way in. The app now says so when it
+   happens. Whether iOS deletes the key is not verified. **Recommendation:** require the recovery
+   key to be saved before the lock can be turned on.
+3. *Forgot the code?* erases this phone's copy with no check by the phone, so anybody holding it
+   unlocked can erase it. **Recommendation:** ask for Face ID or the phone's passcode first, and
+   skip that on a phone with no passcode.
+4. *Changing the code* retires the old key without first opening the new lock. Turning the lock on
+   does prove the new lock opens; changing the code does not. **Recommendation:** prove it the same
+   way, at the cost of one more sheet.
+5. *Erasing after wrong codes when the app started behind the lock* still cannot tell the member's
+   other devices, as before. Nothing was built for it.
+
+**What only an iPhone can show.** None of this has run:
+
+- that the Secure Enclave refuses the code's key until the check passes, and that its key
+  agreement gives the same result as the app's own arithmetic;
+- that the Face ID or passcode sheet makes the app inactive and never sends it to the background,
+  and that iOS cancels the sheet when the app does go to the background;
+- that turning the phone's passcode off deletes the code's key, and what the app then shows;
+- that a Face ID lockout leaves *Face ID alone* switched on;
+- whether a key that asks for the enrolled faces offers a passcode fallback on its sheet;
+- the reuse period in 1.
+
+The hosted test `TheVaultOnTheRealKeychainTests` raises two real sheets on an iPhone, so a person
+has to be there to answer them.
 
 <!-- COPY END 5d82a14a -->
 
@@ -251,7 +287,46 @@ commits have landed since. Add a time window as a third choice only if Griff con
 what an invitation and an admission carry, so it has to land before the first tester build. The other
 85 commits on that branch need their own pass to see what else never arrived.
 
+**Designed on 2026-11-11, not built.** [The design](designs/room-history.md) was written against
+today's code and reviewed once. Its first page has the four promises for Griff to confirm and six
+decisions, each with a recommendation and what it costs. A time window can only honestly say "no
+more than N days", because one key covers everything written while it was the newest. Nothing is
+built until he answers.
+
 <!-- COPY END 5bab6014 -->
+
+<!-- COPY BEGIN 79bfab59 [NEEDS HUMAN REVIEW] -->
+
+## Formats after the first tester build, and telling a member to update
+
+Asked by Griff on 2026-11-10: keep old message formats accepted without much new code, support one
+prior format, and tell members to update after one release has passed, with no server and nothing
+shared with Apple. [The design](designs/formats-and-updates.md) answers it and nothing is built.
+
+**The plan in four lines.** Saved messages are never converted, and every form ever written stays
+readable, because a signature is taken over the bytes. What phones hand each other (packets, keys,
+invitations) is read in today's form and the one before it. This phone's own state file is converted
+once, at the first launch of a new build. Each phone puts the format number it reads inside the
+sealed packet it already sends, and a phone that hears a higher number tells its member to update.
+
+**What the notice shares.** Nothing with Apple and nothing with a server. Everybody a phone writes
+to learns its format number and roughly when it changed. The App Store opens only when the member
+taps.
+
+**For Griff:** confirm the thirteen promises in the design's section 2, and five decisions on its
+first page.
+
+1. Old messages are never converted, and a fixed rule ships as a new kind of message. *Recommend yes.*
+2. A release reads a new form one release before any release writes it. *Recommend yes.*
+3. Whether the notice compares only the format number, which changes rarely, or also the App Store
+   build number, which tells contacts the exact build. *Recommend adding the build number.*
+4. A room takes no writes while a current member has written something this build cannot read.
+   A member with a modified app could use that to stall a room until removed. *Recommend yes.*
+5. No App Store lookup, which would tell Apple the phone's address at every launch; no public
+   iCloud record edited by the developer, which is a server in all but name; no reminder by a
+   build's age yet. *Recommend no to all three.*
+
+<!-- COPY END 79bfab59 -->
 
 <!-- COPY BEGIN 2983233d [NEEDS HUMAN REVIEW] -->
 
@@ -374,3 +449,116 @@ stays on the clipboard with no expiry.
 what each choice costs.
 
 <!-- COPY END cc829033 -->
+
+<!-- COPY BEGIN 76b2ed08 [NEEDS HUMAN REVIEW] -->
+
+## Five rulings were recorded on a branch that never merged
+
+Found 2026-11-11. The branch `origin/desktop` (86 commits, 2026-09-18 to 2026-09-22, never merged)
+has a `docs/decisions.md` with five entries marked RULED by Griff that are in neither this branch's
+docs nor, as far as was checked, its code. The room history setting was a sixth and has
+[its own question](#a-rooms-history-setting-was-built-on-a-branch-that-never-merged). Everything else
+that branch held is in [the audit](desktop-branch-audit.md).
+
+| Ruled | Griff's words, as that branch recorded them | What it asked for | On this branch |
+|---|---|---|---|
+| 2026-09-20 | "a user provides only what another user is allowed to see. Ideally, they cannot retrieve something they will not be allowed to read." | A device sends each person only the entries they may read | Not here. `mayReceive` is in no file |
+| 2026-09-21 | "I do believe that is enough." | One numbered log per conversation, so no number on an entry says anything about a member's other conversations | Not checked beyond the entry being absent. It changes the bytes of every entry |
+| 2026-09-21 | "yes. I love an enum." | A conversation is named by what kind it is: a room, a Solo or an Outpost | Not here. `ConversationID` is in no file |
+| 2026-09-21 | "No timestamp" | Members vouch for each other's logs, and a mismatch is recorded, not called an accusation | Not checked beyond the entry being absent |
+| 2026-09-21 | "A reinstall should become the same device - if it's still correctly identified." and "Keep the log and state out of backups. And wait only for its own record." | A reinstalled or restored phone comes back as the same device and writes nothing until it has read its own records back | Not checked beyond the entry being absent |
+
+**Why it matters before a tester build.** The second and third change what an entry is made of, and
+after the first tester build a change like that has to be carried as a format step.
+
+**Recommendation.** Griff says which of the five still stand. The ones that do go back into
+`decisions.md` as his rulings and onto the plan ahead of the tester build, starting with sending
+each person only what they may read, because the room history setting leans on it.
+
+<!-- COPY END 76b2ed08 -->
+
+<!-- COPY BEGIN 0fc0cd18 [NEEDS HUMAN REVIEW] -->
+
+## Twelve faults the many-device tests found
+
+Found 2026-11-11 by the tests that run five people and their devices in one process against the fake
+iCloud. Each fault has a test that fails on today's code, marked as a known issue so the suite stays
+green; fixing one means deleting that mark. **None has run on two accounts.** "Every run" and "one run
+in three" are counts from the package suite, not from phones.
+
+**A removed person or device can read what is said next**
+
+| # | What happens | How often | Test | Recommendation |
+|---|---|---|---|---|
+| 1 | Bob's phone collects a removal. Bob's tablet sends before the phone has told it, and writes under the key the removed member still holds | Every run | `ASecondDeviceSendsAfterWhatItsMemberCollectedTests` | Before a send, a device asks the member's other devices what they collected, as well as iCloud |
+| 2 | A friend away for longer than a packet waits never gets the new key unless the sender's app restarts. He writes under the old key | Every run | `AwayWhileTheKeyChangesTests` | A key in a packet that expired uncollected is owed again, and the note that it was handed out is kept on disk |
+| 3 | A friend who has not heard that Bob removed his tablet makes a key and seals it to the tablet. The room sometimes stays on that key. No modified app is needed | One run in three | `ARemovedDeviceGetsNoKeyThroughAFriendTests` | On hearing of a device removal, replace any key that was sealed to that device |
+| 4 | A removed phone running a modified app makes a key. Friends who hear of the removal late take it and sometimes write under it. [The crypto brief](crypto-brief.md) already says a friend who has not heard takes such a key | One run in three, only when a friend hears last | `WhatARemovedDeviceWritesCountsNowhereTests` | Check a key's maker against the device list again when a removal arrives, not only when the key is taken |
+
+**People disagree about who is in a room, or which device counts**
+
+| # | What happens | How often | Test | Recommendation |
+|---|---|---|---|---|
+| 5 | A removal carried only in packets that expired never reaches a friend who was away. He still lists the removed member. Not traced | Every run | `AwayWhileTheKeyChangesTests` | The same as 2: what an expired packet carried is owed again |
+| 6 | Two of a member's devices remove each other at once. The member's devices keep one and every friend keeps the other, so friends cannot read the device that is left. Not traced | Every run | `WhatARemovedDeviceWritesCountsNowhereTests` | Friends order a member's removals by the time iCloud stored them, as the member's own devices do |
+| 7 | A send within two seconds of a round does not see a removal stored in between, so the removed member writes into the room. Shown with the fake holding its view; the real two seconds were not measured | Every run on the fake | `TheOrderThingsArriveInTests` | A send reads the space fresh |
+
+**Lost, repeated or left behind**
+
+| # | What happens | How often | Test | Recommendation |
+|---|---|---|---|---|
+| 8 | A tablet whose disk refused its phone's mail, and then restarted, never gets that mail | Every run | `ATabletRestartsBeforeItsDiskRecoversTests` | On launch, read the mail from the saved place, not only what iCloud reports as changed |
+| 9 | A notification wish turned on and then off a round later sometimes stays on at the other end. Not traced | Three to six runs in eight | `TheOrderThingsArriveInTests` | Trace it first |
+| 10 | **Fixed 2026-11-11.** A removed member's phone wrote her old join confirmation to every friend on every round until her invitation expired, and for good if it had no expiry | Every run, before the fix | `ARemovedMembersQuietRoundsWriteNothingTests` | Done: an invitation the room shows as finished is no longer confirmed. Not run on two accounts |
+| 11 | A write that landed while its answer was lost is made again in a second packet. No message is shown twice | Every run | `AWriteWhoseAnswerWasLostTests` | After a write with no answer, look for the packet before writing again |
+| 12 | The first copy from 11 is tracked by no device and stays in iCloud until a sweep nine days later | Every run | `AWriteWhoseAnswerWasLostTests` | Goes away with 11 |
+
+**Seen once and not confirmed.** A device approved moments earlier, with its clock an hour behind
+iCloud's, could not write anything: its entries were refused as coming from a device not yet approved.
+Whether a real phone can get into that state was not checked.
+
+**Recommendation.** Fix 1 to 4 before a tester build, because each lets somebody who was removed keep
+reading. Fix 5 to 8 before it too, because each leaves two phones disagreeing with nothing to put them
+right. 9, 11 and 12 can wait. Each fix is its own commit and ends by deleting the known-issue mark.
+
+<!-- COPY END 0fc0cd18 -->
+
+<!-- COPY BEGIN 770379fb [NEEDS HUMAN REVIEW] -->
+
+## A reader let in "from now" when the owner posts from two devices
+
+Found 2026-11-11, by review of that day's fix and then by tests. An Outpost reader let in *from now*
+is recorded as coming in at a key's **number**. Two of the owner's devices that are out of touch can
+each make a different key at the same number, so a number cannot say which key the reader came in
+at. Three cases, each a test in `WhatAnOutpostReaderIsHandedTests`, all in the package suite only.
+
+| Case | Before 2026-11-11 | Now |
+|---|---|---|
+| The other device's key has a lower number and was made **before** the reader came in | The reader was handed it and read the earlier posts | **Closed.** A key numbered below where the reader came in is not sent |
+| The other device's key has the **same** number and was made before the reader came in | The reader may be handed it, reads the earlier posts, and may then be unable to read anything newer until the key next changes | **Unchanged.** Happens when that key reaches the reader first; one run in six |
+| The other device's key has a lower number and was made **after** the reader came in, while it was out of touch | The reader was handed it and read that device's new posts | **Worse.** The key is withheld, so the reader cannot read what that device posted until it catches up. Every run |
+
+So the fix is a trade: it stops one way of reading older posts, and it costs a reader the posts an
+out-of-touch second device makes. It was kept because reading what "from now" promised to keep back
+is the worse failure. **Griff decides whether it stays.**
+
+**Recommendation.** Record the exact key a reader came in at, not its number, in the entry that
+lets them in, and hand a reader only that key and keys made by a device that had seen them let in.
+That closes all three. It is decision 2 on the first page of
+[the room history design](designs/room-history.md), and it changes what that entry carries, so it
+belongs before a tester build.
+
+**Three smaller things the same review found**, none shown by a test:
+
+- A room flagged for a new key before anything is written clears the flag before the key change
+  is finished. A message sent in that gap may be written under the old key. The reviewer judged it
+  unlikely by the order tasks run in; it was not measured. Recommend holding the key change as a
+  task that a second writer waits for.
+- A person who accepted two invitations to one room, got in by the second and was then removed
+  still confirms the first one every round. The fix of 2026-11-11 quiets only the invitation she
+  came in by. Recommend recording a replaced invitation as finished, after checking that a member
+  cannot use that to shut somebody out by repeating an old invitation.
+- No test holds two key changes that overlap. The code was read and is right; a test needs a log
+  store that can be held open.
+
+<!-- COPY END 770379fb -->

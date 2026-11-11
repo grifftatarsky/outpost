@@ -108,6 +108,9 @@ Not committed. Built, and run in the package suite; the two items marked were al
 
 ### Left to do, in order
 
+[The Part B plan](part-b-plan.md) of 2026-11-11 is newer than this list and replaces it where the
+two disagree.
+
 1. The room history setting, if Griff says yes to decision 1.
 2. Go through the other 85 commits on `origin/desktop` and list what never reached this branch.
 3. On the rig, in the app's own screens: a Solo from the list of people, a removal, a block, and

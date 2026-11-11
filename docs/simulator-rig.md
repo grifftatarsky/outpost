@@ -458,6 +458,38 @@ live suite.
 
 <!-- COPY END 0a839973 -->
 
+<!-- COPY BEGIN a1f7ccec [NEEDS HUMAN REVIEW] -->
+
+### What outpost-alpha and outpost-beta showed on the night of 2026-11-10
+
+On the build at `fe9ec3e`, each simulator signed in to its own Apple Account.
+
+- **The app suite against live iCloud passed on `outpost-alpha`:** 63 tests in 13 suites in 98
+  seconds, with parallel testing off. Run with parallel testing on, Xcode ran it on a clone of the
+  simulator and it passed there too; that run is not counted.
+- **`LivePairTests` passed once on the two accounts,** 65 seconds a side: a space shared each way,
+  24 entries in the order written, receipts emptying the sender's space, a photo and its copy
+  cleared, a write into the other person's space refused, and a closed space gone.
+- **`LivePairSendTests` passed a second time,** 71 seconds a side. Collecting and then writing took
+  0.7 seconds for a room of two.
+
+`LivePairTests` had not run since 2026-09-28 and stalled three ways before it passed. All three
+were the test, not the app:
+
+- One side waited on a file and ran no rounds while the other still needed its receipts.
+- The sender waited on a file straight after sending a photo, so the photo's entry was never sent.
+  In the app a round follows every send.
+- The last check counts every shared space the account can see, and the runs that had failed left
+  theirs behind.
+
+Each side now clears its own spaces before it starts and keeps running rounds while it waits.
+**A run that fails still leaves its spaces in the account** until the next run clears them.
+
+One thing is not explained: in the first run Alice's test process ended after three and a half
+minutes with no crash report. It has not happened again in four runs.
+
+<!-- COPY END a1f7ccec -->
+
 <!-- COPY BEGIN b526cfb5 [NEEDS HUMAN REVIEW] -->
 
 ## What the rig cannot prove

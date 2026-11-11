@@ -4396,6 +4396,42 @@ Device Security, owed), Face ID has to release a key the Secure Enclave holds ba
 
 <!-- COPY END b900e80f -->
 
+<!-- COPY BEGIN 77c117c2 [NEEDS HUMAN REVIEW] -->
+
+### The lock's code is tried only after the phone has checked Face ID or its passcode
+
+**RULED 2026-11-10 by Griff:** *"It sounds like the two factors via face id and phone passcode is
+the move; a thief who knows the passcode...you've got big problems and our app is the least of it."*
+How it is done, below, is **PROPOSED**.
+
+The hardware key behind the code is made so that the Secure Enclave will not use it until Face ID
+or the phone's passcode has passed (`SecureEnclaveKeys.flags(for:)`). Until then the app holds
+nothing a code can be tested against. So somebody holding the unlocked phone, who knows neither the
+phone's passcode nor the member's face, gets no guess at the code, with the app as shipped or with
+a modified one. Before this, code running as the app could skip the app's own count and try every
+six-digit code in hours ([the measurement](open-questions.md#outposts-own-lock-seals-what-the-phone-keeps-and-what-that-costs)).
+
+- A check that does not pass is not a wrong code. It counts no try, starts no wait and erases
+  nothing.
+- The phone's passcode alone never opens the app. It earns the right to try the code.
+- Turning the lock on seals nothing until the new lock has opened once.
+- The recovery key opens the app with no check from the phone, so a member who turns the phone's
+  passcode off is not shut out.
+- *Face ID alone* stays an opt-in. It starts off, and it is turned off when the faces enrolled on
+  the phone change.
+- A passed check is kept for at most 60 seconds, and dropped when the app goes to the background.
+
+**What it does not stop,** by the ruling: somebody who knows the phone's passcode. They pass the
+check, and what stands between them and the app is the code and the app's own count.
+
+`TheCodeIsTriedOnlyAfterThePhonesCheckTests` holds it, against a stand-in that refuses what the
+real key refuses.
+
+> **Not verified.** Nothing here has run on a Secure Enclave, which a simulator does not have. What
+> only an iPhone can show, and three things found while building that are Griff's to decide, are in
+> [open questions](open-questions.md#outposts-own-lock-seals-what-the-phone-keeps-and-what-that-costs).
+
+<!-- COPY END 77c117c2 -->
 <!-- COPY BEGIN fd2829c5 [NEEDS HUMAN REVIEW] -->
 
 ### Advanced On Device Security seals what this phone keeps while it is locked
@@ -6257,6 +6293,49 @@ that had never been considered. **Do not add a protocol extension default to thi
 default is exactly how a fake drifts from the thing it stands in for.
 
 <!-- COPY END 00237a6d -->
+
+<!-- COPY BEGIN 397dc048 [NEEDS HUMAN REVIEW] -->
+
+### A story with many devices runs in one process, and the simulators are a short last check
+
+`RULED 2026-11-10 by Griff`: "I think we spend way too much time on sims when we should have a more
+standard 'lots of unit tests, many integration tests, some end to end tests' approach". How it is
+done, below, is `PROPOSED`.
+
+**What there is.** `Gathering`, in the test target, puts up to five people and their devices in one
+test. Each device is a whole `AppSession` with its own keychain, folder and clock, its own door
+(`HookedMailbox`) onto one `InMemoryMailbox`, and a device relay per member. A story takes turns by
+name, and `settle()` runs rounds until two passes in a row change nothing. Waits are counted, never
+timed, so a story takes the same steps on a busy machine.
+
+**What a door can be told to do**, because iCloud does each of these: fail one call; store a write
+and lose its answer; stop answering; end the app at a numbered call, keeping the folder and keychain
+as they were at that instant; leave a record out of every read until its sender writes again; answer
+from a view that is two seconds old; hand back records stored at one instant in any order. A relay
+can hand a change over once, as the real engine does, and fail one send or one refresh.
+
+**The three layers.** A unit test holds one rule of one type. A many-device test holds a feature's
+promises across people, devices and orders of arrival, and is where a removed device, a device that
+was away and a modified app are tried. The simulators hold only what those cannot reach: what
+iCloud itself does, code in the app target, and hardware. That is `LivePairTests` and
+`LivePairSendTests` on two Apple Accounts, and the live suites that need one.
+
+**What it costs.** The fake has to stay as hard as iCloud, or a green many-device suite says less
+than it seems to. Where the fake is still easier is listed in
+[the design](designs/many-device-tests.md), section 3. The shared checks that would run one set of
+tests against both the fake and iCloud are designed and not built, and so is a script that runs the
+simulator checks in one command.
+
+**What it does not change.** Anything crossing the network is unproven until two devices on two
+Apple Accounts have run it. Whether that relaxes is
+[Griff's to decide](part-b-plan.md#waiting-on-griff).
+
+**Not built: scripted tests against iCloud's web interface.** They would not run this app's code,
+and each user needs a person to sign in. Apple says a user token for its command-line tool is made
+"using an interactive login and cannot be automated"
+(<https://developer.apple.com/icloud/cloudkit/automating/>).
+
+<!-- COPY END 397dc048 -->
 
 <!-- COPY BEGIN eb9de51f [NEEDS HUMAN REVIEW] -->
 
