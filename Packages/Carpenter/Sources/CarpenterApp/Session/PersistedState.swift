@@ -66,14 +66,12 @@ struct PersistedState: Codable, Equatable, Sendable {
     var wantsWhatWasSaid = false
     var siblingMail = SiblingMail()
 
-    private enum RetiredKeys: String, CodingKey { case awaitingJoin, epochTurnsOwed }
     var knownKeys: [IdentityPublicKeys] = []
     var certificates: [DeviceCertificate] = []
     var revocations: [DeviceRevocation] = []
     var otherRevocations: [DeviceRevocation] = []
     var supersededLines: [FeedKey: DeviceRegistry.Line] = [:]
     var authorityStored: [Data: Date] = [:]
-    var authorityIsLegacy = false
     var authorityPublished: Set<Data> = []
     var authorityAnnounced: Data?
     var authorityOwed: Set<ParticipantID> = []
@@ -84,6 +82,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var notCollected: [ParticipantID: Set<EntryHash>] = [:]
     var collectedAt: [ParticipantID: [EntryHash: Date]] = [:]
     var claimTimes: [EntryHash: Date] = [:]
+    var keptIsSealed = false
     var removalsTold: Set<EntryHash> = []
     var grantsWaiting: [ForwardedGrant] = []
     var photosOwed: Set<EntryHash> = []
@@ -95,7 +94,6 @@ struct PersistedState: Codable, Equatable, Sendable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let retired = try decoder.container(keyedBy: RetiredKeys.self)
         organisation =
             try container.decodeIfPresent(RoomsListOrganisation.self, forKey: .organisation)
             ?? RoomsListOrganisation()
@@ -110,16 +108,8 @@ struct PersistedState: Codable, Equatable, Sendable {
             try container.decodeIfPresent(VectorClock.self, forKey: .syncedFrontier) ?? VectorClock()
         knownKeys =
             try container.decodeIfPresent([IdentityPublicKeys].self, forKey: .knownKeys) ?? []
-        if let accepted = try container.decodeIfPresent(
-            [AcceptedInvitation].self, forKey: .acceptedInvitations)
-        {
-            acceptedInvitations = accepted
-        } else {
-            acceptedInvitations =
-                (try retired.decodeIfPresent([MembershipAttestation].self, forKey: .awaitingJoin)
-                    ?? [])
-                .map { AcceptedInvitation(attestation: $0, confirmedAt: .distantPast) }
-        }
+        acceptedInvitations =
+            try container.decodeIfPresent([AcceptedInvitation].self, forKey: .acceptedInvitations) ?? []
         phraseNonces =
             try container.decodeIfPresent([String: Data].self, forKey: .phraseNonces) ?? [:]
         certificates =
@@ -152,8 +142,7 @@ struct PersistedState: Codable, Equatable, Sendable {
         askedAutomatically =
             try container.decodeIfPresent([RoomID: Date].self, forKey: .askedAutomatically) ?? [:]
         keyRotationsOwed =
-            try container.decodeIfPresent([RoomID].self, forKey: .keyRotationsOwed)
-            ?? retired.decodeIfPresent([RoomID].self, forKey: .epochTurnsOwed) ?? []
+            try container.decodeIfPresent([RoomID].self, forKey: .keyRotationsOwed) ?? []
         reviewsPostponed =
             try container.decodeIfPresent([RoomID: [ParticipantID]].self, forKey: .reviewsPostponed)
             ?? [:]
@@ -179,12 +168,7 @@ struct PersistedState: Codable, Equatable, Sendable {
             try container.decodeIfPresent([DeviceRevocation].self, forKey: .otherRevocations) ?? []
         supersededLines =
             try container.decodeIfPresent([FeedKey: DeviceRegistry.Line].self, forKey: .supersededLines) ?? [:]
-        if let stored = try container.decodeIfPresent([Data: Date].self, forKey: .authorityStored) {
-            authorityStored = stored
-            authorityIsLegacy = try container.decodeIfPresent(Bool.self, forKey: .authorityIsLegacy) ?? false
-        } else {
-            authorityIsLegacy = true
-        }
+        authorityStored = try container.decodeIfPresent([Data: Date].self, forKey: .authorityStored) ?? [:]
         authorityPublished = try container.decodeIfPresent(Set<Data>.self, forKey: .authorityPublished) ?? []
         authorityAnnounced = try container.decodeIfPresent(Data.self, forKey: .authorityAnnounced)
         authorityOwed = try container.decodeIfPresent(Set<ParticipantID>.self, forKey: .authorityOwed) ?? []
@@ -199,6 +183,7 @@ struct PersistedState: Codable, Equatable, Sendable {
         collectedAt =
             try container.decodeIfPresent([ParticipantID: [EntryHash: Date]].self, forKey: .collectedAt) ?? [:]
         claimTimes = try container.decodeIfPresent([EntryHash: Date].self, forKey: .claimTimes) ?? [:]
+        keptIsSealed = try container.decodeIfPresent(Bool.self, forKey: .keptIsSealed) ?? false
         removalsTold = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .removalsTold) ?? []
         grantsWaiting = try container.decodeIfPresent([ForwardedGrant].self, forKey: .grantsWaiting) ?? []
         photosOwed = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .photosOwed) ?? []

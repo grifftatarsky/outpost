@@ -151,14 +151,14 @@ extension ForwardCompatibilityTests {
         let other = Identity.generate()
         state.otherRevocations = [
             try DeviceRevocation.issue(
-                for: DeviceKeys.generate().id, by: other, at: stamp.at, from: DeviceKeys.generate())
+                for: DeviceKeys.generate().id, by: other, at: stamp.at, from: DeviceKeys.generate(),
+                cutoff: 0, head: nil, remaining: [DeviceKeys.generate().id])
         ]
         state.supersededLines = [
             FeedKey(author: other.id, device: DeviceID(rawValue: WideID.of([8]))):
                 DeviceRegistry.Line(seq: 12, head: EntryHash(rawValue: Data(repeating: 0x5C, count: 32)))
         ]
         state.authorityStored = [Data(repeating: 0x5D, count: 32): stamp.at]
-        state.authorityIsLegacy = true
         state.authorityPublished = [Data(repeating: 0x5E, count: 32)]
         state.authorityAnnounced = Data(repeating: 0x5F, count: 32)
         state.restoredWithTheRecoveryKey = true
@@ -169,6 +169,7 @@ extension ForwardCompatibilityTests {
         state.notCollected = [ParticipantID(rawValue: WideID.of([12])): [EntryHash(rawValue: Data(repeating: 0x66, count: 32))]]
         state.collectedAt = [ParticipantID(rawValue: WideID.of([13])): [EntryHash(rawValue: Data(repeating: 0x67, count: 32)): stamp.at]]
         state.claimTimes = [EntryHash(rawValue: Data(repeating: 0x62, count: 32)): stamp.at]
+        state.keptIsSealed = true
         state.removalsTold = [EntryHash(rawValue: Data(repeating: 0x63, count: 32))]
         state.photosOwed = [EntryHash(rawValue: Data(repeating: 0x64, count: 32))]
         state.ownPhotosHeld = [AttachmentID()]
@@ -226,28 +227,6 @@ extension ForwardCompatibilityTests {
         }
     }
 
-    @Test func aStateFileFromTheBuildBeforeTheRenameStillOpens() throws {
-        let inviter = Identity.generate()
-        let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: Identity.generate().publicKeys, by: inviter,
-            at: Date(timeIntervalSince1970: 1_786_635_000))
-
-        var old = try #require(
-            try JSONSerialization.jsonObject(with: JSONEncoder().encode(PersistedState()))
-                as? [String: Any])
-        old.removeValue(forKey: "acceptedInvitations")
-        old["awaitingJoin"] = try JSONSerialization.jsonObject(
-            with: JSONEncoder().encode([attestation]))
-
-        let decoded = try JSONDecoder().decode(
-            PersistedState.self,
-            from: try JSONSerialization.data(withJSONObject: old))
-
-        #expect(
-            decoded.acceptedInvitations.map(\.attestation) == [attestation],
-            "an invitation confirmed on the build before the rename was dropped on upgrade")
-    }
-
     @Test("A contact's link written by the build before links were weighed still opens, and is joined again")
     func aPairBookEntryFromTheBuildBeforeStillOpens() throws {
         let json = Data(#"{"theirs":{"account":"_them","url":"https://icloud.invalid/share/a"},"joined":true,"announced":"https://icloud.invalid/share/b"}"#.utf8)
@@ -256,24 +235,6 @@ extension ForwardCompatibilityTests {
         #expect(entry.announced?.absoluteString == "https://icloud.invalid/share/b")
         #expect(entry.joinedSpace == nil)
         #expect(entry.gone.isEmpty)
-    }
-
-    @Test("A key rotation owed under the old field name is still owed after the upgrade")
-    func owedKeyRotationsSurviveTheRename() throws {
-        let room = RoomID()
-        var old = try #require(
-            try JSONSerialization.jsonObject(with: JSONEncoder().encode(PersistedState()))
-                as? [String: Any])
-        old.removeValue(forKey: "keyRotationsOwed")
-        old["epochTurnsOwed"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([room]))
-
-        let decoded = try JSONDecoder().decode(
-            PersistedState.self,
-            from: try JSONSerialization.data(withJSONObject: old))
-
-        #expect(
-            decoded.keyRotationsOwed == [room],
-            "a removal whose key rotation had not happened yet was forgotten on upgrade, so the removed member keeps reading")
     }
 
     @Test func decodingPersistedStateKeepsEveryFieldItWasGiven() throws {

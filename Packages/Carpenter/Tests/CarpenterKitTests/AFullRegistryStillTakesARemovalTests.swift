@@ -32,7 +32,8 @@ struct AFullRegistryStillTakesARemovalTests {
         }
         let revocations = try (0..<DeviceRegistry.mostDevices).map { second in
             try DeviceRevocation.issue(
-                for: certificates[0].device, by: house.identity, at: t0 + 30 + TimeInterval(second), from: house.thief)
+                for: certificates[0].device, by: house.identity, at: t0 + 30 + TimeInterval(second), from: house.thief,
+                cutoff: 0, head: nil, remaining: [house.thief.id])
         }
         return (certificates, revocations)
     }
@@ -49,7 +50,9 @@ struct AFullRegistryStillTakesARemovalTests {
         try flood(&house)
 
         try house.registry.revoke(
-            DeviceRevocation.issue(for: house.thief.id, by: house.identity, at: t0 + 500, from: house.phone),
+            DeviceRevocation.issue(
+                for: house.thief.id, by: house.identity, at: t0 + 500, from: house.phone,
+                cutoff: 0, head: nil, remaining: [house.phone.id]),
             storedAt: t0 + 500)
 
         let stillCounts = house.registry.counts(house.thief.id, storedAt: t0 + 600)
@@ -111,7 +114,9 @@ struct AFullRegistryStillTakesARemovalTests {
                 ])
         }
         SyncSession.integrate(packet(certificates: made.certificates, revocations: made.revocations, at: t0 + 40), into: &replica)
-        let removal = try DeviceRevocation.issue(for: house.thief.id, by: house.identity, at: t0 + 500, from: house.phone)
+        let removal = try DeviceRevocation.issue(
+            for: house.thief.id, by: house.identity, at: t0 + 500, from: house.phone,
+            cutoff: 0, head: nil, remaining: [house.phone.id])
         SyncSession.integrate(packet(certificates: [], revocations: [removal], at: t0 + 500), into: &replica)
 
         let afterwards = try Entry.append(

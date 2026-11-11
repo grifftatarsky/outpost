@@ -20,7 +20,6 @@ extension CloudKitMailbox {
         lines.append("spaces you read: \(theirs.count), from people this device knows: \(theirs.values.filter { $0.hint.map(known.contains) ?? false }.count)")
         let waiting = mine.values.reduce(0) { $0 + $1.records.values.filter { $0.type == PacketRecord.type }.count }
         lines.append("packets waiting to be collected from you: \(waiting)")
-        lines.append(await index.hasOldOutbox ? "old outbox: still kept while contacts move over" : "old outbox: gone")
         return lines.joined(separator: "\n")
     }
 }

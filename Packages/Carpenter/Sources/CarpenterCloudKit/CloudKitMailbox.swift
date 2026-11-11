@@ -4,7 +4,6 @@ import Foundation
 import os
 
 public struct CloudKitMailbox: Mailbox, MediaMailbox {
-    public static let legacyZoneName = "Outbox"
     static let pairZonePrefix = "Pair-"
 
     let container: CKContainer
@@ -49,28 +48,20 @@ public struct CloudKitMailbox: Mailbox, MediaMailbox {
         for zone in privateChanges.changed {
             if zone.zoneName.hasPrefix(Self.pairZonePrefix) {
                 mine[zone] = try await read(zone, in: container.privateCloudDatabase)
-            } else if zone.zoneName == Self.legacyZoneName {
-                await index.noteOldOutbox(true)
             }
         }
-        if privateChanges.gone.contains(where: { $0.zoneName == Self.legacyZoneName }) { await index.noteOldOutbox(false) }
         let sharedChanges = try await changes(in: container.sharedCloudDatabase, since: await index.sharedToken)
         var theirs: [CKRecordZone.ID: PairIndex.Zone] = [:]
-        var legacy: [CKRecordZone.ID: PairIndex.Zone] = [:]
-        for zone in sharedChanges.changed {
+        for zone in sharedChanges.changed where zone.zoneName.hasPrefix(Self.pairZonePrefix) {
             do {
-                if zone.zoneName.hasPrefix(Self.pairZonePrefix) {
-                    theirs[zone] = try await read(zone, in: container.sharedCloudDatabase)
-                } else if zone.zoneName == Self.legacyZoneName {
-                    legacy[zone] = try await read(zone, in: container.sharedCloudDatabase)
-                }
+                theirs[zone] = try await read(zone, in: container.sharedCloudDatabase)
             } catch let error as CKError where error.code == .zoneNotFound || error.code == .userDeletedZone {
                 theirs[zone] = nil
             }
         }
         await index.take(
             mine: mine, mineGone: privateChanges.gone, privateToken: privateChanges.token,
-            theirs: theirs, legacy: legacy, sharedGone: sharedChanges.gone, sharedToken: sharedChanges.token)
+            theirs: theirs, sharedGone: sharedChanges.gone, sharedToken: sharedChanges.token)
         try await sweepDuplicates()
     }
 
@@ -167,14 +158,12 @@ public actor PairIndex {
 
     private(set) var mine: [CKRecordZone.ID: Zone] = [:]
     private(set) var theirs: [CKRecordZone.ID: Zone] = [:]
-    private(set) var legacy: [CKRecordZone.ID: Zone] = [:]
     private(set) var privateToken: CKServerChangeToken?
     private(set) var sharedToken: CKServerChangeToken?
     private(set) var links: [CKRecordZone.ID: URL] = [:]
     private var readers: [CKRecordZone.ID: String] = [:]
     private var making: [PairHint: Task<CKRecordZone.ID, any Error>] = [:]
     private(set) var account: String?
-    private(set) var hasOldOutbox = false
     private var refreshedAt: Date?
     private var refreshing: Task<Void, any Error>?
 
@@ -194,20 +183,15 @@ public actor PairIndex {
 
     func take(
         mine changedMine: [CKRecordZone.ID: Zone], mineGone: [CKRecordZone.ID], privateToken: CKServerChangeToken,
-        theirs changedTheirs: [CKRecordZone.ID: Zone], legacy changedLegacy: [CKRecordZone.ID: Zone],
-        sharedGone: [CKRecordZone.ID], sharedToken: CKServerChangeToken
+        theirs changedTheirs: [CKRecordZone.ID: Zone], sharedGone: [CKRecordZone.ID], sharedToken: CKServerChangeToken
     ) {
         for zone in mineGone { dropMine(zone) }
         for (zone, found) in changedMine {
             mine[zone] = found
             readers[zone] = nil
         }
-        for zone in sharedGone {
-            theirs[zone] = nil
-            legacy[zone] = nil
-        }
+        for zone in sharedGone { theirs[zone] = nil }
         for (zone, found) in changedTheirs { theirs[zone] = found }
-        for (zone, found) in changedLegacy { legacy[zone] = found }
         self.privateToken = privateToken
         self.sharedToken = sharedToken
     }
@@ -279,8 +263,6 @@ public actor PairIndex {
     func zone(linkedBy url: URL) -> CKRecordZone.ID? { links.first { $0.value == url }?.key }
 
     func remember(account: String) { self.account = account }
-
-    func noteOldOutbox(_ present: Bool) { hasOldOutbox = present }
 
     func wrote(_ name: String, _ cached: Cached, in zone: CKRecordZone.ID) {
         mine[zone, default: Zone()].records[name] = cached

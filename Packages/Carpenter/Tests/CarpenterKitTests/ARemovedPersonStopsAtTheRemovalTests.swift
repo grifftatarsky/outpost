@@ -151,14 +151,16 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
     private let phone = DeviceKeys.generate()
     private let stolen = DeviceKeys.generate()
 
-    private func registry(cutoff: UInt64?) throws -> DeviceRegistry {
+    private func registry(cutoff: UInt64) throws -> DeviceRegistry {
         var registry = DeviceRegistry(identity: identity.publicKeys)
         try registry.admit(DeviceCertificate.recovered(for: phone, by: identity, at: start), storedAt: start)
         try registry.admit(
             DeviceCertificate.issue(for: stolen, by: identity, at: start + 10, approvedBy: phone),
             storedAt: start + 10)
         try registry.revoke(
-            DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: cutoff),
+            DeviceRevocation.issue(
+                for: stolen.id, by: identity, at: start + 1000, from: phone,
+                cutoff: cutoff, head: EntryHash(rawValue: Data(repeating: 7, count: 32)), remaining: [phone.id]),
             storedAt: start + 1000)
         return registry
     }
@@ -175,13 +177,6 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
     @Test("Nothing counts from before the device was approved")
     func beforeApprovalNothingCounts() throws {
         #expect(!(try registry(cutoff: 4)).isAuthorized(stolen.id, at: start + 5, seq: 1))
-    }
-
-    @Test("A removal made before cutoffs existed still goes by its date")
-    func anOlderRemovalGoesByDate() throws {
-        let registry = try registry(cutoff: nil)
-        #expect(registry.isAuthorized(stolen.id, at: start + 999, seq: 50))
-        #expect(!registry.isAuthorized(stolen.id, at: start + 1001, seq: 1))
     }
 
     @Test("A replica refuses the stolen device's backdated entry past the cutoff, and leaves it open while the phone could vouch for it")
@@ -206,7 +201,9 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
         try replica.integrate(written[0])
         try replica.integrate(written[1])
         try replica.revoke(
-            DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 2),
+            DeviceRevocation.issue(
+                for: stolen.id, by: identity, at: start + 1000, from: phone,
+                cutoff: 2, head: written[1].hash, remaining: [phone.id]),
             storedAt: start + 1000)
 
         #expect(throws: (any Error).self, "an entry past the cutoff, dated before the removal, was taken") {
@@ -242,7 +239,8 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
 
     private func removal(at top: Entry) throws -> DeviceRevocation {
         try DeviceRevocation.issue(
-            for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: top.seq, head: top.hash)
+            for: stolen.id, by: identity, at: start + 1000, from: phone,
+            cutoff: top.seq, head: top.hash, remaining: [phone.id])
     }
 
     @Test("A second entry the stolen device signs at a number the removal saw is refused")
@@ -314,36 +312,13 @@ struct ARemovedDeviceStopsAtTheCutoffTests {
         #expect(throws: (any Error).self) { try revocation.verify(against: identity.publicKeys) }
     }
 
-    @Test("A removal with a cutoff and no head signs the same bytes it did before heads existed")
-    func theCutoffLayoutIsUnchanged() throws {
-        let revocation = try DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 4)
-        let expected = CanonicalBytes.payload(
-            domain: Domain.deviceRevocation,
-            fields: [
-                identity.id.rawValue, stolen.id.rawValue, CanonicalBytes.timestamp(start + 1000),
-                Data("revoked-by".utf8), phone.id.rawValue, Data("cutoff".utf8), CanonicalBytes.sequence(4),
-            ])
-        #expect(revocation.signingPayload == expected)
-    }
-
     @Test("The cutoff is signed: changing it breaks the removal")
     func theCutoffIsSigned() throws {
         var revocation = try DeviceRevocation.issue(
-            for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 4)
+            for: stolen.id, by: identity, at: start + 1000, from: phone,
+            cutoff: 4, head: EntryHash(rawValue: Data(repeating: 7, count: 32)), remaining: [phone.id])
         try revocation.verify(against: identity.publicKeys)
         revocation.cutoff = 900
         #expect(throws: (any Error).self) { try revocation.verify(against: identity.publicKeys) }
-    }
-
-    @Test("A removal without a cutoff signs the same bytes it always did")
-    func theOldLayoutIsUnchanged() throws {
-        let revocation = try DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone)
-        let expected = CanonicalBytes.payload(
-            domain: Domain.deviceRevocation,
-            fields: [
-                identity.id.rawValue, stolen.id.rawValue, CanonicalBytes.timestamp(start + 1000),
-                Data("revoked-by".utf8), phone.id.rawValue,
-            ])
-        #expect(revocation.signingPayload == expected)
     }
 }

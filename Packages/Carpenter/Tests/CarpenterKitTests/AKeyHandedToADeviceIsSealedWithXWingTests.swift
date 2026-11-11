@@ -109,74 +109,22 @@ struct AKeyHandedToADeviceIsSealedWithXWingTests {
         #expect(try recipient.open(seal.sealed) == Data(repeating: 7, count: 32))
     }
 
-    private struct OldSeal: Codable {
-        let device: DeviceID
-        let ephemeral: Data
-        let sealed: Data
-    }
-
-    private func oldFormSeal(
-        _ plaintext: Data, to device: DeviceKeys, context: Data
-    ) throws -> (Data, Curve25519.KeyAgreement.PrivateKey) {
-        let seed = HKDF<SHA256>.deriveKey(
-            inputKeyMaterial: SymmetricKey(data: device.signingSeed),
-            salt: Data("carpenter.device-agreement.v1".utf8), info: Data("carpenter.device-agreement.v1".utf8),
-            outputByteCount: 32)
-        let agreement = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: seed.withUnsafeBytes { Data($0) })
-        let ephemeral = Curve25519.KeyAgreement.PrivateKey()
-        let shared = try ephemeral.sharedSecretFromKeyAgreement(with: agreement.publicKey)
-        let key = shared.hkdfDerivedSymmetricKey(
-            using: SHA256.self, salt: Data("carpenter.device-seal.v1".utf8),
-            sharedInfo: CanonicalBytes.payload(
-                domain: "carpenter.device-seal.v1",
-                fields: [device.id.rawValue, ephemeral.publicKey.rawRepresentation, context]),
-            outputByteCount: 32)
-        let box = try ChaChaPoly.seal(plaintext, using: key, authenticating: context)
-        let json = try JSONEncoder().encode(
-            OldSeal(device: device.id, ephemeral: ephemeral.publicKey.rawRepresentation, sealed: box.combined))
-        return (json, agreement)
-    }
-
-    @Test("A seal in the old X25519 form is refused, and the grant that carries it still decodes")
-    func anOldFormSealIsRefused() throws {
+    @Test("A seal with no X-Wing part, or one of the wrong size, does not decode")
+    func aSealWithoutItsXWingPartIsRefused() throws {
         let phone = DeviceKeys.generate()
-        let (sender, member) = (Identity.generate(), Identity.generate())
-        let pairwise = try PairwiseSecret.derive(mine: sender, theirs: member.publicKeys)
-        let theirs = try PairwiseSecret.derive(mine: member, theirs: sender.publicKeys)
-        let room = RoomID()
-        let grant = try EpochGrant.issue(
-            EpochSecret.random(), at: .initial, in: room, link: nil, to: pairwise, devices: [to(phone)])
-        let grantContext = context(room, EpochNumber.initial.rawValue)
-        let wrapped = try pairwise.wrap(Data(repeating: 8, count: 32), context: grantContext)
-
-        let (oldJSON, agreement) = try oldFormSeal(wrapped, to: phone, context: grantContext)
-        let old = try JSONDecoder().decode(OldSeal.self, from: oldJSON)
-        let shared = try agreement.sharedSecretFromKeyAgreement(
-            with: try Curve25519.KeyAgreement.PublicKey(rawRepresentation: old.ephemeral))
-        let oldKey = shared.hkdfDerivedSymmetricKey(
-            using: SHA256.self, salt: Data("carpenter.device-seal.v1".utf8),
-            sharedInfo: CanonicalBytes.payload(
-                domain: "carpenter.device-seal.v1", fields: [phone.id.rawValue, old.ephemeral, grantContext]),
-            outputByteCount: 32)
-        #expect(
-            try ChaChaPoly.open(ChaChaPoly.SealedBox(combined: old.sealed), using: oldKey, authenticating: grantContext)
-                == wrapped,
-            "precondition: this is a genuine old-form seal for the phone")
-
-        let decoded = try JSONDecoder().decode(DeviceSeal.self, from: oldJSON)
-        #expect(decoded.encapsulated.isEmpty)
-        #expect(throws: CryptoError.openFailed) { try decoded.open(with: phone, context: grantContext) }
-
-        let carried = try JSONEncoder().encode([ForwardedGrant(from: sender.id, grant: grant)])
-        var waiting = try #require(try JSONSerialization.jsonObject(with: carried) as? [[String: Any]])
-        var held = try #require(waiting[0]["grant"] as? [String: Any])
-        held["sealedFor"] = [try #require(try JSONSerialization.jsonObject(with: oldJSON) as? [String: Any])]
-        waiting[0]["grant"] = held
-        let stored = try JSONSerialization.data(withJSONObject: waiting)
-
-        let reopened = try JSONDecoder().decode([ForwardedGrant].self, from: stored)
-        #expect(reopened.count == 1, "one old seal made everything stored beside it unreadable")
-        #expect(throws: CryptoError.openFailed) { try reopened[0].grant.open(with: theirs, as: phone) }
+        let whole = try DeviceSeal.seal(Data(repeating: 7, count: 32), to: to(phone), context: Data("c".utf8))
+        var fields = try #require(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(whole)) as? [String: Any])
+        fields["encapsulated"] = nil
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode(DeviceSeal.self, from: JSONSerialization.data(withJSONObject: fields))
+        }
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode(
+                DeviceSeal.self,
+                from: JSONEncoder().encode(
+                    DeviceSeal(device: phone.id, encapsulated: Data(count: 32), sealed: whole.sealed)))
+        }
     }
 
     @Test("A seal larger than any record can hold is refused before anything opens it")

@@ -122,7 +122,7 @@ struct JoinEndToEndTests {
             )
             verifiedBy.append(residents[index].id)
 
-            let admission = try Payload.admission(of: residents[3].id, admitted: true)
+            let admission = try Payload.admission(of: residents[3].id, admitted: true, invitation: attestation.signature)
             let entry = try residents[index].author.append(
                 admission, at: start.addingTimeInterval(240), room: roomID)
             try broadcast(entry, admission, to: &residents)
@@ -201,12 +201,12 @@ struct JoinEndToEndTests {
             attestation, by: residents[2].author.identity,
             relayedBy: 0, to: &residents, at: start.addingTimeInterval(15))
 
-        let yes = try Payload.admission(of: residents[2].id, admitted: true)
+        let yes = try Payload.admission(of: residents[2].id, admitted: true, invitation: attestation.signature)
         try broadcast(
             try residents[0].author.append(yes, at: start.addingTimeInterval(20), room: roomID),
             yes, to: &residents)
 
-        let no = try Payload.admission(of: residents[2].id, admitted: false)
+        let no = try Payload.admission(of: residents[2].id, admitted: false, invitation: attestation.signature)
         try broadcast(
             try residents[1].author.append(no, at: start.addingTimeInterval(30), room: roomID),
             no, to: &residents)

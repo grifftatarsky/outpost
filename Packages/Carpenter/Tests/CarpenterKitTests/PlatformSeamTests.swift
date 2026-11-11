@@ -16,25 +16,6 @@ struct PlatformSeamTests {
         #expect(clock.now == start.addingTimeInterval(90))
     }
 
-    @Test("A test random source is deterministic, so a failing case can be replayed")
-    func seededRandom() {
-        let a = SeededRandomSource(seed: 42).bytes(count: 32)
-        let b = SeededRandomSource(seed: 42).bytes(count: 32)
-        let c = SeededRandomSource(seed: 43).bytes(count: 32)
-
-        #expect(a.count == 32)
-        #expect(a == b)
-        #expect(a != c)
-    }
-
-    @Test("Successive draws from one source differ")
-    func randomAdvances() {
-        let source = SeededRandomSource(seed: 7)
-        let first = source.bytes(count: 16)
-        let second = source.bytes(count: 16)
-        #expect(first != second)
-    }
-
     @Test("An in-memory keychain stores, replaces and removes by key")
     func keychain() async throws {
         let store = InMemoryKeychainStore()

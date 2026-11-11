@@ -26,7 +26,9 @@ struct WhoCanRemoveADeviceTests {
         try registry.admit(
             DeviceCertificate.issue(for: thief, by: identity, at: t0 + 20, approvedBy: phone), storedAt: t0 + 20)
         try registry.revoke(
-            DeviceRevocation.issue(for: thief.id, by: identity, at: t0 + 30, from: phone), storedAt: t0 + 30)
+            DeviceRevocation.issue(
+                for: thief.id, by: identity, at: t0 + 30, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id]), storedAt: t0 + 30)
         #expect(!registry.counts(thief.id, storedAt: t0 + 31), "precondition: the thief's device was removed")
         #expect(registry.counts(phone.id, storedAt: t0 + 31) && registry.counts(tablet.id, storedAt: t0 + 31))
         return Household(registry: registry, identity: identity, phone: phone, tablet: tablet, thief: thief)
@@ -37,7 +39,8 @@ struct WhoCanRemoveADeviceTests {
         at when: Date
     ) throws -> DeviceRevocation {
         var forged = DeviceRevocation(
-            participant: house.identity.id, device: target, revokedAt: when, signature: Data(), revokedBy: remover)
+            participant: house.identity.id, device: target, revokedAt: when, signature: Data(), revokedBy: remover,
+            revokerSignature: Data(), cutoff: 0, head: nil, remaining: [remover])
         forged.signature = try house.identity.sign(forged.signingPayload)
         forged.revokerSignature = try signer.sign(forged.signingPayload)
         return forged
@@ -52,7 +55,9 @@ struct WhoCanRemoveADeviceTests {
         #expect(house.registry.counts(house.phone.id, storedAt: t0 + 50), "a removal nobody real signed took the phone")
         #expect(house.registry.activeDevices.contains(house.phone.id))
 
-        let real = try DeviceRevocation.issue(for: house.phone.id, by: house.identity, at: t0 + 60, from: house.tablet)
+        let real = try DeviceRevocation.issue(
+            for: house.phone.id, by: house.identity, at: t0 + 60, from: house.tablet,
+            cutoff: 0, head: nil, remaining: [house.tablet.id])
         try house.registry.revoke(real, storedAt: t0 + 60)
         #expect(!house.registry.counts(house.phone.id, storedAt: t0 + 61), "precondition: a real removal works")
     }
@@ -60,10 +65,13 @@ struct WhoCanRemoveADeviceTests {
     @Test("A removed device can't remove the phone in its own name either, before or after it was removed")
     func aRemovedDeviceRemovesNobody() throws {
         var house = try household()
-        let late = try DeviceRevocation.issue(for: house.phone.id, by: house.identity, at: t0 + 40, from: house.thief)
+        let late = try DeviceRevocation.issue(
+            for: house.phone.id, by: house.identity, at: t0 + 40, from: house.thief,
+            cutoff: 0, head: nil, remaining: [house.thief.id])
         try house.registry.revoke(late, storedAt: t0 + 40)
         let backdated = try DeviceRevocation.issue(
-            for: house.tablet.id, by: house.identity, at: t0 + 25, from: house.thief)
+            for: house.tablet.id, by: house.identity, at: t0 + 25, from: house.thief,
+            cutoff: 0, head: nil, remaining: [house.thief.id])
         try house.registry.revoke(backdated, storedAt: t0 + 41)
         #expect(house.registry.counts(house.phone.id, storedAt: t0 + 50))
         #expect(house.registry.counts(house.tablet.id, storedAt: t0 + 50), "a removal dated into the past counted")
@@ -85,7 +93,9 @@ struct WhoCanRemoveADeviceTests {
     func aRemovalBeforeTheApprovalRemovesNobody() throws {
         var house = try household()
         let late = DeviceKeys.generate()
-        let early = try DeviceRevocation.issue(for: house.tablet.id, by: house.identity, at: t0 + 50, from: late)
+        let early = try DeviceRevocation.issue(
+            for: house.tablet.id, by: house.identity, at: t0 + 50, from: late,
+            cutoff: 0, head: nil, remaining: [late.id])
         try house.registry.admit(
             DeviceCertificate.issue(for: late, by: house.identity, at: t0 + 100, approvedBy: house.phone),
             storedAt: t0 + 100)

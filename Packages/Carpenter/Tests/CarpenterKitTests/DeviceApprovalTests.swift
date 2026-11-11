@@ -91,7 +91,9 @@ struct DeviceApprovalTests {
                 try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
                 try DeviceCertificate.issue(for: stranger, by: identity, at: start + 300, approvedBy: tablet),
             ],
-            [try DeviceRevocation.issue(for: tablet.id, by: identity, at: start + 200, from: phone)])
+            [try DeviceRevocation.issue(
+                for: tablet.id, by: identity, at: start + 200, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id])])
         #expect(!registry.isAuthorized(stranger.id, at: start + 400), "a removed device let another one in")
     }
 
@@ -104,7 +106,9 @@ struct DeviceApprovalTests {
                 try DeviceCertificate.issue(for: tablet, by: identity, at: start + 60, approvedBy: phone),
                 try DeviceCertificate.issue(for: laptop, by: identity, at: start + 120, approvedBy: tablet),
             ],
-            [try DeviceRevocation.issue(for: tablet.id, by: identity, at: start + 200, from: phone)])
+            [try DeviceRevocation.issue(
+                for: tablet.id, by: identity, at: start + 200, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id, laptop.id])])
         #expect(registry.isAuthorized(laptop.id, at: start + 400), "removing the tablet threw out the laptop it approved")
         #expect(!registry.isAuthorized(tablet.id, at: start + 400))
     }
@@ -119,8 +123,12 @@ struct DeviceApprovalTests {
                 try DeviceCertificate.issue(for: laptop, by: identity, at: start + 120, approvedBy: phone),
             ],
             [
-                try DeviceRevocation.issue(for: tablet.id, by: identity, at: start + 200, from: phone),
-                try DeviceRevocation.issue(for: laptop.id, by: identity, at: start + 300, from: tablet),
+                try DeviceRevocation.issue(
+                    for: tablet.id, by: identity, at: start + 200, from: phone,
+                    cutoff: 0, head: nil, remaining: [phone.id]),
+                try DeviceRevocation.issue(
+                    for: laptop.id, by: identity, at: start + 300, from: tablet,
+                    cutoff: 0, head: nil, remaining: [tablet.id]),
             ])
         #expect(registry.standing(of: tablet.id)?.revokedBy == phone.id)
         #expect(registry.isAuthorized(laptop.id, at: start + 400), "a removed device removed another")
@@ -152,7 +160,9 @@ struct DeviceApprovalTests {
         try registry.admit(
             DeviceCertificate.issue(for: thiefs, by: identity, at: start + 20, approvedBy: stolen), storedAt: start + 20)
         try registry.revoke(
-            DeviceRevocation.issue(for: phone.id, by: identity, at: start + 30, from: stolen), storedAt: start + 30)
+            DeviceRevocation.issue(
+                for: phone.id, by: identity, at: start + 30, from: stolen,
+                cutoff: 0, head: nil, remaining: [stolen.id, thiefs.id]), storedAt: start + 30)
         #expect(registry.activeDevices == [stolen.id, thiefs.id], "the setup did not model a thief who took over")
 
         try registry.admit(
@@ -166,7 +176,9 @@ struct DeviceApprovalTests {
             DeviceCertificate.issue(for: DeviceKeys.generate(), by: identity, at: start + 90, approvedBy: stolen),
             storedAt: start + 200)
         try registry.revoke(
-            DeviceRevocation.issue(for: restored.id, by: identity, at: start + 90, from: thiefs), storedAt: start + 200)
+            DeviceRevocation.issue(
+                for: restored.id, by: identity, at: start + 90, from: thiefs,
+                cutoff: 0, head: nil, remaining: [thiefs.id]), storedAt: start + 200)
         #expect(registry.activeDevices == [restored.id], "a removed device acted after the reset")
 
         try registry.admit(

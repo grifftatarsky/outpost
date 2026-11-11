@@ -190,14 +190,72 @@ struct ARemovalCannotTakeBackWhatTheRemoverSawTests {
         #expect(r.members.contains(r.founder.identity.id))
     }
 
-    @Test("A removed member who hides that they had read their removal and cuts only the remover's invitation is the open question")
-    func aHiddenReadingAndANarrowCutAreStillOpen() throws {
-        var r = try room()
+    private func narrowAnswer(in r: inout Room) throws -> (after: Entry, removal: Entry, answer: Entry) {
         let (after, _) = try r.malloryRemovesVicWhoKeepsTalking(at: start + 20)
-        _ = try r.writeHidingWhatWasRead(
+        let removal = try #require(r.entries.first { $0.author == r.mallory.identity.id && $0.wallTime == start + 20 })
+        let answer = try r.writeHidingWhatWasRead(
             try Payload.removal(of: r.founder.identity.id, heads: [r.entries[2].hash]), by: \.vic, at: start + 31)
+        return (after, removal, answer)
+    }
 
-        withKnownIssue("a removal that names nothing of what its author read: open-questions.md") {
+    @Test("A removed member who hides what they had read and cuts only the remover's invitation stays out on every phone that had the removal first")
+    func aNarrowAnswerStoredLaterLoses() throws {
+        var r = try room()
+        let (after, removal, answer) = try narrowAnswer(in: &r)
+
+        for viewer in [r.founder.identity.id, r.mallory.identity.id, r.sam.identity.id] {
+            let projected = r.projected(by: viewer, reading: [removal.hash: start + 20, answer.hash: start + 31])
+            let members = projected.roster(of: r.room, opening: r.opening).members
+            #expect(projected.outOfRoom(in: r.room, opening: r.opening).contains(after.hash), "the removed member's words came back")
+            #expect(!members.contains(r.vic.identity.id), "the removed member got back in")
+            #expect(members.isSuperset(of: [r.founder.identity.id, r.mallory.identity.id, r.sam.identity.id]))
+        }
+    }
+
+    @Test("A removal stored first still stands against a later one from somebody let in after its line")
+    func anEarlierNarrowRemovalStillWins() throws {
+        var r = try room()
+        let earlier = try r.write(
+            try Payload.removal(of: r.founder.identity.id, heads: [r.entries[2].hash]), by: \.vic, at: start + 10)
+        let later = try r.writeHidingWhatWasRead(
+            try Payload.removal(of: r.vic.identity.id, heads: []), by: \.mallory, at: start + 60)
+
+        let projected = r.projected(by: r.vic.identity.id, reading: [earlier.hash: start + 10, later.hash: start + 60])
+        let members = projected.roster(of: r.room, opening: r.opening).members
+        #expect(members.contains(r.vic.identity.id), "somebody let in after the line removed the remover")
+        #expect(!members.contains(r.founder.identity.id), "the removed inviter came back through somebody they let in afterwards")
+        #expect(!members.contains(r.mallory.identity.id))
+    }
+
+    @Test("A phone that saw neither first goes by what the members who read them wrote down")
+    func aRestoredPhoneGoesByTheNotes() throws {
+        var r = try room()
+        let (after, removal, answer) = try narrowAnswer(in: &r)
+        _ = try r.write(try Payload.removalNoted(removal.hash, storedAt: start + 21), by: \.sam, at: start + 21)
+        _ = try r.write(try Payload.removalNoted(answer.hash, storedAt: start + 32), by: \.sam, at: start + 32)
+
+        let projected = r.projected(by: r.sam.identity.id)
+        #expect(projected.outOfRoom(in: r.room, opening: r.opening).contains(after.hash))
+        #expect(!projected.roster(of: r.room, opening: r.opening).members.contains(r.vic.identity.id))
+    }
+
+    @Test("A remover whose own clock runs fast still has the removal first once another member has written down when it was stored")
+    func aFastClockDoesNotLoseTheRemoval() throws {
+        var r = try room()
+        let (after, removal, answer) = try narrowAnswer(in: &r)
+        _ = try r.write(try Payload.removalNoted(removal.hash, storedAt: start + 21), by: \.sam, at: start + 21)
+
+        let projected = r.projected(by: r.mallory.identity.id, reading: [removal.hash: start + 400, answer.hash: start + 31])
+        #expect(projected.outOfRoom(in: r.room, opening: r.opening).contains(after.hash))
+        #expect(!projected.roster(of: r.room, opening: r.opening).members.contains(r.vic.identity.id))
+    }
+
+    @Test("With nothing anywhere to say which was stored first, the narrower cut still stands, which is the open question")
+    func aNarrowAnswerWithNoEvidenceIsStillOpen() throws {
+        var r = try room()
+        let (after, _, _) = try narrowAnswer(in: &r)
+
+        withKnownIssue("no stored time on this phone and no member's note: open-questions.md") {
             #expect(r.out.contains(after.hash))
         }
     }

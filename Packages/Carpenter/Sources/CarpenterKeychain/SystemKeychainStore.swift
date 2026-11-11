@@ -15,15 +15,7 @@ public struct SystemKeychainStore: KeychainStore {
     }
 
     public func data(for key: KeychainKey) async throws -> Data? {
-        if let found = try read(key, in: accessGroup) { return found.data }
-
-        guard accessGroup != nil, let legacy = try read(key, in: nil) else { return nil }
-        let scope: KeychainScope = legacy.synchronized ? .synchronized : .device
-        try await set(legacy.data, for: key, scope: scope)
-        if let group = legacy.group, group != accessGroup {
-            delete(key, in: group, synchronized: legacy.synchronized)
-        }
-        return legacy.data
+        try read(key, in: accessGroup)?.data
     }
 
     static func accessibility(for scope: KeychainScope, protection: StorageProtection) -> CFString {

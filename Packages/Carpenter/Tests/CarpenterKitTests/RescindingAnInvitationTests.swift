@@ -88,7 +88,7 @@ struct RescindingAnInvitationTests {
             body: try Payload.invitationRescinded(of: attestation))
         roster.apply(
             rendered(inviter.id, .admission, hash: 5, at: 20),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
 
         #expect(!roster.members.contains(joiner.id), "an admission overrode a rescind")
     }

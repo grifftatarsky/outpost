@@ -123,7 +123,7 @@ struct InvitationIsAnOfferTests {
 
         roster.apply(
             rendered(inviter.id, .admission, hash: 5),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
         #expect(roster.members.contains(joiner.id))
     }
 
@@ -136,7 +136,7 @@ struct InvitationIsAnOfferTests {
         let attestation = try invite(joiner, to: &roster, by: inviter, hash: 3)
         roster.apply(
             rendered(inviter.id, .admission, hash: 4),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
         #expect(!roster.members.contains(joiner.id), "approval alone admitted somebody")
 
         try confirm(attestation, by: joiner, to: &roster, relayedBy: inviter, hash: 5)

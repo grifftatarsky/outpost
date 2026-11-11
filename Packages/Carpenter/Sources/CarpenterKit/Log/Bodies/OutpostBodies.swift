@@ -41,9 +41,9 @@ public struct OutpostAccessBody: Hashable, Sendable, Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         person = try container.decode(ParticipantID.self, forKey: .person)
-        isAllowed = try container.decodeIfPresent(Bool.self, forKey: .isAllowed) ?? false
+        isAllowed = try container.decode(Bool.self, forKey: .isAllowed)
         from = try container.decodeIfPresent(Date.self, forKey: .from)
-        origin = try container.decodeIfPresent(OutpostAccess.Origin.self, forKey: .origin) ?? .chosen
+        origin = try container.decode(OutpostAccess.Origin.self, forKey: .origin)
         sinceEpoch = try container.decodeIfPresent(UInt64.self, forKey: .sinceEpoch)
         chosenIn = try container.decodeIfPresent(RoomID.self, forKey: .chosenIn)
     }
@@ -63,6 +63,6 @@ public struct CommentTallyBody: Hashable, Sendable, Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         post = try container.decode(EntryHash.self, forKey: .post)
-        total = Swift.max(0, try container.decodeIfPresent(Int.self, forKey: .total) ?? 0)
+        total = Swift.max(0, try container.decode(Int.self, forKey: .total))
     }
 }

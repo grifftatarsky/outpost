@@ -234,11 +234,6 @@ extension AppSession {
         }
     }
 
-    func collectionTags(for author: ParticipantID) -> Set<RecipientTag> {
-        guard let peer = peers().first(where: { $0.them == author }) else { return [] }
-        return SyncSession.recentTags(for: peer, at: clock.now)
-    }
-
     func collectOwnPhotos(through mailbox: any MediaMailbox) async {
         guard let me = enrolment?.identity.id else { return }
         let held = entriesByHash

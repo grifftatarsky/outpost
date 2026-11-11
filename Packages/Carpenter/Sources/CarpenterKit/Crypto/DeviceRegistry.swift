@@ -147,7 +147,7 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public mutating func revoke(_ revocation: DeviceRevocation, storedAt: Date) throws {
         try revocation.verify(against: identity)
-        guard let remover = revocation.revokedBy else { throw CryptoError.notAuthorized }
+        let remover = revocation.revokedBy
         guard submitted[revocation.device] != nil else { throw CryptoError.unknownDevice }
         if !revocations.contains(revocation) {
             guard let place = place(for: revocation, by: remover, storedAt: storedAt) else { return }
@@ -403,7 +403,7 @@ public struct DeviceRegistry: Hashable, Sendable {
         }
 
         func leaveOut(everyDeviceApprovedThrough revocation: DeviceRevocation, at instant: Date) {
-            guard let remaining = revocation.remaining.map(Set.init) else { return }
+            let remaining = Set(revocation.remaining)
             let unnamed = result.keys.filter { !remaining.contains($0) && descends($0, from: revocation.device) }
             for device in unnamed { apply(Removal(order: instant, leftOutOf: revocation), to: device) }
         }
@@ -443,8 +443,8 @@ public struct DeviceRegistry: Hashable, Sendable {
             let removals = sortedForReplay(
                 (removedAt[instant] ?? []).map(\.revocation), claimed: \.revokedAt, digest: \.digest)
             for revocation in removals {
-                guard let revoker = revocation.revokedBy, authority[revoker]?.covers(instant) == true,
-                    let key = submitted[revoker]?.devicePublicKey, revocation.isSigned(byKey: key)
+                guard authority[revocation.revokedBy]?.covers(instant) == true,
+                    let key = submitted[revocation.revokedBy]?.devicePublicKey, revocation.isSigned(byKey: key)
                 else { continue }
                 let removal = Removal(order: instant, revocation: revocation)
                 if authority[revocation.device] != nil {

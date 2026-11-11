@@ -18,21 +18,11 @@ public struct JoinConfirmedBody: Hashable, Sendable, Codable {
 
     public let signature: Data
 
-    public init(invitation: Data, joiner: ParticipantID, nonce: Data = Data(), signature: Data) {
+    public init(invitation: Data, joiner: ParticipantID, nonce: Data, signature: Data) {
         self.invitation = invitation
         self.joiner = joiner
         self.nonce = nonce
         self.signature = signature
-    }
-
-    private enum CodingKeys: String, CodingKey { case invitation, joiner, nonce, signature }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        invitation = try container.decode(Data.self, forKey: .invitation)
-        joiner = try container.decode(ParticipantID.self, forKey: .joiner)
-        nonce = try container.decodeIfPresent(Data.self, forKey: .nonce) ?? Data()
-        signature = try container.decode(Data.self, forKey: .signature)
     }
 
     public static func signedBytes(invitation: Data, joiner: ParticipantID, nonce: Data) -> Data {
@@ -122,21 +112,12 @@ public struct AdmissionBody: Hashable, Sendable, Codable {
     public let joiner: ParticipantID
     public let admitted: Bool
 
-    public let invitation: Data?
+    public let invitation: Data
 
-    public init(joiner: ParticipantID, admitted: Bool, invitation: Data? = nil) {
+    public init(joiner: ParticipantID, admitted: Bool, invitation: Data) {
         self.joiner = joiner
         self.admitted = admitted
         self.invitation = invitation
-    }
-
-    private enum CodingKeys: String, CodingKey { case joiner, admitted, invitation }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        joiner = try container.decode(ParticipantID.self, forKey: .joiner)
-        admitted = try container.decode(Bool.self, forKey: .admitted)
-        invitation = try container.decodeIfPresent(Data.self, forKey: .invitation)
     }
 }
 

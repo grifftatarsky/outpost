@@ -20,7 +20,9 @@ struct ForgingAReceiptTests {
         try registry.admit(
             DeviceCertificate.issue(for: stolen, by: member, at: t0 + 10, approvedBy: phone), storedAt: t0 + 10)
         try registry.revoke(
-            DeviceRevocation.issue(for: stolen.id, by: member, at: t0 + 20, from: phone), storedAt: t0 + 20)
+            DeviceRevocation.issue(
+                for: stolen.id, by: member, at: t0 + 20, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id]), storedAt: t0 + 20)
         return registry
     }
 

@@ -50,7 +50,7 @@ struct ApprovalThresholdTests {
             for member in [founder] + others.prefix(while: { $0.id != other.id }) {
                 roster.apply(
                     rendered(member.id, .admission, hash: next()),
-                    body: try Payload.admission(of: other.id, admitted: true))
+                    body: try Payload.admission(of: other.id, admitted: true, invitation: invite.signature))
             }
         }
 
@@ -66,12 +66,12 @@ struct ApprovalThresholdTests {
         for refuser in refusers {
             roster.apply(
                 rendered(refuser.id, .admission, hash: next()),
-                body: try Payload.admission(of: joiner.id, admitted: false))
+                body: try Payload.admission(of: joiner.id, admitted: false, invitation: invite.signature))
         }
         for admitter in admitters {
             roster.apply(
                 rendered(admitter.id, .admission, hash: next()),
-                body: try Payload.admission(of: joiner.id, admitted: true))
+                body: try Payload.admission(of: joiner.id, admitted: true, invitation: invite.signature))
         }
         return roster
     }

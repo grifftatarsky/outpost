@@ -62,9 +62,6 @@ extension AppRootView {
                     session.noteICloudHold(true)
                     throw error
                 }
-                if let cloud = mailbox as? CloudKitMailbox, let pairs = session.pairs() {
-                    await cloud.retireOldOutbox(whenEveryoneHasMovedAmong: session.peersLastRound, in: pairs)
-                }
                 #if DEBUG
                     if rig != nil, !session.codeForSharing.isEmpty {
                         RigCodes.leave(session.codeForSharing, as: "\(session.viewer.displayName).identity")

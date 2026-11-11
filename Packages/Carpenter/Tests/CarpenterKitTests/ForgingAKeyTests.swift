@@ -19,7 +19,9 @@ struct SigningARoomKeyTests {
         try registry.admit(
             DeviceCertificate.issue(for: tablet, by: member, at: start + 10, approvedBy: phone), storedAt: start + 10)
         try registry.revoke(
-            DeviceRevocation.issue(for: tablet.id, by: member, at: start + 100, from: phone), storedAt: start + 100)
+            DeviceRevocation.issue(
+                for: tablet.id, by: member, at: start + 100, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id]), storedAt: start + 100)
         return registry
     }
 

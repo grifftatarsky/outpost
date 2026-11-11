@@ -83,7 +83,7 @@ extension Payload {
     }
 
     public static func admission(
-        of joiner: ParticipantID, admitted: Bool, invitation: Data? = nil
+        of joiner: ParticipantID, admitted: Bool, invitation: Data
     ) throws -> Payload {
         Payload(
             type: .admission,

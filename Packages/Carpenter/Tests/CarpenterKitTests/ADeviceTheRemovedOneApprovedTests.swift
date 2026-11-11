@@ -29,7 +29,7 @@ struct TheAppNamesTheDevicesItKeepsTests {
 
         let removal = session.replica.registry(for: enrolment.identity.id)?.knownRevocations
             .first { $0.device == spares[0] }
-        #expect(removal?.remaining.map(Set.init) == [enrolment.device.id, spares[1]])
+        #expect(removal.map { Set($0.remaining) } == [enrolment.device.id, spares[1]])
     }
 }
 
@@ -54,9 +54,10 @@ struct ADeviceTheRemovedOneApprovedTests {
         try DeviceCertificate.issue(for: device, by: identity, at: instant, approvedBy: approver)
     }
 
-    private func removal(of device: DeviceKeys, remaining: Set<DeviceID>?) throws -> DeviceRevocation {
+    private func removal(of device: DeviceKeys, remaining: Set<DeviceID>) throws -> DeviceRevocation {
         try DeviceRevocation.issue(
-            for: device.id, by: identity, at: start + 100, from: phone, cutoff: 0, remaining: remaining)
+            for: device.id, by: identity, at: start + 100, from: phone,
+            cutoff: 0, head: nil, remaining: remaining)
     }
 
     @Test("A friend that saw the hidden device before the removal and the member after it agree on who counts")
@@ -107,7 +108,9 @@ struct ADeviceTheRemovedOneApprovedTests {
                 friend.noteWhatWasSeen(by: phone.id, in: clock)
             }
             try friend.revoke(
-                DeviceRevocation.issue(for: hidden.id, by: identity, at: start + 40, from: stolen, cutoff: 7),
+                DeviceRevocation.issue(
+                    for: hidden.id, by: identity, at: start + 40, from: stolen,
+                    cutoff: 7, head: EntryHash(rawValue: Data(repeating: 7, count: 32)), remaining: [stolen.id]),
                 storedAt: start + 40)
             try friend.revoke(try removal(of: stolen, remaining: [phone.id]), storedAt: start + 100)
 
@@ -122,20 +125,13 @@ struct ADeviceTheRemovedOneApprovedTests {
         var friend = try registry()
         try friend.admit(try approval(of: hidden, by: stolen, at: start + 20), storedAt: start + 20)
         try friend.revoke(
-            DeviceRevocation.issue(for: hidden.id, by: identity, at: start + 40, from: phone, cutoff: 7),
+            DeviceRevocation.issue(
+                for: hidden.id, by: identity, at: start + 40, from: phone,
+                cutoff: 7, head: EntryHash(rawValue: Data(repeating: 7, count: 32)), remaining: [phone.id]),
             storedAt: start + 40)
         try friend.revoke(try removal(of: stolen, remaining: [phone.id]), storedAt: start + 100)
 
         #expect(friend.line(of: hidden.id) == 7)
-    }
-
-    @Test("A removal without the list leaves the devices it approved alone, as before")
-    func withoutTheListNothingElseMoves() throws {
-        var friend = try registry()
-        try friend.admit(try approval(of: hidden, by: stolen, at: start + 20), storedAt: start + 20)
-        try friend.revoke(try removal(of: stolen, remaining: nil), storedAt: start + 100)
-
-        #expect(friend.activeDevices == [phone.id, hidden.id])
     }
 
     @Test("The list is signed: changing it breaks the removal")
@@ -153,43 +149,27 @@ struct ADeviceTheRemovedOneApprovedTests {
         #expect(throws: (any Error).self) { try revocation.verify(against: identity.publicKeys) }
     }
 
-    @Test("A removal with a cutoff and head and no list signs the bytes it did before lists existed")
-    func theHeadLayoutIsUnchanged() throws {
+    @Test("A removal signs its remover, its cutoff, the entry at it and the devices that remain, in that order")
+    func theLayout() throws {
         let head = EntryHash(rawValue: Data(repeating: 7, count: 32))
+        let ids = [phone.id, hidden.id].sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
         let revocation = try DeviceRevocation.issue(
-            for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 4, head: head)
+            for: stolen.id, by: identity, at: start + 1000, from: phone,
+            cutoff: 4, head: head, remaining: Set(ids))
         let expected = CanonicalBytes.payload(
             domain: Domain.deviceRevocation,
             fields: [
                 identity.id.rawValue, stolen.id.rawValue, CanonicalBytes.timestamp(start + 1000),
                 Data("revoked-by".utf8), phone.id.rawValue, Data("cutoff".utf8), CanonicalBytes.sequence(4),
                 Data("head".utf8), head.rawValue,
-            ])
-        #expect(revocation.signingPayload == expected)
-    }
-
-    @Test("The list is appended after everything else, counted, in a fixed order")
-    func theListLayout() throws {
-        let ids = [phone.id, hidden.id].sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
-        let revocation = try DeviceRevocation.issue(
-            for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 4, remaining: Set(ids))
-        let expected = CanonicalBytes.payload(
-            domain: Domain.deviceRevocation,
-            fields: [
-                identity.id.rawValue, stolen.id.rawValue, CanonicalBytes.timestamp(start + 1000),
-                Data("revoked-by".utf8), phone.id.rawValue, Data("cutoff".utf8), CanonicalBytes.sequence(4),
                 Data("remaining".utf8), CanonicalBytes.sequence(2),
             ] + ids.map(\.rawValue))
         #expect(revocation.signingPayload == expected)
     }
 
-    @Test("A removal that names no list still decodes, and one that does keeps it")
+    @Test("A removal survives coding with its list")
     func theListSurvivesCoding() throws {
-        let withList = try removal(of: stolen, remaining: [phone.id])
-        let decoded = try JSONDecoder().decode(DeviceRevocation.self, from: JSONEncoder().encode(withList))
-        #expect(decoded == withList)
-        let without = try removal(of: stolen, remaining: nil)
-        let encoded = try JSONEncoder().encode(without)
-        #expect(!String(decoding: encoded, as: UTF8.self).contains("remaining"))
+        let removal = try removal(of: stolen, remaining: [phone.id])
+        #expect(try JSONDecoder().decode(DeviceRevocation.self, from: JSONEncoder().encode(removal)) == removal)
     }
 }

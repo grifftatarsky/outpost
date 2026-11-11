@@ -51,7 +51,8 @@ struct ARemovalCannotEraseWhatWasSeenTests {
     ) throws -> DeviceRevocation {
         try DeviceRevocation.issue(
             for: device.id, by: identity, at: dated ?? start + 1000, from: remover,
-            cutoff: dated == nil ? top?.seq ?? 0 : nil, head: dated == nil ? top?.hash : nil)
+            cutoff: top?.seq ?? 0, head: top?.hash,
+            remaining: Set([phone, stolen, tablet, remover].map(\.id)).subtracting([device.id]))
     }
 
     private func held(_ replica: Replica, of device: DeviceKeys) -> [UInt64] {

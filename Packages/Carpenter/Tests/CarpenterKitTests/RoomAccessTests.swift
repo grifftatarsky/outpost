@@ -45,7 +45,7 @@ struct RoomAccessTests {
                     try JoinConfirmedBody.signed(confirming: attestation, by: member)))
             roster.apply(
                 rendered(founder.id, .admission, hash: UInt8(40 + offset)),
-                body: try Payload.admission(of: member.id, admitted: true))
+                body: try Payload.admission(of: member.id, admitted: true, invitation: attestation.signature))
         }
         return roster
     }
@@ -70,7 +70,7 @@ struct RoomAccessTests {
     ) throws {
         roster.apply(
             rendered(member.id, .admission, hash: hash),
-            body: try Payload.admission(of: joiner.id, admitted: admitted))
+            body: try Payload.admission(of: joiner.id, admitted: admitted, invitation: try #require(roster.requests[joiner.id]).signature))
     }
 
     // MARK: The default

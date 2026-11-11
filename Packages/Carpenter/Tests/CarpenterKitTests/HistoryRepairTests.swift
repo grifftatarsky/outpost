@@ -477,7 +477,9 @@ struct FinalRefusalTests {
 
         let revokedAt = start.addingTimeInterval(60)
         try replica.revoke(
-            DeviceRevocation.issue(for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device))
+            DeviceRevocation.issue(
+                for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device,
+                cutoff: 0, head: nil, remaining: [alice.device.id]))
 
         let after = try alice.post("after the revocation", at: revokedAt.addingTimeInterval(1))
         #expect(throws: LogError.unauthorizedDevice) { try replica.integrate(after) }
@@ -513,7 +515,9 @@ struct FinalRefusalTests {
         try replica.meet(alice)
         let revokedAt = start.addingTimeInterval(60)
         try replica.revoke(
-            DeviceRevocation.issue(for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device))
+            DeviceRevocation.issue(
+                for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device,
+                cutoff: 0, head: nil, remaining: [alice.device.id]))
         let rogue = try alice.post("after the revocation", at: revokedAt.addingTimeInterval(1))
 
         let packet = try SyncEngine.pack([rogue], for: [mine], window: 7)

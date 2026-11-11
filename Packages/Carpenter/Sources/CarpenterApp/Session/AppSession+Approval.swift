@@ -102,7 +102,6 @@ extension AppSession {
         persisted.certificates = approval.certificates
         persisted.revocations = approval.revocations
         persisted.authorityStored = check.storedTimes
-        persisted.authorityIsLegacy = false
         await persistOrReport("the approval of this device") { try await saveState() }
 
         _ = try? await deviceSync?.send(

@@ -90,7 +90,7 @@ struct JoinConfirmationWireTests {
         let signed = try JoinConfirmedBody.signed(confirming: attestation, by: joiner)
         let somebodyElse = Identity.generate()
         let swapped = JoinConfirmedBody(
-            invitation: signed.invitation, joiner: somebodyElse.id, signature: signed.signature)
+            invitation: signed.invitation, joiner: somebodyElse.id, nonce: signed.nonce, signature: signed.signature)
 
         #expect(throws: MembershipError.self) { try swapped.verify(confirming: attestation) }
     }

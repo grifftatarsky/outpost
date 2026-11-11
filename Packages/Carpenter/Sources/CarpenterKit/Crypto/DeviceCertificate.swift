@@ -152,22 +152,22 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
     public var device: DeviceID
     public var revokedAt: Date
     public var signature: Data
-    public var revokedBy: DeviceID?
-    public var revokerSignature: Data?
-    public var cutoff: UInt64?
+    public var revokedBy: DeviceID
+    public var revokerSignature: Data
+    public var cutoff: UInt64
     public var head: EntryHash?
-    public var remaining: [DeviceID]?
+    public var remaining: [DeviceID]
 
     public init(
         participant: ParticipantID,
         device: DeviceID,
         revokedAt: Date,
         signature: Data,
-        revokedBy: DeviceID? = nil,
-        revokerSignature: Data? = nil,
-        cutoff: UInt64? = nil,
-        head: EntryHash? = nil,
-        remaining: [DeviceID]? = nil
+        revokedBy: DeviceID,
+        revokerSignature: Data,
+        cutoff: UInt64,
+        head: EntryHash?,
+        remaining: [DeviceID]
     ) {
         self.participant = participant
         self.device = device
@@ -182,23 +182,21 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
 
     public static func issue(
         for device: DeviceID, by identity: Identity, at revokedAt: Date,
-        from revoker: DeviceKeys? = nil, cutoff: UInt64? = nil, head: EntryHash? = nil,
-        remaining: Set<DeviceID>? = nil
+        from revoker: DeviceKeys, cutoff: UInt64, head: EntryHash?, remaining: Set<DeviceID>
     ) throws -> DeviceRevocation {
         var revocation = DeviceRevocation(
             participant: identity.id,
             device: device,
             revokedAt: revokedAt,
             signature: Data(),
-            revokedBy: revoker?.id,
+            revokedBy: revoker.id,
+            revokerSignature: Data(),
             cutoff: cutoff,
             head: head,
-            remaining: remaining.map { $0.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) } }
+            remaining: remaining.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
         )
         revocation.signature = try identity.sign(revocation.signingPayload)
-        if let revoker {
-            revocation.revokerSignature = try revoker.sign(revocation.signingPayload)
-        }
+        revocation.revokerSignature = try revoker.sign(revocation.signingPayload)
         return revocation
     }
 
@@ -207,14 +205,12 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
             participant.rawValue,
             device.rawValue,
             CanonicalBytes.timestamp(revokedAt),
+            Data("revoked-by".utf8), revokedBy.rawValue,
+            Data("cutoff".utf8), CanonicalBytes.sequence(cutoff),
         ]
-        if let revokedBy { fields += [Data("revoked-by".utf8), revokedBy.rawValue] }
-        if let cutoff { fields += [Data("cutoff".utf8), CanonicalBytes.sequence(cutoff)] }
         if let head { fields += [Data("head".utf8), head.rawValue] }
-        if let remaining {
-            fields += [Data("remaining".utf8), CanonicalBytes.sequence(UInt64(remaining.count))]
-            fields += remaining.map(\.rawValue)
-        }
+        fields += [Data("remaining".utf8), CanonicalBytes.sequence(UInt64(remaining.count))]
+        fields += remaining.map(\.rawValue)
         return CanonicalBytes.payload(domain: Domain.deviceRevocation, fields: fields)
     }
 
@@ -222,10 +218,7 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
         guard participant == identityKeys.participantID else {
             throw CryptoError.participantMismatch
         }
-        guard (revokedBy == nil) == (revokerSignature == nil) else {
-            throw CryptoError.badSignature
-        }
-        guard (remaining?.count ?? 0) <= DeviceRegistry.mostDevices else {
+        guard remaining.count <= DeviceRegistry.mostDevices, (cutoff == 0) == (head == nil) else {
             throw CryptoError.notAuthorized
         }
         guard try identityKeys.isValidSignature(signature, for: signingPayload) else {
@@ -238,12 +231,11 @@ public struct DeviceRevocation: Hashable, Sendable, Codable {
             SHA256.hash(
                 data: CanonicalBytes.payload(
                     domain: Domain.authorityRecord,
-                    fields: [Data("revocation".utf8), signingPayload, signature, revokerSignature ?? Data()])))
+                    fields: [Data("revocation".utf8), signingPayload, signature, revokerSignature])))
     }
 
     func isSigned(byKey revokerPublicKey: Data) -> Bool {
-        guard let revokerSignature else { return false }
-        return (try? DeviceKeys.isValidSignature(
+        (try? DeviceKeys.isValidSignature(
             revokerSignature, for: signingPayload, publicKey: revokerPublicKey)) == true
     }
 }

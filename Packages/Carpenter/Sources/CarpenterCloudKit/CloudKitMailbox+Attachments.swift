@@ -43,7 +43,6 @@ extension CloudKitMailbox {
         try await refresh()
         var places: [(CKRecordZone.ID, String)] = []
         for zone in await index.theirsFor(sender, in: pairs) { places.append((zone, copy.recordName)) }
-        for zone in await index.legacy.keys { places.append((zone, photo.recordName)) }
         for (zone, name) in places {
             do {
                 let record = try await container.sharedCloudDatabase.record(for: CKRecord.ID(recordName: name, zoneID: zone))

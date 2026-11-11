@@ -116,7 +116,7 @@ struct ConfirmingAJoinTests {
 
         roster.apply(
             rendered(alice.id, .admission, hash: 4),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: try #require(roster.requests[joiner.id]).signature))
 
         #expect(roster.awaitingConfirmation(by: alice.id).isEmpty)
     }
@@ -131,7 +131,7 @@ struct ConfirmingAJoinTests {
 
         roster.apply(
             rendered(alice.id, .admission, hash: 4),
-            body: try Payload.admission(of: joiner.id, admitted: false))
+            body: try Payload.admission(of: joiner.id, admitted: false, invitation: try #require(roster.requests[joiner.id]).signature))
 
         #expect(roster.awaitingConfirmation(by: alice.id).isEmpty, "it went on asking")
         #expect(

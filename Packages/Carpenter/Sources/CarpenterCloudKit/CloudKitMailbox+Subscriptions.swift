@@ -33,7 +33,6 @@ extension CloudKitMailbox {
             let stale = standing.map(\.subscriptionID).filter { !keep.contains($0) }
             _ = try await container.sharedCloudDatabase.modifySubscriptions(
                 saving: wanted.map { $0.subscription() }, deleting: stale)
-            _ = try? await container.privateCloudDatabase.modifySubscriptions(saving: [], deleting: ["outpost.bell.v1"])
             Diagnostics.sync.notice(
                 """
                 push: watching contacts' spaces — silently for packets, visibly for rings only; \

@@ -211,7 +211,7 @@ struct RoomRosterTests {
 
         roster.apply(
             rendered(alice.id, .admission, hash: 3),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
 
         #expect(roster.pending(for: alice.id, at: start).isEmpty)
         #expect(roster.members.contains(joiner.id))
@@ -246,10 +246,10 @@ struct RoomRosterTests {
 
         roster.apply(
             rendered(alice.id, .admission, hash: 4),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
         roster.apply(
             rendered(bob.id, .admission, hash: 5),
-            body: try Payload.admission(of: joiner.id, admitted: false))
+            body: try Payload.admission(of: joiner.id, admitted: false, invitation: attestation.signature))
 
         #expect(roster.members.contains(joiner.id))
 
@@ -284,7 +284,7 @@ struct RoomRosterTests {
                     try JoinConfirmedBody.signed(confirming: attestation, by: joiner)))
             roster.apply(
                 rendered(alice.id, .admission, hash: UInt8(10 + offset)),
-                body: try Payload.admission(of: joiner.id, admitted: true))
+                body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
         }
 
         #expect(roster.members == [alice.id, bob.id, carol.id])
@@ -565,15 +565,6 @@ struct InviteEnvelopeTests {
     func mailboxIsOptional() throws {
         let invite = Invite(attestation: try attestation())
         #expect(try Invite.decoded(from: try invite.encoded()) == invite)
-    }
-
-    @Test("A bare attestation decodes as an invite with no mailbox")
-    func bareAttestationStillWorks() throws {
-        let bare = try attestation()
-        let restored = try Invite.decoded(from: try bare.encoded())
-
-        #expect(restored.attestation == bare)
-        #expect(restored.pair == nil)
     }
 
     @Test("Rubbish is still refused")

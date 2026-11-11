@@ -416,7 +416,7 @@ extension AppSession {
         do {
             try await write()
         } catch {
-            integrity.writesFailed += 1
+            if !storageIsSealed { integrity.writesFailed += 1 }
             Diagnostics.sync.error(
                 "storage: could not write \(what, privacy: .public) — it is in memory and will be gone on the next launch (\(String(describing: error), privacy: .public))")
         }

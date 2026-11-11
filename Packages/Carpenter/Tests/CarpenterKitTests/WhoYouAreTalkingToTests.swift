@@ -79,6 +79,7 @@ struct WhoYouAreTalkingToTests {
         let forged = JoinConfirmedBody(
             invitation: invite.signature,
             joiner: invite.joiner,
+            nonce: TestInvite.nonce(for: invite),
             signature: try inviter.sign(
                 JoinConfirmedBody.signedBytes(
                     invitation: invite.signature, joiner: invite.joiner,

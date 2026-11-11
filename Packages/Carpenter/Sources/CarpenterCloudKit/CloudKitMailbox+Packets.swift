@@ -16,7 +16,6 @@ extension CloudKitMailbox {
         PacketRecord.write(fields, into: record)
         try await save([record], in: container.privateCloudDatabase)
         await index.wrote(packet.id.recordName, PairIndex.Cached(type: PacketRecord.type, fields: fields, at: Date()), in: zone)
-        await putInOldOutbox(record, fields: fields, for: peer, in: pairs)
     }
 
     public func ring(_ peer: ParticipantID, in pairs: Pairs) async throws {
@@ -33,8 +32,7 @@ extension CloudKitMailbox {
         try await refresh()
         let theirs = await index.theirZone(for: peer, in: pairs)
         let mine = await index.myZone(for: hint)
-        var found = packets(in: theirs, for: tags, from: peer, answeredIn: mine)
-        found += await oldOutboxPackets(for: tags, from: peer)
+        let found = packets(in: theirs, for: tags, from: peer, answeredIn: mine)
         if let theirs { await clearAnswered(to: peer, hint: hint, holding: Set(theirs.records.keys)) }
         return found
     }
@@ -66,7 +64,6 @@ extension CloudKitMailbox {
 
     public func withdraw(_ id: PacketID, in pairs: Pairs) async throws {
         try await remove([id.recordName])
-        await withdrawFromOldOutbox(id)
     }
 
     // MARK: Shared by packets and photos

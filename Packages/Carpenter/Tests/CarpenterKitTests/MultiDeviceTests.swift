@@ -94,7 +94,9 @@ struct MultiDeviceTests {
         try replica.integrate(beforeLoss)
 
         let revokedAt = start.addingTimeInterval(3_600)
-        try replica.revoke(DeviceRevocation.issue(for: lost.id, by: identity, at: revokedAt, from: kept))
+        try replica.revoke(DeviceRevocation.issue(
+            for: lost.id, by: identity, at: revokedAt, from: kept,
+            cutoff: beforeLoss.seq, head: beforeLoss.hash, remaining: [kept.id]))
 
         let afterLoss = try Entry.append(
             to: beforeLoss, author: identity.id, device: lost, clock: beforeLoss.clock,

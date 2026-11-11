@@ -58,7 +58,8 @@ struct WhatVouchesForAnEntryCanArriveInALaterPacketTests {
         seeing.observe(words[4].feedKey, seq: words[4].seq)
         let vouch = try feed(of: tablet, 1, seeing: seeing)
         let removal = try DeviceRevocation.issue(
-            for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: words[2].seq, head: words[2].hash)
+            for: stolen.id, by: identity, at: start + 1000, from: phone,
+            cutoff: words[2].seq, head: words[2].hash, remaining: [phone.id])
 
         var first = try friend()
         var second = try friend()
@@ -101,7 +102,9 @@ struct WhatVouchesForAnEntryCanArriveInALaterPacketTests {
         var replica = try friend()
         for entry in words.prefix(3) { try replica.integrate(entry) }
         try replica.revoke(
-            DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 3, head: words[2].hash),
+            DeviceRevocation.issue(
+                for: stolen.id, by: identity, at: start + 1000, from: phone,
+                cutoff: 3, head: words[2].hash, remaining: [phone.id]),
             storedAt: start + 1000)
 
         let (late, _) = SyncSession.integrate(
@@ -127,13 +130,17 @@ struct WhatVouchesForAnEntryCanArriveInALaterPacketTests {
             DeviceCertificate.issue(for: stolen, by: identity, at: start + 10, approvedBy: phone), storedAt: start + 10)
         for entry in words.prefix(3) { try replica.integrate(entry) }
         try replica.revoke(
-            DeviceRevocation.issue(for: stolen.id, by: identity, at: start + 1000, from: phone, cutoff: 3, head: words[2].hash),
+            DeviceRevocation.issue(
+                for: stolen.id, by: identity, at: start + 1000, from: phone,
+                cutoff: 3, head: words[2].hash, remaining: [phone.id]),
             storedAt: start + 1000)
         #expect(throws: (any Error).self) { try replica.integrate(words[3]) }
         #expect(!replica.refusesForever(words[3]), "the member's phone could still vouch, and the refusal was final")
 
         try replica.revoke(
-            DeviceRevocation.issue(for: phone.id, by: identity, at: start + 2000, from: phone), storedAt: start + 2000)
+            DeviceRevocation.issue(
+                for: phone.id, by: identity, at: start + 2000, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id]), storedAt: start + 2000)
         #expect(replica.refusesForever(words[3]), "nobody is left to vouch, and the refusal is still not final")
     }
 }

@@ -183,11 +183,12 @@ struct RemovalTests {
         let alice = Identity.generate()
         let sam = Identity.generate()
         var roster = try room(founder: alice, joining: [sam])
+        let invitation = try #require(roster.requests[sam.id]).signature
 
         try remove(sam, by: alice, from: &roster, hash: 90, at: 10)
         roster.apply(
             rendered(alice.id, .admission, hash: 92, at: 20),
-            body: try Payload.admission(of: sam.id, admitted: true))
+            body: try Payload.admission(of: sam.id, admitted: true, invitation: invitation))
 
         #expect(!roster.members.contains(sam.id), "an admission put a removed member back")
         #expect(roster.removal(of: sam.id) != nil)
@@ -258,7 +259,7 @@ struct RemovalTests {
             body: try Payload.joinRequest(again))
         roster.apply(
             rendered(alice.id, .admission, hash: 94, at: 32),
-            body: try Payload.admission(of: sam.id, admitted: true))
+            body: try Payload.admission(of: sam.id, admitted: true, invitation: again.signature))
 
         #expect(
             !roster.members.contains(sam.id),

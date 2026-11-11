@@ -76,7 +76,8 @@ struct DeviceCertificateTests {
         let device = DeviceKeys.generate()
         let certificate = try DeviceCertificate.issue(
             for: device.publicKey, by: identity, at: issuedAt)
-        let revocation = try DeviceRevocation.issue(for: device.id, by: identity, at: issuedAt)
+        let revocation = try DeviceRevocation.issue(
+            for: device.id, by: identity, at: issuedAt, from: device, cutoff: 0, head: nil, remaining: [])
 
         var crossed = certificate
         crossed.signature = revocation.signature
@@ -163,7 +164,8 @@ struct DeviceRegistryTests {
 
         try enrolled.registry.revoke(
             DeviceRevocation.issue(
-                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device))
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device,
+                cutoff: 0, head: nil, remaining: [enrolled.device.id]))
 
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt))
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(1)))
@@ -176,7 +178,8 @@ struct DeviceRegistryTests {
 
         try enrolled.registry.revoke(
             DeviceRevocation.issue(
-                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device))
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device,
+                cutoff: 0, head: nil, remaining: [enrolled.device.id]))
 
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: issuedAt))
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(-1)))
@@ -189,7 +192,9 @@ struct DeviceRegistryTests {
 
         #expect(throws: CryptoError.participantMismatch) {
             try enrolled.registry.revoke(
-                DeviceRevocation.issue(for: enrolled.device.id, by: impostor, at: issuedAt))
+                DeviceRevocation.issue(
+                    for: enrolled.device.id, by: impostor, at: issuedAt, from: enrolled.device,
+                    cutoff: 0, head: nil, remaining: [enrolled.device.id]))
         }
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: issuedAt))
     }
@@ -201,7 +206,8 @@ struct DeviceRegistryTests {
         #expect(throws: CryptoError.unknownDevice) {
             try enrolled.registry.revoke(
                 DeviceRevocation.issue(
-                    for: DeviceKeys.generate().id, by: enrolled.identity, at: issuedAt, from: enrolled.device))
+                    for: DeviceKeys.generate().id, by: enrolled.identity, at: issuedAt, from: enrolled.device,
+                    cutoff: 0, head: nil, remaining: [enrolled.device.id]))
         }
     }
 
@@ -240,7 +246,8 @@ struct DeviceRegistryTests {
 
         try enrolled.registry.revoke(
             DeviceRevocation.issue(
-                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device))
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device,
+                cutoff: 0, head: nil, remaining: [enrolled.device.id]))
         try enrolled.registry.admit(certificate)
 
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(1)))

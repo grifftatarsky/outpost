@@ -186,7 +186,7 @@ struct PendingInvitationTests {
                 try JoinConfirmedBody.signed(confirming: invitation, by: bob)))
         joined.apply(
             rendered(alice.id, .admission, hash: 61),
-            body: try Payload.admission(of: bob.id, admitted: true))
+            body: try Payload.admission(of: bob.id, admitted: true, invitation: invitation.signature))
         #expect(joined.lapsedInvitations(at: afterwards).isEmpty, "somebody in the room was listed as a dead offer")
 
         var withdrawn = try roomWith(founder: alice, inviting: [(bob, .aDay)])
@@ -214,7 +214,7 @@ struct PendingInvitationTests {
                 try JoinConfirmedBody.signed(confirming: invitation, by: bob)))
         roster.apply(
             rendered(alice.id, .admission, hash: 50),
-            body: try Payload.admission(of: bob.id, admitted: true))
+            body: try Payload.admission(of: bob.id, admitted: true, invitation: invitation.signature))
 
         #expect(roster.members.contains(bob.id))
         #expect(

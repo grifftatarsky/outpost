@@ -336,8 +336,7 @@ public struct RoomRoster: Hashable, Sendable {
             guard established.contains(entry.author),
                 let decision = try? body.decode(AdmissionBody.self)
             else { return }
-            guard let invitation = decision.invitation ?? requests[decision.joiner]?.signature
-            else { return }
+            let invitation = decision.invitation
             if decision.admitted {
                 admissionsByInvitation[invitation, default: []].insert(entry.author)
                 refusalsByInvitation[invitation]?.remove(entry.author)

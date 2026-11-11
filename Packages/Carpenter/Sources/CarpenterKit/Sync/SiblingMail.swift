@@ -359,10 +359,6 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         if let digest { lastState = digest }
     }
 
-    public var ownRecords: [SiblingRecord.Kind] {
-        [.state] + outstanding.keys.sorted().map { .mail($0) } + catchUps.keys.map { .catchUp(for: $0) }
-    }
-
     public static func digest(of preferences: MemberPreferences) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys

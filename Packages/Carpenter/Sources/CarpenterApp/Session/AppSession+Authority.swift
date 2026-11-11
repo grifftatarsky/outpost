@@ -18,8 +18,8 @@ extension AppSession {
         return max(clock.now, latest.addingTimeInterval(0.001))
     }
 
-    func storedTime(for digest: Data, claimed: Date) -> Date? {
-        persisted.authorityIsLegacy ? claimed : persisted.authorityStored[digest]
+    func storedTime(for digest: Data) -> Date? {
+        persisted.authorityStored[digest]
     }
 
     func keepAuthorityTimes() {
@@ -47,7 +47,6 @@ extension AppSession {
             .sorted { $0.digest.lexicographicallyPrecedes($1.digest) }
         persisted.certificates = knownCertificates()
         persisted.authorityStored = replica.storedTimes
-        persisted.authorityIsLegacy = false
     }
 
     func takeAuthority(_ record: SiblingRecord) async {

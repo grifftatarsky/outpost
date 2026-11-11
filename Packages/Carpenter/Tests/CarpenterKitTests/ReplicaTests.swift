@@ -248,7 +248,9 @@ struct ReplicaTests {
 
         let revokedAt = start.addingTimeInterval(3_600)
         try replica.revoke(
-            DeviceRevocation.issue(for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device))
+            DeviceRevocation.issue(
+                for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device,
+                cutoff: before.seq, head: before.hash, remaining: [alice.device.id]))
 
         let after = try alice.post("after", at: revokedAt.addingTimeInterval(60))
 

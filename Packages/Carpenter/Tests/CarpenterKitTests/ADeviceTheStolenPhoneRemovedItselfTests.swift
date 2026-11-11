@@ -28,11 +28,14 @@ struct ADeviceTheStolenPhoneRemovedItselfTests {
     func theThiefsOwnRemovalIsNotAPass() throws {
         var replica = try friend()
         try replica.revoke(
-            DeviceRevocation.issue(for: hidden.id, by: identity, at: start + 30, from: stolen, cutoff: 1 << 40),
+            DeviceRevocation.issue(
+                for: hidden.id, by: identity, at: start + 30, from: stolen,
+                cutoff: 1 << 40, head: EntryHash(rawValue: Data(repeating: 7, count: 32)), remaining: [stolen.id]),
             storedAt: start + 30)
         try replica.revoke(
             DeviceRevocation.issue(
-                for: stolen.id, by: identity, at: start + 100, from: phone, cutoff: 0, remaining: [phone.id]),
+                for: stolen.id, by: identity, at: start + 100, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id]),
             storedAt: start + 100)
         try #require(
             replica.registry(for: identity.id)?.standing(of: hidden.id)?.revokedAt != nil,

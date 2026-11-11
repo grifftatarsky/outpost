@@ -83,9 +83,9 @@ public struct DeviceApproval: Hashable, Sendable, Codable {
         signingSeed = try container.decode(Data.self, forKey: .signingSeed)
         agreementSeed = try container.decode(Data.self, forKey: .agreementSeed)
         recoveryKey = try container.decode(Data.self, forKey: .recoveryKey)
-        certificates = try container.decodeIfPresent([DeviceCertificate].self, forKey: .certificates) ?? []
-        revocations = try container.decodeIfPresent([DeviceRevocation].self, forKey: .revocations) ?? []
-        stored = try container.decodeIfPresent([Data: Date].self, forKey: .stored) ?? [:]
+        certificates = try container.decode([DeviceCertificate].self, forKey: .certificates)
+        revocations = try container.decode([DeviceRevocation].self, forKey: .revocations)
+        stored = try container.decode([Data: Date].self, forKey: .stored)
     }
 
     public func identity() throws -> Identity {

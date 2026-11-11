@@ -47,14 +47,6 @@ public struct OutpostNotificationChoices: Hashable, Sendable, Codable {
     public enum Kind: String, CaseIterable, Sendable {
         case repliesOnPostsICommentedOn, repliesOnPostsIReactedTo, commentsOnMyPosts, likesOnMyPosts
 
-        public var interruption: NotificationUrgency {
-            switch self {
-            case .commentsOnMyPosts, .repliesOnPostsICommentedOn, .repliesOnPostsIReactedTo:
-                return .active
-            case .likesOnMyPosts: return .passive
-            }
-        }
-
         public var path: WritableKeyPath<OutpostNotificationChoices, Bool> {
             switch self {
             case .repliesOnPostsICommentedOn: return \.repliesOnPostsICommentedOn

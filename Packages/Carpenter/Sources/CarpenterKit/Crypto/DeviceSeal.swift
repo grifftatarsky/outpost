@@ -55,12 +55,12 @@ public struct DeviceSeal: Hashable, Sendable, Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         device = try container.decode(DeviceID.self, forKey: .device)
-        encapsulated = try container.decodeIfPresent(Data.self, forKey: .encapsulated) ?? Data()
+        encapsulated = try container.decode(Data.self, forKey: .encapsulated)
         sealed = try container.decode(Data.self, forKey: .sealed)
-        guard encapsulated.count <= Self.encapsulatedByteCount, sealed.count <= MailboxRules.recordByteCeiling
+        guard encapsulated.count == Self.encapsulatedByteCount, sealed.count <= MailboxRules.recordByteCeiling
         else {
             throw DecodingError.dataCorruptedError(
-                forKey: .sealed, in: container, debugDescription: "a device seal larger than a record can hold")
+                forKey: .sealed, in: container, debugDescription: "a device seal of the wrong size")
         }
     }
 }

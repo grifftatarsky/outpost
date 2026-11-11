@@ -27,7 +27,9 @@ struct WhatTheRegistryCountsTests {
             DeviceCertificate.issue(for: devices.stolen, by: identity, at: start + 20, approvedBy: devices.phone),
             storedAt: start + 20)
         try registry.revoke(
-            DeviceRevocation.issue(for: devices.stolen.id, by: identity, at: start + 1000, from: devices.phone),
+            DeviceRevocation.issue(
+                for: devices.stolen.id, by: identity, at: start + 1000, from: devices.phone,
+                cutoff: 0, head: nil, remaining: [devices.phone.id, devices.tablet.id, devices.fresh.id]),
             storedAt: start + 1000)
         return registry
     }
@@ -49,7 +51,9 @@ struct WhatTheRegistryCountsTests {
         var registry = try removedStolenDevice(devices)
         for target in [devices.phone.id, devices.tablet.id] {
             try registry.revoke(
-                DeviceRevocation.issue(for: target, by: identity, at: start + 900, from: devices.stolen),
+                DeviceRevocation.issue(
+                    for: target, by: identity, at: start + 900, from: devices.stolen,
+                    cutoff: 0, head: nil, remaining: [devices.stolen.id]),
                 storedAt: start + 2000)
         }
         #expect(registry.activeDevices == [devices.phone.id, devices.tablet.id])
@@ -74,11 +78,13 @@ struct WhatTheRegistryCountsTests {
             (.added(try DeviceCertificate.issue(
                 for: devices.stolen, by: identity, at: start + 20, approvedBy: devices.phone)), start + 20),
             (.removed(try DeviceRevocation.issue(
-                for: devices.stolen.id, by: identity, at: start + 1000, from: devices.phone)), start + 1000),
+                for: devices.stolen.id, by: identity, at: start + 1000, from: devices.phone,
+                cutoff: 0, head: nil, remaining: [devices.phone.id])), start + 1000),
             (.added(try DeviceCertificate.issue(
                 for: devices.fresh, by: identity, at: start + 500, approvedBy: devices.stolen)), start + 2000),
             (.removed(try DeviceRevocation.issue(
-                for: devices.phone.id, by: identity, at: start + 900, from: devices.stolen)), start + 2001),
+                for: devices.phone.id, by: identity, at: start + 900, from: devices.stolen,
+                cutoff: 0, head: nil, remaining: [devices.stolen.id])), start + 2001),
         ]
         var results: Set<Set<DeviceID>> = []
         for _ in 0..<20 {
@@ -114,16 +120,33 @@ struct WhatTheRegistryCountsTests {
         #expect(registry.activeDevices.contains(devices.fresh.id))
     }
 
-    @Test("A removal signed by the identity key alone is refused")
-    func aRemovalNeedsADevice() throws {
+    @Test(
+        "A removal that leaves out its remover, its cutoff or the devices that remain does not decode",
+        arguments: ["revokedBy", "revokerSignature", "cutoff", "remaining"])
+    func aRemovalNamesEverythingTheAppWrites(field: String) throws {
         let devices = Devices()
-        var registry = try removedStolenDevice(devices)
-        #expect(throws: CryptoError.notAuthorized) {
-            try registry.revoke(
-                DeviceRevocation.issue(for: devices.phone.id, by: identity, at: start + 3000),
-                storedAt: start + 3000)
+        let whole = try DeviceRevocation.issue(
+            for: devices.stolen.id, by: identity, at: start + 3000, from: devices.phone,
+            cutoff: 0, head: nil, remaining: [devices.phone.id])
+        var fields = try #require(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(whole)) as? [String: Any])
+        #expect(fields.removeValue(forKey: field) != nil)
+
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode(DeviceRevocation.self, from: JSONSerialization.data(withJSONObject: fields))
         }
-        #expect(registry.activeDevices.contains(devices.phone.id))
+    }
+
+    @Test("A removal that names a cutoff and no entry at it, or an entry and no cutoff, is refused")
+    func aCutoffAndItsEntryComeTogether() throws {
+        let devices = Devices()
+        let hash = EntryHash(rawValue: Data(repeating: 7, count: 32))
+        for (cutoff, head) in [(UInt64(4), EntryHash?.none), (UInt64(0), EntryHash?.some(hash))] {
+            let removal = try DeviceRevocation.issue(
+                for: devices.stolen.id, by: identity, at: start + 3000, from: devices.phone,
+                cutoff: cutoff, head: head, remaining: [devices.phone.id])
+            #expect(throws: CryptoError.notAuthorized) { try removal.verify(against: identity.publicKeys) }
+        }
     }
 
     @Test("A stored approval whose contents do not match its name is refused")
@@ -152,7 +175,9 @@ struct WhatTheRegistryCountsTests {
         replica.introduce(identity.publicKeys)
         let phone = try DeviceCertificate.recovered(for: devices.phone, by: identity, at: start)
         let stolen = try DeviceCertificate.issue(for: devices.stolen, by: identity, at: start + 20, approvedBy: devices.phone)
-        let removal = try DeviceRevocation.issue(for: devices.stolen.id, by: identity, at: start + 1000, from: devices.phone)
+        let removal = try DeviceRevocation.issue(
+            for: devices.stolen.id, by: identity, at: start + 1000, from: devices.phone,
+            cutoff: 0, head: nil, remaining: [devices.phone.id])
         let backDated = try DeviceCertificate.issue(
             for: devices.fresh, by: identity, at: start + 500, approvedBy: devices.stolen)
 
@@ -253,7 +278,9 @@ struct WritingOldDatesIntoICloudTests {
             try DeviceCertificate.issue(for: fresh, by: rig.identity, at: past, approvedBy: rig.stolenKeys))
         let removals = try [original, second].map {
             AuthorityEvent.removed(
-                try DeviceRevocation.issue(for: $0, by: rig.identity, at: past, from: rig.stolenKeys))
+                try DeviceRevocation.issue(
+                    for: $0, by: rig.identity, at: past, from: rig.stolenKeys,
+                    cutoff: 0, head: nil, remaining: [rig.stolenKeys.id]))
         }
         for event in [approval] + removals {
             let record = try event.record(sealedFor: rig.identity, by: rig.stolenKeys.id)

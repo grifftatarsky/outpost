@@ -55,7 +55,9 @@ struct SiblingFeedIsSealedTests {
             revocations: [
                 DeviceRevocation(
                     participant: identity.id, device: keys.id,
-                    revokedAt: Date(timeIntervalSince1970: 5_000), signature: Data(repeating: 0x0F, count: 64))
+                    revokedAt: Date(timeIntervalSince1970: 5_000), signature: Data(repeating: 0x0F, count: 64),
+                    revokedBy: keys.id, revokerSignature: Data(repeating: 0x0E, count: 64), cutoff: 0, head: nil,
+                    remaining: [keys.id])
             ],
             forwarded: [ForwardedGrant(from: identity.id, grant: forwardedGrant)],
             people: [friend],

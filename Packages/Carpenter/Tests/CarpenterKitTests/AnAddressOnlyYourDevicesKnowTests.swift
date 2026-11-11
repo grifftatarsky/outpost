@@ -27,7 +27,9 @@ struct AnAddressOnlyYourDevicesKnowTests {
         try registry.admit(
             DeviceCertificate.issue(for: thief, by: identity, at: t0 + 20, approvedBy: phone), storedAt: t0 + 20)
         try registry.revoke(
-            DeviceRevocation.issue(for: thief.id, by: identity, at: t0 + 30, from: phone), storedAt: t0 + 30)
+            DeviceRevocation.issue(
+                for: thief.id, by: identity, at: t0 + 30, from: phone,
+                cutoff: 0, head: nil, remaining: [phone.id]), storedAt: t0 + 30)
         return Household(registry: registry, identity: identity, phone: phone, tablet: tablet, thief: thief)
     }
 
