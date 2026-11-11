@@ -31,6 +31,13 @@ enum LivePair {
         throw CancellationError()
     }
 
+    static func waitFor(_ name: String, running session: AppSession, through cloud: CloudKitMailbox) async throws -> String {
+        try await until("\(name) to be left", session, through: cloud) {
+            FileManager.default.fileExists(atPath: folder.appending(path: name).path)
+        }
+        return try await waitFor(name)
+    }
+
     static func session() -> AppSession {
         let root = URL.temporaryDirectory.appending(path: "carpenter-live-pair-\(UUID().uuidString)")
         return AppSession(
@@ -69,6 +76,7 @@ struct LivePairTests {
     @Test(.enabled(if: LivePairRun.role == "alice"))
     func alice() async throws {
         let cloud = try await LiveCloudKit.mailbox()
+        try? await cloud.eraseEverySpace()
         let alice = LivePair.session()
         await alice.load()
         try await alice.createIdentity(displayName: "Alice")
@@ -100,7 +108,7 @@ struct LivePairTests {
         try await alice.send(LivePair.photo, to: room, through: cloud)
         let photo = try #require(alice.messages(in: room).last?.media?.id)
         try LivePair.leave(photo.rawValue.uuidString, as: "alice-photo")
-        _ = try await LivePair.waitFor("bob-has-photo")
+        _ = try await LivePair.waitFor("bob-has-photo", running: alice, through: cloud)
         let copy = try #require(alice.photoCopyName(of: photo, for: bobID))
         try await LivePair.until("the photo's copy to be cleared once Bob had it", alice, through: cloud) {
             try await cloud.storedCopies(in: pairs).allSatisfy { $0.name != copy }
@@ -116,6 +124,7 @@ struct LivePairTests {
     @Test(.enabled(if: LivePairRun.role == "bob"))
     func bob() async throws {
         let cloud = try await LiveCloudKit.mailbox()
+        try? await cloud.eraseEverySpace()
         let bob = LivePair.session()
         await bob.load()
         try await bob.createIdentity(displayName: "Bob")
@@ -140,8 +149,10 @@ struct LivePairTests {
             "Alice's entries arrived out of the order she wrote them")
         try LivePair.leave("yes", as: "bob-got-24")
 
-        let photo = AttachmentID(rawValue: try #require(UUID(uuidString: try await LivePair.waitFor("alice-photo"))))
+        let named = try await LivePair.waitFor("alice-photo", running: bob, through: cloud)
+        let photo = AttachmentID(rawValue: try #require(UUID(uuidString: named)))
         try await LivePair.until("Alice's photo", bob, through: cloud) { await bob.holdsAttachment(photo) }
+        for _ in 0..<2 { try await bob.sync(through: cloud, media: cloud) }
         try LivePair.leave("yes", as: "bob-has-photo")
 
         let shared = CKContainer.default().sharedCloudDatabase

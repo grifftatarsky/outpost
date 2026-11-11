@@ -1,4 +1,5 @@
 import Foundation
+import Testing
 
 enum TestScratch {
     static let root: URL = {
@@ -12,4 +13,16 @@ enum TestScratch {
         try? files.createDirectory(at: mine, withIntermediateDirectories: true)
         return mine
     }()
+
+    static let keepsProtectionClasses: Bool = {
+        let probe = root.appending(path: "protection-probe-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: probe) }
+        return (try? Data([0]).write(to: probe, options: [.atomic, .completeFileProtection])) != nil
+    }()
+}
+
+extension Trait where Self == ConditionTrait {
+    static var onADiskThatKeepsProtectionClasses: Self {
+        .enabled(if: TestScratch.keepsProtectionClasses, "This disk refuses a file's protection class")
+    }
 }

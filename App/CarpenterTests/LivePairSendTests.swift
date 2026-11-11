@@ -28,6 +28,7 @@ struct LivePairSendTests {
     @Test(.enabled(if: LivePairRun.role == "ann"))
     func ann() async throws {
         let cloud = try await LiveCloudKit.mailbox()
+        try? await cloud.eraseEverySpace()
         let ann = LivePair.session()
         await ann.load()
         try await ann.createIdentity(displayName: "Ann")
@@ -77,6 +78,7 @@ struct LivePairSendTests {
     @Test(.enabled(if: LivePairRun.role == "ben"))
     func ben() async throws {
         let cloud = try await LiveCloudKit.mailbox()
+        try? await cloud.eraseEverySpace()
         let ben = LivePair.session()
         await ben.load()
         try await ben.createIdentity(displayName: "Ben")

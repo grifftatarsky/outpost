@@ -71,7 +71,7 @@ struct SealedWhileLockedTests {
 
     // MARK: Nothing is read or written while the phone is locked
 
-    @Test("A round while the phone is locked collects nothing and signs for nothing, and the message arrives on unlock")
+    @Test("A round while the phone is locked collects nothing and signs for nothing, and the message arrives on unlock", .onADiskThatKeepsProtectionClasses)
     func aLockedPhoneCollectsNothing() async throws {
         let t = try await rig()
         await t.lock()
@@ -89,7 +89,7 @@ struct SealedWhileLockedTests {
         #expect(t.bobHas("while you were away"), "a message sent while the phone was locked never arrived")
     }
 
-    @Test("A phone that starts while locked waits for it to unlock, and never offers to start over")
+    @Test("A phone that starts while locked waits for it to unlock, and never offers to start over", .onADiskThatKeepsProtectionClasses)
     func aLockedStartWaits() async throws {
         let t = try await rig()
         try await t.alice.send("before the lock", to: t.room)
@@ -139,7 +139,7 @@ struct SealedWhileLockedTests {
         #expect(nse.enrolment != nil, "turning nothing on still sealed the keys from the extension")
     }
 
-    @Test("A write refused because the phone locked mid-round is not reported as damage, and is written after unlock")
+    @Test("A write refused because the phone locked mid-round is not reported as damage, and is written after unlock", .onADiskThatKeepsProtectionClasses)
     func aLockMidRoundIsNotDamage() async throws {
         let refusing = LocksOnFirstWrite()
         let t = try await rig(log: { refusing.wrapping($0) })
@@ -164,7 +164,7 @@ struct SealedWhileLockedTests {
 
     // MARK: The setting, the keys and the record agree
 
-    @Test("Turning it on seals every key this phone already kept, and turning it off opens them again")
+    @Test("Turning it on seals every key this phone already kept, and turning it off opens them again", .onADiskThatKeepsProtectionClasses)
     func keysFollowTheSetting() async throws {
         let t = try await rig(sealed: false)
         let before = await t.keychain.protectedKeys
@@ -236,7 +236,7 @@ struct SealedWhileLockedTests {
 
     // MARK: Files
 
-    @Test("Every file the stores keep is written with the protection the setting names at that moment")
+    @Test("Every file the stores keep is written with the protection the setting names at that moment", .onADiskThatKeepsProtectionClasses)
     func filesFollowTheSetting() async throws {
         let requests = ProtectionRequests()
         let dial = ProtectionDial(.whileUnlocked)
@@ -273,7 +273,7 @@ struct SealedWhileLockedTests {
             "a store kept the protection it was made with")
     }
 
-    @Test("Changing the setting reaches every file and folder already kept, and skips what is not there")
+    @Test("Changing the setting reaches every file and folder already kept, and skips what is not there", .onADiskThatKeepsProtectionClasses)
     func reprotectingReachesEverything() throws {
         let requests = ProtectionRequests()
         let folder = TestScratch.root.appending(path: "carpenter-kept-\(UUID().uuidString)", directoryHint: .isDirectory)
