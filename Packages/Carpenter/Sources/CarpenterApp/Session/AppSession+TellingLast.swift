@@ -108,6 +108,13 @@ extension AppSession {
         Set(report.written.filter { $0.entries.contains(entry.hash) }.compactMap(\.to))
     }
 
+    func timeOwnClaim() {
+        guard let head else { return }
+        let latestSeen = persisted.claimTimes.values.max() ?? .distantPast
+        persisted.claimTimes[head.hash] = max(clock.now, latestSeen.addingTimeInterval(0.001))
+        logChanged()
+    }
+
     func takeClaimTimes(_ times: [EntryHash: Date]) {
         let earlier = times.filter { hash, time in persisted.claimTimes[hash].map { time < $0 } ?? true }
         guard !earlier.isEmpty else { return }

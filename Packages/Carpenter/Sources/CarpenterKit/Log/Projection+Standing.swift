@@ -91,6 +91,14 @@ extension Projection {
         }
         if !answeredAfterTheirRemoval.isEmpty { return answeredAfterTheirRemoval }
 
+        let storedAfterTheirRemoval = voided.filter { victim in
+            voiders(victim).contains { voider in
+                upheld.contains(voider)
+                    && wasStoredFirst(claims[voider].entry, before: claims[victim].entry, noted: noted)
+            }
+        }
+        if !storedAfterTheirRemoval.isEmpty { return storedAfterTheirRemoval }
+
         if !unsettled.isEmpty {
             let viable = voided.filter { takes($0, cutting.subtracting(voiders($0))) }
             let idle = unsettled.subtracting(walking(taking.union(viable)).took)
@@ -130,6 +138,25 @@ extension Projection {
         }
         return (unfollowed.isEmpty ? indices : unfollowed)
             .max { comesFirst(claims[$0].entry, claims[$1].entry, noted: noted) }
+    }
+
+    private func wasStoredFirst(
+        _ removal: RenderedEntry, before answer: RenderedEntry, noted: () -> [EntryHash: Date]
+    ) -> Bool {
+        guard !Self.hadSeen(answer, before: removal) else { return false }
+        if let first = timeThisPhoneSaw(removal, noted: noted), let second = timeThisPhoneSaw(answer, noted: noted),
+            first != second
+        {
+            return first < second
+        }
+        let written = noted()
+        guard let first = written[removal.id], let second = written[answer.id] else { return false }
+        return first < second
+    }
+
+    private func timeThisPhoneSaw(_ claim: RenderedEntry, noted: () -> [EntryHash: Date]) -> Date? {
+        guard claim.author == viewer else { return claimTimes[claim.id] }
+        return [claimTimes[claim.id], noted()[claim.id]].compactMap { $0 }.min()
     }
 
     static func hadSeen(_ earlier: RenderedEntry, before later: RenderedEntry) -> Bool {
