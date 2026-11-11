@@ -37,12 +37,6 @@
       "Bash(date:*)"
     ],
     "ask": [
-      "Bash(xcrun simctl erase:*)",
-      "Bash(xcrun simctl uninstall:*)",
-      "Bash(./Scripts/reset-device.sh:*)",
-      "Bash(git push:*)",
-      "Bash(git reset:*)",
-      "Bash(git checkout:*)"
     ]
   }
 }

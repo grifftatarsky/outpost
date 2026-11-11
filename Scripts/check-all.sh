@@ -8,7 +8,7 @@
 # files this branch changed; it is printed at the end and copied to the clipboard, so it can be
 # pasted straight back into the session that asked for the run.
 #
-# Usage: Scripts/check-all.sh [simulator-name]              run everything (default: bullet)
+# Usage: Scripts/check-all.sh [simulator-name]              run everything (default: outpost-alpha)
 #        Scripts/check-all.sh --only STEP[,STEP] [simulator] run only those steps, e.g. app-suite
 #        Scripts/check-all.sh --digest                      read the last run's logs again
 #
@@ -231,7 +231,7 @@ if [ "${1:-}" = "--digest" ]; then
         exit 1
     fi
 else
-    simulator="${1:-bullet}"
+    simulator="${1:-outpost-alpha}"
     chosen="$([ -n "${1:-}" ] && echo named || echo default)"
     rm -rf "$logs"
     mkdir -p "$logs"

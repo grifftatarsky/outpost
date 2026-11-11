@@ -20,7 +20,7 @@
 		</dict>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
+	<false/>
 	<!-- COPY BEGIN dc8580d4 [NEEDS HUMAN REVIEW] -->
 	<key>NSCameraUsageDescription</key>
 	<string>The camera reads the QR code on an invite somebody shows you, and the app keeps nothing else it sees.</string>
