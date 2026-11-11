@@ -2,6 +2,7 @@ import CarpenterKit
 import CryptoKit
 import Foundation
 import LocalAuthentication
+import OSLog
 import Security
 
 public struct SecureEnclaveKeys: HardwareKeys {
@@ -13,14 +14,12 @@ public struct SecureEnclaveKeys: HardwareKeys {
 
     public static var isAvailable: Bool { SecureEnclave.isAvailable }
 
-    public func make(_ id: HardwareKeyID, requiringBiometrics: Bool) async throws -> Data {
+    public func make(_ id: HardwareKeyID, opensFor rule: HardwareKeyRule) async throws -> Data {
         guard Self.isAvailable else { throw HardwareKeyError.unavailable }
         var error: Unmanaged<CFError>?
-        let flags: SecAccessControlCreateFlags =
-            requiringBiometrics ? [.privateKeyUsage, .biometryCurrentSet] : [.privateKeyUsage]
         guard let control = SecAccessControlCreateWithFlags(
-            nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, flags, &error)
-        else { throw HardwareKeyError.unavailable }
+            nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, Self.flags(for: rule), &error)
+        else { throw Self.failure(error, making: true) }
 
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
@@ -35,7 +34,7 @@ public struct SecureEnclaveKeys: HardwareKeys {
         ]
         var made: Unmanaged<CFError>?
         guard let key = SecKeyCreateRandomKey(attributes as CFDictionary, &made) else {
-            throw HardwareKeyError.unavailable
+            throw Self.failure(made, making: true)
         }
         guard let publicKey = SecKeyCopyPublicKey(key),
             let bytes = SecKeyCopyExternalRepresentation(publicKey, nil) as Data?
@@ -43,19 +42,8 @@ public struct SecureEnclaveKeys: HardwareKeys {
         return bytes
     }
 
-    public func publicKey(of id: HardwareKeyID) async throws -> Data? {
-        let key: SecKey
-        do {
-            key = try find(id, reason: nil)
-        } catch HardwareKeyError.noSuchKey {
-            return nil
-        }
-        guard let publicKey = SecKeyCopyPublicKey(key) else { return nil }
-        return SecKeyCopyExternalRepresentation(publicKey, nil) as Data?
-    }
-
     public func agree(_ id: HardwareKeyID, with publicKey: Data, reason: String) async throws -> Data {
-        let key = try find(id, reason: reason.isEmpty ? nil : reason)
+        let key = try find(id, reason: reason)
         let theirs = try P256.KeyAgreement.PublicKey(x963Representation: publicKey)
         guard let peer = SecKeyCreateWithData(
             theirs.x963Representation as CFData,
@@ -69,7 +57,7 @@ public struct SecureEnclaveKeys: HardwareKeys {
         var error: Unmanaged<CFError>?
         guard let shared = SecKeyCopyKeyExchangeResult(
             key, .ecdhKeyExchangeStandard, peer, [:] as CFDictionary, &error) as Data?
-        else { throw HardwareKeyError.refused }
+        else { throw Self.failure(error, making: false) }
         return shared
     }
 
@@ -80,16 +68,39 @@ public struct SecureEnclaveKeys: HardwareKeys {
         ] as CFDictionary)
     }
 
-    private func find(_ id: HardwareKeyID, reason: String?) throws -> SecKey {
+    private static func flags(for rule: HardwareKeyRule) -> SecAccessControlCreateFlags {
+        switch rule {
+        case .unlockedPhone: [.privateKeyUsage]
+        case .ownerPresent: [.privateKeyUsage, .userPresence]
+        case .enrolledFaces: [.privateKeyUsage, .biometryCurrentSet]
+        }
+    }
+
+    private static func failure(_ error: Unmanaged<CFError>?, making: Bool) -> HardwareKeyError {
+        let failure = error?.takeRetainedValue() as Error? as NSError?
+        let (domain, code) = (failure?.domain ?? "none", failure?.code ?? 0)
+        Diagnostics.identity.error(
+            "secure enclave: \(making ? "making" : "using", privacy: .public) a key failed: \(domain, privacy: .public) \(code, privacy: .public)"
+        )
+        switch (domain, code) {
+        case (LAError.errorDomain, LAError.Code.passcodeNotSet.rawValue): return .noPasscode
+        case (NSOSStatusErrorDomain, Int(errSecItemNotFound)): return .noSuchKey
+        case (NSOSStatusErrorDomain, Int(errSecInteractionNotAllowed)): return .locked
+        default: return making ? .unavailable : .refused
+        }
+    }
+
+    private func find(_ id: HardwareKeyID, reason: String) throws -> SecKey {
         var query: [String: Any] = [
             kSecClass as String: kSecClassKey,
             kSecAttrApplicationTag as String: tag(id),
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
             kSecReturnRef as String: true,
         ]
-        if let reason {
+        if !reason.isEmpty {
             let context = LAContext()
             context.localizedReason = reason
+            if id.purpose == .biometrics { context.localizedFallbackTitle = "" }
             query[kSecUseAuthenticationContext as String] = context
         }
         var item: CFTypeRef?
@@ -100,8 +111,9 @@ public struct SecureEnclaveKeys: HardwareKeys {
             return item as! SecKey
         case errSecItemNotFound: throw HardwareKeyError.noSuchKey
         case errSecInteractionNotAllowed: throw HardwareKeyError.locked
-        case errSecUserCanceled, errSecAuthFailed: throw HardwareKeyError.refused
-        default: throw HardwareKeyError.unavailable
+        default:
+            Diagnostics.identity.error("secure enclave: finding a key failed: \(status, privacy: .public)")
+            throw HardwareKeyError.refused
         }
     }
 

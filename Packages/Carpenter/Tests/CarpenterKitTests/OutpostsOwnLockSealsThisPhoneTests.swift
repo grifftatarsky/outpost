@@ -8,16 +8,24 @@ import Testing
 struct OutpostsOwnLockSealsThisPhoneTests {
     private let rounds = 1_000
 
+    private func open(_ sealed: SealedVaultKey, with code: String, on hardware: FakeHardwareKeys) async throws
+        -> SymmetricKey
+    {
+        try Vault.open(
+            sealed, with: code,
+            after: try await Vault.askThePhone(sealed, hardware: hardware, reason: "Needed before your code is tried"))
+    }
+
     @Test("The code opens what this phone keeps, and a wrong code opens nothing")
     func theCodeOpensIt() async throws {
         let hardware = FakeHardwareKeys()
         let (key, sealed) = try await Vault.create(
             code: "824193", usingBiometrics: false, hardware: hardware, rounds: rounds)
 
-        let opened = try await Vault.open(sealed, with: "824193", hardware: hardware, reason: "")
+        let opened = try await open(sealed, with: "824193", on: hardware)
         #expect(opened == key)
         await #expect(throws: VaultError.wrongCode) {
-            _ = try await Vault.open(sealed, with: "824194", hardware: hardware, reason: "")
+            _ = try await open(sealed, with: "824194", on: hardware)
         }
     }
 
@@ -28,9 +36,9 @@ struct OutpostsOwnLockSealsThisPhoneTests {
             code: "824193", usingBiometrics: false, hardware: hardware, rounds: rounds)
 
         let thief = FakeHardwareKeys()
-        _ = try await thief.make(sealed.byCode.hardware, requiringBiometrics: false)
+        _ = try await thief.make(sealed.byCode.hardware, opensFor: .ownerPresent)
         await #expect(throws: VaultError.wrongCode) {
-            _ = try await Vault.open(sealed, with: "824193", hardware: thief, reason: "")
+            _ = try await open(sealed, with: "824193", on: thief)
         }
     }
 
@@ -41,13 +49,13 @@ struct OutpostsOwnLockSealsThisPhoneTests {
             code: "1234", usingBiometrics: false, hardware: hardware, rounds: rounds)
 
         let thief = FakeHardwareKeys()
-        _ = try await thief.make(sealed.byCode.hardware, requiringBiometrics: false)
+        _ = try await thief.make(sealed.byCode.hardware, opensFor: .ownerPresent)
         for guess in 0..<40 {
             await #expect(throws: VaultError.wrongCode) {
-                _ = try await Vault.open(sealed, with: String(format: "%04d", guess), hardware: thief, reason: "")
+                _ = try await open(sealed, with: String(format: "%04d", guess), on: thief)
             }
         }
-        let opened = try await Vault.open(sealed, with: "1234", hardware: hardware, reason: "")
+        let opened = try await open(sealed, with: "1234", on: hardware)
         #expect(opened == key, "the phone that made it opens it with the right code, after forty guesses elsewhere")
     }
 
@@ -57,20 +65,19 @@ struct OutpostsOwnLockSealsThisPhoneTests {
         let (key, sealed) = try await Vault.create(
             code: "824193", usingBiometrics: true, hardware: hardware, rounds: rounds)
         try #require(sealed.usesBiometrics)
-        let whenItWasSetUp = await hardware.biometricChecks
+        #expect(await hardware.sheets == 0, "setting it up asked for a face")
 
-        let opened = try await Vault.openWithBiometrics(sealed, hardware: hardware, reason: "")
+        let opened = try await Vault.openWithBiometrics(sealed, hardware: hardware, reason: "Unlock the app")
         #expect(opened == key)
-        #expect(
-            await hardware.biometricChecks == whenItWasSetUp + 1,
-            "the key came out of the enclave without the phone asking for a face")
+        #expect(await hardware.sheets == 1, "the key came out of the enclave without the phone asking for a face")
 
-        await hardware.allowBiometrics(false)
+        await hardware.hand(to: .somebodyWhoFails)
         await #expect(throws: HardwareKeyError.refused) {
-            _ = try await Vault.openWithBiometrics(sealed, hardware: hardware, reason: "")
+            _ = try await Vault.openWithBiometrics(sealed, hardware: hardware, reason: "Unlock the app")
         }
+        await hardware.hand(to: .ownerWithThePasscode)
         #expect(
-            try await Vault.open(sealed, with: "824193", hardware: hardware, reason: "") == key,
+            try await open(sealed, with: "824193", on: hardware) == key,
             "the code still opens it when a face will not")
     }
 
@@ -83,13 +90,13 @@ struct OutpostsOwnLockSealsThisPhoneTests {
         let without = Vault.withoutBiometrics(sealed)
         #expect(!without.usesBiometrics)
         await #expect(throws: VaultError.biometricsNotSet) {
-            _ = try await Vault.openWithBiometrics(without, hardware: hardware, reason: "")
+            _ = try await Vault.openWithBiometrics(without, hardware: hardware, reason: "Unlock the app")
         }
-        #expect(try await Vault.open(without, with: "824193", hardware: hardware, reason: "") == key)
+        #expect(try await open(without, with: "824193", on: hardware) == key)
 
         let again = try await Vault.addingBiometrics(to: without, key: key, hardware: hardware)
-        #expect(try await Vault.openWithBiometrics(again, hardware: hardware, reason: "") == key)
-        #expect(try await Vault.open(again, with: "824193", hardware: hardware, reason: "") == key)
+        #expect(try await Vault.openWithBiometrics(again, hardware: hardware, reason: "Unlock the app") == key)
+        #expect(try await open(again, with: "824193", on: hardware) == key)
     }
 
     @Test("A new code opens it and the old one stops, once the old sealing is retired")
@@ -99,15 +106,15 @@ struct OutpostsOwnLockSealsThisPhoneTests {
             code: "824193", usingBiometrics: true, hardware: hardware, rounds: rounds)
 
         let new = try await Vault.changingCode(of: old, key: key, to: "570226", hardware: hardware)
-        #expect(try await Vault.open(new, with: "570226", hardware: hardware, reason: "") == key)
+        #expect(try await open(new, with: "570226", on: hardware) == key)
         await #expect(throws: VaultError.wrongCode) {
-            _ = try await Vault.open(new, with: "824193", hardware: hardware, reason: "")
+            _ = try await open(new, with: "824193", on: hardware)
         }
-        #expect(try await Vault.openWithBiometrics(new, hardware: hardware, reason: "") == key)
+        #expect(try await Vault.openWithBiometrics(new, hardware: hardware, reason: "Unlock the app") == key)
 
         try await Vault.retire(old, keeping: new, hardware: hardware)
         await #expect(throws: HardwareKeyError.noSuchKey) {
-            _ = try await Vault.open(old, with: "824193", hardware: hardware, reason: "")
+            _ = try await open(old, with: "824193", on: hardware)
         }
         #expect(await hardware.held == new.hardwareKeys, "retiring left an enclave key nothing uses, or took one in use")
     }
@@ -122,7 +129,7 @@ struct OutpostsOwnLockSealsThisPhoneTests {
         _ = try await Vault.create(code: "111111", usingBiometrics: true, hardware: hardware, rounds: rounds)
 
         #expect(
-            try await Vault.open(old, with: "824193", hardware: hardware, reason: "") == key,
+            try await open(old, with: "824193", on: hardware) == key,
             "making a new key deleted the one the kept sealing still needs")
     }
 
@@ -134,10 +141,7 @@ struct OutpostsOwnLockSealsThisPhoneTests {
 
         await hardware.lockPhone()
         await #expect(throws: HardwareKeyError.locked) {
-            _ = try await Vault.open(sealed, with: "824193", hardware: hardware, reason: "")
-        }
-        await #expect(throws: HardwareKeyError.locked) {
-            _ = try await hardware.publicKey(of: sealed.byCode.hardware)
+            _ = try await open(sealed, with: "824193", on: hardware)
         }
     }
 
@@ -151,7 +155,7 @@ struct OutpostsOwnLockSealsThisPhoneTests {
         await hardware.forgetEverything()
         let readBack = try JSONDecoder().decode(SealedVaultKey.self, from: vault)
         await #expect(throws: HardwareKeyError.noSuchKey) {
-            _ = try await Vault.open(readBack, with: "824193", hardware: hardware, reason: "")
+            _ = try await open(readBack, with: "824193", on: hardware)
         }
     }
 

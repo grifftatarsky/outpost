@@ -144,6 +144,7 @@ struct AppLockControllerTests {
         let matches: Bool
         var name: String? { "Face ID" }
         func state() -> Data? { enrolled }
+        func passcodeIsSet() -> Bool { true }
         func evaluate(reason: String) async -> Bool { matches }
     }
 

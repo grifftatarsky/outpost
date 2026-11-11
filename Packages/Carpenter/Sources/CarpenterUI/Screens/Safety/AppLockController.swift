@@ -7,6 +7,7 @@ import SwiftUI
 public protocol Biometrics: Sendable {
     var name: String? { get }
     func state() -> Data?
+    func passcodeIsSet() -> Bool
     func evaluate(reason: String) async -> Bool
 }
 
@@ -28,6 +29,12 @@ public struct SystemBiometrics: Biometrics {
         let context = LAContext()
         guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) else { return nil }
         return context.domainState.biometry.stateHash
+    }
+
+    public func passcodeIsSet() -> Bool {
+        var error: NSError?
+        let usable = LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+        return usable || error?.code != LAError.Code.passcodeNotSet.rawValue
     }
 
     public func evaluate(reason: String) async -> Bool {
@@ -66,8 +73,17 @@ public final class AppLockController {
     private var leftAt: LockMoment?
     private var confirmedAt: LockMoment?
     private var writing: Task<Void, Never>?
+    private var passed: PassedCheck?
+    private var passedAt: LockMoment?
+    private var asking: Task<PassedCheck?, Never>?
+    private var checksAsked = 0
+    private var sheetsUp = 0
+    private var isActive = false
+    private var asksWhenActive = true
+    private var leftWhileASheetWasUp = false
 
     public static let confirmationLasts: TimeInterval = 300
+    public static let checkLasts: TimeInterval = 60
 
     public init(
         store: AppLockStore, vault: VaultKeeper? = nil, biometrics: any Biometrics = SystemBiometrics(),
@@ -83,11 +99,16 @@ public final class AppLockController {
 
     public var biometricName: String? { biometrics.name }
 
+    public var phoneHasPasscode: Bool { biometrics.passcodeIsSet() }
+
     public var sealsWhatThisPhoneKeeps: Bool { vault?.vault.isInUse ?? false }
+
+    public var phoneHasChecked: Bool { passed != nil }
 
     private func lockNow() {
         isLocked = true
         vault?.shut()
+        dropCheck()
     }
 
     public var isCovered: Bool { isLocked || (isAway && (lock != nil || coversWhenAway)) }
@@ -98,8 +119,8 @@ public final class AppLockController {
     }
 
     public var biometricsChanged: Bool {
-        guard let lock, lock.usesBiometrics, biometrics.name != nil else { return false }
-        return !lock.allowsBiometrics(currentState: biometrics.state())
+        guard let lock, lock.usesBiometrics, biometrics.name != nil, let state = biometrics.state() else { return false }
+        return !lock.allowsBiometrics(currentState: state)
     }
 
     public func load() async {
@@ -113,10 +134,12 @@ public final class AppLockController {
             isLocked = true
         }
         loaded = true
+        askIfDue()
     }
 
     public func sceneChanged(to phase: ScenePhase) {
         isAway = phase != .active
+        isActive = phase == .active
         guard let lock else {
             if unreadable, phase == .active { Task { await load() } }
             return
@@ -128,20 +151,106 @@ public final class AppLockController {
                 if away >= lock.delay { lockNow() }
             }
             self.leftAt = nil
+            askIfDue()
         case .background:
-            if leftAt == nil { leftAt = moment() }
+            if leftAt == nil, !isLocked { leftAt = moment() }
+            guard sheetsUp == 0 else {
+                leftWhileASheetWasUp = true
+                break
+            }
+            dropCheck()
+            asksWhenActive = true
         default:
             break
         }
     }
 
+    private func sheetEnded() {
+        sheetsUp -= 1
+        guard sheetsUp == 0, leftWhileASheetWasUp else { return }
+        leftWhileASheetWasUp = false
+        dropCheck()
+        asksWhenActive = true
+        askIfDue()
+    }
+
+    private func askIfDue() {
+        guard isActive, asksWhenActive, loaded, isLocked, let lock, let vault, sealsWhatThisPhoneKeeps else { return }
+        asksWhenActive = false
+        let wait = lock.remainingWait(at: moment())
+        guard wait == 0 else {
+            problem = .waitUntil(clock().addingTimeInterval(wait))
+            return
+        }
+        guard biometrics.passcodeIsSet() else {
+            problem = .noPasscode
+            return
+        }
+        if problem == .noPasscode { problem = nil }
+        if offersBiometrics {
+            Task { await unlockWithBiometrics() }
+        } else {
+            _ = beginAsking(vault, reason: Self.reason(.unlocking))
+        }
+    }
+
+    private func passedCheck(reason: String) async -> PassedCheck? {
+        guard let vault else { return nil }
+        if let passed, let passedAt, let since = moment().seconds(since: passedAt), since < Self.checkLasts {
+            return passed
+        }
+        passed = nil
+        guard biometrics.passcodeIsSet() else {
+            problem = .noPasscode
+            return nil
+        }
+        return await beginAsking(vault, reason: reason).value
+    }
+
+    private func beginAsking(_ vault: VaultKeeper, reason: String) -> Task<PassedCheck?, Never> {
+        if let asking { return asking }
+        let generation = checksAsked
+        sheetsUp += 1
+        let task = Task { await ask(vault, reason: reason, generation: generation) }
+        asking = task
+        return task
+    }
+
+    private func ask(_ vault: VaultKeeper, reason: String, generation: Int) async -> PassedCheck? {
+        let result: Result<PassedCheck, any Error>
+        do {
+            result = .success(try await vault.askThePhone(reason: reason))
+        } catch {
+            result = .failure(error)
+        }
+        asking = nil
+        sheetEnded()
+        guard generation == checksAsked else { return nil }
+        switch result {
+        case .success(let check):
+            passed = check
+            passedAt = moment()
+            if problem?.isAboutThePhone == true { problem = nil }
+            return check
+        case .failure(let error):
+            problem = Self.problem(after: error, otherwise: .phoneCouldNotCheck)
+            return nil
+        }
+    }
+
+    private func dropCheck() {
+        passed = nil
+        passedAt = nil
+        checksAsked += 1
+    }
+
     public func unlock(with code: String) async {
-        guard await check(code) else { return }
+        guard await check(code, reason: Self.reason(.unlocking)) else { return }
         isLocked = false
     }
 
     public func confirm(_ code: String) async -> Bool {
-        let right = await check(code)
+        let right = await check(code, reason: Self.reason(.changing))
         if right { confirmedAt = moment() }
         return right
     }
@@ -151,11 +260,23 @@ public final class AppLockController {
         return since < Self.confirmationLasts
     }
 
-    private func check(_ code: String) async -> Bool {
+    private func check(_ code: String, reason: String) async -> Bool {
         guard var lock, !checking else { return false }
         checking = true
         defer { checking = false }
 
+        if let wait = lock.wait(at: moment()) {
+            self.lock = lock
+            try? await store.save(lock)
+            problem = .waitUntil(clock().addingTimeInterval(wait))
+            return false
+        }
+        var check: PassedCheck?
+        if vault != nil, sealsWhatThisPhoneKeeps {
+            guard let passed = await passedCheck(reason: reason), let current = self.lock else { return false }
+            check = passed
+            lock = current
+        }
         if let wait = lock.charge(at: moment()) {
             self.lock = lock
             try? await store.save(lock)
@@ -171,8 +292,14 @@ public final class AppLockController {
         self.lock = lock
 
         let right: Bool
-        if let vault, sealsWhatThisPhoneKeeps {
-            right = (try? await vault.open(with: code)) ?? false
+        if let vault, let check {
+            do {
+                right = try await vault.open(with: code, after: check)
+            } catch {
+                dropCheck()
+                problem = .phoneCouldNotCheck
+                return false
+            }
         } else {
             let snapshot = lock
             right = await Task.detached(priority: .userInitiated) { snapshot.matches(code) }.value
@@ -187,36 +314,80 @@ public final class AppLockController {
             switch lock.afterAWrongCode {
             case .wrong(let left):
                 problem = lock.codesLeftBeforeErasing.map { .wrongBeforeErasing($0) } ?? .wrong(triesBeforeAWait: left)
-            case .wait(let wait): problem = .waitUntil(clock().addingTimeInterval(wait))
+            case .wait(let wait):
+                dropCheck()
+                problem = .waitUntil(clock().addingTimeInterval(wait))
             case .unlocked: problem = nil
             }
             return false
         }
-        lock.succeeded()
-        if lock.usesBiometrics { lock.noteBiometrics(biometrics.state()) }
-        self.lock = lock
-        try? await store.save(lock)
+        dropCheck()
+        let facesWentAway = biometricsChanged ? await dropFaceIDAlone() : false
+        if var current = self.lock {
+            current.succeeded()
+            if facesWentAway {
+                current.usesBiometrics = false
+                current.biometricState = nil
+            }
+            self.lock = current
+            try? await store.save(current)
+        }
         problem = nil
         return true
     }
 
+    private func dropFaceIDAlone() async -> Bool {
+        guard let vault, sealsWhatThisPhoneKeeps else { return true }
+        return (try? await vault.setBiometrics(false)) != nil
+    }
+
     public func unlockWithBiometrics() async {
-        guard offersBiometrics, var lock else { return }
-        // COPY BEGIN d35bb503 [NEEDS HUMAN REVIEW]
-        let reason = String(localized: "Unlock the app", bundle: .module)
-        // COPY END d35bb503
+        guard offersBiometrics else { return }
+        let reason = Self.reason(.faces)
         if let vault, sealsWhatThisPhoneKeeps {
-            if !vault.checksBiometricsItself { guard await biometrics.evaluate(reason: reason) else { return } }
-            guard (try? await vault.openWithBiometrics(reason: reason)) == true else { return }
+            let generation = checksAsked
+            sheetsUp += 1
+            let opened = (try? await vault.openWithBiometrics(reason: reason)) == true
+            sheetEnded()
+            guard generation == checksAsked else {
+                if isLocked { vault.shut() }
+                return
+            }
+            guard opened else { return }
         } else {
             guard await biometrics.evaluate(reason: reason) else { return }
         }
-        guard lock.allowsBiometrics(currentState: biometrics.state()) else { return }
+        guard var lock, lock.allowsBiometrics(currentState: biometrics.state()) else { return }
+        dropCheck()
         lock.noteBiometricUnlock()
         self.lock = lock
         try? await store.save(lock)
         problem = nil
         isLocked = false
+    }
+
+    private enum Reason { case unlocking, turningOn, changing, faces }
+
+    private static func reason(_ reason: Reason) -> String {
+        switch reason {
+        // COPY BEGIN d35bb503 [NEEDS HUMAN REVIEW]
+        case .faces: String(localized: "Unlock the app", bundle: .module)
+        // COPY END d35bb503
+        // COPY BEGIN 5e548c33 [NEEDS HUMAN REVIEW]
+        case .unlocking: String(localized: "Needed before your code is tried", bundle: .module)
+        case .turningOn: String(localized: "Turn on the lock", bundle: .module)
+        case .changing: String(localized: "Change the lock", bundle: .module)
+        // COPY END 5e548c33
+        }
+    }
+
+    private static func problem(after error: any Error, otherwise: AppLockProblem) -> AppLockProblem {
+        switch error as? HardwareKeyError {
+        case .refused: .phoneDidNotCheck
+        case .noPasscode: .noPasscode
+        case .noSuchKey: .codeIsGone
+        default: otherwise
+        }
     }
 
     @discardableResult
@@ -225,10 +396,19 @@ public final class AppLockController {
         return await keep(new, code: code)
     }
 
+    public func lockTheApp(with new: AppLock, code: String) async -> AppLockProblem? {
+        await turnOn(new, code: code) ? nil : problem ?? .notSaved
+    }
+
     @discardableResult
     public func replace(with new: AppLock, code: String? = nil) async -> Bool {
-        guard lock != nil else { return await keep(new, code: code) }
+        guard let current = lock else { return await keep(new, code: code) }
         guard spendConfirmation() else { return false }
+        var new = new
+        new.usesBiometrics = current.usesBiometrics
+        new.biometricState = current.biometricState
+        new.delay = current.delay
+        new.eraseAfter = current.eraseAfter
         return await keep(new, code: code)
     }
 
@@ -268,12 +448,17 @@ public final class AppLockController {
         if new?.usesBiometrics == true { new?.noteBiometrics(biometrics.state()) }
         var made: SymmetricKey?
         if let vault {
+            if new != nil, !vault.vault.isInUse, !biometrics.passcodeIsSet() {
+                problem = .noPasscode
+                return false
+            }
             do {
                 made = try await settleVault(vault, for: new, code: code)
             } catch {
-                problem = .notSaved
+                problem = Self.problem(after: error, otherwise: .notSaved)
                 return false
             }
+            dropCheck()
             if vault.vault.isInUse || made != nil { new = new?.withoutAVerifier }
         }
         let (previous, store, target) = (writing, store, new)
@@ -313,8 +498,11 @@ public final class AppLockController {
         }
         guard vault.vault.isInUse else {
             guard let code else { return nil }
+            sheetsUp += 1
+            defer { sheetEnded() }
             return try await vault.make(
-                code: code, usingBiometrics: new.usesBiometrics, recovery: vaultRecoverySecret?())
+                code: code, usingBiometrics: new.usesBiometrics, recovery: vaultRecoverySecret?(),
+                reason: Self.reason(.turningOn))
         }
         if let code { try await vault.changeCode(to: code) }
         try await vault.setBiometrics(new.usesBiometrics)
@@ -361,6 +549,7 @@ public final class AppLockController {
         problem = nil
         leftAt = nil
         confirmedAt = nil
+        dropCheck()
     }
 }
 
@@ -372,6 +561,17 @@ public enum AppLockProblem: Hashable, Sendable {
     case wrongBeforeErasing(Int)
     case erasing
     case notTheRecoveryKey
+    case phoneDidNotCheck
+    case noPasscode
+    case phoneCouldNotCheck
+    case codeIsGone
+
+    public var isAboutThePhone: Bool {
+        switch self {
+        case .phoneDidNotCheck, .noPasscode, .phoneCouldNotCheck, .codeIsGone: true
+        default: false
+        }
+    }
 }
 
 public struct NotificationPrivacy {

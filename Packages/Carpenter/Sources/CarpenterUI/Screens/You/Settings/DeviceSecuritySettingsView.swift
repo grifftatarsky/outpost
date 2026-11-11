@@ -1,5 +1,4 @@
 import CarpenterKit
-import LocalAuthentication
 import SwiftUI
 
 public struct DeviceSecuritySetting: Sendable {
@@ -68,18 +67,12 @@ struct DeviceSecuritySettingsView: View {
         .navigationTitle(Text("Advanced On Device Security", bundle: .module))
         // COPY END 8bf17541
         .toolbarTitleDisplayMode(.inline)
-        .onAppear { passcodeIsSet = Self.phoneHasPasscode() }
+        .onAppear { passcodeIsSet = SystemBiometrics().passcodeIsSet() }
     }
 
     private func change(_ on: Bool) async {
         changing = true
         problem = await setting.change(on)
         changing = false
-    }
-
-    private static func phoneHasPasscode() -> Bool {
-        var error: NSError?
-        let usable = LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
-        return usable || error?.code != LAError.Code.passcodeNotSet.rawValue
     }
 }

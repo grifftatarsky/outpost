@@ -31,7 +31,7 @@
 	<!-- COPY END 9662b091 -->
 	<!-- COPY BEGIN b6501cb1 [NEEDS HUMAN REVIEW] -->
 	<key>NSFaceIDUsageDescription</key>
-	<string>Face ID opens the app when you have locked it, instead of typing your code.</string>
+	<string>The app's lock asks for Face ID before your code, or instead of it if you choose that.</string>
 	<!-- COPY END b6501cb1 -->
 	<!-- COPY BEGIN 18088558 [NEEDS HUMAN REVIEW] -->
 	<key>NSNearbyInteractionUsageDescription</key>

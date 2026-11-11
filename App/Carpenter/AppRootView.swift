@@ -439,7 +439,7 @@ struct AppRootView: View {
         .onChange(of: badgeCount, initial: true) { _, count in
             Task { await PushRegistration.setBadge(count) }
         }
-        .onChange(of: scenePhase) { _, phase in
+        .onChange(of: scenePhase, initial: true) { _, phase in
             appLock.sceneChanged(to: phase)
         }
         .onChange(of: appLock.isCovered, initial: true) { _, covered in

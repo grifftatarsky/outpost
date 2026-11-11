@@ -81,15 +81,17 @@ public struct AppLock: Hashable, Sendable, Codable {
         case wait(TimeInterval)
     }
 
-    public mutating func charge(at now: LockMoment) -> TimeInterval? {
-        if let waitStarted, waitLength > 0 {
-            if let elapsed = now.seconds(since: waitStarted) {
-                if elapsed < waitLength { return waitLength - elapsed }
-            } else {
-                self.waitStarted = now
-                return waitLength
-            }
+    public mutating func wait(at now: LockMoment) -> TimeInterval? {
+        guard let waitStarted, waitLength > 0 else { return nil }
+        guard let elapsed = now.seconds(since: waitStarted) else {
+            self.waitStarted = now
+            return waitLength
         }
+        return elapsed < waitLength ? waitLength - elapsed : nil
+    }
+
+    public mutating func charge(at now: LockMoment) -> TimeInterval? {
+        if let wait = wait(at: now) { return wait }
         failures += 1
         let wait = Self.wait(after: failures)
         if wait > 0 {

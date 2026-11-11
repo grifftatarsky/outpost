@@ -118,11 +118,12 @@ extension AppRootView {
     var lockOffer: some View {
         NavigationStack {
             AppLockSetupView(
-                biometricName: appLock.biometricName,
+                biometricName: appLock.biometricName, choosesBiometrics: true,
+                passcodeIsSet: { appLock.phoneHasPasscode },
                 revealsNotifications: { appLock.notificationPrivacy?.reveals() ?? false },
                 onLock: { lock, code in
                     lockOfferOpen = true
-                    return await appLock.turnOn(lock, code: code)
+                    return await appLock.lockTheApp(with: lock, code: code)
                 },
                 onMakeNotificationsPrivate: { await appLock.notificationPrivacy?.makePrivate() },
                 onDone: {

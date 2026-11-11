@@ -40,9 +40,11 @@ public struct AppLockScreen: View {
                 .foregroundStyle(palette.primaryText)
             if controller.erasing {
                 ProgressView()
-                AppLockProblem.erasing.sentence
+                AppLockProblem.erasing.sentence(nil)
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
+            } else if controller.isLocked, controller.problem == .noPasscode {
+                notice
             } else if controller.isLocked, let lock = controller.lock, lock.code == .digits {
                 notice
                 DigitPad(
@@ -101,21 +103,25 @@ public struct AppLockScreen: View {
             .themed(.default)
         }
         .task {
-            if controller.offersBiometrics {
-                await controller.unlockWithBiometrics()
-            }
             if controller.isLocked { typing = true }
         }
     }
 
     @ViewBuilder private var notice: some View {
         if let problem = controller.problem {
-            problem.sentence
+            problem.sentence(controller.biometricName)
                 .font(CarpenterFont.footnote)
-                .foregroundStyle(palette.destructive)
+                .foregroundStyle(problem.isAboutThePhone ? palette.secondaryText : palette.destructive)
                 .multilineTextAlignment(.center)
         } else if controller.biometricsChanged, let name = controller.biometricName {
-            Text("\(name) changed on this phone, so enter your code.", bundle: .module)
+            Text(
+                "\(name) changed on this phone, so it no longer skips your code. You can turn it back on in App Lock.",
+                bundle: .module)
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .multilineTextAlignment(.center)
+        } else if controller.phoneHasChecked {
+            Text("Enter your code.", bundle: .module)
                 .font(CarpenterFont.footnote)
                 .foregroundStyle(palette.secondaryText)
                 .multilineTextAlignment(.center)
@@ -174,7 +180,7 @@ public struct AppLockScreen: View {
 
 extension AppLockProblem {
     // COPY BEGIN c45e581f [NEEDS HUMAN REVIEW]
-    var sentence: Text {
+    func sentence(_ biometricName: String?) -> Text {
         switch self {
         case .wrong(let left):
             Text("That's not it. \(left) more tries before a wait.", bundle: .module)
@@ -192,9 +198,40 @@ extension AppLockProblem {
             Text("Erasing everything…", bundle: .module)
         case .notTheRecoveryKey:
             Text("That isn't the recovery key for this identity.", bundle: .module)
+        case .phoneDidNotCheck:
+            if let biometricName {
+                Text("Your code wasn't tried. Your phone asks for \(biometricName) or its passcode first.", bundle: .module)
+            } else {
+                Text("Your code wasn't tried. Your phone asks for its passcode first.", bundle: .module)
+            }
+        case .noPasscode:
+            Text(
+                "This iPhone has no passcode, so your code can't be checked. Set one in the Settings app, or use your recovery key.",
+                bundle: .module)
+        case .phoneCouldNotCheck:
+            Text("This phone couldn't check your code. Try again, or use your recovery key.", bundle: .module)
+        case .codeIsGone:
+            Text(
+                "This phone can no longer check your code. Use your recovery key, or tap Forgot the code?",
+                bundle: .module)
         }
     }
     // COPY END c45e581f
+
+    // COPY BEGIN d77b7684 [NEEDS HUMAN REVIEW]
+    func sentenceInSettings(_ biometricName: String?) -> Text {
+        switch self {
+        case .noPasscode:
+            Text("This iPhone has no passcode. Set one in the Settings app.", bundle: .module)
+        case .codeIsGone:
+            Text(
+                "This phone can no longer check your code. To turn the lock off, use your recovery key the next time the app is locked.",
+                bundle: .module)
+        default:
+            sentence(biometricName)
+        }
+    }
+    // COPY END d77b7684
 }
 
 struct RecoveryKeyUnlockView: View {
@@ -220,7 +257,7 @@ struct RecoveryKeyUnlockView: View {
                 .autocorrectionDisabled()
             } footer: {
                 if controller.problem == .notTheRecoveryKey {
-                    AppLockProblem.notTheRecoveryKey.sentence
+                    AppLockProblem.notTheRecoveryKey.sentence(nil)
                         .foregroundStyle(palette.destructive)
                 } else {
                     Text(
@@ -265,10 +302,13 @@ struct RecoveryKeyUnlockView: View {
 public struct AppLockSetupView: View {
     @Environment(\.palette) private var palette
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     private let biometricName: String?
+    private let choosesBiometrics: Bool
+    private let passcodeIsSet: @MainActor () -> Bool
     private let revealsNotifications: (@MainActor () -> Bool)?
-    private let onLock: (AppLock, String) async -> Bool
+    private let onLock: (AppLock, String) async -> AppLockProblem?
     private let onMakeNotificationsPrivate: (() async -> Void)?
     private let onDone: (() -> Void)?
     private let onNotNow: (() -> Void)?
@@ -276,21 +316,25 @@ public struct AppLockSetupView: View {
     @State private var kind: AppLock.Code = .digits
     @State private var code = ""
     @State private var again = ""
-    @State private var biometrics = true
+    @State private var biometrics = false
     @State private var saving = false
-    @State private var notSaved = false
+    @State private var failure: AppLockProblem?
+    @State private var hasPasscode = true
     @State private var askingAboutNotifications = false
     @FocusState private var focus: Field?
 
     private enum Field { case code, again }
 
     public init(
-        biometricName: String?, revealsNotifications: (@MainActor () -> Bool)? = nil,
-        onLock: @escaping (AppLock, String) async -> Bool,
+        biometricName: String?, choosesBiometrics: Bool, passcodeIsSet: @escaping @MainActor () -> Bool,
+        revealsNotifications: (@MainActor () -> Bool)? = nil,
+        onLock: @escaping (AppLock, String) async -> AppLockProblem?,
         onMakeNotificationsPrivate: (() async -> Void)? = nil, onDone: (() -> Void)? = nil,
         onNotNow: (() -> Void)? = nil
     ) {
         self.biometricName = biometricName
+        self.choosesBiometrics = choosesBiometrics
+        self.passcodeIsSet = passcodeIsSet
         self.revealsNotifications = revealsNotifications
         self.onLock = onLock
         self.onMakeNotificationsPrivate = onMakeNotificationsPrivate
@@ -300,7 +344,8 @@ public struct AppLockSetupView: View {
 
     private var mismatch: Bool { !again.isEmpty && again != code }
     private var acceptable: Bool { AppLock.isAcceptable(code, as: kind) }
-    private var ready: Bool { acceptable && code == again && !saving }
+    private var showsTheCodeFields: Bool { hasPasscode && failure != .noPasscode }
+    private var ready: Bool { showsTheCodeFields && acceptable && code == again && !saving }
 
     public var body: some View {
         List {
@@ -309,60 +354,77 @@ public struct AppLockSetupView: View {
                 SettingsHeaderCard(
                     icon: "lock.fill",
                     title: Text("Lock the app", bundle: .module),
-                    paragraph: Text(
-                        "Ask for a code of its own whenever the app opens. Your phone's passcode never opens it.",
-                        bundle: .module))
+                    paragraph: biometricName.map {
+                        Text(
+                            "When the app opens, your phone asks for \($0) or its passcode, then the app asks for a code of its own. Your phone's passcode alone never opens it.",
+                            bundle: .module)
+                    }
+                        ?? Text(
+                            "When the app opens, your phone asks for its passcode, then the app asks for a code of its own. Your phone's passcode alone never opens it.",
+                            bundle: .module))
             }
             .groupedRowSurface()
 
-            Section {
-                Picker(selection: $kind) {
-                    Text("A 4 to 6 digit code", bundle: .module).tag(AppLock.Code.digits)
-                    Text("A passphrase", bundle: .module).tag(AppLock.Code.passphrase)
-                } label: {
-                    Text("Use", bundle: .module)
+            if !showsTheCodeFields {
+                Section {
+                    Text("This iPhone has no passcode. Set one in the Settings app first. The lock needs one.", bundle: .module)
                 }
-                .onChange(of: kind) { _, _ in
-                    code = ""
-                    again = ""
-                }
-                SecureField(text: $code) {
-                    kind == .digits ? Text("Code", bundle: .module) : Text("Passphrase", bundle: .module)
-                }
-                #if !os(macOS)
-                    .keyboardType(kind == .digits ? .numberPad : .default)
-                #endif
-                .focused($focus, equals: .code)
-                SecureField(text: $again) {
-                    Text("Again", bundle: .module)
-                }
-                #if !os(macOS)
-                    .keyboardType(kind == .digits ? .numberPad : .default)
-                #endif
-                .focused($focus, equals: .again)
-                if let biometricName {
-                    Toggle(isOn: $biometrics) {
-                        Text("Also unlock with \(biometricName)", bundle: .module)
+                .groupedRowSurface()
+            } else {
+                Section {
+                    Picker(selection: $kind) {
+                        Text("A 4 to 6 digit code", bundle: .module).tag(AppLock.Code.digits)
+                        Text("A passphrase", bundle: .module).tag(AppLock.Code.passphrase)
+                    } label: {
+                        Text("Use", bundle: .module)
+                    }
+                    .onChange(of: kind) { _, _ in
+                        code = ""
+                        again = ""
+                    }
+                    SecureField(text: $code) {
+                        kind == .digits ? Text("Code", bundle: .module) : Text("Passphrase", bundle: .module)
+                    }
+                    #if !os(macOS)
+                        .keyboardType(kind == .digits ? .numberPad : .default)
+                    #endif
+                    .focused($focus, equals: .code)
+                    SecureField(text: $again) {
+                        Text("Again", bundle: .module)
+                    }
+                    #if !os(macOS)
+                        .keyboardType(kind == .digits ? .numberPad : .default)
+                    #endif
+                    .focused($focus, equals: .again)
+                    if choosesBiometrics, let biometricName {
+                        Toggle(isOn: $biometrics) {
+                            Text("Skip the code with \(biometricName)", bundle: .module)
+                        }
+                    }
+                } footer: {
+                    if failure == .phoneDidNotCheck {
+                        Text("The lock isn't on yet. Tap Lock the app to try again.", bundle: .module)
+                            .foregroundStyle(palette.destructive)
+                    } else if let failure {
+                        failure.sentence(biometricName)
+                            .foregroundStyle(palette.destructive)
+                    } else if mismatch {
+                        Text("The two don't match.", bundle: .module)
+                            .foregroundStyle(palette.destructive)
+                    } else if !code.isEmpty, !acceptable {
+                        kind == .digits
+                            ? Text("Use 4 to 6 digits.", bundle: .module)
+                            : Text("Use at least 8 characters.", bundle: .module)
+                    } else if biometrics, choosesBiometrics, let biometricName {
+                        Text("Then anyone set up in \(biometricName) on this phone opens the app without your code.", bundle: .module)
+                    } else {
+                        Text(
+                            "The lock guards the app's screens. If you forget the code, your recovery key opens the app from the lock screen.",
+                            bundle: .module)
                     }
                 }
-            } footer: {
-                if notSaved {
-                    AppLockProblem.notSaved.sentence
-                        .foregroundStyle(palette.destructive)
-                } else if mismatch {
-                    Text("The two don't match.", bundle: .module)
-                        .foregroundStyle(palette.destructive)
-                } else if !code.isEmpty, !acceptable {
-                    kind == .digits
-                        ? Text("Use 4 to 6 digits.", bundle: .module)
-                        : Text("Use at least 8 characters.", bundle: .module)
-                } else {
-                    Text(
-                        "The lock guards the app's screens. If you forget the code, your recovery key opens the app from the lock screen.",
-                        bundle: .module)
-                }
+                .groupedRowSurface()
             }
-            .groupedRowSurface()
             // COPY END 66758400
 
             actions
@@ -384,7 +446,15 @@ public struct AppLockSetupView: View {
         .navigationTitle(Text("App Lock", bundle: .module))
         .toolbarTitleDisplayMode(.inline)
         // COPY END 61f4704a
-        .onAppear { if onNotNow == nil { focus = .code } }
+        .onAppear {
+            hasPasscode = passcodeIsSet()
+            if onNotNow == nil { focus = .code }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            hasPasscode = passcodeIsSet()
+            if hasPasscode, failure == .noPasscode { failure = nil }
+        }
         .onChange(of: ready) { _, now in if now { focus = nil } }
         // COPY BEGIN 095e4033 [NEEDS HUMAN REVIEW]
         .alert(Text("Make notifications private too?", bundle: .module), isPresented: $askingAboutNotifications) {
@@ -437,15 +507,14 @@ public struct AppLockSetupView: View {
     private func save() {
         guard ready else { return }
         saving = true
-        let (entered, chosen, withBiometrics) = (code, kind, biometrics && biometricName != nil)
+        let (entered, chosen, withBiometrics) = (code, kind, biometrics && choosesBiometrics && biometricName != nil)
         Task {
             let made = await Task.detached(priority: .userInitiated) {
                 try? AppLock.make(entered, as: chosen, usesBiometrics: withBiometrics)
             }.value
-            let kept = if let made { await onLock(made, entered) } else { false }
+            failure = if let made { await onLock(made, entered) } else { .notSaved }
             saving = false
-            notSaved = !kept
-            guard kept else { return }
+            guard failure == nil else { return }
             if revealsNotifications?() == true, onMakeNotificationsPrivate != nil {
                 askingAboutNotifications = true
             } else {
@@ -482,9 +551,14 @@ struct AppLockSettingsView: View {
                 SettingsHeaderCard(
                     icon: "lock.fill",
                     title: Text("App lock", bundle: .module),
-                    paragraph: Text(
-                        "When it's on, the app asks for its own code, or Face ID, when it opens, and covers itself in the app switcher.",
-                        bundle: .module))
+                    paragraph: controller.biometricName.map {
+                        Text(
+                            "When it's on, your phone asks for \($0) or its passcode, then the app asks for its own code. The app covers itself in the app switcher.",
+                            bundle: .module)
+                    }
+                        ?? Text(
+                            "When it's on, your phone asks for its passcode, then the app asks for its own code. The app covers itself in the app switcher.",
+                            bundle: .module))
             }
             .groupedRowSurface()
 
@@ -518,7 +592,7 @@ struct AppLockSettingsView: View {
                                 }
                             })
                         ) {
-                            Text("Unlock with \(name)", bundle: .module)
+                            Text("Skip the code with \(name)", bundle: .module)
                         }
                     }
                     Button { confirming = .newCode } label: {
@@ -543,9 +617,9 @@ struct AppLockSettingsView: View {
             }
             if let problem = controller.problem {
                 Section {
-                    problem.sentence
+                    problem.sentenceInSettings(controller.biometricName)
                         .font(CarpenterFont.footnote)
-                        .foregroundStyle(palette.destructive)
+                        .foregroundStyle(problem.isAboutThePhone ? palette.secondaryText : palette.destructive)
                 }
                 .groupedRowSurface()
             }
@@ -558,9 +632,10 @@ struct AppLockSettingsView: View {
         .sheet(isPresented: $settingUp) {
             NavigationStack {
                 AppLockSetupView(
-                    biometricName: controller.biometricName,
+                    biometricName: controller.biometricName, choosesBiometrics: controller.lock == nil,
+                    passcodeIsSet: { controller.phoneHasPasscode },
                     revealsNotifications: { controller.notificationPrivacy?.reveals() ?? false },
-                    onLock: { lock, code in await controller.turnOn(lock, code: code) },
+                    onLock: { lock, code in await controller.lockTheApp(with: lock, code: code) },
                     onMakeNotificationsPrivate: { await controller.notificationPrivacy?.makePrivate() })
             }
         }
@@ -686,12 +761,15 @@ private struct EraseChoice: Identifiable {
     private struct PreviewBiometrics: Biometrics {
         var name: String? { "Face ID" }
         func state() -> Data? { Data([1]) }
+        func passcodeIsSet() -> Bool { true }
         func evaluate(reason: String) async -> Bool { false }
     }
 
     #Preview("App lock — setting it up") {
         NavigationStack {
-            AppLockSetupView(biometricName: "Face ID", onLock: { _, _ in true }, onNotNow: {})
+            AppLockSetupView(
+                biometricName: "Face ID", choosesBiometrics: true, passcodeIsSet: { true }, onLock: { _, _ in nil },
+                onNotNow: {})
         }
         .themed(.default)
     }

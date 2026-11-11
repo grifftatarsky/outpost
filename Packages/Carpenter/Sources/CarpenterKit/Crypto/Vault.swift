@@ -8,10 +8,22 @@ public struct HardwareKeyID: Hashable, Sendable, Codable {
         self.rawValue = rawValue
     }
 
-    public enum Purpose: String, Sendable {
+    public enum Purpose: String, Sendable, CaseIterable {
         case code = "vault.code"
         case biometrics = "vault.biometrics"
         case recovery = "vault.recovery"
+
+        public var rule: HardwareKeyRule {
+            switch self {
+            case .code: .ownerPresent
+            case .biometrics: .enrolledFaces
+            case .recovery: .unlockedPhone
+            }
+        }
+    }
+
+    public var purpose: Purpose? {
+        Purpose.allCases.first { rawValue.hasPrefix("\($0.rawValue).") }
     }
 
     public static func fresh(_ purpose: Purpose) -> HardwareKeyID {
@@ -19,18 +31,29 @@ public struct HardwareKeyID: Hashable, Sendable, Codable {
     }
 }
 
+public enum HardwareKeyRule: String, Hashable, Sendable, Codable {
+    case unlockedPhone
+    case ownerPresent
+    case enrolledFaces
+}
+
 public enum HardwareKeyError: Error, Hashable, Sendable {
     case unavailable
     case refused
     case noSuchKey
     case locked
+    case noPasscode
 }
 
 public protocol HardwareKeys: Sendable {
-    func make(_ id: HardwareKeyID, requiringBiometrics: Bool) async throws -> Data
-    func publicKey(of id: HardwareKeyID) async throws -> Data?
+    func make(_ id: HardwareKeyID, opensFor rule: HardwareKeyRule) async throws -> Data
     func agree(_ id: HardwareKeyID, with publicKey: Data, reason: String) async throws -> Data
     func remove(_ id: HardwareKeyID) async throws
+}
+
+public struct PassedCheck: Sendable {
+    fileprivate let key: HardwareKeyID
+    fileprivate let shared: Data
 }
 
 public struct SealedVaultKey: Hashable, Sendable, Codable {
@@ -74,6 +97,7 @@ public enum VaultError: Error, Hashable, Sendable {
     case biometricsNotSet
     case recoveryNotSet
     case shut
+    case notChecked
 }
 
 public enum Vault {
@@ -107,33 +131,49 @@ public enum Vault {
     ) async throws -> (key: SymmetricKey, sealed: SealedVaultKey) {
         let vaultKey = SymmetricKey(size: .bits256)
         let byCode = try await wrap(vaultKey, for: .code(code), rounds: rounds, hardware: hardware)
-        let byBiometrics =
-            usingBiometrics ? try await wrap(vaultKey, for: .biometrics, rounds: rounds, hardware: hardware) : nil
-        var byRecovery: SealedVaultKey.Wrapping?
-        if let recovery { byRecovery = try await wrap(vaultKey, for: .recovery(recovery), rounds: rounds, hardware: hardware) }
+        var others: [HardwareKeyID.Purpose: SealedVaultKey.Wrapping] = [:]
+        do {
+            if usingBiometrics { others[.biometrics] = try await wrap(vaultKey, for: .biometrics, rounds: rounds, hardware: hardware) }
+            if let recovery {
+                others[.recovery] = try await wrap(vaultKey, for: .recovery(recovery), rounds: rounds, hardware: hardware)
+            }
+        } catch {
+            for wrapping in [byCode] + others.values { try? await hardware.remove(wrapping.hardware) }
+            throw error
+        }
         return (
-            vaultKey, SealedVaultKey(rounds: rounds, byCode: byCode, byBiometrics: byBiometrics, byRecovery: byRecovery)
+            vaultKey,
+            SealedVaultKey(rounds: rounds, byCode: byCode, byBiometrics: others[.biometrics], byRecovery: others[.recovery])
         )
     }
 
-    public static func open(
-        _ sealed: SealedVaultKey, with code: String, hardware: any HardwareKeys, reason: String
-    ) async throws -> SymmetricKey {
-        try await unwrap(sealed.byCode, with: .code(code), rounds: sealed.rounds, hardware: hardware, reason: reason)
+    public static func askThePhone(
+        _ sealed: SealedVaultKey, hardware: any HardwareKeys, reason: String
+    ) async throws -> PassedCheck {
+        let wrapping = sealed.byCode
+        return PassedCheck(
+            key: wrapping.hardware, shared: try await hardware.agree(wrapping.hardware, with: wrapping.ephemeral, reason: reason))
+    }
+
+    public static func open(_ sealed: SealedVaultKey, with code: String, after check: PassedCheck) throws -> SymmetricKey {
+        guard check.key == sealed.byCode.hardware else { throw VaultError.notChecked }
+        return try unwrap(sealed.byCode, with: .code(code), shared: check.shared, rounds: sealed.rounds)
     }
 
     public static func openWithBiometrics(
         _ sealed: SealedVaultKey, hardware: any HardwareKeys, reason: String
     ) async throws -> SymmetricKey {
         guard let byBiometrics = sealed.byBiometrics else { throw VaultError.biometricsNotSet }
-        return try await unwrap(byBiometrics, with: .biometrics, rounds: sealed.rounds, hardware: hardware, reason: reason)
+        let shared = try await hardware.agree(byBiometrics.hardware, with: byBiometrics.ephemeral, reason: reason)
+        return try unwrap(byBiometrics, with: .biometrics, shared: shared, rounds: sealed.rounds)
     }
 
     public static func openWithRecovery(
         _ sealed: SealedVaultKey, secret: Data, hardware: any HardwareKeys
     ) async throws -> SymmetricKey {
         guard let byRecovery = sealed.byRecovery else { throw VaultError.recoveryNotSet }
-        return try await unwrap(byRecovery, with: .recovery(secret), rounds: sealed.rounds, hardware: hardware, reason: "")
+        let shared = try await hardware.agree(byRecovery.hardware, with: byRecovery.ephemeral, reason: "")
+        return try unwrap(byRecovery, with: .recovery(secret), shared: shared, rounds: sealed.rounds)
     }
 
     public static func changingCode(
@@ -166,35 +206,37 @@ public enum Vault {
         _ vaultKey: SymmetricKey, for opener: Opener, rounds: Int, hardware: any HardwareKeys
     ) async throws -> SealedVaultKey.Wrapping {
         let id = HardwareKeyID.fresh(opener.purpose)
-        _ = try await hardware.make(id, requiringBiometrics: opener.purpose == .biometrics)
-        let salt = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
-        let ephemeral = P256.KeyAgreement.PrivateKey().publicKey.x963Representation
-        let wrapping = try await wrappingKey(
-            id, opener: opener, salt: salt, rounds: rounds, ephemeral: ephemeral, hardware: hardware, reason: "")
-        let sealed = try ChaChaPoly.seal(
-            vaultKey.withUnsafeBytes { Data($0) }, using: wrapping, authenticating: context(opener.purpose))
-        return SealedVaultKey.Wrapping(hardware: id, salt: salt, ephemeral: ephemeral, sealed: sealed.combined)
+        let made = try await hardware.make(id, opensFor: opener.purpose.rule)
+        do {
+            let ephemeral = P256.KeyAgreement.PrivateKey()
+            let shared = try ephemeral.sharedSecretFromKeyAgreement(
+                with: try P256.KeyAgreement.PublicKey(x963Representation: made))
+            let salt = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
+            let sealed = try ChaChaPoly.seal(
+                vaultKey.withUnsafeBytes { Data($0) },
+                using: wrappingKey(
+                    shared: shared.withUnsafeBytes { Data($0) }, opener: opener, salt: salt, rounds: rounds),
+                authenticating: context(opener.purpose))
+            return SealedVaultKey.Wrapping(
+                hardware: id, salt: salt, ephemeral: ephemeral.publicKey.x963Representation, sealed: sealed.combined)
+        } catch {
+            try? await hardware.remove(id)
+            throw error
+        }
     }
 
     private static func unwrap(
-        _ wrapping: SealedVaultKey.Wrapping, with opener: Opener, rounds: Int, hardware: any HardwareKeys,
-        reason: String
-    ) async throws -> SymmetricKey {
-        let key = try await wrappingKey(
-            wrapping.hardware, opener: opener, salt: wrapping.salt, rounds: rounds, ephemeral: wrapping.ephemeral,
-            hardware: hardware, reason: reason)
+        _ wrapping: SealedVaultKey.Wrapping, with opener: Opener, shared: Data, rounds: Int
+    ) throws -> SymmetricKey {
+        let key = wrappingKey(shared: shared, opener: opener, salt: wrapping.salt, rounds: rounds)
         guard let box = try? ChaChaPoly.SealedBox(combined: wrapping.sealed),
             let opened = try? ChaChaPoly.open(box, using: key, authenticating: context(opener.purpose))
         else { throw VaultError.wrongCode }
         return SymmetricKey(data: opened)
     }
 
-    private static func wrappingKey(
-        _ id: HardwareKeyID, opener: Opener, salt: Data, rounds: Int, ephemeral: Data, hardware: any HardwareKeys,
-        reason: String
-    ) async throws -> SymmetricKey {
-        let shared = try await hardware.agree(id, with: ephemeral, reason: reason)
-        return SymmetricKey(
+    private static func wrappingKey(shared: Data, opener: Opener, salt: Data, rounds: Int) -> SymmetricKey {
+        SymmetricKey(
             data: HKDF<SHA256>.deriveKey(
                 inputKeyMaterial: SymmetricKey(data: shared + opener.secret(salt: salt, rounds: rounds)),
                 salt: salt,
@@ -212,17 +254,12 @@ public actor VaultKeeper {
     private let hardware: any HardwareKeys
     private let rounds: Int
     public nonisolated let vault: OpenVault
-    public nonisolated let checksBiometricsItself: Bool
 
-    public init(
-        keychain: any KeychainStore, hardware: any HardwareKeys, vault: OpenVault, rounds: Int = Vault.rounds,
-        checksBiometricsItself: Bool = true
-    ) {
+    public init(keychain: any KeychainStore, hardware: any HardwareKeys, vault: OpenVault, rounds: Int = Vault.rounds) {
         self.keychain = keychain
         self.hardware = hardware
         self.vault = vault
         self.rounds = rounds
-        self.checksBiometricsItself = checksBiometricsItself
     }
 
     public func sealed() async throws -> SealedVaultKey? {
@@ -236,20 +273,29 @@ public actor VaultKeeper {
         return true
     }
 
-    public func make(code: String, usingBiometrics: Bool, recovery: Data?) async throws -> SymmetricKey {
+    public func make(code: String, usingBiometrics: Bool, recovery: Data?, reason: String) async throws -> SymmetricKey {
         let replaced = try await sealed()
         let made = try await Vault.create(
             code: code, usingBiometrics: usingBiometrics, recovery: recovery, hardware: hardware, rounds: rounds)
-        try await keep(made.sealed, replacing: replaced)
+        do {
+            let check = try await Vault.askThePhone(made.sealed, hardware: hardware, reason: reason)
+            guard try Vault.open(made.sealed, with: code, after: check) == made.key else { throw VaultError.wrongCode }
+            try await write(made.sealed)
+        } catch {
+            for id in made.sealed.hardwareKeys { try? await hardware.remove(id) }
+            throw error
+        }
+        if let replaced { try await Vault.retire(replaced, keeping: made.sealed, hardware: hardware) }
         return made.key
     }
 
-    public func create(code: String, usingBiometrics: Bool, recovery: Data?) async throws {
-        vault.open(with: try await make(code: code, usingBiometrics: usingBiometrics, recovery: recovery))
+    public func askThePhone(reason: String) async throws -> PassedCheck {
+        guard let current = try await sealed() else { throw VaultError.shut }
+        return try await Vault.askThePhone(current, hardware: hardware, reason: reason)
     }
 
-    public func open(with code: String, reason: String = "") async throws -> Bool {
-        try await opening { try await Vault.open($0, with: code, hardware: hardware, reason: reason) }
+    public func open(with code: String, after check: PassedCheck) async throws -> Bool {
+        try await opening { try Vault.open($0, with: code, after: check) }
     }
 
     public func openWithBiometrics(reason: String) async throws -> Bool {
@@ -291,13 +337,15 @@ public actor VaultKeeper {
             return true
         } catch VaultError.wrongCode {
             return false
-        } catch HardwareKeyError.refused {
-            return false
         }
     }
 
     private func keep(_ new: SealedVaultKey, replacing old: SealedVaultKey?) async throws {
-        try await keychain.set(try JSONEncoder().encode(new), for: SealedVaultKey.key, scope: .device)
+        try await write(new)
         if let old { try await Vault.retire(old, keeping: new, hardware: hardware) }
+    }
+
+    private func write(_ sealed: SealedVaultKey) async throws {
+        try await keychain.set(try JSONEncoder().encode(sealed), for: SealedVaultKey.key, scope: .device)
     }
 }

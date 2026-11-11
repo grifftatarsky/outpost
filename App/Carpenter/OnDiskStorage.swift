@@ -8,6 +8,7 @@ import CarpenterMedia
 import CarpenterUI
 import OSLog
 import Intents
+import LocalAuthentication
 import SwiftUI
 
 #if canImport(UIKit)
@@ -58,9 +59,7 @@ enum LockVault {
         let service = TestProfileWorld.container(for: nil)
         let keychain = SystemKeychainStore(service: service, accessGroup: SharedKeychain.group, protection: .main)
         #if targetEnvironment(simulator)
-            return VaultKeeper(
-                keychain: keychain, hardware: SimulatorHardwareKeys(keychain: keychain), vault: gate,
-                checksBiometricsItself: false)
+            return VaultKeeper(keychain: keychain, hardware: SimulatorHardwareKeys(keychain: keychain), vault: gate)
         #else
             return VaultKeeper(keychain: keychain, hardware: SecureEnclaveKeys(service: service), vault: gate)
         #endif
@@ -71,29 +70,59 @@ enum LockVault {
     struct SimulatorHardwareKeys: HardwareKeys {
         let keychain: any KeychainStore
 
+        private struct Kept: Codable {
+            let key: Data
+            let rule: HardwareKeyRule
+            let faces: Data?
+        }
+
         private func slot(_ id: HardwareKeyID) -> KeychainKey { KeychainKey("simulated.hardware.\(id.rawValue)") }
 
-        func make(_ id: HardwareKeyID, requiringBiometrics: Bool) async throws -> Data {
+        func make(_ id: HardwareKeyID, opensFor rule: HardwareKeyRule) async throws -> Data {
             let key = P256.KeyAgreement.PrivateKey()
-            try await keychain.set(key.rawRepresentation, for: slot(id), scope: .device)
+            let kept = Kept(key: key.rawRepresentation, rule: rule, faces: rule == .enrolledFaces ? Self.faces() : nil)
+            try await keychain.set(try JSONEncoder().encode(kept), for: slot(id), scope: .device)
             return key.publicKey.x963Representation
         }
 
-        func publicKey(of id: HardwareKeyID) async throws -> Data? {
-            try await keychain.data(for: slot(id)).map {
-                try P256.KeyAgreement.PrivateKey(rawRepresentation: $0).publicKey.x963Representation
-            }
-        }
-
         func agree(_ id: HardwareKeyID, with publicKey: Data, reason: String) async throws -> Data {
-            guard let kept = try await keychain.data(for: slot(id)) else { throw HardwareKeyError.noSuchKey }
-            let key = try P256.KeyAgreement.PrivateKey(rawRepresentation: kept)
+            guard let data = try await keychain.data(for: slot(id)) else { throw HardwareKeyError.noSuchKey }
+            let kept = try JSONDecoder().decode(Kept.self, from: data)
+            switch kept.rule {
+            case .unlockedPhone:
+                break
+            case .ownerPresent:
+                try await Self.ask(.deviceOwnerAuthentication, reason: reason)
+            case .enrolledFaces:
+                guard let faces = kept.faces, Self.faces() == faces else { throw HardwareKeyError.refused }
+                try await Self.ask(.deviceOwnerAuthenticationWithBiometrics, reason: reason)
+            }
+            let key = try P256.KeyAgreement.PrivateKey(rawRepresentation: kept.key)
             let theirs = try P256.KeyAgreement.PublicKey(x963Representation: publicKey)
             return try key.sharedSecretFromKeyAgreement(with: theirs).withUnsafeBytes { Data($0) }
         }
 
         func remove(_ id: HardwareKeyID) async throws {
             try await keychain.remove(slot(id))
+        }
+
+        private static func faces() -> Data? {
+            let context = LAContext()
+            guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) else { return nil }
+            return context.domainState.biometry.stateHash
+        }
+
+        private static func ask(_ policy: LAPolicy, reason: String) async throws {
+            guard !reason.isEmpty else { throw HardwareKeyError.unavailable }
+            let context = LAContext()
+            if policy == .deviceOwnerAuthenticationWithBiometrics { context.localizedFallbackTitle = "" }
+            do {
+                _ = try await context.evaluatePolicy(policy, localizedReason: reason)
+            } catch let error as LAError where error.code == .passcodeNotSet {
+                throw HardwareKeyError.noPasscode
+            } catch {
+                throw HardwareKeyError.refused
+            }
         }
     }
 #endif

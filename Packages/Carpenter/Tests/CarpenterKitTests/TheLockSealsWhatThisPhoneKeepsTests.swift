@@ -43,9 +43,19 @@ struct TheLockSealsWhatThisPhoneKeepsTests {
     }
 
     private func lockOn(_ phone: Phone, _ session: AppSession, code: String = "824193") async throws {
-        try await phone.keeper.create(
-            code: code, usingBiometrics: false, recovery: session.enrolment?.identity.vaultRecoverySecret)
+        try await makeTheVault(phone, session, code: code)
         try await session.rewriteWhatThisPhoneKeeps()
+    }
+
+    private func makeTheVault(_ phone: Phone, _ session: AppSession, code: String = "824193") async throws {
+        phone.vault.open(
+            with: try await phone.keeper.make(
+                code: code, usingBiometrics: false, recovery: session.enrolment?.identity.vaultRecoverySecret,
+                reason: "Turn on the lock"))
+    }
+
+    private func open(_ keeper: VaultKeeper, with code: String) async throws -> Bool {
+        try await keeper.open(with: code, after: try await keeper.askThePhone(reason: "Needed before your code is tried"))
     }
 
     @Test("Before the lock is on, nothing is sealed and nothing changes")
@@ -97,9 +107,9 @@ struct TheLockSealsWhatThisPhoneKeepsTests {
         try await lockOn(phone, session)
         phone.vault.shut()
 
-        #expect(try await phone.keeper.open(with: "824194") == false)
+        #expect(try await open(phone.keeper, with: "824194") == false)
         #expect(phone.vault.isShut)
-        #expect(try await phone.keeper.open(with: "824193"))
+        #expect(try await open(phone.keeper, with: "824193"))
 
         let reopened = phone.session()
         await reopened.load()
@@ -158,8 +168,7 @@ struct TheLockSealsWhatThisPhoneKeepsTests {
     @Test("A seal that stopped half-way is finished the next time the phone is opened")
     func aHalfFinishedSealIsFinished() async throws {
         let (phone, session, _) = try await phoneWithARoom()
-        try await phone.keeper.create(
-            code: "824193", usingBiometrics: false, recovery: session.enrolment?.identity.vaultRecoverySecret)
+        try await makeTheVault(phone, session)
         #expect(try await phone.sealedKeys() == [false, false], "precondition: the app stopped before sealing")
 
         let reopened = phone.session()
@@ -186,7 +195,7 @@ struct TheLockSealsWhatThisPhoneKeepsTests {
         try await lockOn(phone, session)
 
         let thief = VaultKeeper(keychain: phone.keychain, hardware: FakeHardwareKeys(), vault: OpenVault(), rounds: 1_000)
-        await #expect(throws: (any Error).self) { _ = try await thief.open(with: "824193") }
+        await #expect(throws: (any Error).self) { _ = try await open(thief, with: "824193") }
     }
 
     @Test("With a vault, the lock itself keeps nothing that says whether a code is right")
@@ -205,8 +214,8 @@ struct TheLockSealsWhatThisPhoneKeepsTests {
         try await phone.keeper.changeCode(to: "190482")
         phone.vault.shut()
 
-        #expect(try await phone.keeper.open(with: "824193") == false)
-        #expect(try await phone.keeper.open(with: "190482"))
+        #expect(try await open(phone.keeper, with: "824193") == false)
+        #expect(try await open(phone.keeper, with: "190482"))
         let reopened = phone.session()
         await reopened.load()
         #expect(reopened.enrolment != nil)

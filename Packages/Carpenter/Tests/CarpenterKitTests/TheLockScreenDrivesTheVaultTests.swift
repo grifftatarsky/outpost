@@ -17,6 +17,7 @@ struct TheLockScreenDrivesTheVaultTests {
     private struct Faces: Biometrics {
         var name: String? { "Face ID" }
         func state() -> Data? { Data([1]) }
+        func passcodeIsSet() -> Bool { true }
         func evaluate(reason: String) async -> Bool { true }
     }
 
@@ -189,12 +190,12 @@ struct TheLockScreenDrivesTheVaultTests {
         let relaunched = Launch(phone)
         await relaunched.open()
 
-        await phone.hardware.allowBiometrics(false)
+        await phone.hardware.hand(to: .somebodyWhoFails)
         await relaunched.controller.unlockWithBiometrics()
         #expect(relaunched.controller.isLocked)
         #expect(relaunched.vault.isShut)
 
-        await phone.hardware.allowBiometrics(true)
+        await phone.hardware.hand(to: .owner)
         await relaunched.controller.unlockWithBiometrics()
         #expect(!relaunched.controller.isLocked)
         #expect(relaunched.vault.isOpen)
@@ -206,7 +207,7 @@ struct TheLockScreenDrivesTheVaultTests {
         let first = Launch(phone)
         await first.open()
         try await first.session.createIdentity(displayName: "Alice")
-        _ = try await first.keeper.make(code: "482913", usingBiometrics: false, recovery: nil)
+        _ = try await first.keeper.make(code: "482913", usingBiometrics: false, recovery: nil, reason: "Turn on the lock")
 
         let relaunched = Launch(phone)
         await relaunched.open()
