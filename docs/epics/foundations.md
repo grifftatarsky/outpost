@@ -646,7 +646,7 @@ proven, so that the first outside tester is not the first audit.
 **Acceptance criteria**
 
 - **Done.** The language pass over every member-facing screen, checked against the build, 2026-09-05.
-- **Done.** Permissions explained before they are asked; none asked at cold launch.
+- **Done.** Permissions explained before they are asked; none asked at a clean restart.
 - **Done.** *Erase everything* in every build, with its facts checked against the wipe.
 - **Done.** The debug leaves: the Debug section, the launch argument, the demo rooms and *Blur every
   photo* said in the code to be DEBUG-only or removed.

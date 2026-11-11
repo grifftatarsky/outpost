@@ -221,7 +221,7 @@ no before the system asks, so that the prompt is not a surprise.
 
 **Acceptance criteria**
 
-- **Done.** A sheet in the app's voice on the first ready screen, never at cold launch: what is asked (a
+- **Done.** A sheet in the app's voice on the first ready screen, never at a clean restart: what is asked (a
   banner for a message, a count on the icon, nothing else), and what refusing costs (messages still
   arrive every time the app is opened; nothing announces them). One button, *Continue*, and since
   2026-09-16 it cannot be swiped away before Apple's prompt: the no is given to Apple.

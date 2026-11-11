@@ -173,7 +173,7 @@ that overstates, understates, or describes a plan.
 ## Permissions, explained before they are asked
 
 Each system prompt is explained in the app's voice first — what is asked for, why, and what the app
-does if the answer is no. None of them is asked at cold launch. A view shown just before a
+does if the answer is no. None of them is asked at a clean restart. A view shown just before a
 system prompt has one button and cannot be dismissed — the HIG's pre-alert rule, applied 2026-09-16.
 
 | Permission | When | Explained | Behavior on refusal |

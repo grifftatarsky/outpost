@@ -360,7 +360,7 @@ representable or a hand-drawn overlay, which native-first argues against.
 that finishes after a menu closed does not present it, so set the item in the menu action and let the
 sheet fetch what it needs.
 
-**A sheet handed a snapshot of `session.rooms` shows what had loaded.** On a cold start a room's name
+**A sheet handed a snapshot of `session.rooms` shows what had loaded.** On a clean restart a room's name
 arrives over a second or two, so a link tapped during launch can open a picker on an incomplete list.
 `AddSomeoneView` re-reads on every draw; other sheets that capture a name at presentation have not been
 checked.
