@@ -72,6 +72,12 @@ extension AppRootView {
             unsaved: { session.recoveryKeyText().map { ($0, session.recoveryKeyFingerprint ?? "") } },
             markSaved: { await session.noteRecoveryKeySaved() },
             opens: { session.recoveryKeyOpens($0) })
+        appLock.onKeptChanged = { (try? await session.rewriteWhatThisPhoneKeeps()) != nil }
+        appLock.vaultRecoverySecret = { session.enrolment?.identity.vaultRecoverySecret }
+        appLock.onReopened = {
+            await reopenAfterTheLockOpened()
+            return session.enrolment != nil
+        }
         appLock.notificationPrivacy = NotificationPrivacy(
             reveals: { notificationsAllowed == true && session.notificationsRevealMore },
             makePrivate: { await session.makeNotificationsPrivate() })
@@ -114,9 +120,9 @@ extension AppRootView {
             AppLockSetupView(
                 biometricName: appLock.biometricName,
                 revealsNotifications: { appLock.notificationPrivacy?.reveals() ?? false },
-                onLock: { lock in
+                onLock: { lock, code in
                     lockOfferOpen = true
-                    return await appLock.turnOn(lock)
+                    return await appLock.turnOn(lock, code: code)
                 },
                 onMakeNotificationsPrivate: { await appLock.notificationPrivacy?.makePrivate() },
                 onDone: {

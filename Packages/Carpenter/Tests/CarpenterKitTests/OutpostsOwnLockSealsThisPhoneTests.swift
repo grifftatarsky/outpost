@@ -173,11 +173,11 @@ struct OutpostsOwnLockSealsThisPhoneTests {
             "a room's name was written where anybody holding the file could read it")
         #expect(try await store.load([String].self) == ["Kitchen", "Lanterns"])
 
-        await vault.shut()
+        vault.shut()
         await #expect(throws: VaultError.shut) { _ = try await store.load([String].self) }
         await #expect(throws: VaultError.shut) { try await store.save(["Anything"]) }
 
-        await vault.open(with: key)
+        vault.open(with: key)
         #expect(try await store.load([String].self) == ["Kitchen", "Lanterns"])
     }
 

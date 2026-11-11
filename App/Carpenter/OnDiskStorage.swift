@@ -3,6 +3,7 @@ import CarpenterCloudKit
 import CarpenterKeychain
 import CloudKit
 import CarpenterKit
+import CryptoKit
 import CarpenterMedia
 import CarpenterUI
 import OSLog
@@ -25,7 +26,7 @@ extension SessionStorage {
             service: container, accessGroup: SharedKeychain.group, protection: protection)
         let keychain: any KeychainStore = profile == nil ? system : DeviceOnlyKeychainStore(system)
 
-        return SessionStorage(
+        let storage = SessionStorage(
             keychain: keychain,
             log: FileLogStore(url: directory.appending(path: StorageLocation.logName), protection: protection),
             documents: FileDocumentStore(
@@ -35,6 +36,7 @@ extension SessionStorage {
             locations: keptLocations(container: container, directory: directory, shared: profile == nil),
             settings: profile == nil ? keptSettings : []
         )
+        return profile == nil ? storage.sealed(by: LockVault.gate) : storage
     }
 
     private static func keptLocations(container: String, directory: URL, shared: Bool) -> [URL] {
@@ -48,3 +50,50 @@ extension SessionStorage {
         KeptSetting(suite: AppGroup.identifier, key: FocusFilterStore.filterKey),
     ]
 }
+
+enum LockVault {
+    static let gate = OpenVault()
+
+    static let keeper: VaultKeeper = {
+        let service = TestProfileWorld.container(for: nil)
+        let keychain = SystemKeychainStore(service: service, accessGroup: SharedKeychain.group, protection: .main)
+        #if targetEnvironment(simulator)
+            return VaultKeeper(
+                keychain: keychain, hardware: SimulatorHardwareKeys(keychain: keychain), vault: gate,
+                checksBiometricsItself: false)
+        #else
+            return VaultKeeper(keychain: keychain, hardware: SecureEnclaveKeys(service: service), vault: gate)
+        #endif
+    }()
+}
+
+#if targetEnvironment(simulator)
+    struct SimulatorHardwareKeys: HardwareKeys {
+        let keychain: any KeychainStore
+
+        private func slot(_ id: HardwareKeyID) -> KeychainKey { KeychainKey("simulated.hardware.\(id.rawValue)") }
+
+        func make(_ id: HardwareKeyID, requiringBiometrics: Bool) async throws -> Data {
+            let key = P256.KeyAgreement.PrivateKey()
+            try await keychain.set(key.rawRepresentation, for: slot(id), scope: .device)
+            return key.publicKey.x963Representation
+        }
+
+        func publicKey(of id: HardwareKeyID) async throws -> Data? {
+            try await keychain.data(for: slot(id)).map {
+                try P256.KeyAgreement.PrivateKey(rawRepresentation: $0).publicKey.x963Representation
+            }
+        }
+
+        func agree(_ id: HardwareKeyID, with publicKey: Data, reason: String) async throws -> Data {
+            guard let kept = try await keychain.data(for: slot(id)) else { throw HardwareKeyError.noSuchKey }
+            let key = try P256.KeyAgreement.PrivateKey(rawRepresentation: kept)
+            let theirs = try P256.KeyAgreement.PublicKey(x963Representation: publicKey)
+            return try key.sharedSecretFromKeyAgreement(with: theirs).withUnsafeBytes { Data($0) }
+        }
+
+        func remove(_ id: HardwareKeyID) async throws {
+            try await keychain.remove(slot(id))
+        }
+    }
+#endif

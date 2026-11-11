@@ -49,8 +49,6 @@ public struct AppLock: Hashable, Sendable, Codable {
     public private(set) var waitLength: TimeInterval = 0
 
     public static let rounds = 300_000
-    public static let delays: [TimeInterval] = [0, 60, 300, 900]
-    public static let eraseChoices: [Int?] = [nil, 1, 5, 10]
 
     public var codesLeftBeforeErasing: Int? {
         eraseAfter.map { max(0, $0 - failures) }
@@ -107,8 +105,16 @@ public struct AppLock: Hashable, Sendable, Codable {
         return max(0, waitLength - elapsed)
     }
 
+    public var withoutAVerifier: AppLock {
+        var kept = self
+        kept.salt = Data()
+        kept.verifier = Data()
+        return kept
+    }
+
     public func matches(_ code: String) -> Bool {
-        Self.same(Self.derive(code, salt: salt, rounds: rounds), verifier)
+        guard !verifier.isEmpty else { return false }
+        return Self.same(Self.derive(code, salt: salt, rounds: rounds), verifier)
     }
 
     public mutating func succeeded() {

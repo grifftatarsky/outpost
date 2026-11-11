@@ -49,6 +49,18 @@ final class RigChecks: XCTestCase {
         return false
     }
 
+    func copyFromTheShareSheet(_ app: XCUIApplication) {
+        let cell = app.cells.matching(NSPredicate(format: "label == %@", "Copy")).firstMatch
+        let button = app.buttons["Copy"].firstMatch
+        if cell.waitForExistence(timeout: 5) {
+            cell.tap()
+        } else if button.exists {
+            button.tap()
+        } else {
+            app.swipeDown()
+        }
+    }
+
     func tapped(_ element: XCUIElement) -> Bool {
         var landed = false
         XCTExpectFailure("a screen changing under the tap takes the element away before it lands", strict: false) {
@@ -97,8 +109,7 @@ final class RigChecks: XCTestCase {
     func saveTheRecoveryKey(_ app: XCUIApplication) -> Bool {
         guard tapIfThere(app, "Save key", timeout: 2) else { return false }
         sleep(2)
-        let copy = app.buttons["Copy"].firstMatch
-        if copy.waitForExistence(timeout: 5) { copy.tap() } else { app.swipeDown() }
+        copyFromTheShareSheet(app)
         sleep(1)
         guard tapIfThere(app, "I've saved it", timeout: 5) else { return false }
         return tapIfThere(app, "It's saved", timeout: 3)
@@ -163,8 +174,7 @@ final class RigChecks: XCTestCase {
         XCTAssertTrue(tapIfThere(app, "Save key"), "the key could not be saved a second time")
         sleep(2)
         shoot(app, "lock-2-share-sheet")
-        let copy = app.buttons["Copy"].firstMatch
-        if copy.waitForExistence(timeout: 5) { copy.tap() } else { app.swipeDown() }
+        copyFromTheShareSheet(app)
         sleep(1)
         XCTAssertTrue(saved.waitForExistence(timeout: 5) && saved.isEnabled, "saving did not let the member go on")
         saved.tap()
@@ -221,6 +231,21 @@ final class RigChecks: XCTestCase {
         for digit in "482913" { app.buttons[String(digit)].firstMatch.tap() }
         XCTAssertTrue(app.buttons["You"].firstMatch.waitForExistence(timeout: 10), "the right code did not open the app")
         shoot(app, "lock-8-open")
+
+        app.terminate()
+        app.launch()
+        _ = app.wait(for: .runningForeground, timeout: 20)
+        XCTAssertTrue(locked.waitForExistence(timeout: 15), "the app started again without its lock")
+        XCTAssertFalse(app.textFields.firstMatch.exists, "a locked phone was taken for an empty one and offered setup")
+        shoot(app, "lock-8b-started-again")
+        for digit in "482913" { app.buttons[String(digit)].firstMatch.tap() }
+        XCTAssertTrue(
+            app.buttons["You"].firstMatch.waitForExistence(timeout: 15), "the code did not open the app after it started again")
+        app.buttons["You"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Lockwood"].firstMatch.waitForExistence(timeout: 10),
+            "what the phone keeps did not come back once the lock opened")
+        shoot(app, "lock-8c-still-lockwood")
 
         XCUIDevice.shared.press(.home)
         sleep(2)

@@ -163,6 +163,15 @@ public struct Identity: Hashable, Sendable {
         try signingKey.signature(for: message)
     }
 
+    public var vaultRecoverySecret: Data {
+        HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: SymmetricKey(data: signingSeed + agreementSeed),
+            salt: Data(Domain.vaultRecovery.utf8),
+            info: Data(Domain.vaultRecovery.utf8),
+            outputByteCount: 32
+        ).withUnsafeBytes { Data($0) }
+    }
+
     public func sharedSecret(with peer: IdentityPublicKeys) throws -> SharedSecret {
         guard let peerKey = try? Curve25519.KeyAgreement.PublicKey(rawRepresentation: peer.agreement)
         else {
@@ -290,6 +299,8 @@ enum Domain {
     static let tapSwap = "carpenter.tap-swap.v1"
     static let vaultKey = "carpenter.vault-key.v1"
     static let vaultDocument = "carpenter.vault-document.v1"
+    static let vaultSecret = "carpenter.vault-secret.v1"
+    static let vaultRecovery = "carpenter.vault-recovery.v1"
     static let tapCommitment = "carpenter.tap-commitment.v1"
     static let tapNumber = "carpenter.tap-number.v1"
     static let pairwiseAddress = "carpenter.pairwise-address.v1"

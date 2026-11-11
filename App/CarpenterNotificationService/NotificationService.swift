@@ -52,11 +52,20 @@ final class NotificationService: UNNotificationServiceExtension {
             }
         #endif
 
+        let keychain = SystemKeychainStore(service: container, accessGroup: sharedKeychainGroup)
+        let vault = OpenVault()
+        let hasVault: Bool
+        do {
+            hasVault = try await keychain.data(for: SealedVaultKey.key) != nil
+        } catch {
+            hasVault = true
+        }
+        if hasVault { vault.shutUntilOpened() }
         let storage = SessionStorage(
-            keychain: SystemKeychainStore(service: container, accessGroup: sharedKeychainGroup),
+            keychain: keychain,
             log: FileLogStore(url: directory.appending(path: StorageLocation.logName)),
             documents: FileDocumentStore(url: directory.appending(path: StorageLocation.stateName))
-        ).readOnly
+        ).sealed(by: vault).readOnly
 
         DiagnosticsExport.note(
             "nse: storage=\(directory.path) appGroup=\(AppGroup.available ? "yes" : "NO — private container")")

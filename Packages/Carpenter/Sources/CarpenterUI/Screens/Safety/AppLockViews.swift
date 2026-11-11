@@ -31,7 +31,7 @@ public struct AppLockScreen: View {
         VStack(spacing: 24) {
             Spacer()
             Image(systemName: "lock.fill")
-                .font(.system(size: 44, weight: .semibold))
+                .scaledSystemFont(44, weight: .semibold)
                 .foregroundStyle(palette.accentColor)
                 .accessibilityHidden(true)
             // COPY BEGIN 5be5d303 [NEEDS HUMAN REVIEW]
@@ -268,7 +268,7 @@ public struct AppLockSetupView: View {
 
     private let biometricName: String?
     private let revealsNotifications: (@MainActor () -> Bool)?
-    private let onLock: (AppLock) async -> Bool
+    private let onLock: (AppLock, String) async -> Bool
     private let onMakeNotificationsPrivate: (() async -> Void)?
     private let onDone: (() -> Void)?
     private let onNotNow: (() -> Void)?
@@ -286,7 +286,7 @@ public struct AppLockSetupView: View {
 
     public init(
         biometricName: String?, revealsNotifications: (@MainActor () -> Bool)? = nil,
-        onLock: @escaping (AppLock) async -> Bool,
+        onLock: @escaping (AppLock, String) async -> Bool,
         onMakeNotificationsPrivate: (() async -> Void)? = nil, onDone: (() -> Void)? = nil,
         onNotNow: (() -> Void)? = nil
     ) {
@@ -442,7 +442,7 @@ public struct AppLockSetupView: View {
             let made = await Task.detached(priority: .userInitiated) {
                 try? AppLock.make(entered, as: chosen, usesBiometrics: withBiometrics)
             }.value
-            let kept = if let made { await onLock(made) } else { false }
+            let kept = if let made { await onLock(made, entered) } else { false }
             saving = false
             notSaved = !kept
             guard kept else { return }
@@ -560,7 +560,7 @@ struct AppLockSettingsView: View {
                 AppLockSetupView(
                     biometricName: controller.biometricName,
                     revealsNotifications: { controller.notificationPrivacy?.reveals() ?? false },
-                    onLock: { lock in await controller.turnOn(lock) },
+                    onLock: { lock, code in await controller.turnOn(lock, code: code) },
                     onMakeNotificationsPrivate: { await controller.notificationPrivacy?.makePrivate() })
             }
         }
@@ -691,7 +691,7 @@ private struct EraseChoice: Identifiable {
 
     #Preview("App lock — setting it up") {
         NavigationStack {
-            AppLockSetupView(biometricName: "Face ID", onLock: { _ in true }, onNotNow: {})
+            AppLockSetupView(biometricName: "Face ID", onLock: { _, _ in true }, onNotNow: {})
         }
         .themed(.default)
     }

@@ -33,7 +33,7 @@ struct AppRootView: View {
     @AppStorage("onboarding.lockOffered") var lockOffered = false
     @State var lockOfferOpen = false
     @AppStorage("siri.donationsForgotten") var siriDonationsForgotten = false
-    @State var appLock = AppLockController(store: AppRootView.appLockStore)
+    @State var appLock = AppLockController(store: AppRootView.appLockStore, vault: LockVault.keeper)
     @State var syncing = false
     @State var syncAgain = false
     @State var lastSync = Date.distantPast
@@ -451,6 +451,11 @@ struct AppRootView: View {
         .task {
             configureAppLock()
             await appLock.load()
+            await reopenAfterTheLockOpened()
+        }
+        .onChange(of: appLock.isLocked) { _, locked in
+            guard !locked else { return }
+            Task { await reopenAfterTheLockOpened() }
         }
         .task { await forgetOldSiriDonations() }
         .environment(\.appLock, appLock)
@@ -580,11 +585,7 @@ struct AppRootView: View {
         var issued: [ParticipantID: Invite] = [:]
         for person in people.sorted(by: { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }) {
             do {
-                guard let keys = session.publicKeys(of: person) else {
-                    throw AppSessionError.noIdentity
-                }
-                issued[person] = try await session.invite(
-                    joinerCode: try keys.encoded(), joining: room, through: mailbox)
+                issued[person] = try await session.invite(person, joining: room, through: mailbox)
             } catch {
                 Diagnostics.identity.error(
                     "invite failed while making a room: \(String(describing: error), privacy: .public)")

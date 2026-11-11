@@ -16,8 +16,18 @@ extension AppRootView {
             session.phoneLocked(!UIApplication.shared.isProtectedDataAvailable)
         #endif
         await session.readProtection()
+        _ = try? await LockVault.keeper.shutIfThereIsOne()
         await session.load()
         Task { await protectWhatIsKept() }
+    }
+
+    func reopenAfterTheLockOpened() async {
+        guard !session.storageIsSealed else { return }
+        if session.waitsForUnlock {
+            await session.load()
+            await finishOpening()
+        }
+        await syncNow()
     }
 
     func finishOpening() async {

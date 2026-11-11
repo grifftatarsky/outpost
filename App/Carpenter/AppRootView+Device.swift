@@ -231,6 +231,7 @@ extension AppRootView {
         startedSyncFor = nil
         restoring = false
         await session.eraseWhatThisPhoneKeeps()
+        LockVault.gate.retire()
         await dropWhatTheErasedSessionShowed()
 
         session = AppSession(storage: .onDisk(profile: testSession?.profile), clock: UITestMode.clock)

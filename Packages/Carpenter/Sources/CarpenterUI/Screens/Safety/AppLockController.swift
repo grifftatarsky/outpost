@@ -1,4 +1,5 @@
 import CarpenterKit
+import CryptoKit
 import Foundation
 import LocalAuthentication
 import SwiftUI
@@ -53,7 +54,12 @@ public final class AppLockController {
     public var recovery: RecoveryKeyAccess?
     public var notificationPrivacy: NotificationPrivacy?
 
+    public var onKeptChanged: (@MainActor () async -> Bool)?
+    public var onReopened: (@MainActor () async -> Bool)?
+    public var vaultRecoverySecret: (@MainActor () -> Data?)?
+
     private let store: AppLockStore
+    private let vault: VaultKeeper?
     private let biometrics: any Biometrics
     private let moment: @Sendable () -> LockMoment
     private let clock: @Sendable () -> Date
@@ -64,17 +70,25 @@ public final class AppLockController {
     public static let confirmationLasts: TimeInterval = 300
 
     public init(
-        store: AppLockStore, biometrics: any Biometrics = SystemBiometrics(),
+        store: AppLockStore, vault: VaultKeeper? = nil, biometrics: any Biometrics = SystemBiometrics(),
         moment: @escaping @Sendable () -> LockMoment = LockMoment.now,
         clock: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.store = store
+        self.vault = vault
         self.biometrics = biometrics
         self.moment = moment
         self.clock = clock
     }
 
     public var biometricName: String? { biometrics.name }
+
+    public var sealsWhatThisPhoneKeeps: Bool { vault?.vault.isInUse ?? false }
+
+    private func lockNow() {
+        isLocked = true
+        vault?.shut()
+    }
 
     public var isCovered: Bool { isLocked || (isAway && (lock != nil || coversWhenAway)) }
 
@@ -91,6 +105,7 @@ public final class AppLockController {
     public func load() async {
         do {
             lock = try await store.load()
+            if let vault, try await vault.shutIfThereIsOne(), lock == nil { try await vault.destroy() }
             unreadable = false
             isLocked = lock != nil
         } catch {
@@ -110,7 +125,7 @@ public final class AppLockController {
         case .active:
             if let leftAt {
                 let away = moment().seconds(since: leftAt) ?? .infinity
-                if away >= lock.delay { isLocked = true }
+                if away >= lock.delay { lockNow() }
             }
             self.leftAt = nil
         case .background:
@@ -155,8 +170,13 @@ public final class AppLockController {
         }
         self.lock = lock
 
-        let snapshot = lock
-        let right = await Task.detached(priority: .userInitiated) { snapshot.matches(code) }.value
+        let right: Bool
+        if let vault, sealsWhatThisPhoneKeeps {
+            right = (try? await vault.open(with: code)) ?? false
+        } else {
+            let snapshot = lock
+            right = await Task.detached(priority: .userInitiated) { snapshot.matches(code) }.value
+        }
         guard right else {
             if lock.codesLeftBeforeErasing == 0 {
                 problem = .erasing
@@ -185,7 +205,12 @@ public final class AppLockController {
         // COPY BEGIN d35bb503 [NEEDS HUMAN REVIEW]
         let reason = String(localized: "Unlock the app", bundle: .module)
         // COPY END d35bb503
-        guard await biometrics.evaluate(reason: reason) else { return }
+        if let vault, sealsWhatThisPhoneKeeps {
+            if !vault.checksBiometricsItself { guard await biometrics.evaluate(reason: reason) else { return } }
+            guard (try? await vault.openWithBiometrics(reason: reason)) == true else { return }
+        } else {
+            guard await biometrics.evaluate(reason: reason) else { return }
+        }
         guard lock.allowsBiometrics(currentState: biometrics.state()) else { return }
         lock.noteBiometricUnlock()
         self.lock = lock
@@ -195,16 +220,16 @@ public final class AppLockController {
     }
 
     @discardableResult
-    public func turnOn(_ new: AppLock) async -> Bool {
-        guard lock == nil else { return await replace(with: new) }
-        return await keep(new)
+    public func turnOn(_ new: AppLock, code: String? = nil) async -> Bool {
+        guard lock == nil else { return await replace(with: new, code: code) }
+        return await keep(new, code: code)
     }
 
     @discardableResult
-    public func replace(with new: AppLock) async -> Bool {
-        guard lock != nil else { return await keep(new) }
+    public func replace(with new: AppLock, code: String? = nil) async -> Bool {
+        guard lock != nil else { return await keep(new, code: code) }
         guard spendConfirmation() else { return false }
-        return await keep(new)
+        return await keep(new, code: code)
     }
 
     @discardableResult
@@ -238,9 +263,19 @@ public final class AppLockController {
         return true
     }
 
-    private func keep(_ new: AppLock?) async -> Bool {
+    private func keep(_ new: AppLock?, code: String? = nil) async -> Bool {
         var new = new
         if new?.usesBiometrics == true { new?.noteBiometrics(biometrics.state()) }
+        var made: SymmetricKey?
+        if let vault {
+            do {
+                made = try await settleVault(vault, for: new, code: code)
+            } catch {
+                problem = .notSaved
+                return false
+            }
+            if vault.vault.isInUse || made != nil { new = new?.withoutAVerifier }
+        }
         let (previous, store, target) = (writing, store, new)
         let write = Task<Bool, Never> {
             await previous?.value
@@ -260,8 +295,30 @@ public final class AppLockController {
         problem = nil
         if new == nil {
             isLocked = false
+            try? await vault?.destroy()
+        }
+        if let made, let vault {
+            vault.vault.open(with: made)
+            _ = await onKeptChanged?()
         }
         return true
+    }
+
+    private func settleVault(_ vault: VaultKeeper, for new: AppLock?, code: String?) async throws -> SymmetricKey? {
+        guard let new else {
+            guard vault.vault.isInUse else { return nil }
+            try vault.vault.writeInTheClear()
+            guard await onKeptChanged?() ?? true else { throw VaultError.shut }
+            return nil
+        }
+        guard vault.vault.isInUse else {
+            guard let code else { return nil }
+            return try await vault.make(
+                code: code, usingBiometrics: new.usesBiometrics, recovery: vaultRecoverySecret?())
+        }
+        if let code { try await vault.changeCode(to: code) }
+        try await vault.setBiometrics(new.usesBiometrics)
+        return nil
     }
 
     @discardableResult
@@ -273,14 +330,31 @@ public final class AppLockController {
 
     @discardableResult
     public func unlock(withRecoveryKey text: String) async -> Bool {
-        guard lock != nil, let recovery, recovery.opens(text) else {
+        guard lock != nil else {
             problem = .notTheRecoveryKey
             return false
+        }
+        if let vault, sealsWhatThisPhoneKeeps {
+            let secret = (try? RecoveryKey.secret(from: text))?.identity.vaultRecoverySecret
+            guard let secret, (try? await vault.openWithRecovery(secret)) == true else {
+                problem = .notTheRecoveryKey
+                return false
+            }
+            guard await onReopened?() ?? true else {
+                problem = .notSaved
+                return false
+            }
+        } else {
+            guard let recovery, recovery.opens(text) else {
+                problem = .notTheRecoveryKey
+                return false
+            }
         }
         return await keep(nil)  // reentrancy considered
     }
 
     public func forget() {
+        Task { [vault] in try? await vault?.destroy() }
         unreadable = false
         lock = nil
         isLocked = false

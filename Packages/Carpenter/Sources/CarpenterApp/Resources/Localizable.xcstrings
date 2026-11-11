@@ -16,6 +16,9 @@
     "Only whoever named this conversation can change how people are let into it." : {
       "comment" : "Tried to change a room's access rule without founding it"
     },
+    "Some of what this iPhone keeps could not be changed yet. It is tried again the next time the app opens." : {
+      "comment" : "Advanced On Device Security could not re-protect everything stored"
+    },
     "That code came from a device that is already set up, so there is nothing to add." : {
       "comment" : "The pasted offer carries no device subkey"
     },
@@ -78,6 +81,9 @@
     },
     "This is the device you are holding. Removing it would leave nothing able to speak for you." : {
       "comment" : "Tried to revoke the current device"
+    },
+    "This phone is out of space, so the app could not write down what it keeps. Free some space in Settings, then try again." : {
+      "comment" : "The device's storage is full"
     },
     "Whoever signed that invitation is not in the conversation, so it lets nobody in." : {
       "comment" : "The inviter has no standing in the room"

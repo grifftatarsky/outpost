@@ -9,7 +9,33 @@ extension AppSession {
 
     public var sealsWhileLocked: Bool { (protectionChoice?.chosen ?? storage.protection.current) == .whileUnlocked }
 
-    public var storageIsSealed: Bool { phoneIsLocked && storage.protection.current == .whileUnlocked }
+    public var storageIsSealed: Bool {
+        (phoneIsLocked && storage.protection.current == .whileUnlocked) || storage.vault.isShut
+    }
+
+    public func rewriteWhatThisPhoneKeeps() async throws {
+        guard !storageIsSealed, !waitsForUnlock, enrolment != nil else { throw VaultError.shut }
+        var keys = [
+            IdentityStore.identityKey, IdentityStore.deviceKey, IdentityStore.certificateKey,
+            IdentityStore.removedKey, IdentityStore.unsavedRecoveryKey, AddressBook.key,
+        ]
+        for (room, held) in persisted.epochs {
+            keys += held.map { Self.epochKey(room, EpochNumber(rawValue: $0)) }
+        }
+        for key in keys {
+            guard let kept = try await storage.keychain.data(for: key) else { continue }
+            try await storage.keychain.set(kept, for: key, scope: .device)
+        }
+        persisted.keptIsSealed = try storage.vault.sealingKey() != nil
+        try await saveState()
+    }
+
+    func finishSealingIfItStoppedHalfWay() async {
+        guard enrolment != nil, !storageIsSealed, storage.vault.isInUse != persisted.keptIsSealed else { return }
+        await persistOrReport("what this phone keeps, under the lock's key") {
+            try await self.rewriteWhatThisPhoneKeeps()
+        }
+    }
 
     public func phoneLocked(_ locked: Bool) {
         guard phoneIsLocked != locked else { return }

@@ -89,6 +89,7 @@ extension AppSession {
             await adoptNewOutpostAuthors()
 
             countWhatIsHeldForOthers()
+            await finishSealingIfItStoppedHalfWay()
 
             state = hasOwnName ? .ready : .needsProfile
             Diagnostics.identity.notice("load: \(String(describing: self.state), privacy: .public)")

@@ -9,27 +9,36 @@ public struct SessionStorage: Sendable {
     public let documents: any DocumentStore
     public let media: any MediaStore
     public let protection: ProtectionDial
+    public let vault: OpenVault
     public let locations: [URL]
     public let settings: [KeptSetting]
 
     public init(
         keychain: any KeychainStore, log: any LogStore, documents: any DocumentStore,
         media: any MediaStore = MemoryMediaStore(), protection: ProtectionDial = ProtectionDial(),
-        locations: [URL] = [], settings: [KeptSetting] = []
+        vault: OpenVault = OpenVault(), locations: [URL] = [], settings: [KeptSetting] = []
     ) {
         self.keychain = keychain
         self.log = log
         self.documents = documents
         self.media = media
         self.protection = protection
+        self.vault = vault
         self.locations = locations
         self.settings = settings
+    }
+
+    public func sealed(by vault: OpenVault) -> SessionStorage {
+        SessionStorage(
+            keychain: SealedKeychainStore(around: keychain, vault: vault),
+            log: log, documents: SealedDocumentStore(around: documents, vault: vault), media: media,
+            protection: protection, vault: vault, locations: locations, settings: settings)
     }
 
     public var readOnly: SessionStorage {
         SessionStorage(
             keychain: ReadOnlyKeychainStore(keychain), log: ReadOnlyLogStore(log),
-            documents: ReadOnlyDocumentStore(documents), media: media, protection: protection)
+            documents: ReadOnlyDocumentStore(documents), media: media, protection: protection, vault: vault)
     }
 }
 
@@ -434,7 +443,7 @@ public final class AppSession {
 
         for keys in persisted.knownKeys { replica.introduce(keys) }
         for certificate in persisted.certificates.approversFirst {
-            guard let at = storedTime(for: certificate.digest, claimed: certificate.issuedAt) else {
+            guard let at = storedTime(for: certificate.digest) else {
                 Diagnostics.identity.error("authority: a saved certificate had no stored time and was left out")
                 continue
             }
@@ -442,7 +451,7 @@ public final class AppSession {
         }
 
         for revocation in persisted.revocations + persisted.otherRevocations {
-            guard let at = storedTime(for: revocation.digest, claimed: revocation.revokedAt) else {
+            guard let at = storedTime(for: revocation.digest) else {
                 Diagnostics.identity.error("authority: a saved removal had no stored time and was left out")
                 continue
             }

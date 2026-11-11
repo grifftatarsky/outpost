@@ -28,7 +28,7 @@ public enum SessionProblem {
                 bundle: .module, comment: "An edit with no words in it")
         case .unknownMessage:
             return String(
-                localized: "This device no longer has the entry behind that.",
+                localized: "This device no longer has that message.",
                 bundle: .module, comment: "The entry is not on this device")
         case .cannotWriteThere:
             return String(
