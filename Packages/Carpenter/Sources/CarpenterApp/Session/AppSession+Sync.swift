@@ -8,7 +8,8 @@ import os
 extension AppSession {
     @discardableResult
     public func sync(
-        through mailbox: any Mailbox, media: (any MediaMailbox)? = nil, mode: SyncMode = .full
+        through mailbox: any Mailbox, media: (any MediaMailbox)? = nil, mode: SyncMode = .full,
+        from people: Set<ParticipantID>? = nil
     ) async throws -> SyncReport {
         guard !storageIsSealed else {
             Diagnostics.sync.notice("round: this phone is locked and what it keeps is sealed; collecting nothing")
@@ -25,7 +26,7 @@ extension AppSession {
 
         var report = SyncReport()
         var firstFailure: (any Error)?
-        for peer in everyPeer() {
+        for peer in everyPeer() where people?.contains(peer.them) ?? true {
             do {
                 try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
             } catch {

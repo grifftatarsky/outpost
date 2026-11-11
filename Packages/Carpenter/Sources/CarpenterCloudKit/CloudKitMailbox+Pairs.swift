@@ -147,6 +147,16 @@ extension CloudKitMailbox {
         Diagnostics.sync.notice("pairs: left \(zones.count, privacy: .public) space(s) of somebody blocked")
     }
 
+    public func eraseEverySpace() async throws {
+        let zones = try await container.privateCloudDatabase.allRecordZones().map(\.zoneID).filter {
+            $0.zoneName.hasPrefix(Self.pairZonePrefix)
+        }
+        guard !zones.isEmpty else { return }
+        _ = try await container.privateCloudDatabase.modifyRecordZones(saving: [], deleting: zones)
+        for zone in zones { await index.dropMine(zone) }
+        Diagnostics.sync.notice("mailbox: erased \(zones.count, privacy: .public) space(s) and their links")
+    }
+
     func zone(for peer: ParticipantID, in pairs: Pairs) async throws -> CKRecordZone.ID {
         let hint = try pairs.hint(for: peer)
         try await refresh()

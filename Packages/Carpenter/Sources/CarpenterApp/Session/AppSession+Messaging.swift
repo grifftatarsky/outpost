@@ -33,6 +33,30 @@ extension AppSession {
         return room
     }
 
+    public func send(_ text: String, to room: RoomID?, after mailbox: any Mailbox) async throws {
+        if let room { await collectBeforeWriting(to: room, through: mailbox) }
+        try await send(text, to: room)
+    }
+
+    public func send(
+        _ media: PreparedMedia, to room: RoomID, through uploads: any MediaMailbox, after mailbox: any Mailbox
+    ) async throws {
+        await collectBeforeWriting(to: room, through: mailbox)
+        try await send(media, to: room, through: uploads)
+    }
+
+    func collectBeforeWriting(to room: RoomID, through mailbox: any Mailbox) async {
+        do {
+            try await sync(through: mailbox, mode: .readOnly, from: roster(of: room).members)
+        } catch {
+            Diagnostics.sync.notice(
+                """
+                send: iCloud did not answer before this was written, so it is sealed under the keys this \
+                phone holds (\(String(describing: error), privacy: .public))
+                """)
+        }
+    }
+
     public func send(_ text: String, to room: RoomID?) async throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }

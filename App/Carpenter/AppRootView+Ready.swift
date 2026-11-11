@@ -132,7 +132,7 @@ extension AppRootView {
             },
             onSend: { text, room in
                 do {
-                    try await session.send(text, to: room)
+                    try await session.send(text, to: room, after: mailbox)
                     return nil
                 } catch {
                     Diagnostics.sync.error(

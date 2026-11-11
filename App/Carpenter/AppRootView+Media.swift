@@ -19,7 +19,8 @@ extension AppRootView {
     func attach(_ picked: PickedMedia, caption: String?, to room: RoomID) async -> String? {
         // COPY BEGIN c7bf5484 [NEEDS HUMAN REVIEW]
         do {
-            try await session.send(try await prepare(picked, caption: caption), to: room, through: media)
+            try await session.send(
+                try await prepare(picked, caption: caption), to: room, through: media, after: mailbox)
             return nil
         } catch VideoPreparer.Failure.tooLarge(let bytes) {
             let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
