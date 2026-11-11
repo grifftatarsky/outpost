@@ -154,6 +154,7 @@ extension AppSession {
                 var passesOn: Bool?
                 for target in targets {
                     let floor = isWall ? (floors[target] ?? nil).map(EpochNumber.init(rawValue:)) : nil
+                    if let floor, epoch < floor { continue }
                     let link = floor.map { epoch > $0 ? passing.link : nil } ?? passing.link
                     let links = floor.map { ceiling in chain.everyLink.filter { $0.epoch > ceiling } }
                         ?? chain.everyLink
