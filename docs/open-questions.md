@@ -57,29 +57,44 @@ phone can check it. It changes what a key hand-off carries.
 
 <!-- COPY BEGIN 1b539bd8 [NEEDS HUMAN REVIEW] -->
 
-## A remover who never said what they had seen can still cut everything
+## What a removal can still cut, and when a removed member can still answer it
 
 A removal names the last entry of each of the removed person's devices that the remover's phone holds,
 and everything of theirs past that line stops counting, on Griff's ruling that the line is what the
-remover's device had received. A modified app can name nothing. Since 2026-10-31 that cannot cut what
-the remover's own phone had already named by hash in the room before the removal (a read receipt, the
-heads a key change lists, a Solo answer), anything the removed person wrote before they left on their
-own, or an invitation of theirs that another member had answered. What is still open: in an open
-room, a member who never sent a read receipt, never changed the key and never answered a check can
-remove somebody with an empty list, and every phone drops all of that person's words and everybody
-they let in whom nobody else answered for. A removed member can do the same with the old key by
-writing a clock that hides that they had read their own removal: a removal of the founder that names
-only the founder's entries up to the member's own invitation ends the remover's invitation, and with it
-the removal (found 2026-11-04). Nothing the remover signed earlier says otherwise, and the
-dates and positions in the log cannot be used instead, because a removed person can sign a new entry
-under a number they used in a room the remover is not in.
+remover's device had received. The app always names everything it holds. A modified app can name less.
 
-**Recommendation: build it.** Each device names the newest entry it holds from every device in a room
-now and then, signed, the way a key change already does (for example on each read receipt, or once a
-day per room). The line of a removal already reaches back to every entry the remover's earlier lists
-named, so nothing else has to change. It changes what a read receipt carries, and costs 32 bytes per
-device in the room each time: about 2 KB for thirty people with two phones each, worked out and not
-measured.
+**Closed on 2026-11-10.** A removed member could undo their removal with the old key: a removal of
+whoever let the remover in, naming a line just before that invitation and hiding what its author had
+read. Every phone then dropped the remover and put the removed member back. Now a removal that this
+phone had first stands against anything its subject writes afterwards, whatever that later entry
+claims. A phone goes by the time iCloud stored each one as it saw them itself, by its own clock for a
+removal it wrote, and, when it saw neither first, by the times other members wrote down when they
+read them. Griff's words for the rule: a removal takes place when it reaches the first person who is
+not the one removed. `ARemovalCannotTakeBackWhatTheRemoverSawTests` holds it in the package. Not run
+on two accounts.
+
+The fix first recommended here was different: have every device sign, now and then, the newest entry
+it holds from every other device. It was checked and not built. It only binds a device that ran the
+real app before it turned hostile, and the app already names everything it holds when it removes
+somebody. It would also add a signal, on every entry, of what each phone had received.
+
+**Still open, three cases:**
+
+1. A phone that gets its copy of the removal after the removed member's answer. A removal is written
+   to the remaining members before the removed person is told, so this takes a failed write to one
+   member. That member's phone then believes the answer, and shows the member as out of the room, until
+   another member's note of the removal reaches it.
+2. A phone with nothing to say which came first: no stored time of its own and no member's note. None
+   has been found; a test keeps the case as a known issue.
+3. A member who is still in an open room, with a modified app, can remove somebody with a short line
+   and every phone drops that person's later words and everybody they let in whom nobody else
+   answered for. In an open room that member could remove each of those people one at a time anyway;
+   what the short line adds is that their words go too.
+
+**Recommendation for 3: keep an entry of the removed person's that another member's phone had
+already named before it heard of the removal,** the way an invitation another member answered is
+kept today. It needs a rule for who counts as another member when the removal itself decides who is
+in, and a ruling on a room where nobody does: whether the remover's line or the inviter's side wins.
 
 <!-- COPY END 1b539bd8 -->
 
@@ -105,6 +120,8 @@ Three ways out, and none is free:
    long a packet waits becomes a signal about the recipient's phone.
 3. **Accept it.** With the setting on, a message nobody collected in nine days comes back through
    history repair instead, and the member is told that is the trade.
+
+The same holds while Outpost's own lock is shut, since 2026-11-10.
 
 **Recommendation: 3, and say so on the setting's page.** The setting already costs classic
 notifications; a message older than nine days coming back the slow way is a smaller cost than
@@ -133,25 +150,108 @@ said*, which names nothing.
 
 <!-- COPY BEGIN 5d82a14a [NEEDS HUMAN REVIEW] -->
 
-## Outpost's own lock cannot seal the identity, because the other phones need it
+## Outpost's own lock seals what the phone keeps, and what that costs
 
-Outpost's own lock is meant to seal with a key wrapped by the code and by a key the Secure Enclave
-will not hand over, so a copied file opens on no other phone. That vault is written and tested in the
-package and not yet connected to the lock, which today guards the screens and seals nothing
-([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
-Once connected it works for anything this phone alone keeps.
+Connected on 2026-11-10. With the lock on, the state file and every key kept only on this device
+(the identity, the device key, every room key, the address book) are sealed under a key that opens
+with the code, with Face ID if chosen, or with the recovery key, and only on this phone: each
+wrapping also needs a Secure Enclave key. Checking a code is opening that key; the lock no longer
+keeps anything else that says whether a code is right. While the lock is shut the app reads nothing,
+writes nothing and collects nothing. Turning the lock off, or opening with the recovery key, puts
+everything back in the clear first. The package holds it in `TheLockSealsWhatThisPhoneKeepsTests` and
+`TheLockScreenDrivesTheVaultTests`, against a fake Secure Enclave.
 
-It cannot work for the identity. The identity lives in iCloud Keychain so the member's other phones
-have it, and iCloud Keychain protects an item with the phone's own passcode. There is no way to ask
-it for a code Outpost chose. So with Outpost's lock on and the phone's lock off, the identity is
-protected by whatever the phone is protected by, and the rest is sealed by the code.
+An earlier entry here said the lock could not seal the identity because the identity lives in iCloud
+Keychain. The code keeps the identity on this device only, so the lock seals it.
 
-**Recommendation: say it on the page, in one line, and keep the choice.** Something like: *Outpost's
-code seals what this phone keeps. Your identity stays with iCloud Keychain, which uses your phone's
-passcode.* The alternative is to refuse Outpost's own lock unless the phone has a passcode, which
-makes the setting nearly pointless, since the phone's lock is then available and stronger.
+**Not proven.** The Secure Enclave half has never run: a simulator has none, and a simulator build
+uses a stand-in that keeps its key in the keychain and protects nothing. The lock screens were
+walked once on a simulator on 2026-11-10 (`RigChecks.testANewMemberSavesTheKeyAndLocksTheApp` on
+`outpost-alpha`): the lock set at setup, a wrong code, the right code, the app stopped and started
+again behind the lock, the member's name still there once it opened, and *Forgot the code?* erasing
+the phone. Changing the code, Face ID and the recovery key were not walked, and nothing has run on a
+phone.
+
+**What it costs.** Griff accepted 1 and 3 on 2026-11-10; 2, 4 and 5 are still his to accept or
+change.
+
+1. With the lock on, a notification can only say that something arrived. The notification extension
+   runs in its own process and never has the key. Accepted: "it does still allow for anon push
+   notifications? That's nice."
+2. Nothing is collected while the lock is shut, the same as a locked phone under Advanced On Device
+   Security, so a message nobody collected in nine days comes back through history repair.
+3. The key stays in memory from an unlock until the lock screen next comes up. *Require the code*
+   in the lock's settings says when that is: immediately, or after one, five or fifteen minutes
+   away. Accepted: "The key staying in mem until the app is closed or the phone is locked makes
+   sense to me."
+4. A six-digit code can be guessed on the phone itself by somebody who can run their own code as
+   the app, which takes a jailbroken phone that is unlocked. The app counts wrong codes (five free,
+   then waits of a minute, five minutes, fifteen minutes and an hour, and *Erase after* 1, 5 or 10
+   wrong codes if the member turned it on), and a modified app skips the counting. Each guess then
+   costs one Secure Enclave operation and 600,000 rounds of PBKDF2, the count OWASP gives
+   ([OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)).
+   Measured on an M1 Mac on 2026-11-10, the PBKDF2 alone is 0.067 seconds a guess: every six-digit
+   code in about 18 hours, every four-digit code in about 11 minutes. Not measured on a phone, and
+   the Secure Enclave's share was not measured.
+   Apple's own passcode does not have this problem because the Secure Enclave counts the attempts
+   and enforces the waits itself
+   ([Apple Platform Security](https://support.apple.com/guide/security/passcodes-and-passwords-sec20230a10d/web)).
+   An app cannot ask the Secure Enclave to count guesses of the app's own code. Signal's answer is a
+   server that counts them ([Signal](https://signal.org/blog/secure-value-recovery/)), and Outpost
+   has no server. What an app can do is make the Secure Enclave refuse to use the vault's key until
+   iOS has checked Face ID or the phone's passcode, which the Secure Enclave does count
+   ([Apple](https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/userpresence)).
+   Today only the Face ID wrapping asks for that; the code's wrapping asks for nothing but an
+   unlocked phone.
+5. Left in the clear: the lock's own record, the choice of when files open, and the outside of each
+   entry in the history file (which device wrote it, when, and in which room, by number). What each
+   entry says, and every photo, is sealed under room keys, which the lock now seals.
+
+**Recommendation for 4, three parts.** Make the code's wrapping ask for the phone's own check
+first (Face ID, or the phone's passcode), so somebody without those gets no guesses at all: that is
+two factors, and it costs a second prompt when Face ID fails. Say beside the code that a passphrase
+is what stops a thief who knows the phone's passcode. Offer *Face ID only*, with the recovery key as
+the one way back, for a member who wants that thief stopped outright. None of it can be run on a
+simulator, so it is built with the first iPhone run.
 
 <!-- COPY END 5d82a14a -->
+
+<!-- COPY BEGIN 5bab6014 [NEEDS HUMAN REVIEW] -->
+
+## A room's history setting was built on a branch that never merged
+
+Griff ruled on 2026-09-19 that a room should offer what an Outpost offers: "sharing all history, or
+only forward history, when invites are issued." It was built that day as commit `f75295a` on the
+branch `origin/desktop`, with `JoiningFromTodayTests`. That branch holds 86 commits from 2026-09-18
+to 2026-09-22 and was never merged into `main` or this branch. Twenty of its test suites exist
+nowhere else. Why it was left is not recorded.
+
+So on this branch a room hands every newcomer the newest key, and the newest key opens every
+earlier one. An Outpost does have the setting: a reader let in "from today" is handed only the keys
+after that point (`Projection.outpostFloors`).
+
+What Griff described on 2026-11-10 is wider than what was built: "rooms with settings so that people
+were allowed time windows, all, or other settings per room." No record of time windows was found in
+the docs or on either branch.
+
+**What the build on the other branch did.** The invitation said, signed, whether it carried the
+history. When a newcomer without history was let in, the inviter replaced the room's key and handed
+them only the keys after that, so the older ones could not be worked out. Because that newcomer
+cannot read the entries that made the room, the inviter also restated the room's name, members and
+rule for them.
+
+**What it does and does not change.** It decides what a newcomer can read. A member who was there
+all along still holds every key they were given, so somebody who takes that member's unlocked phone
+reads what that member could. Only deleting old keys, and with them the old messages on that phone,
+changes that.
+
+**Recommendation.** Bring the 2026-09-19 design to this branch as a setting on the room (everything,
+or from when they join), written again against today's code and not cherry-picked, because 251
+commits have landed since. Add a time window as a third choice only if Griff confirms it. It changes
+what an invitation and an admission carry, so it has to land before the first tester build. The other
+85 commits on that branch need their own pass to see what else never arrived.
+
+<!-- COPY END 5bab6014 -->
 
 <!-- COPY BEGIN 2983233d [NEEDS HUMAN REVIEW] -->
 
@@ -229,3 +329,48 @@ published, and X-Wing is published. All of it is CryptoKit.
 adopted.** This is a reading of the rule, not legal advice.
 
 <!-- COPY END 4f2530e3 -->
+
+<!-- COPY BEGIN 7146c022 [NEEDS HUMAN REVIEW] -->
+
+## An invitation to somebody this phone already knows carries its own opening
+
+Starting a Solo from the list of people, or picking people while making a room, never worked. The
+app gave the invitation the person's bare key where it expected the code that person shares, and
+decoding failed every time (seen on the rig 2026-11-04 as "Send a Solo opened nothing", fixed
+2026-11-10). An invitation is signed over a commitment from the person joining, and somebody picked
+from a list has not given one. For these invitations the inviting phone now makes the commitment
+and puts its opening in the invitation.
+
+What it is built to guarantee, for Griff to confirm:
+
+1. Picking somebody this phone already holds a key for makes an invitation they can accept without
+   a code of theirs.
+2. Only the holder of that key gets in. Somebody else who gets the link cannot use it, and an opening
+   that does not match what the invitation was signed over is ignored.
+3. An opening in an invitation never replaces one the joining phone made for its own code.
+
+What it does not do: the phrase the two phones show for one of these invitations cannot catch
+somebody who had already swapped both people's keys before the invitation was made. The inviter
+chose the opening, so such a person could search for an invitation of their own with a matching
+phrase. A code handed over in person still catches that, and so does the Solo's own check.
+
+**Recommendation: keep it, and treat the phrase on these invitations as a courtesy, not a check.**
+`InvitingSomebodyYouAlreadyKnowTests` holds the three sentences in the package. Not run on two
+accounts.
+
+<!-- COPY END 7146c022 -->
+
+<!-- COPY BEGIN cc829033 [NEEDS HUMAN REVIEW] -->
+
+## Should the app stop copying and screenshots?
+
+Griff asked on 2026-11-10 for this to be explored. Nothing has been looked into yet: what iOS lets
+an app do about screenshots and screen recording, whether copying can be turned off for a room or
+everywhere, and what either would cost somebody who needs a record of what was said to them. A
+report is a copy, for one. Today the app does neither, and a report copied from the report screen
+stays on the clipboard with no expiry.
+
+**Recommendation: none yet.** Read Apple's documentation first, then bring back what is possible and
+what each choice costs.
+
+<!-- COPY END cc829033 -->

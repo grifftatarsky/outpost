@@ -21,18 +21,19 @@ them without taking over the Mac.
 
 ## The devices
 
-Two simulators on iOS 27.2, run from Xcode 27.1, where `DeviceHub.app` replaces `Simulator.app`.
-They replaced the five-device rig of September in November 2026.
+Two simulators on iOS 27.2 (24B8117), run from Xcode 27.2. They were made on 2026-11-10, when every
+earlier simulator and the older iOS 27.2 runtime were deleted. Neither is signed in to an Apple
+Account yet, so nothing that crosses the network can run until Griff signs each into a different one.
 **Address them by `id=<UDID>`, never by `name=`**: a duplicate name once made `xcodebuild` boot a
 shut-down twin instead of the running device, and on Xcode 27 a name also means the newest iOS
 (measured 2026-09-28). `Scripts/check-all.sh`, `Scripts/check-release-leaves.sh` and
-`Scripts/scan-for-vulnerabilities.sh` look `bullet` up by name through
+`Scripts/scan-for-vulnerabilities.sh` look `outpost-alpha` up by name through
 `.github/scripts/pick-simulator.py`.
 
 | Name | UDID | Apple Account | Points |
 |---|---|---|---|
-| `bullet`, iPhone 17 Pro | `D2CC04F2-782C-495B-AEE2-D80BD21A8D43` | account A | 402 × 874 |
-| `iPhone 17`, iPhone 17 | `955E8D27-689F-45D6-9D41-D73AEE9FF887` | account B | 402 × 874 |
+| `outpost-alpha`, iPhone 17 | `5A43F953-128D-4FE6-9135-0D26520E02B6` | not signed in yet | 402 wide |
+| `outpost-beta`, iPhone 17 Pro Max | `DF6EB0C7-9FCF-45C8-A120-6349FBFA288F` | not signed in yet | 440 wide |
 
 The two are on different Apple Accounts, so they prove what two people over CloudKit can. Which
 account belongs to which device is kept outside this repository, and so is whose they are:
@@ -58,9 +59,9 @@ week's code looks exactly like a defect, and Griff has caught one twice.
 
 ```bash
 xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter \
-  -destination 'platform=iOS Simulator,id=D2CC04F2-782C-495B-AEE2-D80BD21A8D43' \
+  -destination 'platform=iOS Simulator,id=5A43F953-128D-4FE6-9135-0D26520E02B6' \
   -derivedDataPath /tmp/carpenter-dd build
-for u in D2CC04F2-782C-495B-AEE2-D80BD21A8D43 955E8D27-689F-45D6-9D41-D73AEE9FF887; do
+for u in 5A43F953-128D-4FE6-9135-0D26520E02B6 DF6EB0C7-9FCF-45C8-A120-6349FBFA288F; do
   xcrun simctl terminate "$u" com.microgpt.carpenter 2>/dev/null
   xcrun simctl install "$u" /tmp/carpenter-dd/Build/Products/Debug-iphonesimulator/Outpost.app
 done
@@ -427,6 +428,35 @@ simulator on this rig (see [What a simulator can actually do](#what-a-simulator-
 simulator proves nothing.
 
 <!-- COPY END ba46c2cf -->
+
+<!-- COPY BEGIN 0a839973 [NEEDS HUMAN REVIEW] -->
+
+### What outpost-alpha and outpost-beta have shown, 2026-11-10
+
+On the working tree of `overnight-2026-10-31` that afternoon, uncommitted, on iOS 27.2 (24B8117).
+Each is one run.
+
+- **Two accounts, in the app's test host, over CloudKit** (`LivePairSendTests`, Ann on alpha and Ben
+  on beta, 85 and 84 seconds). Ann invited Ben to a room by his code and he joined. Ann started a
+  Solo with Ben from the people she knows; Ben was let in and both ends read the same phrase. Ann
+  replaced the room's key while Ben ran no rounds; Ben's next message collected first and was sealed
+  under Ann's new key, and collecting and writing took 0.9 seconds. Ann removed Ben; Ben's next send
+  collected the removal and wrote nothing. The key was replaced by calling the session directly,
+  because a removal needs a third person and the rig has two accounts.
+- **The lock, in the app, on alpha** (`RigChecks.testANewMemberSavesTheKeyAndLocksTheApp`, under
+  `--mailbox`, so no iCloud). See [the lock's open question](open-questions.md#outposts-own-lock-seals-what-the-phone-keeps-and-what-that-costs).
+  The walk first failed on this iOS because the share sheet's Copy is a cell, not a button; the test
+  looks for both now.
+
+**A side that only waits for a file is not running rounds.** The first live run stalled for six
+minutes because Ann waited on a file while Ben still needed her next round to hand him the Solo's
+key. A side waits with `LivePair.until`, which runs rounds, unless the other side needs nothing more
+from it.
+
+Not run: the app's own screens for any of this on two accounts, a ring after a block, and the older
+live suite.
+
+<!-- COPY END 0a839973 -->
 
 <!-- COPY BEGIN b526cfb5 [NEEDS HUMAN REVIEW] -->
 

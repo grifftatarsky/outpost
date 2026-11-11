@@ -23,6 +23,121 @@ lies, and it ships invisibly because the English build looks fine.
 
 <!-- COPY END 57d4dc21 -->
 
+<!-- COPY BEGIN 57f41d12 [NEEDS HUMAN REVIEW] -->
+
+## The plan to a first tester build, 2026-11-10
+
+Written from the code and from what was measured that day, not from the rest of this page. Where
+the two disagree, this section is the newer one. The first build goes to internal testers on
+iPhone only.
+
+### What is true today
+
+- The package suite passes (2,170 tests, one known issue) and the app builds with its test targets.
+  Two things have now crossed two Apple Accounts on the simulators, once each
+  ([the rig](simulator-rig.md#what-outpost-alpha-and-outpost-beta-have-shown-2026-11-10)): a Solo
+  started from the list of people, and a message that collects from iCloud before it is written.
+  No build has run on a phone, been archived, or met the production iCloud environment.
+- Blocking takes the member off the blocked person's space and takes that person off the member's.
+  A ring is a record the sender writes in their own space, so after that nothing they write is
+  pushed to the member. Griff ruled on 2026-11-10 that this is the pattern and that Apple's
+  notification filtering entitlement is dropped.
+- With Outpost's lock on, the state file and every key kept only on this device are sealed under a
+  key that opens with the code, Face ID or the recovery key, on this phone only. While the lock is
+  shut the app reads, writes and collects nothing, and a notification says only that something
+  arrived. Walked once in the app on a simulator, where the Secure Enclave is a stand-in; never on a
+  phone ([what it costs](open-questions.md#outposts-own-lock-seals-what-the-phone-keeps-and-what-that-costs)).
+- A removal this phone had first stands against anything the removed person writes afterwards
+  ([what is still open](open-questions.md#what-a-removal-can-still-cut-and-when-a-removed-member-can-still-answer-it)).
+- A message to a room is written after the phone has collected what the room's members left in
+  iCloud ([Decisions](decisions.md#a-phone-collects-from-the-rooms-members-before-it-writes-a-message)).
+- A room's newest key opens every earlier one, and a newcomer is handed the newest key. The setting
+  Griff ruled on 2026-09-19, all history or only from joining, is on a branch that never merged
+  ([the question](open-questions.md#a-rooms-history-setting-was-built-on-a-branch-that-never-merged)).
+- Nothing reads a form no build writes
+  ([Decisions](decisions.md#nothing-reads-a-form-that-no-build-writes)).
+
+### Changed on 2026-11-10, in the working tree
+
+Not committed. Built, and run in the package suite; the two items marked were also run on the rig.
+
+- A removed member's later answer no longer undoes their removal, and a phone times the removals it
+  writes itself.
+- Outpost's lock seals what the phone keeps. The key stretch is 600,000 rounds, the lock keeps no
+  verifier for the code, and the recovery key opens the vault when the code is forgotten. *Rig.*
+- A message collects from iCloud before it is written. *Rig.*
+- Starting a Solo from the list of people makes an invitation that works
+  ([the question it raises](open-questions.md#an-invitation-to-somebody-this-phone-already-knows-carries-its-own-opening)).
+  *Rig.*
+- Entries in forms the app never writes are refused: an admission that names no invitation, a
+  device removal with no cutoff or no list of the devices that remain, a device seal without its
+  X-Wing part. About sixty tests that wrote those forms write what the app writes.
+- `ITSAppUsesNonExemptEncryption` is `false`.
+- Code that read layouts no device holds is gone: the old shared outbox zone, the keychain item
+  move, the move from the app's own container to the App Group, two renamed state keys, the legacy
+  authority flag, the bare-attestation invite, and two record types and three fields in
+  `CloudKit/schema.ckdb`.
+- Code the app never called is gone: the write budget, the abandoned-feed rule, the random-source
+  seam and seven stray helpers, with the tests that only tested those.
+- Three duplications are one thing each: the Outposts feed in the two root layouts, the app-icon and
+  notifications-off sections in the two notification screens, and the key stretch in the lock and the
+  vault. The second conversation initialiser, which dropped arguments, is gone.
+- "Hide for me" is an ordinary action with no confirmation, because it can be undone
+  ([HIG, alerts](https://developer.apple.com/design/human-interface-guidelines/alerts)).
+- Large symbols follow the member's text size, and the one label under 11 points is a caption.
+- Paste is the system's `PasteButton`.
+- 62 strings no longer say "the ask", "drawn", "collected", "log" or "entry", and no longer explain
+  both the off and the on state where the row's title already says one of them.
+- The three UI test classes that drove the app from outside the main actor are on it; the 154
+  warnings are gone.
+
+### Griff's to decide
+
+1. The room history setting: bring the 2026-09-19 design to this branch, and whether a time window
+   is a third choice (link above). It changes what an invitation carries, so it comes before a
+   tester build.
+2. The lock and guessing: make the code's wrapping ask for Face ID or the phone's passcode first,
+   and offer *Face ID only* (link above). Also items 2 and 5 of what the lock costs.
+3. The three sentences for an invitation to somebody already known (link above).
+4. The third open case of a removal: a member still in an open room who names a short line (link
+   above).
+5. Erasing after wrong codes when the app was started behind the lock: the phone is erased, and the
+   member's other devices are not told, because the key that signs that notice is sealed. Keeping a
+   signed notice outside the vault would fix it and would let anybody holding the phone's files
+   remove the member's devices.
+
+### Left to do, in order
+
+1. The room history setting, if Griff says yes to decision 1.
+2. Go through the other 85 commits on `origin/desktop` and list what never reached this branch.
+3. On the rig, in the app's own screens: a Solo from the list of people, a removal, a block, and
+   each screen changed above. The older live suite has not been run on these two simulators.
+4. Walk the rest of the lock on a simulator (changing the code, the recovery key, turning it off),
+   then all of it on an iPhone, where the Secure Enclave half runs for the first time. Build
+   decision 2 with that run.
+5. Make the target iPhone only and portrait only, then archive and validate once. Expect questions
+   about two Mac-only entries in the iPhone entitlements and an empty share-access entry on the
+   extension.
+6. Import the pruned schema into development, compare it with what development holds, deploy to
+   production, and run two accounts against production.
+7. Define `APP_CONTACT_FORM_URL`; the Contact row never shows without it. Give a tester a way to
+   send logs: the diagnostics export does nothing in a Release build.
+8. Commit today's work as separate commits, push the branch and let CI run it. No job archives or
+   uploads yet.
+9. Put the eleven sheets on the rooms view behind one `enum` and one `.sheet(item:)`. Two of them
+   hand over to another sheet, and that has to be watched on a device.
+10. Move the accessors only tests call out of the app, about twenty of them. Rename
+    `legacySecret(with:)`: it is the pair's base secret and in daily use.
+11. Count test waits in attempts, not seconds. A test that takes one second alone reports seventy in
+    the full run because it queues behind two thousand others, and the waits give up after sixty
+    seconds of wall clock.
+12. Copy: the 65 strings over 200 characters, the lock's pages now that it seals, the page that names
+    other messaging apps, and the banner that promises testers a free year with no purchase code
+    behind it.
+13. On two real iPhones: rings, a second device on one account, and the lock.
+
+<!-- COPY END 57f41d12 -->
+
 <!-- COPY BEGIN 04dcaec6 [NEEDS HUMAN REVIEW] -->
 
 ## Every sentence a member reads, checked against the build
@@ -330,8 +445,9 @@ Added 2026-09-16, from Griff.
   has `label` and there are three record types for the space kept per contact: `PairInfo`,
   `PairReceipt` and `PairRing`. `CloudKit/schema.ckdb` has them all; import it into development first
   (the command is in `CloudKit/README.md`), because development has to have them before production
-  does. Check with `xcrun cktool export-schema … --environment production | grep "RECORD TYPE"` — ten
-  lines.
+  does. Check with `xcrun cktool export-schema … --environment production | grep "RECORD TYPE"` — eight
+  lines since 2026-11-10, when `MessageBell`, `OutboxShareOffer`, `receiptTags`, `receiptValues` and
+  `attachmentID` left the file because no code writes them.
 - **The trap, and it was walked into once.** There is a second container,
   `iCloud.com.microgpt.carpenter`, which is **not the app's**. `APP_ICLOUD_CONTAINER` resolves to
   `…outpost`, the built entitlement carries `…outpost`, and `CKContainer.default()` takes the first
@@ -400,9 +516,9 @@ Added 2026-09-16, from Griff.
   ([Decisions](decisions.md#the-source-is-published-under-the-mozilla-public-license-20)). Publishing
   it is still to happen with the build — [App Store §3](app-store.md#3-export-compliance) rests the
   export position on it.
-- **Done.** **`ITSAppUsesNonExemptEncryption` is `true`** in `App/Carpenter/Info.plist`, 2026-09-17, as
-  [App Store §3](app-store.md#3-export-compliance) says. App Store Connect still asks Apple's
-  questionnaire; this is not verified to stop it asking again per build.
+- **Done.** **`ITSAppUsesNonExemptEncryption` is `false`** in `App/Carpenter/Info.plist`, 2026-11-10, as
+  [App Store §3](app-store.md#3-export-compliance) says. It was `true` from 2026-09-17. Not verified
+  against App Store Connect: no build has been uploaded.
 - **Done.** **The rig's iCloud sign-ins.** Both lapsed on 2026-09-17 ("bad or missing auth token"); Griff
   reset alpha and signed alpha and beta back in the same day, and the live deletion test ran on beta.
 - **Done.** The privacy policy and the store EULA carry the report-retention section, written 2026-09-15 in

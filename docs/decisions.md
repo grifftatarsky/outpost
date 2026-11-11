@@ -1495,6 +1495,38 @@ failed log write already did. Sending stops with it.
 
 <!-- COPY END 977b4dcb -->
 
+<!-- COPY BEGIN 23a0fa0f [NEEDS HUMAN REVIEW] -->
+
+### A phone collects from the room's members before it writes a message
+
+**RULED 2026-11-10 by Griff:** "A phone should fetch from iCloud before it sends (the actual send
+method, not the button, since you can send and it can fail to reach icloud)." How it is done is
+**PROPOSED** by Claude the same day. **Built**, and run once on two Apple Accounts.
+
+**What it guarantees.** A message is sealed only after this phone has collected what the room's
+members left for it in iCloud, when iCloud answers. So a removal or a new room key that has reached
+iCloud is applied before the message is sealed. A member who learns in that read that they were
+removed writes nothing and is told so. When iCloud does not answer, the message is still written
+under the newest key the phone holds, is marked as not sent, and goes out at the next round.
+
+**How.** `AppSession.send(_:to:after:)` and the media send run a read-only round over the room's
+members, then write. A read-only round collects, checks, keeps keys and removals and saves; it
+acknowledges nothing and sends nothing, so it can run beside an ordinary round. A post on the
+member's own Outpost does not read first, because only its owner changes its key.
+
+**What it costs.** A send waits for one read of each member's space, one after another. Measured
+once on two accounts on 2026-11-10: 0.9 seconds for a room of two. A larger room was not measured.
+Without the read, the same message is sealed under the key the removed person still holds;
+`AMessageWaitsForWhatICloudHoldsTests` holds both cases.
+
+**What it does not cover.** Reactions, edits and membership entries are written without reading
+first. A removal that has not reached iCloud cannot be read by anybody.
+
+**What would change it:** a measured wait in a large room that members notice, at which point the
+reads run side by side or the read is limited to members who have written since the last round.
+
+<!-- COPY END 23a0fa0f -->
+
 <!-- COPY BEGIN 3db4b458 [NEEDS HUMAN REVIEW] -->
 
 ## Cryptography
@@ -6434,6 +6466,42 @@ findings could fail a commit too and the seven rules could come back on.
 
 <!-- COPY END 7a1e64c5 -->
 
+<!-- COPY BEGIN 9ff7b33b [NEEDS HUMAN REVIEW] -->
+
+### Nothing reads a form that no build writes
+
+**RULED 2026-11-10 by Griff:** "Get rid of the older layout stuff", and earlier the same day, of code
+that read old data formats, "Any cruft like that is fair game." **Built.**
+
+No build has reached a tester, so nothing written by an older build exists. Each time a format
+gained a field, the code kept accepting the form without it and treated it by the rule the field had
+replaced. Only somebody running a modified app could write such an entry, and the older rule was the
+weaker one each time. Those branches are gone:
+
+- An admission names the invitation it answers. One that names none used to count for whatever
+  invitation that person had open.
+- A device removal carries the device that made it, the last entry of the removed device it had
+  seen, and the devices that remain. One with no cutoff used to go by the date its author wrote, and
+  one with no list left the devices the removed one had approved in place.
+- A key sealed to a device carries its X-Wing part at its exact size, and a join confirmation
+  carries its opening.
+- An Outpost access change, a comment count and a device approval carry every field the app writes.
+
+`DeviceRevocation` and `AdmissionBody` have no optional field left for these, so the weaker form
+cannot be built or decoded. About sixty tests that wrote the older forms now write what the app
+writes.
+
+**Left as they are.** A sync packet and a repair request treat a missing list as an empty one, which
+changes no rule. What a member's own devices write for each other, and the state file, are still
+read field by field.
+
+**What it costs.** The day a build reaches testers this stops being free: a changed format then
+needs a version number and a reader for the version before it.
+
+**What would change it:** the first tester build.
+
+<!-- COPY END 9ff7b33b -->
+
 <!-- COPY BEGIN da54c3de [NEEDS HUMAN REVIEW] -->
 
 ## Superseded
@@ -6444,7 +6512,10 @@ Kept briefly so nobody re-derives them.
   *visual*, which stops it waking the app. Both silent subscriptions are silent; the badge is unset.
 - **"A notification extension cannot suppress a push."** True by default and incomplete: it can, with
   `com.apple.developer.usernotifications.filtering`, which needs Apple's approval. Not pursued —
-  scoping the subscription removed the need.
+  scoping the subscription removed the need. **RULED 2026-11-10:** Griff dropped it for blocking too.
+  A blocked person's ring is a record in their own space, and blocking takes the member off that
+  space, so iCloud has nothing of theirs to push. A ring that lands between the tap and the phone
+  reaching iCloud is accepted.
 - **"Spurious notifications cannot be fixed without going silent."** False. `recordType` scopes a
   subscription, including on the shared database, and nothing was using it.
 - **`pushingOutgoing: false` means the extension does not write.** It skipped the send and left the

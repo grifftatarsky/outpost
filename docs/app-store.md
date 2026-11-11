@@ -223,11 +223,15 @@ There is nothing to send to anyone.
 
 ### What to put in App Store Connect
 
-**`ITSAppUsesNonExemptEncryption` = `true`** — set in `App/Carpenter/Info.plist` on 2026-09-17 — and
-answer Apple's questionnaire honestly. Being
-outside the EAR is a US export question; Apple's questions are Apple's own. Do not answer `false` —
-that answer exists for apps whose encryption is incidental, like an HTTPS call, and this app's
-entire purpose is encryption.
+**`ITSAppUsesNonExemptEncryption` = `false`**, set in `App/Carpenter/Info.plist` on 2026-11-10. It
+was `true` from 2026-09-17, on the reading that an app whose purpose is encryption should not answer
+`false`. Apple's own page says otherwise: the value is `NO` when an app "only uses forms of
+encryption that are exempt from export compliance documentation requirements", and encryption built
+into the operating system is the example it gives
+([Apple](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations)).
+Every primitive the app calls is CryptoKit, CommonCrypto or Security, checked by grep the same day,
+and the package has no dependencies. Being outside the EAR is a separate US export question. This is
+a reading of Apple's pages, not legal advice.
 
 Apple's documentation table is about what you must *upload*, which is narrower:
 
