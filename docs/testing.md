@@ -39,7 +39,7 @@ Each epic has its own test plan: [Messaging](epics/messaging.md#test-plan),
 
 | Suite | Runs with | Covers |
 |---|---|---|
-| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,237 tests in 400 suites on 2026-11-11, in about 305 seconds; four known issues that run. `Scripts/test-package.sh` runs the same suite as six processes in about 215 seconds. |
+| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,264 tests in 412 suites on 2026-11-12, in about 305 seconds; nine known issues. `Scripts/test-package.sh` runs the same suite as six processes in about 250 seconds. |
 | App suite, `App/CarpenterTests` | `xcodebuild test … -only-testing:CarpenterTests` | What needs a real app bundle: the system keychain, and the live CloudKit tests, which are off unless asked for. |
 | UI tests, `App/CarpenterUITests` | `xcodebuild test … -only-testing:CarpenterUITests/<class>` | Apple's accessibility audit, a contrast audit per accent, a label check, and the rig steps. |
 
@@ -371,6 +371,14 @@ report sees zero and passes.
 A fake that is easier than the real thing hides the bugs the real thing has. `TheFakeIsNoEasierTests`
 holds each in-memory stand-in to the rules its real counterpart enforces. Add to it when a seam gains
 a rule.
+
+**The mailbox's rules are one piece of code run against both.** `MailboxContract`
+(`Sources/CarpenterKitTesting/MailboxContract.swift`) holds eleven checks. A check throws an error
+that names the rule it broke. `TheFakeKeepsTheMailboxContractTests` runs all eleven against the
+in-memory mailbox under `swift test`. `CloudKitMailboxTests` runs the five about one's own space
+against iCloud on one account, and `LivePairContractTests` runs the six about a pair on two, a side
+on each simulator. All eleven passed against iCloud on 2026-11-12. A new rule for the mailbox goes
+here first, so the fake cannot be given a rule the real one was never asked.
 
 | Seam | Rule the real one enforces | How the fake used to be easier |
 |---|---|---|

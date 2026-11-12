@@ -513,6 +513,11 @@ Apple Account, from derived data deleted first. Each is one run.
   tests in 12 suites on one account, then both pair suites at about 70 seconds a side. Five other
   builds were running on the Mac at the time.
 
+- **The mailbox's eleven rules hold on iCloud** (2026-11-12, the build at `b4a6f54` with the
+  checks added). The five about one's own space ran in the one-account suite, 66 tests in 13
+  suites; the six about a pair ran as `LivePairContractTests`, a side on each account. They are the
+  same checks the in-memory mailbox passes under `swift test`.
+
 **What that does and does not show about the twelve fixes.** The two accounts are two people with
 one device each. Nine of the twelve faults need a third person or a second device on one account, so
 on the rig their fixes were only shown not to break two people talking. Their evidence is the

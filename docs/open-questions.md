@@ -532,6 +532,81 @@ Whether a real phone can get into that state was not checked.
 
 <!-- COPY END 0fc0cd18 -->
 
+<!-- COPY BEGIN 7e8fde84 [NEEDS HUMAN REVIEW] -->
+
+## A phone restored with the recovery key reaches nobody when the old phone is gone
+
+Found 2026-11-12 by a many-device test (`CarolComesBackWithHerRecoveryKeyTests`), every run, and
+confirmed by reading `restore(fromRecoveryKey:)`. Not run on the rig.
+
+Carol's only phone is lost. She installs the app on a new phone and types her recovery key. She is
+the same member again, with a new device. And that is all: the new phone holds no rooms, no keys
+and nobody to write to, and nothing ever arrives. Her friends still list her and keep writing to her.
+
+Why. A restored phone learns its rooms and its people from the member's old phone, which hands them
+over when it hears it was replaced. The tests that hold the restore all leave the old phone running.
+With it gone, what it left in iCloud for its sibling is sealed to devices that no longer exist, the
+new phone's list of people in touch is empty, and a round only talks to people on that list.
+
+[The identity page](epics/identity-and-devices.md) says the only device being gone is "the case the
+key exists for". On the same Apple Account the new phone could do better: the old phone's small
+state record is readable with the identity alone and names the people she knew, and her own spaces
+for them are still in her iCloud. From those it could find her friends and ask them for what was
+said. What they then send her, room keys included, is not written down anywhere and needs deciding
+with it.
+
+**I would:** build it before a tester build, starting from three sentences for Griff to confirm:
+a member who restores on the same Apple Account finds the people she knew without the old phone;
+each of them sends what the rules already let a restored member have; a stranger with the recovery
+key and a different Apple Account gets nothing from iCloud and has to be let in again.
+
+**Found beside it, by a throwaway probe and not held by a test.** Two restores of one member are
+put in order by the dates the restoring phones wrote. A phone restored with its clock two hours
+behind the lost phone's certificate was treated as the older one, counted as replaced, and erased
+itself: six runs of six. With no clock difference it did not happen. This is
+[a date a device writes is not an order](crypto-brief.md) again. *I would:* order restores by when
+iCloud stored them, as approvals and removals already are, and hold it with a test.
+
+<!-- COPY END 7e8fde84 -->
+
+<!-- COPY BEGIN 80133628 [NEEDS HUMAN REVIEW] -->
+
+## A removed member who has not heard can hand her room keys to a second identity
+
+Found 2026-11-12 by a many-device test (`ARemovedMembersSecondIdentityGetsNobodyInTests`), in the
+two cases where Erin invites Eve before Erin has heard she was removed. Erin's phone still counts
+Eve as let in, makes a new key and hands Eve every key it holds. The room is not fooled: its four
+members show four members and no open invitation, and nothing written after the removal opens for
+Eve. What Eve gets is history Erin could already read and could have copied out by hand.
+
+**I would:** leave it and say so. Stopping it needs Erin's own phone to refuse, and her phone is the
+one that has not heard. The test is kept as a known issue until Griff says it is not a fault.
+
+<!-- COPY END 80133628 -->
+
+<!-- COPY BEGIN 2b4bfabc [NEEDS HUMAN REVIEW] -->
+
+## Blocking somebody does not stop them reading you in a room you share with others
+
+Found 2026-11-12 by a many-device test (`AHoleAndABlockAmongFiveTests`), every run. The decision on
+blocking, which is **PROPOSED** and Griff has not been asked, promises: "While you block somebody,
+they cannot read anything new you write." That holds between two people. In a room of three or more
+it does not: Carol blocks Dave, her own phone stops sending to him, and Alice, Bob and Erin pass her
+messages on, sealed under the room key Dave still holds. They do not know she blocked him, and
+telling them would tell the room.
+
+The app's own words are already the true ones. The alert on blocking says the person "no longer
+appears anywhere on your devices" and that "what they can read of yours doesn't change."
+
+**I would:** change the decision to say what the app says. Blocking hides somebody from you and
+stops their rings. To stop them reading you in a shared room, remove them from it or leave it. The
+other way, giving the room a new key that Dave is not sent, is a removal under another name, and
+the room would see it.
+
+The test is kept as a known issue until the decision says which.
+
+<!-- COPY END 2b4bfabc -->
+
 <!-- COPY BEGIN 770379fb [NEEDS HUMAN REVIEW] -->
 
 ## A reader let in "from now" when the owner posts from two devices

@@ -17,6 +17,12 @@ Nothing below is built until he answers. Each line has a recommendation where it
    ([the list](open-questions.md#twelve-faults-the-many-device-tests-found)). All twelve faults are
    fixed. Two of the six let a removed device keep something it should not, and each has a
    recommendation.
+1. **Three things the later scenarios found.** A phone restored with the recovery key
+   [reaches nobody when the old phone is gone](open-questions.md#a-phone-restored-with-the-recovery-key-reaches-nobody-when-the-old-phone-is-gone),
+   which is the first to answer. Blocking
+   [does not stop somebody reading you in a room you share with others](open-questions.md#blocking-somebody-does-not-stop-them-reading-you-in-a-room-you-share-with-others).
+   A removed member who has not heard
+   [can hand her keys to a second identity](open-questions.md#a-removed-member-who-has-not-heard-can-hand-her-room-keys-to-a-second-identity).
 2. **A reader let in "from now" when the owner posts from two devices**
    ([the question](open-questions.md#a-reader-let-in-from-now-when-the-owner-posts-from-two-devices)).
    Today's fix is a trade. Say whether it stays, and whether the entry that lets a reader in should
@@ -52,9 +58,10 @@ Nothing below is built until he answers. Each line has a recommendation where it
    packet changes.
 3. Send each person only what they may read (a lost ruling, if it stands), then the room history
    setting, which leans on it.
-4. Tests: the shared checks run against the fake and against iCloud; `Scripts/smoke-two-accounts.sh`;
-   scenarios 13 to 26; move `ScannedFieldsTests` into the package. The suite's time: `swift test` takes
-   about 305 seconds and `Scripts/test-package.sh` about 215, by running six processes.
+4. Done 2026-11-12: the shared mailbox checks, run against the fake and against iCloud;
+   `Scripts/smoke-two-accounts.sh`; scenarios 13 to 26; `ScannedFieldsTests` in the package; and
+   `Scripts/test-package.sh`, which runs the suite as six processes. Scenarios 14 and 20 were already
+   held by suites from the first twelve.
 5. The lock on a simulator with Face ID enrolled (`RigChecks` does not enrol one yet), then on an
    iPhone, where the Secure Enclave runs for the first time.
 6. The chat list, once picked. Then the notification settings that are saved and read by nothing.
