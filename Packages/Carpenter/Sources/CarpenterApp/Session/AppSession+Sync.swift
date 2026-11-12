@@ -138,7 +138,7 @@ extension AppSession {
         do {
             report = try await session.send(
                 sending, to: membersFirst(reachable, carrying: sending), certificates: knownCertificates(),
-                revocations: persisted.revocations,
+                revocations: removalsToTellFriends(),
                 granting: owedGrants.map { (to: $0.to, grant: $0.grant) }, at: clock.now,
                 ringing: ringing,
                 identities: knownIdentities(), notifyWalls: sayingWishes,

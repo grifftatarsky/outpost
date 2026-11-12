@@ -132,6 +132,11 @@ extension AppSession {
         }
     }
 
+    func removalsToTellFriends() -> [DeviceRevocation] {
+        guard let me = enrolment?.identity.id, let registry = replica.registry(for: me) else { return [] }
+        return registry.removalsInForce.sorted { $0.digest.lexicographicallyPrecedes($1.digest) }
+    }
+
     func ownAuthorityDigest() -> Data? {
         guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return nil }
         let digests = (registry.certificates.map(\.digest) + registry.knownRevocations.map(\.digest))

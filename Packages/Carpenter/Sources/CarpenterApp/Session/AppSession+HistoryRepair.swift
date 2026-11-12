@@ -272,7 +272,7 @@ extension AppSession {
             do {
                 let sent = try await session.send(
                     fitting, to: [peer], certificates: knownCertificates(),
-                    revocations: persisted.revocations, at: clock.now, answers: [answer],
+                    revocations: removalsToTellFriends(), at: clock.now, answers: [answer],
                     identities: knownIdentities(), withholding: withheld)
                 noteWritten(sent)
                 report = report.adding(sent)

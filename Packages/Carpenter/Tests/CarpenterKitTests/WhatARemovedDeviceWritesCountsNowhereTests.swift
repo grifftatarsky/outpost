@@ -161,13 +161,11 @@ struct WhatARemovedDeviceWritesCountsNowhereTests {
         try await g.settle()
         #expect(g.shows("still here", in: room, on: "Alice's laptop"))
 
-        withKnownIssue("a friend orders two removals that reach it together by the dates their devices wrote") {
-            for name in ["Bob", "Carol", "Dave"] {
-                #expect(
-                    g.devices(of: "Alice", seenBy: name) == survivors,
-                    "\(name) does not keep the device whose removal iCloud stored first")
-                #expect(g.shows("still here", in: room, on: name), "\(name) cannot read the surviving device")
-            }
+        for name in ["Bob", "Carol", "Dave"] {
+            #expect(
+                g.devices(of: "Alice", seenBy: name) == survivors,
+                "\(name) does not keep the device whose removal iCloud stored first")
+            #expect(g.shows("still here", in: room, on: name), "\(name) cannot read the surviving device")
         }
     }
 }

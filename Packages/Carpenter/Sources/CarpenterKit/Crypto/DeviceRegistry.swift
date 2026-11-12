@@ -99,6 +99,10 @@ public struct DeviceRegistry: Hashable, Sendable {
 
     public var knownRevocations: [DeviceRevocation] { Array(revocations) }
 
+    public var removalsInForce: [DeviceRevocation] {
+        revocations.filter { standings[$0.device]?.revokedAt != nil }
+    }
+
     public var lastRestoredDevice: DeviceID? {
         let roots = submitted.values.filter(\.isRecovery)
         guard roots.count > 1 else { return nil }

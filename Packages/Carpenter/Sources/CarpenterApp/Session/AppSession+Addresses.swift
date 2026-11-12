@@ -141,7 +141,7 @@ extension AppSession {
                     salt, from: enrolment.identity.id, by: enrolment.device, to: peer.them, devices: devices)
                 let sent = try await session.send(
                     [], to: [Peer(secret: legacy, them: peer.them, me: peer.me)],
-                    certificates: knownCertificates(), revocations: persisted.revocations, at: clock.now,
+                    certificates: knownCertificates(), revocations: removalsToTellFriends(), at: clock.now,
                     addresses: [announcement])
                 noteWritten(sent)
                 guard let packet = sent.written.first?.packet else { continue }
