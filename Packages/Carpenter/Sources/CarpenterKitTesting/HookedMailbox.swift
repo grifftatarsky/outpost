@@ -229,6 +229,11 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
             }, failing: lands)
     }
 
+    public func lookAgain() async {
+        view = nil
+        await inner.lookAgain()
+    }
+
     public func upload(_ copies: PhotoCopies, in pairs: Pairs) async throws {
         let lands = try await pass(.upload)
         try await landed({ try await inner.upload(copies, in: pairs) }, failing: lands)

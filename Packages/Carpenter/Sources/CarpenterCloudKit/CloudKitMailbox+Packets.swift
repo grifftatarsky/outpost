@@ -66,6 +66,10 @@ extension CloudKitMailbox {
         try await remove([id.recordName])
     }
 
+    public func lookAgain() async {
+        await index.invalidate()
+    }
+
     // MARK: Shared by packets and photos
 
     func answer(_ name: String, with receipt: SealedReceipt, to peer: ParticipantID, in pairs: Pairs) async throws {

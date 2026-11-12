@@ -64,4 +64,6 @@ public struct SignedInMailbox: Mailbox {
     public func withdraw(_ id: PacketID, in pairs: Pairs) async throws {
         await base.acting(as: account) { $0.withdraw(id, in: pairs) }
     }
+
+    public func lookAgain() async {}
 }

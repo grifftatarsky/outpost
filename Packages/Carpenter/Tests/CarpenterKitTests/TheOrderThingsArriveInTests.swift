@@ -23,12 +23,8 @@ struct TheOrderThingsArriveInTests {
         await g.takeTurns("Alice")
         try? await g["Bob"].send("after my removal", to: room, after: g.door("Bob"))
 
-        withKnownIssue("the read before a send goes through a view of iCloud up to two seconds old") {
-            #expect(!g.shows("after my removal", in: room, on: "Bob"), "Bob wrote into a room he had been removed from")
-            #expect(g["Bob"].roster(of: room).removal(of: g.id("Bob")) != nil, "Bob was not told he was removed")
-        } when: {
-            viewIsHeld
-        }
+        #expect(!g.shows("after my removal", in: room, on: "Bob"), "Bob wrote into a room he had been removed from")
+        #expect(g["Bob"].roster(of: room).removal(of: g.id("Bob")) != nil, "Bob was not told he was removed")
     }
 
     @Test(

@@ -378,6 +378,8 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
         store.withdraw(id, as: seat(pairs))
     }
 
+    public func lookAgain() {}
+
     // MARK: Photos
 
     public func upload(_ copies: PhotoCopies, in pairs: Pairs) throws {

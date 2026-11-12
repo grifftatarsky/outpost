@@ -46,6 +46,7 @@ extension AppSession {
     }
 
     func collectBeforeWriting(to room: RoomID, through mailbox: any Mailbox) async {
+        await mailbox.lookAgain()
         do {
             try await sync(through: mailbox, mode: .readOnly, from: roster(of: room).members)
         } catch {

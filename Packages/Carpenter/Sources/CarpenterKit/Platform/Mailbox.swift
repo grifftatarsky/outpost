@@ -268,4 +268,6 @@ public protocol Mailbox: Sendable {
     func sentPackets(in pairs: Pairs) async throws -> [PacketID: SentPacket]
 
     func withdraw(_ id: PacketID, in pairs: Pairs) async throws
+
+    func lookAgain() async
 }

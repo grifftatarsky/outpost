@@ -72,4 +72,6 @@ public actor FileMailbox: Mailbox {
     }
 
     public func withdraw(_ id: PacketID, in pairs: Pairs) throws { try change { $0.withdraw(id, as: self.account(in: pairs)) } }
+
+    public func lookAgain() {}
 }

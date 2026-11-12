@@ -86,6 +86,8 @@
 
         func withdraw(_ id: PacketID, in pairs: Pairs) throws { try change { $0.withdraw(id, as: self.account(in: pairs)) } }
 
+        func lookAgain() {}
+
         func upload(_ copies: PhotoCopies, in pairs: Pairs) throws {
             try change(writing: true) { try $0.upload(copies, in: pairs, as: self.account(in: pairs), at: Date()) }
         }
