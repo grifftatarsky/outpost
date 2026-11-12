@@ -100,7 +100,9 @@ public struct DeviceRegistry: Hashable, Sendable {
     public var knownRevocations: [DeviceRevocation] { Array(revocations) }
 
     public var removalsInForce: [DeviceRevocation] {
-        revocations.filter { standings[$0.device]?.revokedAt != nil }
+        revocations.filter { removal in
+            standings[removal.device].map { $0.revokedAt != nil && $0.revokedBy == removal.revokedBy } ?? false
+        }
     }
 
     public var lastRestoredDevice: DeviceID? {

@@ -103,7 +103,11 @@ struct WhatARemovedDeviceWritesCountsNowhereTests {
         let oldHeldAtTheEnd = try #require(g[old].chains[room])
         let aFriendWasBehindTheOther = hearing.bobHearsFirst != hearing.carolHearsFirst
         for name in everyone {
-            if !aFriendWasBehindTheOther {
+            if aFriendWasBehindTheOther {
+                #expect(
+                    g.key(of: room, on: name) != keyAtTheRemoval,
+                    "\(name) still writes under a key a friend handed to the removed phone: \(fingerprints)")
+            } else {
                 #expect(
                     g.key(of: room, on: name) == keyAtTheRemoval, "\(name) writes under another key: \(fingerprints)")
             }
@@ -167,5 +171,40 @@ struct WhatARemovedDeviceWritesCountsNowhereTests {
                 "\(name) does not keep the device whose removal iCloud stored first")
             #expect(g.shows("still here", in: room, on: name), "\(name) cannot read the surviving device")
         }
+    }
+    @Test("A removal a removed device wrote is never passed on, even after its target is removed for real")
+    func aRemovedDevicesRemovalIsNeverPassedOn() async throws {
+        let g = try await Gathering.of("Alice", "Bob")
+        _ = try await g.room("Lanterns", host: "Alice", guests: ["Bob"])
+        try await g.secondDevice("Alice's tablet", of: "Alice")
+        try await g.secondDevice("Alice's old phone", of: "Alice")
+        let tabletKeys = try #require(g["Alice's tablet"].enrolment)
+        let (tablet, old) = (g.device("Alice's tablet"), g.device("Alice's old phone"))
+        g.away("Alice's tablet", "Bob")
+
+        try await g["Alice"].revoke(tablet)
+        try await g.quiesce()
+        let forged = try DeviceRevocation.issue(
+            for: old, by: tabletKeys.identity, at: TestSession.now.addingTimeInterval(-3_600), from: tabletKeys.device,
+            cutoff: 0, head: nil, remaining: [tablet])
+        let record = try AuthorityEvent.removed(forged).record(sealedFor: tabletKeys.identity, by: tabletKeys.device.id)
+        try await g.relay(of: "Alice").place(record.name, record.sealed)
+        await g["Alice"].refreshDeviceSync()
+        try await g.quiesce()
+        let registry = try #require(g["Alice"].replica.registry(for: g.id("Alice")))
+        try #require(registry.knownRevocations.contains(forged), "precondition: Alice's phone holds the forged removal")
+        try #require(registry.activeDevices.contains(old), "precondition: the forged removal took effect on Alice's phone")
+
+        try await g["Alice"].revoke(old)
+        try await g.quiesce()
+        let told = g["Alice"].removalsToTellFriends()
+        #expect(!told.contains(forged), "Alice passes on a removal written by a device she had already removed")
+        #expect(told.count == 2, "Alice tells friends of \(told.count) removals, not her own two")
+
+        g.back("Bob")
+        try await g.settle(inOrder: ["Alice", "Bob"])
+        #expect(
+            g.devices(of: "Alice", seenBy: "Bob") == [g.device("Alice")],
+            "Bob, hearing every removal at once, does not keep exactly Alice's phone")
     }
 }
