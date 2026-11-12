@@ -6,6 +6,12 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
         case account, space, spaceForACode, claim, join, reads, close, stopSharing, leave
         case put, fetch, ring, acknowledge, sentPackets, withdraw
         case upload, download, acknowledgeCopy, ownCopy, storedCopies, delete
+
+        var alwaysSaves: Bool {
+            [.spaceForACode, .claim, .put, .ring, .acknowledge, .upload, .acknowledgeCopy].contains(self)
+        }
+        var deletes: Bool { [.withdraw, .delete, .close, .stopSharing, .leave].contains(self) }
+        var readsICloud: Bool { [.fetch, .sentPackets, .reads, .download, .ownCopy, .storedCopies].contains(self) }
     }
 
     public struct Made: Sendable, Equatable {
@@ -19,6 +25,7 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
         var times: Int
         let error: MailboxError
         let landing: Bool
+        let peer: ParticipantID?
     }
 
     public let inner: InMemoryMailbox
@@ -30,11 +37,14 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
     private var silentAfter: Int?
     private var failingCalls: Set<Int> = []
     private var refusal: MailboxFailure?
+    private var savesRefused: (failure: MailboxFailure, deletes: Bool)?
     private var unreachable: Set<ParticipantID> = []
     private var unreadable: Set<ParticipantID> = []
     private var toSkip: Set<PacketID> = []
     private var skipped: [ParticipantID: (space: Set<String>, packets: Set<PacketID>)] = [:]
     private var view: LocalPairStore?
+    private var landingOnly: Set<ParticipantID>?
+    private var joinsNotYetNamed = 0
 
     public init(inner: InMemoryMailbox = InMemoryMailbox()) {
         self.inner = inner
@@ -43,6 +53,10 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
     public func onPut(_ work: @escaping @Sendable () async -> Void) { duringPut = work }
     public func onFetch(_ work: @escaping @Sendable () async -> Void) { duringFetch = work }
     public func refuse(_ failure: MailboxFailure) { refusal = failure }
+
+    public func refuseEverySave(_ failure: MailboxFailure, deletesToo: Bool = true) {
+        savesRefused = (failure, deletesToo)
+    }
     public func cannotReach(_ peer: ParticipantID) { unreachable.insert(peer) }
     public func reachesEveryone() { unreachable = [] }
     public func cannotCollect(from peer: ParticipantID) { unreadable.insert(peer) }
@@ -50,6 +64,7 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
 
     public func relent() {
         refusal = nil
+        savesRefused = nil
         silentAfter = nil
     }
 
@@ -57,11 +72,19 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
         steps[calls.count + number] = work
     }
 
-    public func fail(_ call: Call, times: Int = 1, with error: MailboxError = .unavailable, landing: Bool = false) {
-        planned.append(Planned(call: call, times: times, error: error, landing: landing))
+    public func fail(
+        _ call: Call, times: Int = 1, with error: MailboxError = .unavailable, landing: Bool = false,
+        to peer: ParticipantID? = nil
+    ) {
+        planned.append(Planned(call: call, times: times, error: error, landing: landing, peer: peer))
     }
 
-    public var faultsPending: Int { planned.count + failingCalls.count + steps.count + toSkip.count }
+    public func answerJoinNotYetNamed(times: Int) { joinsNotYetNamed += times }
+
+    public var faultsPending: Int {
+        planned.count + failingCalls.count + steps.count + toSkip.count + (landingOnly == nil ? 0 : 1)
+            + joinsNotYetNamed
+    }
 
     public func forgetSteps() {
         steps = [:]
@@ -76,6 +99,8 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
 
     public func skip(_ packet: PacketID) { toSkip.insert(packet) }
 
+    public func landOnlyTheCopies(for peers: Set<ParticipantID>) { landingOnly = peers }
+
     public func holdView() async { view = await inner.view() }
 
     public func refreshView() { view = nil }
@@ -88,7 +113,12 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
         if let step = steps.removeValue(forKey: number) { await step() }
         if let silentAfter, number > silentAfter { throw MailboxError.unavailable }
         if failingCalls.remove(number) != nil { throw MailboxError.unavailable }
-        guard let index = planned.firstIndex(where: { $0.call == call }) else { return nil }
+        if let savesRefused {
+            if call.alwaysSaves || (call.deletes && savesRefused.deletes) { throw savesRefused.failure }
+            if call.readsICloud && savesRefused.failure == .notSignedIn { throw MailboxError.unavailable }
+        }
+        guard let index = planned.firstIndex(where: { $0.call == call && ($0.peer == nil || $0.peer == peer) })
+        else { return nil }
         planned[index].times -= 1
         let fault = planned[index]
         if fault.times <= 0 { planned.remove(at: index) }
@@ -157,7 +187,17 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
 
     public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> URL {
         let lands = try await pass(.space, peer)
+        if let savesRefused, try await savesASpace(for: peer, naming: account, in: pairs) {
+            throw savesRefused.failure
+        }
         return try await landed({ try await inner.space(for: peer, naming: account, in: pairs) }, failing: lands)
+    }
+
+    private func savesASpace(for peer: ParticipantID, naming account: String?, in pairs: Pairs) async throws -> Bool {
+        var probe = await inner.view()
+        let before = probe.spaces.mapValues(\.named)
+        _ = try probe.space(for: peer, naming: account, in: pairs, as: await inner.account(in: pairs))
+        return probe.spaces.mapValues(\.named) != before
     }
 
     public func spaceForACode(in pairs: Pairs) async throws -> URL {
@@ -174,6 +214,10 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
 
     public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) async throws -> JoinOutcome {
         let lands = try await pass(.join, peer)
+        if joinsNotYetNamed > 0 {
+            joinsNotYetNamed -= 1
+            return .notYetNamed
+        }
         return try await landed({ await inner.join(link, of: peer, in: pairs) }, failing: lands)
     }
 
@@ -236,6 +280,12 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
 
     public func upload(_ copies: PhotoCopies, in pairs: Pairs) async throws {
         let lands = try await pass(.upload)
+        if let landing = landingOnly {
+            landingOnly = nil
+            let some = copies.copies.filter { landing.contains($0.key) }
+            if !some.isEmpty { try await inner.upload(PhotoCopies(photo: copies.photo, copies: some), in: pairs) }
+            throw MailboxError.unavailable
+        }
         try await landed({ try await inner.upload(copies, in: pairs) }, failing: lands)
     }
 

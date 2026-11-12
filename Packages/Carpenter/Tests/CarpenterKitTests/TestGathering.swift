@@ -89,7 +89,7 @@ final class Gathering {
         return gathering
     }
 
-    private func makeDevice(_ name: String, of person: String, keychain: InMemoryKeychainStore) throws -> Device {
+    func makeDevice(_ name: String, of person: String, keychain: InMemoryKeychainStore) throws -> Device {
         let folder = TestScratch.root.appending(path: "gathering-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let clock = TestClock(now: iCloud.now)
