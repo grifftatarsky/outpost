@@ -27,6 +27,16 @@ public struct HeldAddress: Hashable, Sendable, Codable {
     }
 }
 
+public struct RemovalHeard: Hashable, Sendable, Codable {
+    public let revocation: DeviceRevocation
+    public let storedAt: Date
+
+    public init(revocation: DeviceRevocation, storedAt: Date) {
+        self.revocation = revocation
+        self.storedAt = storedAt
+    }
+}
+
 public struct SiblingFeed: Hashable, Sendable, Codable {
     public let member: ParticipantID?
 
@@ -57,9 +67,11 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
 
     public let asks: [ForwardedAsk]
 
+    public let removalsHeard: [RemovalHeard]
+
     private enum CodingKeys: String, CodingKey {
         case member, writtenAt, entries, certificates, epochs, preferences, collected, through
-        case revocations, forwarded, people, addresses, claimTimes, photosHeld, asks
+        case revocations, forwarded, people, addresses, claimTimes, photosHeld, asks, removalsHeard
     }
 
     public init(from decoder: any Decoder) throws {
@@ -82,6 +94,7 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         claimTimes = try container.decodeIfPresent([EntryHash: Date].self, forKey: .claimTimes) ?? [:]
         photosHeld = try container.decodeIfPresent([AttachmentID].self, forKey: .photosHeld) ?? []
         asks = try container.decodeIfPresent([ForwardedAsk].self, forKey: .asks) ?? []
+        removalsHeard = try container.decodeIfPresent([RemovalHeard].self, forKey: .removalsHeard) ?? []
     }
 
     public init(
@@ -99,7 +112,8 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         addresses: [HeldAddress] = [],
         claimTimes: [EntryHash: Date] = [:],
         photosHeld: [AttachmentID] = [],
-        asks: [ForwardedAsk] = []
+        asks: [ForwardedAsk] = [],
+        removalsHeard: [RemovalHeard] = []
     ) {
         self.member = member
         self.writtenAt = writtenAt
@@ -116,6 +130,7 @@ public struct SiblingFeed: Hashable, Sendable, Codable {
         self.claimTimes = claimTimes
         self.photosHeld = photosHeld
         self.asks = asks
+        self.removalsHeard = removalsHeard
     }
 }
 

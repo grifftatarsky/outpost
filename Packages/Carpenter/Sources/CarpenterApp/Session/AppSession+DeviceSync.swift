@@ -197,7 +197,10 @@ extension AppSession {
             if !persisted.knownKeys.contains(keys) { persisted.knownKeys.append(keys) }
         }
         let epochs = trust == .historical ? [] : feed.epochs
-        if !fromRemoved { takeClaimTimes(feed.claimTimes) }
+        if !fromRemoved {
+            takeClaimTimes(feed.claimTimes)
+            takeRemovalsHeard(feed.removalsHeard)
+        }
 
         let preferences = fromRemoved ? MemberPreferences() : feed.preferences
         let deletedAfterMerge = persisted.preferences.merged(with: preferences).roomsDeleted
@@ -285,6 +288,25 @@ extension AppSession {
         return trust
     }
 
+    private func takeRemovalsHeard(_ removals: [RemovalHeard]) {
+        guard let me = enrolment?.identity.id else { return }
+        let before = replica
+        for heard in removals
+        where heard.revocation.participant != me && replica.registry(for: heard.revocation.participant) != nil {
+            do {
+                try replica.revoke(heard.revocation, storedAt: heard.storedAt)
+            } catch {
+                Diagnostics.identity.error(
+                    "device sync: refused a friend's device removal another of your devices passed on")
+            }
+        }
+        persisted.siblingMail.shared(removals.map(\.revocation))
+        guard replica.knownRevocations.count != before.knownRevocations.count else { return }
+        replica.fixSupersededLines(sparing: me)
+        noteKeyChangesRefused(among: Self.entriesTurnedAway([], from: before, to: replica))
+        recordAuthority()
+    }
+
     public func refreshDeviceSync() async {
         guard let deviceSync, !storageIsSealed else { return }
         do {
@@ -346,9 +368,15 @@ extension AppSession {
                 .sorted { $0.participantID.rawValue.lexicographicallyPrecedes($1.participantID.rawValue) }
             let preferencesDigest = try? SiblingMail.digest(of: persisted.preferences)
             let addresses = addressBook.held
+            let removalsOfOthers = replica.knownRevocations.filter { $0.participant != enrolment.identity.id }
+                .sorted { $0.digest.lexicographicallyPrecedes($1.digest) }
+            let heard: ([DeviceRevocation]) -> [RemovalHeard] = { [stored = replica.storedTimes] removals in
+                removals.map { RemovalHeard(revocation: $0, storedAt: stored[$0.digest] ?? now) }
+            }
             let plan = persisted.siblingMail.plan(
                 entries: replica.allEntries, held: held, people: people, preferences: preferencesDigest,
-                addresses: addresses, me: me, revoked: Set(persisted.revocations.map(\.device)), now: now)
+                addresses: addresses, removals: removalsOfOthers, me: me,
+                revoked: Set(persisted.revocations.map(\.device)), now: now)
 
             let photosHeld = persisted.ownPhotosHeld.sorted { $0.rawValue.uuidString < $1.rawValue.uuidString }
             let asks = persisted.photoAsks.map {
@@ -374,7 +402,8 @@ extension AppSession {
                     member: enrolment.identity.id, writtenAt: now,
                     preferences: mail.carriesPreferences ? persisted.preferences : MemberPreferences(),
                     forwarded: mail.forwarded, people: mail.people, addresses: mail.addresses,
-                    claimTimes: persisted.claimTimes.filter { carried.contains($0.key) })))
+                    claimTimes: persisted.claimTimes.filter { carried.contains($0.key) },
+                    removalsHeard: heard(mail.removals))))
             }
             if !plan.catchUpsFor.isEmpty {
                 func catchUp(_ entries: [Entry]) -> SiblingFeed {
@@ -382,7 +411,8 @@ extension AppSession {
                         entries: entries, certificates: state.certificates, epochs: held,
                         member: enrolment.identity.id, writtenAt: now, preferences: persisted.preferences,
                         through: plan.through, revocations: persisted.revocations, people: people,
-                        addresses: addresses, claimTimes: persisted.claimTimes)
+                        addresses: addresses, claimTimes: persisted.claimTimes,
+                        removalsHeard: heard(removalsOfOthers))
                 }
                 let everything = catchUp(replica.allEntries)
                 for target in plan.catchUpsFor {

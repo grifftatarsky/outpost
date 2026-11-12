@@ -118,6 +118,30 @@ struct ARemovedDeviceGetsNoKeyThroughAFriendTests {
         g.sameRoom(room, on: people)
     }
 
+    @Test("A friend's device removal that a phone collects reaches that member's tablet through its device mail")
+    func aFriendsDeviceRemovalReachesTheMembersOtherDevice() async throws {
+        let g = try await Gathering.of("Alice", "Bob", "Carol")
+        _ = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol"])
+        try await g.secondDevice("Bob's tablet", of: "Bob")
+        try await g.secondDevice("Alice's tablet", of: "Alice")
+        try await g.settle()
+        try #require(
+            g.devices(of: "Bob", seenBy: "Alice's tablet").count == 2,
+            "precondition: Alice's tablet lists both of Bob's devices")
+
+        g.away("Bob's tablet")
+        await g.door("Alice's tablet").cannotCollect(from: g.id("Bob"))
+        try await g["Bob"].revoke(g.device("Bob's tablet"))
+        await g.takeTurns("Bob", "Alice")
+        try #require(
+            g.devices(of: "Bob", seenBy: "Alice").count == 1, "precondition: Alice's phone heard of the removal")
+        await g.takeTurns("Alice's tablet")
+
+        #expect(
+            g.devices(of: "Bob", seenBy: "Alice's tablet").count == 1,
+            "Alice's tablet never heard that Bob removed his tablet, and would go on sealing keys to it")
+    }
+
     @Test("A friend a round behind on a member's new phone still gets the key to that phone")
     func aFriendBehindStillReachesTheNewPhone() async throws {
         let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave")

@@ -122,6 +122,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         public let people: [IdentityPublicKeys]
         public let carriesPreferences: Bool
         public let addresses: [HeldAddress]
+        public let removals: [DeviceRevocation]
     }
 
     public struct Plan: Sendable {
@@ -137,6 +138,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         fileprivate var sharedPeople: Set<ParticipantID> = []
         fileprivate var sharedPreferences: Data?
         fileprivate var sharedAddresses: Set<AddressMark> = []
+        fileprivate var sharedRemovals: Set<Data> = []
         fileprivate let now: Date
 
         public var deletions: [SiblingRecord.Kind] {
@@ -190,12 +192,14 @@ public struct SiblingMail: Hashable, Sendable, Codable {
     private(set) var sharedPeople: Set<ParticipantID> = []
     private(set) var sharedPreferences: Data?
     private(set) var sharedAddresses: Set<AddressMark> = []
+    private(set) var sharedRemovals: Set<Data> = []
 
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
         case lastMail, sharedClock, sharedEpochs, outstanding, deletedThrough, collected, takenAbove
         case catchUps, siblings, lastState, forwards, sharedPeople, sharedPreferences, sharedAddresses
+        case sharedRemovals
     }
 
     public init(from decoder: any Decoder) throws {
@@ -214,6 +218,11 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         sharedPeople = try container.decodeIfPresent(Set<ParticipantID>.self, forKey: .sharedPeople) ?? []
         sharedPreferences = try container.decodeIfPresent(Data.self, forKey: .sharedPreferences)
         sharedAddresses = try container.decodeIfPresent(Set<AddressMark>.self, forKey: .sharedAddresses) ?? []
+        sharedRemovals = try container.decodeIfPresent(Set<Data>.self, forKey: .sharedRemovals) ?? []
+    }
+
+    public mutating func shared(_ removals: [DeviceRevocation]) {
+        sharedRemovals.formUnion(removals.map(\.digest))
     }
 
     public mutating func shared(_ people: [IdentityPublicKeys]) {
@@ -282,8 +291,8 @@ public struct SiblingMail: Hashable, Sendable, Codable {
 
     public func plan(
         entries all: [Entry], held: [HeldEpoch], people known: [IdentityPublicKeys] = [],
-        preferences: Data? = nil, addresses kept: [HeldAddress] = [], me: DeviceID, revoked: Set<DeviceID>,
-        now: Date
+        preferences: Data? = nil, addresses kept: [HeldAddress] = [], removals heard: [DeviceRevocation] = [],
+        me: DeviceID, revoked: Set<DeviceID>, now: Date
     ) -> Plan {
         let active = siblings.filter { id, seen in
             id != me && !revoked.contains(id) && now.timeIntervalSince(seen.at) < Self.keptFor
@@ -306,9 +315,11 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         plan.sharedPreferences = preferences ?? sharedPreferences
         let addresses = kept.filter { !sharedAddresses.contains(AddressMark($0)) }
         plan.sharedAddresses = Set(addresses.map(AddressMark.init))
+        let removals = heard.filter { !sharedRemovals.contains($0.digest) }
+        plan.sharedRemovals = Set(removals.map(\.digest))
 
         if !entries.isEmpty || !epochs.isEmpty || !people.isEmpty || preferencesChanged || !addresses.isEmpty
-            || (!forwards.isEmpty && !active.isEmpty)
+            || !removals.isEmpty || (!forwards.isEmpty && !active.isEmpty)
         {
             plan.through = lastMail + 1
             if active.isEmpty {
@@ -316,7 +327,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
             } else {
                 plan.mail = Mail(
                     number: plan.through, entries: entries, epochs: epochs, forwarded: forwards, people: people,
-                    carriesPreferences: preferencesChanged, addresses: addresses)
+                    carriesPreferences: preferencesChanged, addresses: addresses, removals: removals)
             }
         }
 
@@ -354,6 +365,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         sharedPeople.formUnion(plan.sharedPeople)
         sharedPreferences = plan.sharedPreferences
         sharedAddresses.formUnion(plan.sharedAddresses)
+        sharedRemovals.formUnion(plan.sharedRemovals)
         for number in plan.mailsToDelete {
             outstanding[number] = nil
             deletedThrough = Swift.max(deletedThrough, number)

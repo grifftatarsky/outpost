@@ -74,6 +74,15 @@ struct SiblingFeedIsSealedTests {
                     ask: PhotoAsk(
                         entry: EntryHash(rawValue: Data(repeating: 0xD3, count: 32)),
                         attachment: AttachmentID(rawValue: UUID(uuidString: "1B7E4D2F-90A6-4C31-8E5D-6F2A3C4B5D6E")!)))
+            ],
+            removalsHeard: [
+                RemovalHeard(
+                    revocation: DeviceRevocation(
+                        participant: friend.participantID, device: keys.id,
+                        revokedAt: Date(timeIntervalSince1970: 8_000), signature: Data(repeating: 0x1F, count: 64),
+                        revokedBy: keys.id, revokerSignature: Data(repeating: 0x1E, count: 64), cutoff: 0, head: nil,
+                        remaining: [keys.id]),
+                    storedAt: Date(timeIntervalSince1970: 8_500))
             ])
     }
 

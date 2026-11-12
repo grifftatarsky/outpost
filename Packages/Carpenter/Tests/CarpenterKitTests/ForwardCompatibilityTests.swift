@@ -155,6 +155,7 @@ extension ForwardCompatibilityTests {
                 for: DeviceKeys.generate().id, by: other, at: stamp.at, from: DeviceKeys.generate(),
                 cutoff: 0, head: nil, remaining: [DeviceKeys.generate().id])
         ]
+        state.siblingMail.shared(state.otherRevocations)
         state.supersededLines = [
             FeedKey(author: other.id, device: DeviceID(rawValue: WideID.of([8]))):
                 DeviceRegistry.Line(seq: 12, head: EntryHash(rawValue: Data(repeating: 0x5C, count: 32)))
