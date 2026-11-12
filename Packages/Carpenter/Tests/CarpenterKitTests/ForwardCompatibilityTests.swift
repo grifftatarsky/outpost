@@ -163,6 +163,11 @@ extension ForwardCompatibilityTests {
         state.authorityAnnounced = Data(repeating: 0x5F, count: 32)
         state.restoredWithTheRecoveryKey = true
         state.rekeyBeforeWriting = [RoomID()]
+        state.keysSealed = [
+            KeySealed(
+                room: room, key: Data(repeating: 0x68, count: 32), person: ParticipantID(rawValue: WideID.of([14])),
+                device: DeviceID(rawValue: WideID.of([15])))
+        ]
         state.resend = [EntryHash(rawValue: Data(repeating: 0x61, count: 32))]
         state.entriesOwed = [ParticipantID(rawValue: WideID.of([11])): [EntryHash(rawValue: Data(repeating: 0x65, count: 32))]]
         state.authorityOwed = [ParticipantID(rawValue: WideID.of([10]))]

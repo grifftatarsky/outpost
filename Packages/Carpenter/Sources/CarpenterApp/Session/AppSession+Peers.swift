@@ -124,9 +124,9 @@ extension AppSession {
         viewMayBeStale && roomHasAbsences
     }
 
-    func grantsOwed() throws -> [(to: Peer, grant: EpochGrant, receipt: String)] {
+    func grantsOwed() throws -> [(to: Peer, grant: EpochGrant, receipt: String, key: Data)] {
         guard let enrolment else { return [] }
-        var owed: [(to: Peer, grant: EpochGrant, receipt: String)] = []
+        var owed: [(to: Peer, grant: EpochGrant, receipt: String, key: Data)] = []
 
         for room in persisted.knownRooms {
             guard let chain = chains[room] else { continue }
@@ -179,12 +179,45 @@ extension AppSession {
                                 secret, at: epoch, in: room, link: link, links: links, to: pairwise,
                                 devices: devices
                             ).signed(by: enrolment.device, from: enrolment.identity.id, to: target),
-                            receipt: receipt
+                            receipt: receipt, key: secret.fingerprint
                         ))
                 }
             }
         }
         return owed
+    }
+
+    func noteDevicesKeysAreSealedTo(by owed: [(to: Peer, grant: EpochGrant, receipt: String, key: Data)]) -> Bool {
+        var sealed = persisted.keysSealed.filter { chains[$0.room] != nil }
+        for grant in owed where outpostOwner(of: grant.grant.room) == nil {
+            for seal in grant.grant.sealedFor {
+                sealed.insert(KeySealed(room: grant.grant.room, key: grant.key, person: grant.to.them, device: seal.device))
+            }
+        }
+        for room in Set(owed.map(\.grant.room)) {
+            let passedOn = Set(keysToPassOn(in: room).map(\.secret.fingerprint))
+            sealed = sealed.filter { $0.room != room || passedOn.contains($0.key) }
+        }
+        guard sealed != persisted.keysSealed else { return false }
+        persisted.keysSealed = sealed
+        return true
+    }
+
+    func oweNewKeysWhereARemovedDeviceHoldsOne() async {
+        let gone = persisted.keysSealed.filter { sealed in
+            replica.registry(for: sealed.person).map { !$0.activeDevices.contains(sealed.device) } ?? false
+        }
+        guard !gone.isEmpty else { return }
+        for room in Set(gone.map(\.room)) where chains[room] != nil {
+            guard let writing = writingKey(of: room)?.secret.fingerprint,
+                gone.contains(where: { $0.room == room && $0.key == writing })
+            else { continue }
+            persisted.rekeyBeforeWriting.insert(room)
+            Diagnostics.sync.notice(
+                "mailbox sync: this room's key was sealed to a device its member has since removed; it gets a new one")
+        }
+        persisted.keysSealed.subtract(gone)
+        await persistOrReport("that a room needs a key a removed device was never sent") { try await saveState() }
     }
 
     private func holdsWhatItsMakerSaw(_ epoch: EpochNumber, in room: RoomID, under secret: EpochSecret) -> Bool {

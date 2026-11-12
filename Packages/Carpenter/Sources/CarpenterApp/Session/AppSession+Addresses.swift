@@ -165,8 +165,9 @@ extension AppSession {
 
     // MARK: Hearing a contact's new address, and noticing a contact who has not heard ours
 
-    func takeAddresses(_ received: [SyncReport.ReceivedAddress], from peer: Peer) async {
-        guard let enrolment, !received.isEmpty, let registry = replica.registry(for: peer.them) else { return }
+    @discardableResult
+    func takeAddresses(_ received: [SyncReport.ReceivedAddress], from peer: Peer) async -> Bool {
+        guard let enrolment, !received.isEmpty, let registry = replica.registry(for: peer.them) else { return false }
         var opened: [(AddressSalt, Date)] = []
         for item in received where item.announcement.member == peer.them {
             guard let salt = item.announcement.open(
@@ -184,13 +185,14 @@ extension AppSession {
                     book.adopt(item.0, for: person, storedAt: item.1, at: now) || changed
                 }
             })
-        else { return }
+        else { return false }
         Diagnostics.sync.notice("address: a peer's hidden address changed; writing to them at the new one")
         if persisted.addressAnnounced[peer.them]?.confirmed == true {
             persisted.addressAnnounced[peer.them]?.confirmed = false
             persisted.addressAnnounced[peer.them]?.packet = nil
         }
         sendOwnEntries()
+        return true
     }
 
     func noticeOldAddresses(_ collected: SyncSession.CollectedPackets, from peer: Peer) {

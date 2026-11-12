@@ -28,13 +28,17 @@ extension AppSession {
         var firstFailure: (any Error)?
         for peer in everyPeer() where people?.contains(peer.them) ?? true {
             do {
-                try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
+                let movedAddress = try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
+                if movedAddress, let there = everyPeer().first(where: { $0.them == peer.them }) {
+                    _ = try await takeWhatArrived(from: there, through: session, mode: mode, into: &report)
+                }
             } catch {
                 firstFailure = firstFailure ?? error
             }
         }
         do { try await writeDownOrReport() } catch { firstFailure = firstFailure ?? error }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
+        await oweNewKeysWhereARemovedDeviceHoldsOne()
         if mode == .full {
             update(\.viewMayBeStale, to: refusalWatch.holdsKeys(after: report.refusals, at: clock.now))
             await pairUp(through: mailbox)
@@ -129,6 +133,7 @@ extension AppSession {
 
         let wishes = wallsToBeToldAbout()
         let sayingWishes = notifyWallsSent == wishes ? nil : wishes
+        if noteDevicesKeysAreSealedTo(by: owedGrants) { try await saveState() }
 
         do {
             report = try await session.send(
@@ -192,7 +197,7 @@ extension AppSession {
 
     private func takeWhatArrived(
         from peer: Peer, through session: SyncSession, mode: SyncMode, into report: inout SyncReport
-    ) async throws {
+    ) async throws -> Bool {
         let alternates = alternateSecrets(with: peer.them)
         let signedFor = ownMemberSignedFor(from: peer, alternates: alternates)
         let collected = try await session.collect(
@@ -228,7 +233,7 @@ extension AppSession {
         takeRepairRequests(received.repairRequests, from: peer.them)
         takeAsks(received.photoAsks, from: peer.them)
         noticeOldAddresses(collected, from: peer)
-        await takeAddresses(received.addresses, from: peer)
+        let movedAddress = await takeAddresses(received.addresses, from: peer)
         for answer in received.repairAnswers {
             if let index = persisted.repairs.firstIndex(where: { $0.id == answer.request }) {
                 persisted.repairs[index].answers[peer.them] = answer
@@ -292,6 +297,7 @@ extension AppSession {
                 \(distinct.joined(separator: "; "), privacy: .public)
                 """)
         }
+        return movedAddress
     }
 
     private func noteRefusedForever(_ refusals: [SyncReport.Refusal]) {

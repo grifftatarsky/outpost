@@ -52,16 +52,70 @@ struct ARemovedDeviceGetsNoKeyThroughAFriendTests {
             #expect(g.shows(body, in: room, on: "Bob"), "Bob's phone never read \(friend)'s message")
             #expect(!g.shows(body, in: room, on: "Bob's tablet"), "the removed tablet read \(friend)'s message")
         }
-        withKnownIssue(
-            "a key made by a friend still listing the removed tablet is sealed to it, and wins if it sorts first",
-            isIntermittent: true
-        ) {
-            #expect(g.key(of: room, on: "Alice") != lateFriendsKey, "the room is still written under \(late)'s key")
-            for friend in friends {
-                let entry = try #require(g.entry(saying: "from \(friend)", in: room, on: friend))
-                #expect(entry.opened(using: tabletHeld) == nil, "the tablet's old keys open \(friend)'s message")
-            }
+        #expect(g.key(of: room, on: "Alice") != lateFriendsKey, "the room is still written under \(late)'s key")
+        for friend in friends {
+            let entry = try #require(g.entry(saying: "from \(friend)", in: room, on: friend))
+            #expect(entry.opened(using: tabletHeld) == nil, "the tablet's old keys open \(friend)'s message")
         }
+    }
+
+    @Test("A key a friend passes on to Bob's tablet before hearing it was removed does not stay the room's key")
+    func aKeyPassedOnEarlyIsReplaced() async throws {
+        let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave")
+        let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave"])
+        try await g.secondDevice("Bob's tablet", of: "Bob")
+        let friends = ["Alice", "Carol", "Dave"]
+
+        g.mailboxOnly("Bob's tablet")
+        try await g["Bob"].revoke(g.device("Bob's tablet"))
+        await g.door("Bob").cannotReach(g.id("Dave"))
+        await g.takeTurns("Bob", "Alice", "Carol")
+        let bobsKey = try #require(g.key(of: room, on: "Bob"))
+        try #require(g.key(of: room, on: "Alice") == bobsKey, "precondition: Alice took the key Bob made")
+        let packetsBefore = Set(await g.cloud.writtenPackets)
+        await g.takeTurns("Dave")
+        try #require(g.key(of: room, on: "Dave") == bobsKey, "precondition: a friend passed Dave the key Bob made")
+        try #require(g.devices(of: "Bob", seenBy: "Dave").count == 2, "precondition: Dave has not heard of the removal")
+        var grantsToBob = 0
+        for id in await g.cloud.writtenPackets where !packetsBefore.contains(id) {
+            if await g.cloud.everySentPacket[id]?.to == g.id("Bob") { grantsToBob += await g.cloud.grantCount(in: id) }
+        }
+        try #require(grantsToBob > 0, "precondition: Dave passed Bob's key on while still listing the tablet")
+        await g.takeTurns("Bob's tablet")
+        let tabletHeld = try #require(g["Bob's tablet"].chains[room])
+        await g.door("Bob").reachesEveryone()
+        try await g.settle()
+
+        for friend in friends { try await g[friend].send("from \(friend)", to: room) }
+        try await g.settle()
+
+        g.sameRoom(room, on: friends + ["Bob"])
+        #expect(g.key(of: room, on: "Alice") != bobsKey, "the room is still written under a key the tablet was sent")
+        for friend in friends {
+            let entry = try #require(g.entry(saying: "from \(friend)", in: room, on: friend))
+            #expect(entry.opened(using: tabletHeld) == nil, "the tablet's keys open \(friend)'s message")
+            #expect(!g.shows("from \(friend)", in: room, on: "Bob's tablet"), "the removed tablet read \(friend)")
+        }
+    }
+
+    @Test("Removing a device gives the room one new key, not one from every friend who hears of it")
+    func removingADeviceMakesOneKey() async throws {
+        let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave")
+        let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave"])
+        try await g.secondDevice("Bob's tablet", of: "Bob")
+        let people = ["Alice", "Bob", "Carol", "Dave"]
+
+        g.away("Bob's tablet")
+        try await g["Bob"].revoke(g.device("Bob's tablet"))
+        try await g.settle()
+
+        for name in people {
+            let chain = try #require(g[name].chains[room])
+            let newest = try #require(chain.highestKnownEpoch)
+            #expect(chain.heldSecrets(at: newest).count == 1, "\(name) holds rival keys after one device was removed")
+            #expect(g.devices(of: "Bob", seenBy: name).count == 1, "\(name) still lists Bob's tablet")
+        }
+        g.sameRoom(room, on: people)
     }
 
     @Test("A friend a round behind on a member's new phone still gets the key to that phone")

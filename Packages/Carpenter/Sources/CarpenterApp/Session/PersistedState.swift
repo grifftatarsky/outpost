@@ -26,6 +26,13 @@ struct PhotoAskRecord: Codable, Equatable, Sendable {
     var at: Date
 }
 
+struct KeySealed: Codable, Hashable, Sendable {
+    let room: RoomID
+    let key: Data
+    let person: ParticipantID
+    let device: DeviceID
+}
+
 struct PersistedState: Codable, Equatable, Sendable {
     var organisation = RoomsListOrganisation()
     var knownRooms: [RoomID] = []
@@ -77,6 +84,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var authorityOwed: Set<ParticipantID> = []
     var restoredWithTheRecoveryKey = false
     var rekeyBeforeWriting: Set<RoomID> = []
+    var keysSealed: Set<KeySealed> = []
     var resend: Set<EntryHash> = []
     var entriesOwed: [ParticipantID: Set<EntryHash>] = [:]
     var notCollected: [ParticipantID: Set<EntryHash>] = [:]
@@ -175,6 +183,7 @@ struct PersistedState: Codable, Equatable, Sendable {
         restoredWithTheRecoveryKey =
             try container.decodeIfPresent(Bool.self, forKey: .restoredWithTheRecoveryKey) ?? false
         rekeyBeforeWriting = try container.decodeIfPresent(Set<RoomID>.self, forKey: .rekeyBeforeWriting) ?? []
+        keysSealed = try container.decodeIfPresent(Set<KeySealed>.self, forKey: .keysSealed) ?? []
         resend = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .resend) ?? []
         entriesOwed =
             try container.decodeIfPresent([ParticipantID: Set<EntryHash>].self, forKey: .entriesOwed) ?? [:]
