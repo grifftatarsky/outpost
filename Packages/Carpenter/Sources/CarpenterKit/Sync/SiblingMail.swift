@@ -239,6 +239,10 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         siblings[sibling] = Seen(hasOfMine: cursors.first { $0.device == me }?.mail, at: at)
     }
 
+    public func hasTaken(mail number: Int, from sibling: DeviceID) -> Bool {
+        number <= collected[sibling] ?? 0 || takenAbove[sibling]?.contains(number) == true
+    }
+
     public mutating func took(mail number: Int, from sibling: DeviceID) {
         let cursor = collected[sibling] ?? 0
         var above = takenAbove[sibling] ?? []

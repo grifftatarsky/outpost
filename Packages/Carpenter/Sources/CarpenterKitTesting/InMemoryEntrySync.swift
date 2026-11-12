@@ -220,6 +220,13 @@ public actor InMemoryEntrySync: EntrySync {
         }
     }
 
+    public func readEverything() async throws {
+        if isCut { throw Relay.Refused() }
+        for record in try await relay.everything(exceptFrom: writers, handedTo: nil) {
+            await deliver(record.name, record.bytes, created: record.created, modified: record.modified)
+        }
+    }
+
     public func forgetOwnContribution() async throws {
         sent = []
         await relay.withdraw(writers)

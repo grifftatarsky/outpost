@@ -29,7 +29,7 @@ extension AppSession {
             } else {
                 await self.requestApproval(through: engine)
             }
-            try? await engine.refresh()
+            try? await engine.readEverything()
         }
     }
 
@@ -63,6 +63,9 @@ extension AppSession {
         let writer = record.name.writer
         guard writer != me else { return }
         if case .catchUp(let target) = record.name.kind, target != me { return }
+        if case .mail(let number) = record.name.kind, persisted.siblingMail.hasTaken(mail: number, from: writer) {
+            return
+        }
         switch record.name.kind {
         case .request:
             noteRequest(record)

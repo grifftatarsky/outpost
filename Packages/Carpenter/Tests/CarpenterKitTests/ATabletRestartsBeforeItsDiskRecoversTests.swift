@@ -84,13 +84,11 @@ struct ATabletRestartsBeforeItsDiskRecoversTests {
             await refreshBoth(phone, reopened)
         }
 
-        withKnownIssue("device sync hands a change over once, and the tablet keeps no mail it could not write") {
-            #expect(
-                reopened.messages(in: room).contains { $0.body == "while the tablet's disk was refusing" },
-                "the reopened tablet never got the mail its disk refused")
-            #expect(
-                reopened.replica.allEntries.contains { $0.hash == refused },
-                "the refused entry never reached the reopened tablet's log")
-        }
+        #expect(
+            reopened.messages(in: room).contains { $0.body == "while the tablet's disk was refusing" },
+            "the reopened tablet never got the mail its disk refused")
+        #expect(
+            reopened.replica.allEntries.contains { $0.hash == refused },
+            "the refused entry never reached the reopened tablet's log")
     }
 }

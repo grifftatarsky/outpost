@@ -191,6 +191,30 @@ public actor CloudKitEntrySync: EntrySync, AccountRegistry {
             "device sync: fetch took \(Int(Date().timeIntervalSince(started) * 1000), privacy: .public)ms")
     }
 
+    public func readEverything() async throws {
+        try await start()
+        var token: CKServerChangeToken?
+        var more = true
+        while more {
+            let batch: (
+                modificationResultsByID: [CKRecord.ID: Result<CKDatabase.RecordZoneChange.Modification, any Error>],
+                deletions: [CKDatabase.RecordZoneChange.Deletion], changeToken: CKServerChangeToken, moreComing: Bool
+            )
+            do {
+                batch = try await container.privateCloudDatabase.recordZoneChanges(inZoneWith: zoneID, since: token)
+            } catch let error as CKError where error.code == .zoneNotFound || error.code == .userDeletedZone {
+                return
+            }
+            received(
+                batch.modificationResultsByID.values.compactMap { try? $0.get().record }
+                    .sorted { $0.recordID.recordName < $1.recordID.recordName })
+            token = batch.changeToken
+            more = batch.moreComing
+        }
+        if !Self.isDelivering, let delivering { await delivering.value }
+        Diagnostics.sync.notice("device sync: read everything this member's other devices have stored")
+    }
+
     public func occupancy() async -> AccountOccupancy {
         if await CloudKitHold.isHeld(container) { return .held }
         do {

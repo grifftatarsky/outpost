@@ -10,5 +10,7 @@ public protocol EntrySync: Sendable {
 
     func refresh() async throws
 
+    func readEverything() async throws
+
     func forgetOwnContribution() async throws
 }
