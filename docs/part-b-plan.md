@@ -13,9 +13,10 @@ where the two disagree.
 
 Nothing below is built until he answers. Each line has a recommendation where it is linked.
 
-1. **The twelve faults the many-device tests found**
-   ([the list](open-questions.md#twelve-faults-the-many-device-tests-found)). Say yes to fixing 1 to
-   8 before a tester build, in that order.
+1. **Six things found while fixing the twelve faults**
+   ([the list](open-questions.md#twelve-faults-the-many-device-tests-found)). All twelve faults are
+   fixed. Two of the six let a removed device keep something it should not, and each has a
+   recommendation.
 2. **A reader let in "from now" when the owner posts from two devices**
    ([the question](open-questions.md#a-reader-let-in-from-now-when-the-owner-posts-from-two-devices)).
    Today's fix is a trade. Say whether it stays, and whether the entry that lets a reader in should
@@ -44,8 +45,7 @@ Nothing below is built until he answers. Each line has a recommendation where it
 
 ## To build, in order
 
-1. Faults 1 to 4, then 5 to 8 (10 is fixed). Each is its own commit, starts from the test that already fails, and
-   ends by deleting the known-issue mark. Then both live pair suites on two accounts.
+1. Done 2026-11-11: all twelve faults, one commit each.
 2. Formats, part one (design section 5): the format number in every packet, refusing a newer one,
    keeping a newer message and showing it after the update, the room that takes no writes, the
    state-file check, the notices, the version in Settings. Then both live pair suites, because the
@@ -53,8 +53,8 @@ Nothing below is built until he answers. Each line has a recommendation where it
 3. Send each person only what they may read (a lost ruling, if it stands), then the room history
    setting, which leans on it.
 4. Tests: the shared checks run against the fake and against iCloud; `Scripts/smoke-two-accounts.sh`;
-   scenarios 13 to 26; move `ScannedFieldsTests` into the package; bring the suite's time back down
-   (it went from about 130 seconds to about 350).
+   scenarios 13 to 26; move `ScannedFieldsTests` into the package. The suite's time: `swift test` takes
+   about 305 seconds and `Scripts/test-package.sh` about 215, by running six processes.
 5. The lock on a simulator with Face ID enrolled (`RigChecks` does not enrol one yet), then on an
    iPhone, where the Secure Enclave runs for the first time.
 6. The chat list, once picked. Then the notification settings that are saved and read by nothing.
@@ -67,7 +67,8 @@ Nothing below is built until he answers. Each line has a recommendation where it
 
 - Nothing from 2026-11-11 has run on two Apple Accounts or on an iPhone. That covers the lock's
   second factor, the three fixes and every fault in the list.
-- The twelve faults were shown against the fake iCloud. Three of them were not traced to a line.
+- The twelve faults were shown, and their fixes pass, against the fake iCloud. Most need three people
+  or two devices on one account, which the rig does not have.
 - The layouts were not looked at as drawn.
 - The audit of the unmerged branch was checked by hand only for the five rulings.
 

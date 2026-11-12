@@ -6581,6 +6581,46 @@ needs a version number and a reader for the version before it.
 
 <!-- COPY END 9ff7b33b -->
 
+<!-- COPY BEGIN 3588bdcf [NEEDS HUMAN REVIEW] -->
+
+### What the twelve fixes of 2026-11-11 bind
+
+**RULED 2026-11-11 by Griff:** "Complete the faults." The rules below are how; each is
+**PROPOSED** by Claude, built, and passing in the package suite. None has run on two accounts
+unless [the rig's record](simulator-rig.md#what-outpost-alpha-and-outpost-beta-showed-on-2026-11-11)
+says so.
+
+- **A device signs for a delivery only once what it carried is stored for the member's other
+  devices.** Signing ends the offer for all of them, so the mail goes first. If that write fails the
+  delivery stays on offer. It costs one write to the member's own iCloud before the receipts.
+- **Before a message is sealed, the phone reads iCloud fresh and then its member's device mail,** in
+  that order. A removal is in one or the other.
+- **What a packet taken back uncollected carried is owed again, if it is a key or decides who is in
+  a room.** Messages are not: they come back through history repair. What waits for an absent member
+  stays the same size however long they are away.
+- **A device keeps a list of the room keys it sealed to each device,** written before the grant is
+  sent, and gives a room a new key when the one in use was sealed to a device since removed.
+- **A phone collects again from a peer whose address just moved.** A device removal changes the
+  member's address, and the packet with the replacement key waits at the new one.
+- **A key with no key-change entry counts on the word of the device that signed its grant,** while
+  that device counts, and never when this phone refused or threw out a key change that made it.
+- **A device tells friends only the removals whose target it shows as removed.** A packet has one
+  stored time, so two removals in one packet fall back to the dates their devices wrote.
+- **On launch, device sync reads everything stored,** because the sync engine hands a change over
+  once and a disk can refuse it.
+- **A notification wish carries when it last changed,** and each change is stamped later than the
+  last, so the newer wins in any order.
+- **A write with no answer is looked for before it is made again.**
+
+**What it costs.** One more list in the state file. A second pass over a peer's packets in the round
+its address moves. A whole-zone read of the member's device records at every launch.
+
+**What would change it:** any of the six questions under
+[the twelve faults](open-questions.md#twelve-faults-the-many-device-tests-found), or a run on two
+accounts that disagrees with the package suite.
+
+<!-- COPY END 3588bdcf -->
+
 <!-- COPY BEGIN da54c3de [NEEDS HUMAN REVIEW] -->
 
 ## Superseded

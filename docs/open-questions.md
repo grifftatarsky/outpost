@@ -482,44 +482,53 @@ each person only what they may read, because the room history setting leans on i
 ## Twelve faults the many-device tests found
 
 Found 2026-11-11 by the tests that run five people and their devices in one process against the fake
-iCloud. Each fault has a test that fails on today's code, marked as a known issue so the suite stays
-green; fixing one means deleting that mark. **None has run on two accounts.** "Every run" and "one run
-in three" are counts from the package suite, not from phones.
+iCloud. Griff asked for them fixed the same day: "Complete the faults." **All twelve are fixed**, each
+in a commit that ends by deleting its known-issue mark, and the whole package suite passes. What has
+run on two accounts is in [the rig's record](simulator-rig.md#what-outpost-alpha-and-outpost-beta-showed-on-2026-11-11).
+Most of these need three people or two devices on one account, which the rig does not have, so for
+those the package suite is the only evidence.
 
-**A removed person or device can read what is said next**
+| # | What happened | What changed |
+|---|---|---|
+| 1 | Bob's tablet sent before his phone told it of a removal, and wrote under the key the removed member still held | The read before a send also takes the mail from the member's other devices. A device signs for a delivery only once what it carried is stored for those devices |
+| 2, 5 | A friend away longer than a packet waits never got the new key, or the removal | When a packet is taken back uncollected, the keys it carried are owed again, and so are the entries in it that decide who is in a room. Messages still come back through history repair |
+| 3 | A friend who had not heard that Bob removed his tablet sealed a key to it, and the room stayed on that key | A device writes down which keys it sealed to which device, and gives a room a new key if it sealed the current one to a device since removed. It also collects again from a peer whose address just moved, so a removal and the key that answers it arrive in one round |
+| 4 | A removed phone with a modified app made a key, and friends kept trusting it after they heard | A key with no key-change record counts only on the word of the device that signed its grant, and only while that device counts. A key whose key change was refused or thrown out counts on nobody's word |
+| 6 | Two of a member's devices removed each other, and friends kept the wrong one | A device tells friends only the removals whose target it shows as removed |
+| 7 | A send inside two seconds of a round missed a removal stored in between | The read before a send drops what the mailbox last read |
+| 8 | A tablet whose disk refused its phone's mail, then restarted, never got it | On launch, device sync reads everything stored, and skips mail it has already taken |
+| 9 | A notification wish turned off a round after it was turned on stayed on | The wish list carries when it last changed, and the newest wins |
+| 10 | A removed member's phone confirmed her old invitation on every round | An invitation the room shows as finished is not confirmed |
+| 11, 12 | A write that landed with its answer lost was made twice, and nothing tracked the first copy | The next round looks for the packet before sending again |
 
-| # | What happens | How often | Test | Recommendation |
-|---|---|---|---|---|
-| 1 | Bob's phone collects a removal. Bob's tablet sends before the phone has told it, and writes under the key the removed member still holds | Every run | `ASecondDeviceSendsAfterWhatItsMemberCollectedTests` | Before a send, a device asks the member's other devices what they collected, as well as iCloud |
-| 2 | A friend away for longer than a packet waits never gets the new key unless the sender's app restarts. He writes under the old key | Every run | `AwayWhileTheKeyChangesTests` | A key in a packet that expired uncollected is owed again, and the note that it was handed out is kept on disk |
-| 3 | A friend who has not heard that Bob removed his tablet makes a key and seals it to the tablet. The room sometimes stays on that key. No modified app is needed | One run in three | `ARemovedDeviceGetsNoKeyThroughAFriendTests` | On hearing of a device removal, replace any key that was sealed to that device |
-| 4 | A removed phone running a modified app makes a key. Friends who hear of the removal late take it and sometimes write under it. [The crypto brief](crypto-brief.md) already says a friend who has not heard takes such a key | One run in three, only when a friend hears last | `WhatARemovedDeviceWritesCountsNowhereTests` | Check a key's maker against the device list again when a removal arrives, not only when the key is taken |
+**Found while fixing, and not fixed.** Each is Griff's to decide, with what I would do.
 
-**People disagree about who is in a room, or which device counts**
-
-| # | What happens | How often | Test | Recommendation |
-|---|---|---|---|---|
-| 5 | A removal carried only in packets that expired never reaches a friend who was away. He still lists the removed member. Not traced | Every run | `AwayWhileTheKeyChangesTests` | The same as 2: what an expired packet carried is owed again |
-| 6 | Two of a member's devices remove each other at once. The member's devices keep one and every friend keeps the other, so friends cannot read the device that is left. Not traced | Every run | `WhatARemovedDeviceWritesCountsNowhereTests` | Friends order a member's removals by the time iCloud stored them, as the member's own devices do |
-| 7 | A send within two seconds of a round does not see a removal stored in between, so the removed member writes into the room. Shown with the fake holding its view; the real two seconds were not measured | Every run on the fake | `TheOrderThingsArriveInTests` | A send reads the space fresh |
-
-**Lost, repeated or left behind**
-
-| # | What happens | How often | Test | Recommendation |
-|---|---|---|---|---|
-| 8 | A tablet whose disk refused its phone's mail, and then restarted, never gets that mail | Every run | `ATabletRestartsBeforeItsDiskRecoversTests` | On launch, read the mail from the saved place, not only what iCloud reports as changed |
-| 9 | A notification wish turned on and then off a round later sometimes stays on at the other end. Not traced | Three to six runs in eight | `TheOrderThingsArriveInTests` | Trace it first |
-| 10 | **Fixed 2026-11-11.** A removed member's phone wrote her old join confirmation to every friend on every round until her invitation expired, and for good if it had no expiry | Every run, before the fix | `ARemovedMembersQuietRoundsWriteNothingTests` | Done: an invitation the room shows as finished is no longer confirmed. Not run on two accounts |
-| 11 | A write that landed while its answer was lost is made again in a second packet. No message is shown twice | Every run | `AWriteWhoseAnswerWasLostTests` | After a write with no answer, look for the packet before writing again |
-| 12 | The first copy from 11 is tracked by no device and stays in iCloud until a sweep nine days later | Every run | `AWriteWhoseAnswerWasLostTests` | Goes away with 11 |
+1. **A removed device can sign for a friend's packets until that friend hears of the removal.** A
+   member's devices share one inbox, and the first to sign for a packet ends the offer. A removed
+   device that still signs is believed by any friend who has not heard, so the member's other
+   devices never see what the packet carried. Read in the code, not shown by a test. *I would:* have
+   a friend who hears of a removal owe again whatever that device signed for.
+2. **A device approved moments ago gets no mail from the member's other devices until they have
+   seen it.** A message sent from it in that gap can miss a removal the phone collected. *I would:*
+   have the approving device write the new device's first catch-up as part of approving it.
+3. **One member's own devices can hand a key to a sibling that was just removed**, the same way a
+   friend could in fault 3, if the phone collects a key before it hears of the removal. Read in the
+   code. *I would:* add what goes in device mail to the list of keys sealed.
+4. **A removed device that reaches a friend before the member's other devices do is believed by
+   that friend.** This is the other half of fault 6. Two devices each say the other was removed, and
+   a friend has only the order the two arrived in to choose by. *I would:* say so in the crypto
+   brief and leave it; the recovery key is the way out. A fix needs a time both sides can trust, and
+   there is none between two Apple Accounts.
+5. **If the replacement key after a device removal never arrives, every friend makes one.** Each
+   friend sealed the old key to the removed device when it still counted, so each replaces it. The
+   room ends on one of those keys. *I would:* leave it; it needs the member's phone to stop between
+   announcing the removal and sending the key.
+6. **If the app restarts between a lost answer and the next round, one message goes out twice.**
+   Nothing is shown twice. *I would:* leave it.
 
 **Seen once and not confirmed.** A device approved moments earlier, with its clock an hour behind
 iCloud's, could not write anything: its entries were refused as coming from a device not yet approved.
 Whether a real phone can get into that state was not checked.
-
-**Recommendation.** Fix 1 to 4 before a tester build, because each lets somebody who was removed keep
-reading. Fix 5 to 8 before it too, because each leaves two phones disagreeing with nothing to put them
-right. 9, 11 and 12 can wait. Each fix is its own commit and ends by deleting the known-issue mark.
 
 <!-- COPY END 0fc0cd18 -->
 

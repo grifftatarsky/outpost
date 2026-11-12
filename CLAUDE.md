@@ -159,6 +159,7 @@ xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 
 ```
 
 `SKIP_SYMBOL_CHECK=1` skips the lint's slowest rule while iterating. CI runs all of it.
+`Scripts/test-package.sh` runs the package suite as six processes, in about two thirds of the time.
 
 The simulator is `outpost-alpha`, named by its UDID: on Xcode 27 `name=` means the newest iOS and the
 rig runs 27.2. `Scripts/check-all.sh` runs every check above and the Release leak check, and ends in a
@@ -359,6 +360,19 @@ Read these before touching sync. Every one cost real time.
   devices collects it first, so the others see it only because that device passes it on in its
   mail to them. Anything a device receives for the member has to go through that mail, or the
   member's other devices never get it (`OneMemberTwoDevicesTests`, measured 2026-09-26).
+- **A removal and the key that answers it can arrive a round apart.** Removing a device changes the
+  member's address, and the packet with the new key waits at the new address, which a friend learns
+  only from the packet that carries the removal. Anything that acts on hearing a removal must not
+  assume the key is there yet, or every friend acts at once: a first cut of a 2026-11-11 fix had
+  every friend mint a rival key on every device removal. A round now collects again from a peer
+  whose address moved (`ARemovedDeviceGetsNoKeyThroughAFriendTests`).
+- **A key somebody passed on is not a key they made.** A key with no key-change entry was trusted on
+  the word of the person who gave it, so an honest friend who had not heard of a removal laundered a
+  removed phone's key. It counts on the word of the device that signed the grant, and not at all once
+  a key change that made it was refused or thrown out (`trustedKey`).
+- **A packet has one stored time.** Two things in one packet tie, and a tie falls back to what the
+  devices wrote. Two device removals sent together were ordered by a clock the losing device had set
+  back. Send only what counts, or give each its own record.
 - **A dictionary keyed by recipient holds one value.** `SyncEngine.pack` addressed epoch grants into
   `[RecipientTag: Data]` with a plain subscript, so a round owing one person keys to two rooms
   delivered the last and dropped the rest — and the sender then marked every owed grant issued,

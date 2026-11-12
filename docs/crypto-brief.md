@@ -476,6 +476,21 @@ that device counted in the sender's registry when iCloud stored the packet
 has not yet heard of the removal still takes a key the removed device signs; a removed device still
 signed in to the Apple Account can delay the news by deleting records.
 
+**Once the friend hears, that key stops counting** (since 2026-11-11, package suite only). A key
+counts by its key-change entry, and what a removed device wrote past its line is thrown out, so the
+entry goes. A key with no entry used to count on the word of the *person* who gave it. It now counts
+on the word of the *device* that signed the grant, while that device counts, and never when this
+phone has refused or thrown out a key change that made it (`trustedKey`, `keyChangesRefused`). That
+last part is for an honest friend who had not heard and passed the key on. What the friend wrote
+under the key before hearing stays readable by the removed device.
+
+**A key sealed to a device since removed is replaced** (since 2026-11-11, package suite only). A
+friend who has not heard of a removal seals whatever key it makes or passes on to the removed device
+too. Each device keeps a list of which room keys it sealed to which device
+(`PersistedState.keysSealed`), written before the grant is sent. When it learns one of those devices
+was removed and the room is still written under a key on the list, it gives the room a new key
+(`ARemovedDeviceGetsNoKeyThroughAFriendTests`).
+
 **A phone passes a key on only once it holds what the key's maker had seen** (built 2026-09-29; its tests
 pass in the package suite). Changing a room's key writes an entry into the room (`EpochChangeBody`, sealed under the old
 key) carrying the link, `heads` (the last entry of every feed in the room that the maker held) and

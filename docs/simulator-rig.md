@@ -490,6 +490,41 @@ minutes with no crash report. It has not happened again in four runs.
 
 <!-- COPY END a1f7ccec -->
 
+<!-- COPY BEGIN 0bf4dd34 [NEEDS HUMAN REVIEW] -->
+
+### What outpost-alpha and outpost-beta showed on 2026-11-11
+
+On the build at `07901f3`, which holds the fixes for all twelve faults, each simulator on its own
+Apple Account, from derived data deleted first. Each is one run.
+
+- **The app suite against live iCloud passed on `outpost-alpha`:** 63 tests in 13 suites in 88
+  seconds.
+- **`LivePairTests` passed on the two accounts,** 49 and 48 seconds a side.
+- **`LivePairSendTests` passed on the two accounts,** 71 and 70 seconds a side. Collecting and then
+  writing took 0.7 seconds. This is the run that reaches two of the fixes over real iCloud: the read
+  before a send now drops what the mailbox last read, and a round collects again from a peer whose
+  address moved.
+
+- **Reading all device mail on launch works over real iCloud** (`LiveSiblingFeedTests`, one
+  account, added the same night). A second device was handed its sibling's mail once. A new sync
+  engine for that device, started from the same saved state as after a restart, fetched and was not
+  handed it again, which is the fault. `readEverything` then handed it over.
+- **`Scripts/smoke-two-accounts.sh` ran all three sets from one clean build** and all passed: 61
+  tests in 12 suites on one account, then both pair suites at about 70 seconds a side. Five other
+  builds were running on the Mac at the time.
+
+**What that does and does not show about the twelve fixes.** The two accounts are two people with
+one device each. Nine of the twelve faults need a third person or a second device on one account, so
+on the rig their fixes were only shown not to break two people talking. Their evidence is the
+package suite.
+
+**The first run of the night passed and counted for nothing.** The build failed on a stale module
+left in the derived data, `xcodebuild test-without-building` ran the build from that afternoon, and
+both sides passed. `Scripts/smoke-two-accounts.sh` now deletes the derived data, stops if the build
+fails, and prints the commit it ran.
+
+<!-- COPY END 0bf4dd34 -->
+
 <!-- COPY BEGIN b526cfb5 [NEEDS HUMAN REVIEW] -->
 
 ## What the rig cannot prove
