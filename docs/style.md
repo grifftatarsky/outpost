@@ -45,7 +45,7 @@ known.
   recomputed on every access, and each was the slowest thing on a screen.
 - Group once, then look up. `Projection` indexes its entries by room when it is built; a question
   about one room walks that room, never the whole log.
-- A key agreement goes through `pairwiseSecret(with:)` or `legacySecret(with:)`, which cache it. Never
+- A key agreement goes through `pairwiseSecret(with:)` or `baseSecret(with:)`, which cache it. Never
   derive one in a loop, and walk `peopleInTouch()`, never `replica.knownParticipants`: a packet decides
   how long that second list is.
 - Find an entry by its hash through the projection's index (`entry(_:)`), never with

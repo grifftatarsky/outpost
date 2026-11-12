@@ -129,7 +129,7 @@ public final class AppSession {
     @ObservationIgnored var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
     @ObservationIgnored var cachedComparisonHalves: [ParticipantID: String] = [:]
     @ObservationIgnored var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
-    @ObservationIgnored var cachedLegacySecrets: [[ParticipantID]: PairwiseSecret] = [:]
+    @ObservationIgnored var cachedBaseSecrets: [[ParticipantID]: PairwiseSecret] = [:]
     @ObservationIgnored var repairsAnswered: Set<RepairID> = []
     @ObservationIgnored var cachedLinksHeard: [ParticipantID: [PairLink]]?
     @ObservationIgnored var pairingUp: Task<Void, Never>?
@@ -357,7 +357,7 @@ public final class AppSession {
         guard owner != enrolment.identity.id else { return try await append(payload, to: nil) }
 
         if !(persisted.preferences.outpostStanding ?? .open).reachesThePostsReaders {
-            guard let theirs = legacySecret(with: owner) else {
+            guard let theirs = baseSecret(with: owner) else {
                 throw AppSessionError.cannotWriteThere
             }
             return try await append(payload, to: nil, alsoFor: theirs)

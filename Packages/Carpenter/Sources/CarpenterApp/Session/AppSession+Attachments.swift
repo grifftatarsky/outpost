@@ -397,11 +397,11 @@ extension AppSession {
     // MARK: One copy for each person, sealed for that pair
 
     func photoCopyName(of photo: AttachmentID, for person: ParticipantID) -> PhotoCopyName? {
-        legacySecret(with: person).map { PhotoCopyName(of: photo, between: $0) }
+        baseSecret(with: person).map { PhotoCopyName(of: photo, between: $0) }
     }
 
     func uploadCopies(of attachment: OutgoingAttachment, through mailbox: any MediaMailbox) async throws {
-        let copies = try attachment.copies(between: { legacySecret(with: $0) })
+        let copies = try attachment.copies(between: { baseSecret(with: $0) })
         try await mailbox.upload(copies, in: try currentPairs())
     }
 
@@ -415,12 +415,12 @@ extension AppSession {
     func openCopy(_ downloaded: Data, of photo: AttachmentID, matching digest: Data, from sender: ParticipantID) throws
         -> Data
     {
-        guard let pair = legacySecret(with: sender) else { throw AttachmentError.digestMismatch }
+        guard let pair = baseSecret(with: sender) else { throw AttachmentError.digestMismatch }
         return try PhotoCopy.open(downloaded, of: photo, matching: digest, between: pair)
     }
 
     func deleteEveryCopy(of photos: [AttachmentID], through mailbox: any MediaMailbox) async throws {
-        let pairs = peopleInTouch().compactMap { legacySecret(with: $0) }
+        let pairs = peopleInTouch().compactMap { baseSecret(with: $0) }
         let copies = Set(photos.flatMap { photo in pairs.map { PhotoCopyName(of: photo, between: $0) } })
         guard !copies.isEmpty else { return }
         try await mailbox.delete(copies: copies, in: try currentPairs())
@@ -433,7 +433,7 @@ extension AppSession {
         var named: [AttachmentID: [StoredPhotoCopy]] = [:]
         var unreadable: [StoredPhotoCopy] = []
         for copy in copies {
-            if pairs[copy.to] == nil { pairs[copy.to] = legacySecret(with: copy.to) }
+            if pairs[copy.to] == nil { pairs[copy.to] = baseSecret(with: copy.to) }
             guard let pair = pairs[copy.to], let label = copy.label,
                 let photo = PhotoCopy.photo(labelled: label, named: copy.name, between: pair)
             else {

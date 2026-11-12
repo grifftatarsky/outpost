@@ -64,7 +64,7 @@ struct AnEntryOpensOnlyInItsOwnRoomTests {
     @Test("An entry in a room does not open under the secret its writer shares with you")
     func thePairSecretDoesNotOpenARoom() async throws {
         let k = try await Kitchen.make()
-        let pair = try #require(k.t.carol.legacySecret(with: k.t.aliceID))
+        let pair = try #require(k.t.carol.baseSecret(with: k.t.aliceID))
         let (madeUp, _) = EpochChain.create(room: k.room)
 
         for payload in [try Payload.post("from Carol"), try Payload.roomProfile(name: "Carol's kitchen")] {
@@ -108,7 +108,7 @@ struct AnEntryOpensOnlyInItsOwnRoomTests {
     @Test("The copy for the owner of an Outpost opens only for a comment or a reaction, the two the app writes")
     func theOwnersCopyIsOnlyForACommentOrAReaction() async throws {
         let k = try await Kitchen.make()
-        let pair = try #require(k.t.carol.legacySecret(with: k.t.aliceID))
+        let pair = try #require(k.t.carol.baseSecret(with: k.t.aliceID))
         let (madeUp, _) = EpochChain.create(room: RoomID.outpost(of: k.t.carolID))
         let carol = try #require(k.t.carol.enrolment)
         let target = try #require(k.t.alice.messages(in: k.room).first?.id.entry)

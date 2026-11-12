@@ -290,7 +290,7 @@ struct SendingPhotoTests {
             try OutgoingAttachment(
                 id: orphan, ciphertext: Data([1, 2, 3]),
                 recipients: [try #require(bob.enrolment?.identity.id): RecipientTag(rawValue: Data([9]))]
-            ).copies(between: { alice.legacySecret(with: $0) }),
+            ).copies(between: { alice.baseSecret(with: $0) }),
             in: try alice.currentPairs())
         #expect(await mailbox.storedAttachmentCount == 2)
 

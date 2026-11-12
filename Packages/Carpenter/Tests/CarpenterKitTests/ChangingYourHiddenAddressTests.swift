@@ -73,16 +73,16 @@ struct ChangingYourHiddenAddressTests {
         try await rig.rounds(6)
     }
 
-    private func legacy(_ session: AppSession, with person: ParticipantID) throws -> PairwiseSecret {
-        try #require(session.legacySecret(with: person))
+    private func base(_ session: AppSession, with person: ParticipantID) throws -> PairwiseSecret {
+        try #require(session.baseSecret(with: person))
     }
 
     @Test("Nobody's address changes until a device is removed, so every secret is the one it always was")
     func nothingChangesWithoutARemoval() async throws {
         let rig = try await rig()
         #expect(rig.tablet.addressBook.ownCurrent == nil)
-        #expect(rig.tablet.pairwiseSecret(with: rig.friendID) == (try legacy(rig.tablet, with: rig.friendID)))
-        #expect(rig.friend.pairwiseSecret(with: rig.griff) == (try legacy(rig.friend, with: rig.griff)))
+        #expect(rig.tablet.pairwiseSecret(with: rig.friendID) == (try base(rig.tablet, with: rig.friendID)))
+        #expect(rig.friend.pairwiseSecret(with: rig.griff) == (try base(rig.friend, with: rig.griff)))
         #expect(rig.tablet.alternateSecrets(with: rig.friendID).isEmpty, "a member who never changed listens twice")
     }
 
@@ -276,7 +276,7 @@ struct ChangingYourHiddenAddressTests {
         await rig.tablet.setOutpostConsent(.closed)
         try await removePhone(rig)
         #expect(
-            rig.tablet.pairwiseSecret(with: rig.friendID) != (try legacy(rig.tablet, with: rig.friendID)),
+            rig.tablet.pairwiseSecret(with: rig.friendID) != (try base(rig.tablet, with: rig.friendID)),
             "precondition: the address changed")
 
         try await rig.tablet.appendToWall(

@@ -55,13 +55,13 @@ extension AppSession {
 
     // MARK: The secrets a round writes under and listens under
 
-    func legacySecret(with person: ParticipantID) -> PairwiseSecret? {
+    func baseSecret(with person: ParticipantID) -> PairwiseSecret? {
         guard let identity = enrolment?.identity else { return nil }
-        if let known = cachedLegacySecrets[[identity.id, person]] { return known }
+        if let known = cachedBaseSecrets[[identity.id, person]] { return known }
         guard let keys = replica.registry(for: person)?.identity,
             let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)
         else { return nil }
-        cachedLegacySecrets[[identity.id, person]] = secret
+        cachedBaseSecrets[[identity.id, person]] = secret
         return secret
     }
 
@@ -135,12 +135,12 @@ extension AppSession {
                 continue
             }
             let devices = deviceRecipients(of: peer.them)
-            guard !devices.isEmpty, let legacy = legacySecret(with: peer.them) else { continue }
+            guard !devices.isEmpty, let base = baseSecret(with: peer.them) else { continue }
             do {
                 let announcement = try AddressAnnouncement.make(
                     salt, from: enrolment.identity.id, by: enrolment.device, to: peer.them, devices: devices)
                 let sent = try await session.send(
-                    [], to: [Peer(secret: legacy, them: peer.them, me: peer.me)],
+                    [], to: [Peer(secret: base, them: peer.them, me: peer.me)],
                     certificates: knownCertificates(), revocations: removalsToTellFriends(), at: clock.now,
                     addresses: [announcement])
                 noteWritten(sent)

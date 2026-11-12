@@ -58,8 +58,8 @@ Nothing below is built until he answers. Each line has a recommendation where it
 5. The lock on a simulator with Face ID enrolled (`RigChecks` does not enrol one yet), then on an
    iPhone, where the Secure Enclave runs for the first time.
 6. The chat list, once picked. Then the notification settings that are saved and read by nothing.
-7. The work orders that change nothing a member sees: accessors only tests call, the
-   `legacySecret(with:)` rename, test waits counted in attempts.
+7. The work orders that change nothing a member sees: accessors only tests call, and test waits
+   counted in attempts. The rename of `legacySecret(with:)` to `baseSecret(with:)` is done.
 8. The tester build itself: iPhone only, archive, validate, the schema to production. Each needs
    Griff's go-ahead.
 

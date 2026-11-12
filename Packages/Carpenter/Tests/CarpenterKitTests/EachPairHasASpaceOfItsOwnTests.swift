@@ -77,9 +77,9 @@ struct EachPairHasASpaceOfItsOwnTests {
             passed.append(link.body)
         }
         let body = try #require(passed.last, "precondition: Alice holds the link Bob sent Carol")
-        let alicesView = try #require(t.alice.legacySecret(with: t.bobID))
+        let alicesView = try #require(t.alice.baseSecret(with: t.bobID))
         #expect(body.open(from: t.bobID, with: alicesView) == nil, "the member in the middle read a link meant for Carol")
-        let carolsView = try #require(t.carol.legacySecret(with: t.bobID))
+        let carolsView = try #require(t.carol.baseSecret(with: t.bobID))
         #expect(body.open(from: t.bobID, with: carolsView) != nil, "the person a link was for could not read it")
     }
 
@@ -99,7 +99,7 @@ struct EachPairHasASpaceOfItsOwnTests {
             to: head, author: t.bobID, device: bob.device, clock: t.bob.replica.frontier,
             wallTime: TestSession.now, room: t.room,
             payload: try Payload.pairLink(
-                try PairLinkBody.seal(forged, from: t.bobID, to: t.carolID, with: try #require(t.bob.legacySecret(with: t.carolID)))),
+                try PairLinkBody.seal(forged, from: t.bobID, to: t.carolID, with: try #require(t.bob.baseSecret(with: t.carolID)))),
             at: try #require(chain.highestKnownEpoch), sealedWith: chain, roomLink: RoomLink(previous: nil))
         try t.bob.replica.integrate(entry)
         t.bob.sendOwnEntries()

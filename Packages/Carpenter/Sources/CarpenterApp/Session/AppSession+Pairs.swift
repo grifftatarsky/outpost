@@ -45,7 +45,7 @@ extension AppSession {
         var hints: [ParticipantID: PairHint] = [:]
         var accounts: [ParticipantID: Set<String>] = [:]
         for person in peopleInTouch() {
-            guard let secret = legacySecret(with: person) else { continue }
+            guard let secret = baseSecret(with: person) else { continue }
             hints[person] = secret.pairHint
             accounts[person] = readable(from: person)
         }
@@ -192,7 +192,7 @@ extension AppSession {
             }
         }
         return heard.reduce(into: [:]) { found, pair in
-            guard let secret = legacySecret(with: pair.key) else { return }
+            guard let secret = baseSecret(with: pair.key) else { return }
             found[pair.key] = pair.value
                 .sorted { ($0.entry.wallTime, $0.entry.seq) > ($1.entry.wallTime, $1.entry.seq) }
                 .compactMap { $0.body.open(from: pair.key, with: secret) }
@@ -205,7 +205,7 @@ extension AppSession {
     }
 
     private func announce(_ link: PairLink, to peer: ParticipantID) async -> Bool {
-        guard let me = enrolment?.identity.id, let secret = legacySecret(with: peer),
+        guard let me = enrolment?.identity.id, let secret = baseSecret(with: peer),
             let room = roomShared(with: peer)
         else { return false }
         do {
