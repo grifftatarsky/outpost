@@ -145,10 +145,15 @@ public struct MemberPreferences: Hashable, Sendable, Codable {
         Set(outpostNotified.filter { $0.value.value }.keys)
     }
 
+    public var outpostNotifiedAsOf: Date? {
+        outpostNotified.values.map(\.stamp.at).max()
+    }
+
     public mutating func setNotified(
         _ isNotified: Bool, about person: ParticipantID, stamp: OrganisationStamp
     ) {
-        outpostNotified[person] = Stamped(isNotified, stamp: stamp)
+        let at = outpostNotifiedAsOf.map { max(stamp.at, $0.addingTimeInterval(0.001)) } ?? stamp.at
+        outpostNotified[person] = Stamped(isNotified, stamp: OrganisationStamp(at: at, device: stamp.device))
     }
 
     public var blockedPeople: Set<ParticipantID> {

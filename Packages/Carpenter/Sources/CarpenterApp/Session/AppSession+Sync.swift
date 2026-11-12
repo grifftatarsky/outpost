@@ -142,6 +142,7 @@ extension AppSession {
                 granting: owedGrants.map { (to: $0.to, grant: $0.grant) }, at: clock.now,
                 ringing: ringing,
                 identities: knownIdentities(), notifyWalls: sayingWishes,
+                notifyWallsAsOf: persisted.preferences.outpostNotifiedAsOf,
                 confirming: owedConfirmations.map(\.body), announcing: announcing, withholding: withholding)
         } catch let refused as MailboxFailure {
             cannotSend = refused
@@ -245,7 +246,10 @@ extension AppSession {
             }
         }
 
-        if let me = enrolment?.identity.id, let wishes = received.notifyWalls {
+        if let me = enrolment?.identity.id, let wishes = received.notifyWalls,
+            (received.notifyWallsAsOf ?? .distantPast) >= (persisted.wishesHeardAsOf[peer.them] ?? .distantPast)
+        {
+            if let asOf = received.notifyWallsAsOf { persisted.wishesHeardAsOf[peer.them] = asOf }
             let wants = wishes.contains(me)
             let held = persisted.wantsOutpostBell.contains(peer.them)
             if wants != held {

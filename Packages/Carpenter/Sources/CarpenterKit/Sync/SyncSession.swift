@@ -114,6 +114,7 @@ public struct SyncReport: Hashable, Sendable {
     public var repairRequests: [RepairRequest] = []
     public var repairAnswers: [RepairAnswer] = []
     public var notifyWalls: [ParticipantID]?
+    public var notifyWallsAsOf: Date?
     public var confirmations: [JoinConfirmedBody] = []
     public var photoAsks: [PhotoAsk] = []
     public var addresses: [ReceivedAddress] = []
@@ -129,6 +130,12 @@ public struct SyncReport: Hashable, Sendable {
     }
 
     public init() {}
+
+    public mutating func hear(_ wishes: [ParticipantID]?, asOf: Date?) {
+        guard let wishes, (asOf ?? .distantPast) >= (notifyWallsAsOf ?? .distantPast) else { return }
+        notifyWalls = wishes
+        notifyWallsAsOf = asOf
+    }
 
     public func adding(_ other: SyncReport) -> SyncReport {
         var merged = self
@@ -155,7 +162,7 @@ public struct SyncReport: Hashable, Sendable {
         merged.grantsReceived.append(contentsOf: other.grantsReceived)
         merged.repairRequests.append(contentsOf: other.repairRequests)
         merged.repairAnswers.append(contentsOf: other.repairAnswers)
-        if let theirs = other.notifyWalls { merged.notifyWalls = theirs }
+        merged.hear(other.notifyWalls, asOf: other.notifyWallsAsOf)
         merged.confirmations.append(contentsOf: other.confirmations)
         merged.photoAsks.append(contentsOf: other.photoAsks)
         merged.addresses.append(contentsOf: other.addresses)
@@ -236,6 +243,7 @@ public struct SyncSession: Sendable {
         answers: [RepairAnswer] = [],
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
+        notifyWallsAsOf: Date? = nil,
         confirming: [JoinConfirmedBody] = [],
         asking: [PhotoAsk] = [],
         addresses: [AddressAnnouncement] = [],
@@ -297,6 +305,7 @@ public struct SyncSession: Sendable {
                     answers: first ? answers : [],
                     identities: planned.identities,
                     notifyWalls: first ? notifyWalls : nil,
+                    notifyWallsAsOf: notifyWallsAsOf,
                     confirmations: first ? confirming : [],
                     asks: first ? asking : [],
                     addresses: first ? announcements : [])
@@ -506,7 +515,7 @@ public struct SyncSession: Sendable {
                 contentsOf: delivery.grants.map { SyncReport.ReceivedGrant(grant: $0, storedAt: packet.storedAt) })
             report.repairRequests.append(contentsOf: delivery.requests)
             report.repairAnswers.append(contentsOf: delivery.answers)
-            if let wishes = delivery.notifyWalls { report.notifyWalls = wishes }
+            report.hear(delivery.notifyWalls, asOf: delivery.notifyWallsAsOf)
             report.confirmations.append(contentsOf: delivery.confirmations)
             report.photoAsks.append(contentsOf: delivery.asks)
             report.addresses.append(

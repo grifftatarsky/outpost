@@ -133,6 +133,7 @@ extension ForwardCompatibilityTests {
         state.reviewsPostponed = [room: [ParticipantID(rawValue: WideID.of([9]))]]
         state.outpostSeenThrough = [ParticipantID(rawValue: WideID.of([9])): stamp.at]
         state.wantsOutpostBell = [ParticipantID(rawValue: WideID.of([9]))]
+        state.wishesHeardAsOf = [ParticipantID(rawValue: WideID.of([9])): stamp.at]
         let inviter = Identity.generate()
         state.acceptedInvitations = [
             AcceptedInvitation(

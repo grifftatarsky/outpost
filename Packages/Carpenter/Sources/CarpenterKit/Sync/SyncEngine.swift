@@ -46,6 +46,7 @@ public enum SyncEngine {
         public let requests: [RepairRequest]
         public let answers: [RepairAnswer]
         public let notifyWalls: [ParticipantID]?
+        public let notifyWallsAsOf: Date?
         public let confirmations: [JoinConfirmedBody]
         public let asks: [PhotoAsk]
         public let addresses: [AddressAnnouncement]
@@ -54,6 +55,7 @@ public enum SyncEngine {
             entries: [Entry], certificates: [DeviceCertificate], revocations: [DeviceRevocation],
             grants: [EpochGrant], requests: [RepairRequest] = [], answers: [RepairAnswer] = [],
             identities: [IdentityPublicKeys] = [], notifyWalls: [ParticipantID]? = nil,
+            notifyWallsAsOf: Date? = nil,
             confirmations: [JoinConfirmedBody] = [], asks: [PhotoAsk] = [], addresses: [AddressAnnouncement] = []
         ) {
             self.entries = entries
@@ -64,6 +66,7 @@ public enum SyncEngine {
             self.requests = requests
             self.answers = answers
             self.notifyWalls = notifyWalls
+            self.notifyWallsAsOf = notifyWallsAsOf
             self.confirmations = confirmations
             self.asks = asks
             self.addresses = addresses
@@ -78,6 +81,7 @@ public enum SyncEngine {
         var requests: [RepairRequest] = []
         var answers: [RepairAnswer] = []
         var notifyWalls: [ParticipantID]?
+        var notifyWallsAsOf: Date?
         var confirmations: [JoinConfirmedBody] = []
         var asks: [PhotoAsk] = []
         var addresses: [AddressAnnouncement] = []
@@ -86,8 +90,8 @@ public enum SyncEngine {
             entries: [Entry] = [], certificates: [DeviceCertificate] = [],
             revocations: [DeviceRevocation] = [], requests: [RepairRequest] = [],
             answers: [RepairAnswer] = [], identities: [IdentityPublicKeys] = [],
-            notifyWalls: [ParticipantID]? = nil, confirmations: [JoinConfirmedBody] = [],
-            asks: [PhotoAsk] = [], addresses: [AddressAnnouncement] = []
+            notifyWalls: [ParticipantID]? = nil, notifyWallsAsOf: Date? = nil,
+            confirmations: [JoinConfirmedBody] = [], asks: [PhotoAsk] = [], addresses: [AddressAnnouncement] = []
         ) {
             self.entries = entries
             self.identities = identities
@@ -96,6 +100,7 @@ public enum SyncEngine {
             self.requests = requests
             self.answers = answers
             self.notifyWalls = notifyWalls
+            self.notifyWallsAsOf = notifyWallsAsOf
             self.confirmations = confirmations
             self.asks = asks
             self.addresses = addresses
@@ -113,6 +118,7 @@ public enum SyncEngine {
             requests = try container.decodeIfPresent([RepairRequest].self, forKey: .requests) ?? []
             answers = try container.decodeIfPresent([RepairAnswer].self, forKey: .answers) ?? []
             notifyWalls = try container.decodeIfPresent([ParticipantID].self, forKey: .notifyWalls)
+            notifyWallsAsOf = try container.decodeIfPresent(Date.self, forKey: .notifyWallsAsOf)
             confirmations =
                 try container.decodeIfPresent([JoinConfirmedBody].self, forKey: .confirmations) ?? []
             asks = try container.decodeIfPresent([PhotoAsk].self, forKey: .asks) ?? []
@@ -132,6 +138,7 @@ public enum SyncEngine {
         answers: [RepairAnswer] = [],
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
+        notifyWallsAsOf: Date? = nil,
         confirmations: [JoinConfirmedBody] = [],
         asks: [PhotoAsk] = [],
         addresses: [AddressAnnouncement] = []
@@ -142,7 +149,8 @@ public enum SyncEngine {
         let body = Body(
             entries: entries, certificates: certificates, revocations: revocations,
             requests: requests, answers: answers, identities: identities,
-            notifyWalls: notifyWalls, confirmations: confirmations, asks: asks, addresses: addresses)
+            notifyWalls: notifyWalls, notifyWallsAsOf: notifyWalls == nil ? nil : notifyWallsAsOf,
+            confirmations: confirmations, asks: asks, addresses: addresses)
         let sealed = try ChaChaPoly.seal(
             Compressed.pack(try JSONEncoder().encode(body)), using: contentKey, authenticating: context)
 
@@ -189,6 +197,7 @@ public enum SyncEngine {
             entries: body.entries, certificates: body.certificates,
             revocations: body.revocations, grants: grants, requests: body.requests,
             answers: body.answers, identities: body.identities, notifyWalls: body.notifyWalls,
+            notifyWallsAsOf: body.notifyWallsAsOf,
             confirmations: body.confirmations, asks: body.asks, addresses: body.addresses)
     }
 

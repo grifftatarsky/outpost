@@ -55,6 +55,7 @@ struct PersistedState: Codable, Equatable, Sendable {
     var askedAutomatically: [RoomID: Date] = [:]
     var outpostMediaOwed: [ParticipantID] = []
     var wantsOutpostBell: [ParticipantID] = []
+    var wishesHeardAsOf: [ParticipantID: Date] = [:]
     var outpostSeenThrough: [ParticipantID: Date] = [:]
     var reviewsPostponed: [RoomID: [ParticipantID]] = [:]
     var keyRotationsOwed: [RoomID] = []
@@ -159,6 +160,8 @@ struct PersistedState: Codable, Equatable, Sendable {
             ?? [:]
         wantsOutpostBell =
             try container.decodeIfPresent([ParticipantID].self, forKey: .wantsOutpostBell) ?? []
+        wishesHeardAsOf =
+            try container.decodeIfPresent([ParticipantID: Date].self, forKey: .wishesHeardAsOf) ?? [:]
         outpostMediaOwed =
             try container.decodeIfPresent([ParticipantID].self, forKey: .outpostMediaOwed) ?? []
         outstandingPackets =

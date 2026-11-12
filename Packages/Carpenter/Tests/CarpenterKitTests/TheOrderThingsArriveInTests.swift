@@ -57,8 +57,6 @@ struct TheOrderThingsArriveInTests {
         #expect(g["Erin"].missingHistory(in: room).isEmpty, "Erin is missing history after a burst")
         #expect(g["Erin"].persisted.askedAutomatically[room] == nil, "Erin started a repair for a burst")
         let earlierWishStands = g["Erin"].wantsOutpostBellFrom(g.id("Alice"))
-        withKnownIssue("a wish turned off a round after it was turned on stands on some runs", isIntermittent: true) {
-            #expect(!earlierWishStands, "Alice's earlier wish stood on seed \(seed)")
-        }
+        #expect(!earlierWishStands, "Alice's earlier wish stood on seed \(seed)")
     }
 }
