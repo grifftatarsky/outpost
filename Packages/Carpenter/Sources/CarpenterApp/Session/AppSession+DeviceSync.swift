@@ -319,18 +319,23 @@ extension AppSession {
             publishAgain = true
             return
         }
-        publishing = true
-        Task { await publishOwnEntries() }
+        passingOn = Task { await publishOwnEntries() }
     }
 
-    private func publishOwnEntries() async {
-        defer { publishing = false }
+    func ownDevicesCanCollectWhatThisOneHolds() async -> Bool {
+        sendOwnEntries()
+        return await passingOn?.value ?? true
+    }
+
+    private func publishOwnEntries() async -> Bool {
+        defer { passingOn = nil }
+        var stored = true
 
         repeat {
             publishAgain = false
-            guard let deviceSync, enrolment != nil else { return }
+            guard let deviceSync, enrolment != nil else { return false }
             await publishAuthority(through: deviceSync)
-            guard let enrolment else { return }
+            guard let enrolment else { return false }
             let me = enrolment.device.id
             let now = clock.now
             let held = heldEpochs()
@@ -404,7 +409,9 @@ extension AppSession {
                 }
                 persisted.siblingMail.commit(
                     plan, stateWritten: drafts.contains { $0.kind == .state } ? digest : nil)
+                stored = true
             } catch {
+                stored = false
                 Diagnostics.sync.error(
                     "device sync send failed: \(String(describing: error), privacy: .public)")
             }
@@ -414,5 +421,6 @@ extension AppSession {
                 }
             }
         } while publishAgain
+        return stored
     }
 }

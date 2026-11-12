@@ -55,6 +55,7 @@ extension AppSession {
                 phone holds (\(String(describing: error), privacy: .public))
                 """)
         }
+        await refreshDeviceSync()
     }
 
     public func send(_ text: String, to room: RoomID?) async throws {

@@ -265,7 +265,7 @@ extension AppSession {
 
         try await writeDownOrReport()
 
-        if mode == .full, let enrolment {
+        if mode == .full, let enrolment, !settled.isEmpty, await ownDevicesCanCollectWhatThisOneHolds() {
             let (member, device, secret) = (enrolment.identity.id, enrolment.device, peer.secret)
             let foundUnder = Dictionary(
                 collected.packets.map { ($0.id, $0.secret ?? secret) }, uniquingKeysWith: { first, _ in first })

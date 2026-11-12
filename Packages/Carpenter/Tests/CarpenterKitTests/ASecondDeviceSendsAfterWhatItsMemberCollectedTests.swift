@@ -25,12 +25,31 @@ struct ASecondDeviceSendsAfterWhatItsMemberCollectedTests {
         try await g.settle()
 
         let sent = try #require(g.entry(saying: "from the tablet", in: room, on: "Bob's tablet"))
-        withKnownIssue("the read before a send is a mailbox round only and skips what the phone collected") {
-            #expect(
-                sent.opened(using: erinHeld) == nil, "Erin's keys from before her removal open the tablet's message")
-            #expect(!g.shows("from the tablet", in: room, on: "Erin"), "Erin read the tablet's message")
-        }
+        #expect(sent.opened(using: erinHeld) == nil, "Erin's keys from before her removal open the tablet's message")
+        #expect(!g.shows("from the tablet", in: room, on: "Erin"), "Erin read the tablet's message")
         g.sameRoom(room, on: ["Alice", "Carol", "Bob", "Bob's tablet"])
         #expect(g.shows("from the tablet", in: room, on: "Alice"))
+    }
+
+    @Test("A phone that could not store a removal for its tablet leaves the delivery for the tablet to collect")
+    func aPhoneThatCouldNotTellItsTabletDoesNotSignForTheDelivery() async throws {
+        let g = try await Gathering.of("Alice", "Bob", "Carol", "Erin")
+        let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Erin"])
+        try await g.secondDevice("Bob's tablet", of: "Bob")
+        let erinHeld = try #require(g["Erin"].chains[room])
+
+        try await g["Alice"].remove(g.id("Erin"), from: room)
+        await g.find("Bob").engine.cut()
+        await g.takeTurns("Alice", "Bob")
+        try #require(
+            g["Bob"].roster(of: room).removal(of: g.id("Erin")) != nil,
+            "precondition: Bob's phone collected the removal")
+        try await g["Bob's tablet"].send("from the tablet", to: room, after: g.door("Bob's tablet"))
+
+        let sent = try #require(g.entry(saying: "from the tablet", in: room, on: "Bob's tablet"))
+        #expect(sent.opened(using: erinHeld) == nil, "Erin's keys from before her removal open the tablet's message")
+        #expect(
+            g["Bob's tablet"].roster(of: room).removal(of: g.id("Erin")) != nil,
+            "the tablet wrote without hearing of the removal its phone had collected")
     }
 }

@@ -222,7 +222,8 @@ public final class AppSession {
 
     var arrivalDelays: [EntryHash: TimeInterval] = [:]
 
-    var publishing = false
+    var passingOn: Task<Bool, Never>?
+    var publishing: Bool { passingOn != nil }
     var publishAgain = false
 
     var stateWrites: Task<Void, any Error>?
