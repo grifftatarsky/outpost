@@ -4,7 +4,8 @@
 #
 #   1. The app suite with the live CloudKit tests on, on the first simulator: one account.
 #   2. LivePairTests, a side on each simulator: a space shared each way, entries in order, receipts,
-#      a photo, a closed space.
+#      a photo, a closed space. Then LivePairContractTests: the rules the in-memory mailbox is held
+#      to under swift test, checked against iCloud by the same code.
 #   3. LivePairSendTests, a side on each: an invitation by code, a Solo, a key replaced while the
 #      other side ran no rounds, a send that collects first, a removal collected.
 #
@@ -22,7 +23,7 @@
 set -uo pipefail
 
 if [ "${ERASE_SPACES:-}" != "yes" ]; then
-  sed -n '3,19p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,20p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
 fi
 
@@ -87,6 +88,7 @@ pair() {
 }
 
 pair LivePairTests alice bob
+pair LivePairContractTests alice bob
 pair LivePairSendTests ann ben
 
 echo "commit $(git rev-parse --short HEAD)$(git diff --quiet || echo ' with uncommitted changes'), logs in $logs"

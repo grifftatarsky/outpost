@@ -37,6 +37,13 @@ enum LiveCloudKit {
         return CloudKitMailbox(container: container)
     }
 
+    static func afterWrite(_ cloud: CloudKitMailbox) -> MailboxContract.AfterWrite {
+        {
+            try await Task.sleep(for: .seconds(2.5))
+            await cloud.lookAgain()
+        }
+    }
+
     static func tag() -> RecipientTag {
         RecipientTag(rawValue: Data((0..<32).map { _ in UInt8.random(in: .min ... .max) }))
     }
@@ -93,36 +100,40 @@ struct CloudKitMailboxTests {
         #expect(named.publicPermission == .none)
     }
 
-    @Test("A packet written into a space comes back exactly as it went, addressed to that one person")
-    func aPacketComesBackExactly() async throws {
-        let t = try await two()
-        let tag = t.toThem.outgoingTag(window: 1)
-        let sent = SyncPacket(
-            wraps: [tag: LiveCloudKit.bytes(48)], ciphertext: LiveCloudKit.bytes(4096), grants: [tag: [LiveCloudKit.bytes(32)]])
-        try await t.mailbox.put(sent, to: t.them.id, in: t.pairs)
-
-        let held = try await t.mailbox.sentPackets(in: t.pairs)
-        let back = try #require(held[sent.id], "a packet written into a space did not come back")
-        #expect(back.to == t.them.id)
-        #expect(back.recipients == [tag])
-        #expect(back.contentDigest == sent.contentDigest, "the packet changed on the way through CloudKit")
-
-        try await t.mailbox.withdraw(sent.id, in: t.pairs)
-        #expect(try await t.mailbox.sentPackets(in: t.pairs)[sent.id] == nil, "a withdrawn packet stayed")
+    private func fresh() async throws -> CloudKitMailbox {
+        let cloud = try await LiveCloudKit.mailbox()
+        try await cloud.eraseEverySpace()
+        return cloud
     }
 
-    @Test("A packet at the app's own budget is accepted, and one over the ceiling is refused before it is sent")
-    func theCeilingHolds() async throws {
-        let t = try await two()
-        let tag = t.toThem.outgoingTag(window: 1)
-        try await t.mailbox.put(
-            SyncPacket(wraps: [tag: Data(count: 32)], ciphertext: LiveCloudKit.bytes(SyncSession.packetByteBudget)),
-            to: t.them.id, in: t.pairs)
-        await #expect(throws: MailboxError.self) {
-            try await t.mailbox.put(
-                SyncPacket(wraps: [tag: Data(count: 32)], ciphertext: Data(count: MailboxRules.recordByteCeiling + 1)),
-                to: t.them.id, in: t.pairs)
-        }
+    @Test("A packet put is listed with the recipients and contents it was put with")
+    func aPutPacketIsListed() async throws {
+        let cloud = try await fresh()
+        try await MailboxContract.aPutPacketIsListed(in: cloud, afterWrite: LiveCloudKit.afterWrite(cloud))
+    }
+
+    @Test("A packet over the record ceiling is refused before anything is stored, and one at the budget goes")
+    func theRecordCeilingHolds() async throws {
+        let cloud = try await fresh()
+        try await MailboxContract.theRecordCeilingHolds(in: cloud, afterWrite: LiveCloudKit.afterWrite(cloud))
+    }
+
+    @Test("A withdrawn packet is no longer listed")
+    func aWithdrawnPacketIsNoLongerListed() async throws {
+        let cloud = try await fresh()
+        try await MailboxContract.aWithdrawnPacketIsNoLongerListed(in: cloud, afterWrite: LiveCloudKit.afterWrite(cloud))
+    }
+
+    @Test("A person's space is found again, a space for a code is new each time, and claiming one makes it theirs")
+    func spacesAreFoundAgainAndCodesAreNew() async throws {
+        let cloud = try await fresh()
+        try await MailboxContract.spacesAreFoundAgainAndCodesAreNew(in: cloud, afterWrite: LiveCloudKit.afterWrite(cloud))
+    }
+
+    @Test("A photo is stored once for each person it is for, and writing it again keeps when it was first stored")
+    func aPhotoIsOneCopyPerPerson() async throws {
+        let cloud = try await fresh()
+        try await MailboxContract.aPhotoIsOneCopyPerPerson(in: cloud, afterWrite: LiveCloudKit.afterWrite(cloud))
     }
 
     @Test("A photo far over the record ceiling goes as an asset, one copy for each person it is for")

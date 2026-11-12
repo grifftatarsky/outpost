@@ -186,3 +186,33 @@ struct LivePairTests {
         try? await cloud.eraseEverySpace()
     }
 }
+
+struct LivePairBoard: ContractBoard {
+    func leave(_ value: String, as name: String) async throws {
+        try await LivePair.leave(value, as: name)
+    }
+
+    func read(_ name: String) async throws -> String {
+        try await LivePair.waitFor(name)
+    }
+}
+
+@Suite(
+    "Both mailboxes keep the pair contract on two iCloud accounts",
+    .enabled(if: LiveCloudKit.isAsked && !LivePairRun.role.isEmpty),
+    .serialized)
+struct LivePairContractTests {
+    @Test(.enabled(if: LivePairRun.role == "alice"), arguments: PairCheck.all)
+    func asAlice(_ check: PairCheck) async throws {
+        let cloud = try await LiveCloudKit.mailbox()
+        try await MailboxContract.run(
+            check, as: .alice, on: cloud, board: LivePairBoard(), afterWrite: LiveCloudKit.afterWrite(cloud))
+    }
+
+    @Test(.enabled(if: LivePairRun.role == "bob"), arguments: PairCheck.all)
+    func asBob(_ check: PairCheck) async throws {
+        let cloud = try await LiveCloudKit.mailbox()
+        try await MailboxContract.run(
+            check, as: .bob, on: cloud, board: LivePairBoard(), afterWrite: LiveCloudKit.afterWrite(cloud))
+    }
+}

@@ -13,69 +13,6 @@ struct TheFakeIsNoEasierTests {
         return (toBob, asBob, alice, bob)
     }
 
-    @Test("A packet too big for a real record is refused here too")
-    func aPacketTooBigIsRefused() async throws {
-        let mailbox = InMemoryMailbox()
-        let pair = try await linked(mailbox)
-        let huge = SyncPacket(
-            wraps: [pair.toBob.outgoingTag(window: 1): Data(count: 32)],
-            ciphertext: Data(count: MailboxRules.recordByteCeiling + 1))
-
-        await #expect(throws: MailboxError.self) {
-            try await mailbox.put(huge, to: pair.toBob.them, in: pair.alice)
-        }
-        #expect(
-            await mailbox.storedPacketCount == 0,
-            """
-            A record over the app's own ceiling was accepted. The ceiling is ours, not CloudKit's \
-            — measured against a real account 2026-09-14, the server took a sixteen-megabyte record \
-            without complaint — so `MailboxRules.recordByteCeiling` and \
-            `SyncSession.packetByteBudget` under it are the only things keeping a round small, and \
-            both mailboxes have to hold the line.
-            """)
-    }
-
-    @Test("A packet within the ceiling still goes")
-    func aPacketWithinTheCeilingGoes() async throws {
-        let mailbox = InMemoryMailbox()
-        let pair = try await linked(mailbox)
-        let big = SyncPacket(
-            wraps: [pair.toBob.outgoingTag(window: 1): Data(count: 32)], ciphertext: Data(count: SyncSession.packetByteBudget))
-
-        try await mailbox.put(big, to: pair.toBob.them, in: pair.alice)
-        #expect(
-            await mailbox.storedPacketCount == 1,
-            "a packet at the app's own budget was refused, so the budget is above the ceiling")
-    }
-
-    @Test("A copy says when it was first stored, as iCloud's creation date does, and a rewrite does not move it")
-    func aCopyKeepsWhenItWasFirstStored() async throws {
-        let clock = TestClock(now: TestSession.now)
-        let mailbox = InMemoryMailbox(clock: clock)
-        let pair = try await linked(mailbox)
-        let tag = pair.toBob.outgoingTag(window: 1)
-        let copies = try OutgoingAttachment(
-            id: AttachmentID(), ciphertext: Data(count: 16), recipients: [pair.toBob.them: tag]
-        ).copies(between: { _ in pair.toBob.secret })
-
-        try await mailbox.upload(copies, in: pair.alice)
-        let first = try #require(await mailbox.storedCopies(in: pair.alice).first)
-        #expect(first.recipients == [tag], "a fresh upload did not report who it is for")
-
-        clock.advance(by: MailboxRules.sweepAge + 1)
-        try await mailbox.upload(copies, in: pair.alice)
-        let again = try #require(await mailbox.storedCopies(in: pair.alice).first)
-        #expect(
-            again.storedAt == first.storedAt,
-            """
-            Writing a copy again moved when it was first stored. iCloud keeps a record's creation \
-            date through a rewrite, and the sweep waits on that date so it cannot race an upload \
-            whose entry has not arrived yet; answering "how old" with the last write is what let a \
-            new reader wipe the outstanding list of a photo posted minutes earlier.
-            """)
-        #expect(again.modifiedAt > first.modifiedAt)
-    }
-
     @MainActor
     private func entries(_ text: String, into log: MemoryLogStore) async throws -> [Entry] {
         let session = AppSession(
