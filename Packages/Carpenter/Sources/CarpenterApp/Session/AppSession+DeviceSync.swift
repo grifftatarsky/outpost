@@ -407,11 +407,19 @@ extension AppSession {
                             draft.feed, for: enrolment.identity, on: me, as: draft.kind, to: recipients,
                             signedBy: enrolment.device)))
                 }
-                if !records.isEmpty || !deleting.isEmpty {
-                    try await deviceSync.send(records, deleting: deleting)
+                let isCatchUp: (SiblingRecord) -> Bool = {
+                    if case .catchUp = $0.name.kind { true } else { false }
                 }
+                let (catchUps, mailAndState) = (records.filter(isCatchUp), records.filter { !isCatchUp($0) })
+                if !mailAndState.isEmpty || !deleting.isEmpty {
+                    let landed = try await deviceSync.send(mailAndState, deleting: deleting)
+                    let mailLanded = mailAndState.allSatisfy { !$0.name.kind.carriesKeys || landed[$0.name] != nil }
+                    guard mailLanded else { throw DeviceMailNotStored() }
+                }
+                let catchUpsWritten = await storeCatchUps(catchUps, through: deviceSync)
                 persisted.siblingMail.commit(
-                    plan, stateWritten: drafts.contains { $0.kind == .state } ? digest : nil)
+                    plan, stateWritten: drafts.contains { $0.kind == .state } ? digest : nil,
+                    catchUpsWritten: catchUpsWritten)
                 stored = true
             } catch {
                 stored = false
@@ -426,4 +434,18 @@ extension AppSession {
         } while publishAgain
         return stored
     }
+
+    private func storeCatchUps(_ catchUps: [SiblingRecord], through deviceSync: any EntrySync) async -> Bool {
+        guard !catchUps.isEmpty else { return true }
+        do {
+            let landed = try await deviceSync.send(catchUps, deleting: [])
+            return catchUps.allSatisfy { landed[$0.name] != nil }
+        } catch {
+            Diagnostics.sync.error(
+                "device sync: a catch-up for another device was not stored: \(String(describing: error), privacy: .public)")
+            return false
+        }
+    }
 }
+
+struct DeviceMailNotStored: Error {}

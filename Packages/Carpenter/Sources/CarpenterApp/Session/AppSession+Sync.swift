@@ -27,11 +27,13 @@ extension AppSession {
 
         var report = SyncReport()
         var firstFailure: (any Error)?
+        var collected: [Collected] = []
         for peer in everyPeer() where people?.contains(peer.them) ?? true {
             do {
-                let movedAddress = try await takeWhatArrived(from: peer, through: session, mode: mode, into: &report)
-                if movedAddress, let there = everyPeer().first(where: { $0.them == peer.them }) {
-                    _ = try await takeWhatArrived(from: there, through: session, mode: mode, into: &report)
+                let first = try await takeWhatArrived(from: peer, through: session, into: &report)
+                collected.append(first)
+                if first.movedAddress, let there = everyPeer().first(where: { $0.them == peer.them }) {
+                    collected.append(try await takeWhatArrived(from: there, through: session, into: &report))
                 }
             } catch {
                 firstFailure = firstFailure ?? error
@@ -39,6 +41,7 @@ extension AppSession {
         }
         do { try await writeDownOrReport() } catch { firstFailure = firstFailure ?? error }
         guard enrolment != nil, !thisDeviceWasRemoved else { throw AppSessionError.noIdentity }
+        if mode == .full { await signFor(collected, through: session) }
         await oweNewKeysWhereARemovedDeviceHoldsOne()
         if mode == .full {
             update(\.viewMayBeStale, to: refusalWatch.holdsKeys(after: report.refusals, at: clock.now))
@@ -227,9 +230,36 @@ extension AppSession {
         update(\.persisted.authorityOwed, to: persisted.authorityOwed.subtracting(told).intersection(everyone))
     }
 
+    private struct Collected {
+        let packets: SyncSession.CollectedPackets
+        let settled: Set<PacketID>
+        let peer: Peer
+        let movedAddress: Bool
+    }
+
+    private func signFor(_ deliveries: [Collected], through session: SyncSession) async {
+        let settled = deliveries.filter { !$0.settled.isEmpty }
+        guard let enrolment, !settled.isEmpty, everythingHeldIsOnDisk, await ownDevicesCanCollectWhatThisOneHolds()
+        else { return }
+        let (member, device) = (enrolment.identity.id, enrolment.device)
+        for delivery in settled {
+            let secret = delivery.peer.secret
+            let foundUnder = Dictionary(
+                delivery.packets.packets.map { ($0.id, $0.secret ?? secret) }, uniquingKeysWith: { first, _ in first })
+            do {
+                try await session.acknowledge(delivery.packets, delivery.settled) { packet, tag in
+                    try PacketReceipt.seal(packet, under: tag, as: member, by: device, to: foundUnder[packet] ?? secret)
+                }
+            } catch {
+                Diagnostics.sync.error(
+                    "mailbox: could not acknowledge a packet: \(String(describing: error), privacy: .public)")
+            }
+        }
+    }
+
     private func takeWhatArrived(
-        from peer: Peer, through session: SyncSession, mode: SyncMode, into report: inout SyncReport
-    ) async throws -> Bool {
+        from peer: Peer, through session: SyncSession, into report: inout SyncReport
+    ) async throws -> Collected {
         let alternates = alternateSecrets(with: peer.them)
         let signedFor = ownMemberSignedFor(from: peer, alternates: alternates)
         let collected = try await session.collect(
@@ -307,19 +337,6 @@ extension AppSession {
 
         try await writeDownOrReport()
 
-        if mode == .full, let enrolment, !settled.isEmpty, await ownDevicesCanCollectWhatThisOneHolds() {
-            let (member, device, secret) = (enrolment.identity.id, enrolment.device, peer.secret)
-            let foundUnder = Dictionary(
-                collected.packets.map { ($0.id, $0.secret ?? secret) }, uniquingKeysWith: { first, _ in first })
-            do {
-                try await session.acknowledge(collected, settled) { packet, tag in
-                    try PacketReceipt.seal(packet, under: tag, as: member, by: device, to: foundUnder[packet] ?? secret)
-                }
-            } catch {
-                Diagnostics.sync.error(
-                    "mailbox: could not acknowledge a packet: \(String(describing: error), privacy: .public)")
-            }
-        }
         if settled.count < collected.packets.count {
             let distinct = Dictionary(grouping: report.refusals, by: \.summary)
                 .map { "\($0.key)\($0.value.count > 1 ? " ×\($0.value.count)" : "")" }
@@ -333,7 +350,7 @@ extension AppSession {
                 \(distinct.joined(separator: "; "), privacy: .public)
                 """)
         }
-        return movedAddress
+        return Collected(packets: collected, settled: settled, peer: peer, movedAddress: movedAddress)
     }
 
     private func noteRefusedForever(_ refusals: [SyncReport.Refusal]) {

@@ -342,7 +342,7 @@ public struct SiblingMail: Hashable, Sendable, Codable {
         return plan
     }
 
-    public mutating func commit(_ plan: Plan, stateWritten digest: Data?) {
+    public mutating func commit(_ plan: Plan, stateWritten digest: Data?, catchUpsWritten: Bool = true) {
         lastMail = Swift.max(lastMail, plan.through)
         if let mail = plan.mail {
             outstanding[mail.number] = plan.now
@@ -359,7 +359,9 @@ public struct SiblingMail: Hashable, Sendable, Codable {
             deletedThrough = Swift.max(deletedThrough, number)
         }
         for id in plan.catchUpsToDelete { catchUps[id] = nil }
-        for id in plan.catchUpsFor { catchUps[id] = Sent(through: plan.through, at: plan.now) }
+        if catchUpsWritten {
+            for id in plan.catchUpsFor { catchUps[id] = Sent(through: plan.through, at: plan.now) }
+        }
         if let digest { lastState = digest }
     }
 
