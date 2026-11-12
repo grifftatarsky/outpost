@@ -195,6 +195,7 @@ public final class AppSession {
 
     var issuedGrants: Set<String> = []
     var grantsCarried: [PacketID: Set<String>] = [:]
+    var writesInDoubt: [PacketID: SyncReport.WrittenPacket] = [:]
 
     var roomsWithUnsentMessages: Set<RoomID> = []
 

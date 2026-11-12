@@ -21,7 +21,8 @@ extension AppSession {
             return SyncReport()
         }
         guard let pairs = pairs() else { throw AppSessionError.noIdentity }
-        let session = SyncSession(mailbox: mailbox, pairs: pairs, clock: clock)
+        let inDoubt = WritesInDoubt()
+        let session = SyncSession(mailbox: mailbox, pairs: pairs, clock: clock, inDoubt: inDoubt)
         if mode == .full { await pairUp(through: mailbox) }
 
         var report = SyncReport()
@@ -53,7 +54,7 @@ extension AppSession {
             await announceAddresses(through: session)
             var sent = SyncReport()
             do {
-                sent = try await sendWhatIsOwed(through: session)
+                sent = try await sendWhatIsOwed(through: session, inDoubt: inDoubt)
             } catch {
                 firstFailure = firstFailure ?? error
                 sent.cannotSend = error as? MailboxFailure
@@ -73,6 +74,7 @@ extension AppSession {
 
         do { try await recordWhatArrived(report) } catch { firstFailure = firstFailure ?? error }
         recordWhatWasSent(report)
+        keepTrackOf(await inDoubt.taken())
         if mode == .full {
             await doWhatIsOwed(after: report, through: session)
         }
@@ -88,7 +90,20 @@ extension AppSession {
         return report
     }
 
-    private func sendWhatIsOwed(through session: SyncSession) async throws -> SyncReport {
+    private func keepTrackOf(
+        _ doubted: [SyncReport.WrittenPacket],
+        carrying owed: [(to: Peer, grant: EpochGrant, receipt: String, key: Data)] = []
+    ) {
+        for wrote in doubted {
+            persisted.outstandingPackets[wrote.packet] = wrote.entries
+            persisted.packetsWritten[wrote.packet] = WrittenPacketRecord(recipients: wrote.recipients, digest: wrote.digest)
+            writesInDoubt[wrote.packet] = wrote
+            let carried = Set(owed.filter { wrote.grants.contains($0.grant) }.map(\.receipt))
+            if !carried.isEmpty { grantsCarried[wrote.packet] = carried }
+        }
+    }
+
+    private func sendWhatIsOwed(through session: SyncSession, inDoubt: WritesInDoubt) async throws -> SyncReport {
         var report = SyncReport()
         let owedGrants = try grantsOwed()
         let owedConfirmations = confirmationsOwed()
@@ -145,12 +160,17 @@ extension AppSession {
                 notifyWallsAsOf: persisted.preferences.outpostNotifiedAsOf,
                 confirming: owedConfirmations.map(\.body), announcing: announcing, withholding: withholding)
         } catch let refused as MailboxFailure {
+            keepTrackOf(await inDoubt.taken(), carrying: owedGrants)
             cannotSend = refused
             Diagnostics.sync.error(
                 "mailbox: nothing can be sent — \(String(describing: refused), privacy: .public)")
             refresh()
             throw refused
+        } catch {
+            keepTrackOf(await inDoubt.taken(), carrying: owedGrants)
+            throw error
         }
+        keepTrackOf(await inDoubt.taken(), carrying: owedGrants)
         noteWhatIsStillOwed(after: report, sending: sending, fresh: freshHashes, heldBackForGood: forGood)
 
         for wrote in report.written where !wrote.grants.isEmpty {
@@ -572,10 +592,23 @@ extension AppSession {
         }
         var altered: [PacketID] = []
         for (packet, entries) in mine {
+            let doubted = writesInDoubt.removeValue(forKey: packet)
             guard let record = sent[packet] else {
+                if doubted != nil {
+                    persisted.outstandingPackets[packet] = nil
+                    persisted.packetsWritten[packet] = nil
+                    grantsCarried[packet] = nil
+                    continue
+                }
                 vanished.append(packet)
                 persisted.resend.formUnion(entries)
                 continue
+            }
+            if let doubted, let person = doubted.to {
+                let still = (persisted.entriesOwed[person] ?? []).subtracting(entries)
+                persisted.entriesOwed[person] = still.isEmpty ? nil : still
+                issuedGrants.formUnion(grantsCarried[packet] ?? [])
+                Diagnostics.sync.notice("mailbox: a packet whose answer was lost had landed; not writing it again")
             }
             let written = persisted.packetsWritten[packet]
             if let digest = written?.digest, let now = record.contentDigest, now != digest {

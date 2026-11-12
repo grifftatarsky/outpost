@@ -23,13 +23,9 @@ struct AWriteWhoseAnswerWasLostTests {
         #expect(await g.door("Alice").faultsPending + g.door("Bob").faultsPending == 0, "a lost answer never happened")
         try await g.settle()
         let alicePut = await g.door("Alice").calls.dropFirst(aliceBefore).filter { $0.call == .put }
-        withKnownIssue("a packet whose answer was lost is written again, beside the copy that landed") {
-            for friend in ["Bob", "Carol"] {
-                let puts = alicePut.count { $0.peer == g.id(friend) }
-                #expect(puts == 1, "Alice wrote \(puts) packets to \(friend) for one message")
-            }
-        } when: {
-            answersAreLost
+        for friend in ["Bob", "Carol"] {
+            let puts = alicePut.count { $0.peer == g.id(friend) }
+            #expect(puts == 1, "Alice wrote \(puts) packets to \(friend) for one message")
         }
         let bobsAcknowledged = await g.door("Bob").calls.dropFirst(bobBefore).filter { $0.call == .acknowledge }
         let acknowledgedTwice = bobsAcknowledged.count - Set(bobsAcknowledged.compactMap(\.packet)).count
@@ -48,11 +44,7 @@ struct AWriteWhoseAnswerWasLostTests {
         let unanswered = await g.cloud.everySentPacket.values.filter { $0.receipts.isEmpty }
         #expect(unanswered.isEmpty, "\(unanswered.count) packets were left in iCloud with no receipt")
         let acknowledged = await g.cloud.everySentPacket.count
-        withKnownIssue("a packet whose answer was lost is tracked by nobody, and waits for one nine days newer") {
-            #expect(acknowledged == 0, "\(acknowledged) packets stayed in iCloud after they were acknowledged")
-        } when: {
-            answersAreLost
-        }
+        #expect(acknowledged == 0, "\(acknowledged) packets stayed in iCloud after they were acknowledged")
 
         g.advance(by: AppSession.packetIsOrphanedAfter + 60)
         try await g["Alice"].send("nine days on", to: room)

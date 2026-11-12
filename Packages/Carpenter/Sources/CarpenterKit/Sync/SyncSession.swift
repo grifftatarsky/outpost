@@ -190,15 +190,32 @@ public struct WhoToMeet: Hashable, Sendable {
     public static let nobody = WhoToMeet(known: [], rooms: [], newcomers: 0)
 }
 
+public actor WritesInDoubt {
+    private var packets: [SyncReport.WrittenPacket] = []
+
+    public init() {}
+
+    func note(_ packet: SyncReport.WrittenPacket) { packets.append(packet) }
+
+    public func taken() -> [SyncReport.WrittenPacket] {
+        defer { packets = [] }
+        return packets
+    }
+}
+
 public struct SyncSession: Sendable {
     private let mailbox: any Mailbox
     private let pairs: Pairs
     private let clock: any Clock
+    private let inDoubt: WritesInDoubt?
 
-    public init(mailbox: any Mailbox, pairs: Pairs, clock: any Clock = SystemClock()) {
+    public init(
+        mailbox: any Mailbox, pairs: Pairs, clock: any Clock = SystemClock(), inDoubt: WritesInDoubt? = nil
+    ) {
         self.mailbox = mailbox
         self.pairs = pairs
         self.clock = clock
+        self.inDoubt = inDoubt
     }
 
     public static let tagWindow: TimeInterval = 86_400
@@ -321,6 +338,10 @@ public struct SyncSession: Sendable {
                         """)
                     continue
                 } catch {
+                    await inDoubt?.note(
+                        SyncReport.WrittenPacket(
+                            packet: packet.id, entries: Set(planned.entries.map(\.hash)), recipients: packet.recipients,
+                            digest: packet.contentDigest, to: peer.them, grants: Set(planned.grants.map(\.grant))))
                     lastError = error
                     cutShort.insert(peer.them)
                     report.cannotSend = report.cannotSend ?? error as? MailboxFailure
