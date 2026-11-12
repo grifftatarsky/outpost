@@ -64,6 +64,10 @@ public struct Projection: Sendable {
 
     public var nicknames: [ParticipantID: String]
 
+    public func type(of entry: EntryHash) -> PayloadType? {
+        positionByID[entry].map { rendered[$0].type }
+    }
+
     func entries(in room: RoomID) -> LazyMapSequence<[Int], RenderedEntry> {
         (roomPositions[room] ?? []).lazy.map { rendered[$0] }
     }

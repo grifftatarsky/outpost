@@ -147,9 +147,10 @@ extension AppSession {
         }
         noteWhatIsStillOwed(after: report, sending: sending, fresh: freshHashes, heldBackForGood: forGood)
 
-        if report.packetsWritten > 0 {
-            let landed = Set(report.written.flatMap(\.grants))
-            for owed in owedGrants where landed.contains(owed.grant) { issuedGrants.insert(owed.receipt) }
+        for wrote in report.written where !wrote.grants.isEmpty {
+            let carried = Set(owedGrants.filter { wrote.grants.contains($0.grant) }.map(\.receipt))
+            issuedGrants.formUnion(carried)
+            grantsCarried[wrote.packet] = carried
         }
         if report.packetsWritten > 0, report.sendFailure == nil {
             roomsWithUnsentMessages.subtract(ringingRooms)
@@ -525,6 +526,12 @@ extension AppSession {
         persisted.notCollected[person, default: []].formUnion(theirs)
     }
 
+    private func oweAgain(whatDecidesWhoIsInAmong entries: Set<EntryHash>, to person: ParticipantID) {
+        let deciding = entries.filter { projection.type(of: $0).map(PayloadType.decidesWhoIsIn.contains) ?? false }
+        guard !deciding.isEmpty else { return }
+        persisted.entriesOwed[person, default: []].formUnion(deciding)
+    }
+
     private func ownEntries(among entries: Set<EntryHash>, inRoomsWith person: ParticipantID) -> Set<EntryHash> {
         guard let me = enrolment?.identity.id else { return [] }
         let held = entriesByHash
@@ -584,7 +591,13 @@ extension AppSession {
             if missing.isEmpty || expired {
                 do {
                     try await mailbox.withdraw(packet, in: pairs)
-                    if missing.isEmpty { confirmAnnouncement(packet) }
+                    let keys = grantsCarried.removeValue(forKey: packet) ?? []
+                    if missing.isEmpty {
+                        confirmAnnouncement(packet)
+                    } else {
+                        issuedGrants.subtract(keys)
+                        oweAgain(whatDecidesWhoIsInAmong: entries, to: record.to)
+                    }
                     persisted.outstandingPackets[packet] = nil
                     persisted.packetsWritten[packet] = nil
                     noteWhetherCollected(
@@ -602,6 +615,7 @@ extension AppSession {
             try? await mailbox.withdraw(packet, in: pairs)
             persisted.outstandingPackets[packet] = nil
             persisted.packetsWritten[packet] = nil
+            grantsCarried[packet] = nil
             waiting[packet] = nil
         }
         if !altered.isEmpty {
@@ -615,6 +629,7 @@ extension AppSession {
         for packet in vanished {
             persisted.outstandingPackets[packet] = nil
             persisted.packetsWritten[packet] = nil
+            grantsCarried[packet] = nil
         }
         await withdrawWhatNobodyTracks(in: sent, besides: mine, through: mailbox, in: pairs)
         if !vanished.isEmpty {

@@ -193,6 +193,7 @@ public final class AppSession {
     var accountRegistry: (any AccountRegistry)?
 
     var issuedGrants: Set<String> = []
+    var grantsCarried: [PacketID: Set<String>] = [:]
 
     var roomsWithUnsentMessages: Set<RoomID> = []
 

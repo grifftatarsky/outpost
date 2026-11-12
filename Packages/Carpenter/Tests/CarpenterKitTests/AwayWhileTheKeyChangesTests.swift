@@ -66,8 +66,8 @@ struct AwayWhileTheKeyChangesTests {
 
     @Test(
         "A friend away longer than a packet waits still gets the new key when he comes back",
-        arguments: [false, true])
-    func aFriendAwayLongerThanAPacketWaitsStillGetsTheKey(aliceRelaunches: Bool) async throws {
+        arguments: [false, true], [1, 2])
+    func aFriendAwayLongerThanAPacketWaitsStillGetsTheKey(aliceRelaunches: Bool, expiries: Int) async throws {
         let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave", "Erin")
         let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave", "Erin"])
 
@@ -78,8 +78,13 @@ struct AwayWhileTheKeyChangesTests {
         try #require(
             await g.cloud.everySentPacket.values.contains { $0.to == g.id("Dave") },
             "precondition: packets wait for Dave")
-        g.advance(by: SyncSession.packetWaitsFor + 3_600)
-        try await g.settle()
+        var waiting: [Int] = []
+        for _ in 0..<expiries {
+            g.advance(by: SyncSession.packetWaitsFor + 3_600)
+            try await g.settle()
+            waiting.append(await g.cloud.everySentPacket.values.count { $0.to == g.id("Dave") })
+        }
+        #expect(waiting.allSatisfy { $0 == waiting[0] }, "what waits for Dave grows each time it expires: \(waiting)")
         let oldPacketsForDave = await g.cloud.everySentPacket.values.filter {
             $0.to == g.id("Dave") && ($0.createdAt ?? .distantPast) <= removedAt
         }
@@ -95,18 +100,11 @@ struct AwayWhileTheKeyChangesTests {
 
         let erinHeld = try #require(g["Erin"].chains[room])
         let davesMessage = try #require(g.entry(saying: "Dave back", in: room, on: "Dave"))
-        withKnownIssue("a key handed out in a packet that expired is not offered again until a relaunch") {
-            #expect(!g.shows("Dave back", in: room, on: "Erin"), "Erin, removed, read Dave's message")
-            #expect(davesMessage.opened(using: erinHeld) == nil, "Erin's keys open Dave's message")
-            #expect(g.shows("after Dave's long absence", in: room, on: "Dave"), "Dave cannot read Alice's message")
-            #expect(g.key(of: room, on: "Dave") == g.key(of: room, on: "Alice"), "Dave writes under an old key")
-        } when: {
-            !aliceRelaunches
-        }
-        withKnownIssue("a removal carried only in packets that expired never reaches the friend who was away") {
-            #expect(
-                g["Dave"].roster(of: room).removal(of: g.id("Erin")) != nil, "Dave never heard that Erin was removed")
-            g.sameRoom(room, on: ["Alice", "Bob", "Carol", "Dave"])
-        }
+        #expect(!g.shows("Dave back", in: room, on: "Erin"), "Erin, removed, read Dave's message")
+        #expect(davesMessage.opened(using: erinHeld) == nil, "Erin's keys open Dave's message")
+        #expect(g.shows("after Dave's long absence", in: room, on: "Dave"), "Dave cannot read Alice's message")
+        #expect(g.key(of: room, on: "Dave") == g.key(of: room, on: "Alice"), "Dave writes under an old key")
+        #expect(g["Dave"].roster(of: room).removal(of: g.id("Erin")) != nil, "Dave never heard that Erin was removed")
+        g.sameRoom(room, on: ["Alice", "Bob", "Carol", "Dave"])
     }
 }
