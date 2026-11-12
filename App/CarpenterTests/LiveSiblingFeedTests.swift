@@ -187,6 +187,53 @@ struct LiveSiblingFeedTests {
         try? await reader.forgetOwnContribution()
     }
 
+    @Test("Mail a device was handed once is handed over again when it reads everything, as it does on launch")
+    func readingEverythingHandsMailOverAgain() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let first = device()
+        let second = device()
+        let material = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
+
+        let writer = CloudKitEntrySync(container: .default(), device: first, stateStore: store())
+        try await writer.start()
+        let sent = try mail(1, from: first, carrying: material, for: identity)
+        try await writer.send([sent], deleting: [])
+
+        let kept = store()
+        let inbox = Inbox()
+        let reader = CloudKitEntrySync(container: .default(), device: second, stateStore: kept)
+        await reader.onIncoming { record in await inbox.record(record.sealed, record.name.writer) }
+        try await reader.start()
+        var handedOnce = false
+        for _ in 0..<30 where !handedOnce {
+            try? await reader.refresh()
+            handedOnce = await inbox.first(from: first) != nil
+            if !handedOnce { try? await Task.sleep(for: .seconds(2)) }
+        }
+        try #require(handedOnce, "precondition: the second device was handed the mail once")
+
+        let again = Inbox()
+        let reopened = CloudKitEntrySync(container: .default(), device: second, stateStore: kept)
+        await reopened.onIncoming { record in await again.record(record.sealed, record.name.writer) }
+        try await reopened.start()
+        try await reopened.refresh()
+        let handedAgainByAFetch = await again.first(from: first) != nil
+        print("LIVE SIBLING: a fetch after a restart handed the old mail over again: \(handedAgainByAFetch)")
+
+        try await reopened.readEverything()
+        let (sealed, from) = try #require(
+            await again.first(from: first),
+            "reading everything did not hand over mail the engine had already handed over once")
+        #expect(from == first, "the mail was attributed to the wrong device")
+        let opened = try sealed.open(with: identity, from: first, as: .mail(1), reading: mailReader)
+        #expect(opened.epochs.first?.material == material, "the mail read back was not the mail written")
+
+        try? await writer.send([], deleting: [sent.name])
+        try? await writer.forgetOwnContribution()
+        try? await reopened.forgetOwnContribution()
+    }
+
     @Test("A new device asks to join, an existing one approves it, and both records cross the real server")
     func approvalCrossesTheServer() async throws {
         guard LiveCloudKit.isAsked else { return }
