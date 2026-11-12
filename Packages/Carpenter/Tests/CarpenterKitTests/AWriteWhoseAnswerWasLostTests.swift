@@ -52,4 +52,27 @@ struct AWriteWhoseAnswerWasLostTests {
         let stillThere = await g.cloud.everySentPacket.count
         #expect(stillThere == 0, "\(stillThere) acknowledged packets were never swept")
     }
+    @Test("A phone that cannot reach iCloud for many rounds keeps one write in doubt for each friend")
+    func roundsWithNoICloudDoNotPileUp() async throws {
+        let g = try await Gathering.of("Alice", "Bob", "Carol")
+        let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol"])
+
+        try await g["Alice"].send("while iCloud was away", to: room)
+        await g.door("Alice").stopAnswering(after: 0)
+        for _ in 0..<10 { await g.takeTurns("Alice") }
+        #expect(g["Alice"].writesInDoubt.count == 2, "Alice keeps \(g["Alice"].writesInDoubt.count) writes in doubt")
+        #expect(
+            g["Alice"].persisted.outstandingPackets.count == 2,
+            "Alice tracks \(g["Alice"].persisted.outstandingPackets.count) packets after ten rounds with no iCloud")
+
+        await g.door("Alice").relent()
+        try await g.settle()
+        for name in ["Alice", "Bob", "Carol"] {
+            let shown = g[name].messages(in: room).count { $0.body == "while iCloud was away" }
+            #expect(shown == 1, "\(name) shows the message \(shown) times")
+        }
+        #expect(g["Alice"].writesInDoubt.isEmpty, "Alice still holds a write in doubt after iCloud came back")
+        let left = await g.cloud.everySentPacket.count
+        #expect(left == 0, "\(left) packets stayed in iCloud after they were acknowledged")
+    }
 }

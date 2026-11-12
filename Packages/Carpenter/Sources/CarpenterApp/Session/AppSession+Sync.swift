@@ -95,12 +95,20 @@ extension AppSession {
         carrying owed: [(to: Peer, grant: EpochGrant, receipt: String, key: Data)] = []
     ) {
         for wrote in doubted {
+            for earlier in writesInDoubt.values where earlier.to == wrote.to { forget(inDoubt: earlier.packet) }
             persisted.outstandingPackets[wrote.packet] = wrote.entries
             persisted.packetsWritten[wrote.packet] = WrittenPacketRecord(recipients: wrote.recipients, digest: wrote.digest)
             writesInDoubt[wrote.packet] = wrote
             let carried = Set(owed.filter { wrote.grants.contains($0.grant) }.map(\.receipt))
             if !carried.isEmpty { grantsCarried[wrote.packet] = carried }
         }
+    }
+
+    private func forget(inDoubt packet: PacketID) {
+        writesInDoubt[packet] = nil
+        persisted.outstandingPackets[packet] = nil
+        persisted.packetsWritten[packet] = nil
+        grantsCarried[packet] = nil
     }
 
     private func sendWhatIsOwed(through session: SyncSession, inDoubt: WritesInDoubt) async throws -> SyncReport {
@@ -595,9 +603,7 @@ extension AppSession {
             let doubted = writesInDoubt.removeValue(forKey: packet)
             guard let record = sent[packet] else {
                 if doubted != nil {
-                    persisted.outstandingPackets[packet] = nil
-                    persisted.packetsWritten[packet] = nil
-                    grantsCarried[packet] = nil
+                    forget(inDoubt: packet)
                     continue
                 }
                 vanished.append(packet)
