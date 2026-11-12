@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A round cut short loses nothing", .serialized, .timeLimit(.minutes(10)), .tags(.sync, .manyDevices))
+@Suite("A round cut short loses nothing", .timeLimit(.minutes(10)), .tags(.sync, .manyDevices))
 struct ARoundCutShortLosesNothingTests {
     nonisolated static let callsInCarolsRound = 1...24
     nonisolated static let callsInCarolsThrottledRound = 1...24
@@ -20,7 +20,7 @@ struct ARoundCutShortLosesNothingTests {
     }
 
     @Test("Carol's app ends at a call of a round; reopened, nothing she acknowledged is missing from her disk",
-        arguments: callsInCarolsRound)
+        .serialized, arguments: callsInCarolsRound)
     func carolsAppEndsMidRound(call: Int) async throws {
         let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave")
         let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave"])
@@ -60,7 +60,7 @@ struct ARoundCutShortLosesNothingTests {
     }
 
     @Test("A round cut off by a throttle after any number of calls loses nothing and repeats nothing",
-        arguments: callsInCarolsThrottledRound)
+        .serialized, arguments: callsInCarolsThrottledRound)
     func aThrottleMidRoundLosesNothing(call: Int) async throws {
         let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave", "Erin")
         let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave"])
@@ -90,7 +90,7 @@ struct ARoundCutShortLosesNothingTests {
         #expect(unanswered.isEmpty, "\(unanswered.count) packets were never collected")
     }
 
-    @Test("A message sent at any point of a round is on every phone once", arguments: callsInBobsRound)
+    @Test("A message sent at any point of a round is on every phone once", .serialized, arguments: callsInBobsRound)
     func aMessageSentMidRoundArrivesOnce(call: Int) async throws {
         let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave", "Erin")
         let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave", "Erin"])
@@ -112,7 +112,7 @@ struct ARoundCutShortLosesNothingTests {
     }
 
     @Test("Alice's app ends between writing a removal and handing out the new key, and everybody who stays gets it",
-        arguments: callsInAlicesRoundAfterARemoval)
+        .serialized, arguments: callsInAlicesRoundAfterARemoval)
     func anAppEndingAfterARemovalStillHandsOutTheKey(call: Int) async throws {
         let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave", "Erin")
         let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave", "Erin"])
@@ -132,7 +132,7 @@ struct ARoundCutShortLosesNothingTests {
 
     @Test(
         "A write that fails just after a removal leaves the new key still owed",
-        arguments: callsInAlicesRoundAfterARemoval)
+        .serialized, arguments: callsInAlicesRoundAfterARemoval)
     func aFailedWriteAfterARemovalLeavesTheKeyOwed(call: Int) async throws {
         let g = try await Gathering.of("Alice", "Bob", "Carol", "Dave", "Erin")
         let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol", "Dave", "Erin"])
