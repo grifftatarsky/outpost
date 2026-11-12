@@ -269,7 +269,7 @@ extension AppSession {
         return chain.heldNumbers.contains { epoch in
             epoch > writing
                 && chain.heldSecrets(at: epoch).contains { secret in
-                    chain.giver(of: secret, at: epoch).map(removed.contains) == true
+                    chain.giver(of: secret, at: epoch).map { removed.contains($0.person) } == true
                         || changes.contains {
                             $0.change.link.epoch == epoch && removed.contains($0.author)
                                 && $0.change.isAuthentic(under: secret)
@@ -324,13 +324,45 @@ extension AppSession {
         let records = changes.filter { $0.change.link.epoch == epoch && $0.change.isAuthentic(under: secret) }
         guard !records.isEmpty else {
             guard (try? chain.secret(for: epoch)) == secret, let giver = chain.giver(of: secret, at: epoch),
-                makers.contains(giver)
+                makers.contains(giver.person), let device = giver.device,
+                replica.registry(for: giver.person)?.activeDevices.contains(device) == true,
+                keyChangesRefused[chain.room]?.contains(where: {
+                    $0.link.epoch == epoch && $0.isAuthentic(under: secret)
+                }) != true
             else { return nil }
             return TrustedKey(epoch: epoch, secret: secret, link: chain.link(at: epoch), maker: nil)
         }
         return records.first { makers.contains($0.author) }.map {
             TrustedKey(epoch: epoch, secret: secret, link: $0.change.link, maker: $0.author)
         }
+    }
+
+    static let mostKeyChangesRefusedKept = 64
+
+    func noteKeyChangesRefused(among entries: [Entry]) {
+        var noted = false
+        for entry in entries {
+            let room = entry.sealingRoom
+            guard let chain = chains[room], let payload = entry.opened(using: chain), payload.type == .epochChange,
+                let change = try? payload.decode(EpochChangeBody.self),
+                keyChangesRefused[room]?.contains(change) != true
+            else { continue }
+            let kept = (keyChangesRefused[room] ?? []) + [change]
+            keyChangesRefused[room] = Array(kept.suffix(Self.mostKeyChangesRefusedKept))
+            noted = true
+        }
+        guard noted else { return }
+        cachedTrustedKeys = [:]
+        cachedKeysToPassOn = [:]
+    }
+
+    static func entriesTurnedAway(_ arriving: [Entry], from before: Replica, to after: Replica) -> [Entry] {
+        let refused = arriving.filter { entry in
+            !after.entries(in: entry.feedKey, at: entry.seq).contains { $0.hash == entry.hash }
+        }
+        guard before.knownRevocations.count != after.knownRevocations.count else { return refused }
+        let kept = Set(after.allEntries.map(\.hash))
+        return refused + before.allEntries.filter { !kept.contains($0.hash) }
     }
 
     func deviceRecipients(of participant: ParticipantID) -> [DeviceRecipient] {

@@ -97,22 +97,25 @@ struct WhatARemovedDeviceWritesCountsNowhereTests {
             let entry = try #require(g.entry(saying: body, in: room, on: name))
             #expect(entry.opened(using: oldHeld) == nil, "the old phone's keys open \(name)'s message: \(fingerprints)")
         }
-        withKnownIssue(
-            "a friend not yet told of the removal takes the removed phone's key, and writes under it if it sorts lower",
-            isIntermittent: true
-        ) {
-            g.sameRoom(room, on: everyone)
-            for name in everyone {
+        g.sameRoom(room, on: everyone)
+        g.back(old)
+        await g.takeTurns(old)
+        let oldHeldAtTheEnd = try #require(g[old].chains[room])
+        let aFriendWasBehindTheOther = hearing.bobHearsFirst != hearing.carolHearsFirst
+        for name in everyone {
+            if !aFriendWasBehindTheOther {
                 #expect(
                     g.key(of: room, on: name) == keyAtTheRemoval, "\(name) writes under another key: \(fingerprints)")
-                let entry = try #require(g.entry(saying: "from \(name)", in: room, on: name))
-                #expect(
-                    entry.opened(using: oldHeldAfter) == nil,
-                    "the key the removed phone made opens \(name)'s message: \(fingerprints)")
             }
+            let entry = try #require(g.entry(saying: "from \(name)", in: room, on: name))
+            #expect(
+                entry.opened(using: oldHeldAfter) == nil,
+                "the key the removed phone made opens \(name)'s message: \(fingerprints)")
+            #expect(
+                entry.opened(using: oldHeldAtTheEnd) == nil,
+                "a key the removed phone was handed opens \(name)'s message: \(fingerprints)")
         }
 
-        g.back(old)
         g.find(old).mailboxOnly = false
         await g.takeTurns(old)
         #expect(g[old].state == .removed, "the removed phone, given a full turn, did not erase itself")

@@ -219,6 +219,7 @@ extension AppSession {
             meeting: whoToMeet(through: peer.them))
         noteNewcomers(received.newcomersMet, from: peer.them)
         let wallKeyOwed = readerLostADevice(from: replica, to: working)
+        noteKeyChangesRefused(among: Self.entriesTurnedAway(collected.entries, from: replica, to: working))
         if working.revision != replica.revision { replica = working }
         if wallKeyOwed, let me = enrolment?.identity.id {
             await persistOrReport("that your Outpost's key has to be rotated") {

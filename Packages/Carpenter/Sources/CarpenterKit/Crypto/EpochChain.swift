@@ -79,11 +79,16 @@ extension EpochChangeBody {
 }
 
 public struct EpochChain: Sendable {
+    public struct Giver: Hashable, Sendable {
+        public let person: ParticipantID
+        public let device: DeviceID?
+    }
+
     public let room: RoomID
 
     private var secrets: [EpochNumber: EpochSecret] = [:]
     private var rivals: [EpochNumber: [EpochSecret]] = [:]
-    private var givenBy: [EpochNumber: [EpochSecret: ParticipantID]] = [:]
+    private var givenBy: [EpochNumber: [EpochSecret: Giver]] = [:]
     private var links: [EpochNumber: EpochLink] = [:]
 
     public static let mostRivals = 16
@@ -132,7 +137,7 @@ public struct EpochChain: Sendable {
         ((try? secret(for: epoch)).map { [$0] } ?? []) + (rivals[epoch] ?? [])
     }
 
-    public func giver(of secret: EpochSecret, at epoch: EpochNumber) -> ParticipantID? {
+    public func giver(of secret: EpochSecret, at epoch: EpochNumber) -> Giver? {
         givenBy[epoch]?[secret]
     }
 
@@ -145,26 +150,27 @@ public struct EpochChain: Sendable {
     }
 
     public mutating func hold(
-        _ secret: EpochSecret, at epoch: EpochNumber, from giver: ParticipantID? = nil,
+        _ secret: EpochSecret, at epoch: EpochNumber, from giver: ParticipantID? = nil, on device: DeviceID? = nil,
         recordedBy recorders: (EpochSecret) -> Set<ParticipantID> = { _ in [] }
     ) {
+        let given = giver.map { Giver(person: $0, device: device) }
         if secrets[epoch] == nil, let derived = try? self.secret(for: epoch) { secrets[epoch] = derived }
         guard let primary = secrets[epoch] else {
             secrets[epoch] = secret
-            if let giver { givenBy[epoch, default: [:]][secret] = giver }
+            if let given { givenBy[epoch, default: [:]][secret] = given }
             return
         }
         let held = [primary] + (rivals[epoch] ?? [])
         guard epoch != .initial, !held.contains(secret) else { return }
         let madeByTheGiver = giver.map { recorders(secret).contains($0) } ?? false
         if let giver {
-            let theirs = held.filter { givenBy[epoch]?[$0] == giver || recorders($0).contains(giver) }
+            let theirs = held.filter { givenBy[epoch]?[$0]?.person == giver || recorders($0).contains(giver) }
             guard theirs.count < Self.mostKeysFromOnePerson, theirs.isEmpty || madeByTheGiver else { return }
         }
         if !madeByTheGiver {
             guard (rivals[epoch] ?? []).count(where: { recorders($0).isEmpty }) < Self.mostRivals else { return }
         }
-        if let giver { givenBy[epoch, default: [:]][secret] = giver }
+        if let given { givenBy[epoch, default: [:]][secret] = given }
         rivals[epoch, default: []].append(secret)
     }
 

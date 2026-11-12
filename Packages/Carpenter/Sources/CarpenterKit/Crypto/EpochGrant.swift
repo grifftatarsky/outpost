@@ -139,7 +139,7 @@ extension EpochChain {
         guard grant.links.count <= Self.mostLinksInAGrant, reaches(grant.epoch, carrying: carried) else {
             throw CryptoError.keyTooFarAhead
         }
-        hold(secret, at: grant.epoch, from: giver, recordedBy: recorders)
+        hold(secret, at: grant.epoch, from: giver, on: grant.grantedBy, recordedBy: recorders)
         try record(carried)
     }
 
