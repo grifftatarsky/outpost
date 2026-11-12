@@ -164,22 +164,32 @@ public actor PairIndex {
     private var readers: [CKRecordZone.ID: String] = [:]
     private var making: [PairHint: Task<CKRecordZone.ID, any Error>] = [:]
     private(set) var account: String?
-    private var refreshedAt: Date?
-    private var refreshing: Task<Void, any Error>?
+    private var refreshed: (at: Date, startedAfter: Int)?
+    private var refreshing: (task: Task<Void, any Error>, startedAfter: Int)?
+    private var looksAsked = 0
 
     public init() {}
 
     func refresh(_ load: @escaping @Sendable () async throws -> Void) async throws {
-        if let refreshing { return try await refreshing.value }
-        if let refreshedAt, Date().timeIntervalSince(refreshedAt) < 2 { return }
+        while let underway = refreshing {
+            defer { finished(underway.task) }
+            try await underway.task.value
+            if underway.startedAfter == looksAsked { return }
+        }
+        if let refreshed, refreshed.startedAfter == looksAsked, Date().timeIntervalSince(refreshed.at) < 2 { return }
+        let started = looksAsked
         let task = Task { try await load() }
-        refreshing = task
-        defer { refreshing = nil }
+        refreshing = (task, started)
+        defer { finished(task) }
         try await task.value
-        refreshedAt = Date()
+        refreshed = (Date(), started)
     }
 
-    func invalidate() { refreshedAt = nil }
+    private func finished(_ task: Task<Void, any Error>) {
+        if refreshing?.task == task { refreshing = nil }
+    }
+
+    func invalidate() { looksAsked += 1 }
 
     func take(
         mine changedMine: [CKRecordZone.ID: Zone], mineGone: [CKRecordZone.ID], privateToken: CKServerChangeToken,
