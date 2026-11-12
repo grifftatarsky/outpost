@@ -6590,11 +6590,16 @@ needs a version number and a reader for the version before it.
 unless [the rig's record](simulator-rig.md#what-outpost-alpha-and-outpost-beta-showed-on-2026-11-11)
 says so.
 
-- **A device signs for a delivery only once what it carried is stored for the member's other
-  devices.** Signing ends the offer for all of them, so the mail goes first. If that write fails the
-  delivery stays on offer. It costs one write to the member's own iCloud before the receipts.
+- **A device signs for a round's deliveries only once what they carried is stored for the member's
+  other devices.** Signing ends the offer for all of them, so the mail goes first: one write a round,
+  and the round is signed for together. "Stored" means iCloud reported the mail record stored, not
+  that the write raised no error. If it is not stored the deliveries stay on offer. A catch-up for
+  a new device goes in a write of its own, so one too big to store cannot stop the signatures.
+- **Device mail carries the device removals this device has heard for other people,** each with the
+  time iCloud stored it, and a device takes them only from a sibling that counts.
 - **Before a message is sealed, the phone reads iCloud fresh and then its member's device mail,** in
-  that order. A removal is in one or the other.
+  that order. A removal is in one or the other. A fresh read waits out any read already under way
+  and starts its own, because the one under way may have begun before the removal was stored.
 - **What a packet taken back uncollected carried is owed again, if it is a key or decides who is in
   a room.** Messages are not: they come back through history repair. What waits for an absent member
   stays the same size however long they are away.
@@ -6604,8 +6609,10 @@ says so.
   member's address, and the packet with the replacement key waits at the new one.
 - **A key with no key-change entry counts on the word of the device that signed its grant,** while
   that device counts, and never when this phone refused or threw out a key change that made it.
-- **A device tells friends only the removals whose target it shows as removed.** A packet has one
-  stored time, so two removals in one packet fall back to the dates their devices wrote.
+- **A device tells friends only the removals that took effect on it:** the target is removed, and
+  the device that wrote the removal is the one shown as having removed it. A packet has one stored
+  time, so removals sent together fall back to the dates their devices wrote, and a removed device
+  can write any date.
 - **On launch, device sync reads everything stored,** because the sync engine hands a change over
   once and a disk can refuse it.
 - **A notification wish carries when it last changed,** and each change is stamped later than the
@@ -6613,7 +6620,12 @@ says so.
 - **A write with no answer is looked for before it is made again.**
 
 **What it costs.** One more list in the state file. A second pass over a peer's packets in the round
-its address moves. A whole-zone read of the member's device records at every launch.
+its address moves. A whole-zone read of the member's device records at every launch. A member with
+two devices waits for one write to her own iCloud before her phone signs for a round.
+
+**Reviewed 2026-11-12** by three readers looking for who could still get through, what the fixes
+cost and whether the tests held them. What they found is under
+[the twelve faults](open-questions.md#twelve-faults-the-many-device-tests-found).
 
 **What would change it:** any of the six questions under
 [the twelve faults](open-questions.md#twelve-faults-the-many-device-tests-found), or a run on two

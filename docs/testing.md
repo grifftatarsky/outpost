@@ -39,7 +39,7 @@ Each epic has its own test plan: [Messaging](epics/messaging.md#test-plan),
 
 | Suite | Runs with | Covers |
 |---|---|---|
-| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,264 tests in 412 suites on 2026-11-12, in about 305 seconds; nine known issues. `Scripts/test-package.sh` runs the same suite as six processes in about 250 seconds. |
+| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,272 tests in 413 suites on 2026-11-12, in about 305 seconds; nine known issues. `Scripts/test-package.sh` runs the same suite as six processes in about 250 seconds. |
 | App suite, `App/CarpenterTests` | `xcodebuild test … -only-testing:CarpenterTests` | What needs a real app bundle: the system keychain, and the live CloudKit tests, which are off unless asked for. |
 | UI tests, `App/CarpenterUITests` | `xcodebuild test … -only-testing:CarpenterUITests/<class>` | Apple's accessibility audit, a contrast audit per accent, a label check, and the rig steps. |
 

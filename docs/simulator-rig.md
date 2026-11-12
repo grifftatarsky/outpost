@@ -518,6 +518,12 @@ Apple Account, from derived data deleted first. Each is one run.
   suites; the six about a pair ran as `LivePairContractTests`, a side on each account. They are the
   same checks the in-memory mailbox passes under `swift test`.
 
+- **After a review changed the round and the mailbox's reading, everything ran again**
+  (2026-11-12, the build at `828153e`, from `Scripts/smoke-two-accounts.sh`): 66 tests in 13 suites
+  on one account in 143 seconds; `LivePairTests` at 49 and 48 seconds a side; the mailbox's pair
+  rules at 264 and 267; `LivePairSendTests` at 74 and 73, with collecting and then writing at 0.8
+  seconds. All passed.
+
 **What that does and does not show about the twelve fixes.** The two accounts are two people with
 one device each. Nine of the twelve faults need a third person or a second device on one account, so
 on the rig their fixes were only shown not to break two people talking. Their evidence is the

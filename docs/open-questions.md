@@ -501,6 +501,26 @@ those the package suite is the only evidence.
 | 10 | A removed member's phone confirmed her old invitation on every round | An invitation the room shows as finished is not confirmed |
 | 11, 12 | A write that landed with its answer lost was made twice, and nothing tracked the first copy | The next round looks for the packet before sending again |
 
+**A review of the fixes, 2026-11-12.** Three reviewers read the fixes for who could still get
+through, what they cost, and whether the tests held them. Seven of their findings were real and
+are fixed, each with a test that fails without it:
+
+- A removal written by a device already removed was still passed to friends once its target was
+  removed for real. A removal is now passed on only when the device that wrote it is the one this
+  phone shows as having removed the target.
+- A friend's device removal never reached the member's other devices, so a tablet behind its phone
+  kept sealing keys to the removed device. Device mail now carries them.
+- A write of device mail that failed for one record without an error let the phone sign anyway. It
+  signs only when iCloud reports the mail record stored.
+- The phone wrote its device mail and waited once for every friend who had delivered something. It
+  now writes once a round and signs for the round together.
+- A fresh look at iCloud joined a read already under way, which could have begun before the removal
+  it was looking for. It now waits that read out and starts its own.
+- Between two people, a lost answer still sent the message twice, and the look for the packet
+  could read a view two seconds old.
+- The test of a removed phone's key no longer checked which key the room ended on in the cases
+  where a friend had handed it to the removed phone. It does now.
+
 **Found while fixing, and not fixed.** Each is Griff's to decide, with what I would do.
 
 1. **A removed device can sign for a friend's packets until that friend hears of the removal.** A
@@ -525,6 +545,11 @@ those the package suite is the only evidence.
    announcing the removal and sending the key.
 6. **If the app restarts between a lost answer and the next round, one message goes out twice.**
    Nothing is shown twice. *I would:* leave it.
+7. **A member's phone does not know which keys her tablet sealed.** The list of keys sealed to each
+   device is kept per device. If Alice's tablet sealed a room key to Bob's removed tablet, only her
+   tablet replaces it, and until it runs a round her phone writes under that key. Found by the
+   review, read in the code. *I would:* put the list in device mail, so any of her devices that
+   hears of a removal can act on what all of them sealed.
 
 **Seen once and not confirmed.** A device approved moments earlier, with its clock an hour behind
 iCloud's, could not write anything: its entries were refused as coming from a device not yet approved.

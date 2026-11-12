@@ -63,7 +63,10 @@ Nothing below is built until he answers. Each line has a recommendation where it
    `Scripts/test-package.sh`, which runs the suite as six processes. Scenarios 14 and 20 were already
    held by suites from the first twelve.
 5. The lock on a simulator with Face ID enrolled (`RigChecks` does not enrol one yet), then on an
-   iPhone, where the Secure Enclave runs for the first time.
+   iPhone, where the Secure Enclave runs for the first time. Tried 2026-11-12 and set aside: the
+   walk has to start from an app with no member in it, and `outpost-alpha` has one. A test can post
+   the simulator's Face ID notices itself with `import notify`; whether the notice names are right
+   was not reached.
 6. The chat list, once picked. Then the notification settings that are saved and read by nothing.
 7. The work orders that change nothing a member sees: accessors only tests call, and test waits
    counted in attempts. The rename of `legacySecret(with:)` to `baseSecret(with:)` is done.
