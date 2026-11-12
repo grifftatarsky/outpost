@@ -27,7 +27,7 @@ struct LetIntoARoomAndAnOutpostAtOnceTests {
             g["Alice"].roster(of: room).members.contains(g.id("Bob")), "precondition: Alice let Bob into Lanterns")
         try #require(g["Bob"].chains[wall] == nil, "precondition: Bob holds no key to Alice's Outpost yet")
 
-        await g.door("Alice").holdView()
+        for friend in ["Bob", "Carol"] { await g.door("Alice").cannotCollect(from: g.id(friend)) }
         try await g.secondDevice("Bob's tablet", of: "Bob")
         try #require(
             g.devices(of: "Bob", seenBy: "Alice").count == 1, "precondition: Alice has not heard of Bob's tablet")
@@ -57,7 +57,7 @@ struct LetIntoARoomAndAnOutpostAtOnceTests {
             #expect(g[device].chains[wall] != nil, "\(device) holds no key to Alice's Outpost before she hears of it")
         }
 
-        await g.door("Alice").refreshView()
+        await g.door("Alice").collectsFromEveryone()
         try await g.settle()
         try await g["Alice"].send("for Lanterns", to: room)
         try await g["Alice"].send("for my readers", to: nil)

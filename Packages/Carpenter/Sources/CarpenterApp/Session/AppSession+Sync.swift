@@ -43,6 +43,7 @@ extension AppSession {
         if mode == .full {
             update(\.viewMayBeStale, to: refusalWatch.holdsKeys(after: report.refusals, at: clock.now))
             await pairUp(through: mailbox)
+            if !writesInDoubt.isEmpty { await mailbox.lookAgain() }
             if let sent = try? await mailbox.sentPackets(in: pairs) {
                 await settleWhatWasSent(sent, through: mailbox, in: pairs)
             }
@@ -169,6 +170,7 @@ extension AppSession {
                 confirming: owedConfirmations.map(\.body), announcing: announcing, withholding: withholding)
         } catch let refused as MailboxFailure {
             keepTrackOf(await inDoubt.taken(), carrying: owedGrants)
+            noteWhatIsStillOwed(after: SyncReport(), sending: sending, fresh: freshHashes, heldBackForGood: forGood)
             cannotSend = refused
             Diagnostics.sync.error(
                 "mailbox: nothing can be sent — \(String(describing: refused), privacy: .public)")
@@ -176,6 +178,7 @@ extension AppSession {
             throw refused
         } catch {
             keepTrackOf(await inDoubt.taken(), carrying: owedGrants)
+            noteWhatIsStillOwed(after: SyncReport(), sending: sending, fresh: freshHashes, heldBackForGood: forGood)
             throw error
         }
         keepTrackOf(await inDoubt.taken(), carrying: owedGrants)

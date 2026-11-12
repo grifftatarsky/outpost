@@ -143,7 +143,9 @@ public actor HookedMailbox: Mailbox, MediaMailbox {
         try await landed(
             {
                 try await inner.put(packet, to: peer, in: pairs)
-                try await view?.put(packet, to: peer, in: pairs, as: inner.account(in: pairs), at: inner.now)
+                if lands == nil {
+                    try await view?.put(packet, to: peer, in: pairs, as: inner.account(in: pairs), at: inner.now)
+                }
             }, failing: lands)
     }
 

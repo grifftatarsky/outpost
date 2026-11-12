@@ -75,4 +75,26 @@ struct AWriteWhoseAnswerWasLostTests {
         let left = await g.cloud.everySentPacket.count
         #expect(left == 0, "\(left) packets stayed in iCloud after they were acknowledged")
     }
+    @Test("Between two people, a message whose only write landed with its answer lost is not written again")
+    func theOnlyWriteOfARoundIsNotMadeTwice() async throws {
+        let g = try await Gathering.of("Alice", "Bob")
+        let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob"])
+
+        try await g["Alice"].send("once, to one person", to: room)
+        await g.door("Alice").holdView()
+        await g.door("Alice").fail(.put, landing: true)
+        let before = await g.door("Alice").calls.count
+        await g.takeTurns("Alice")
+        #expect(await g.door("Alice").faultsPending == 0, "the lost answer never happened")
+        await g.takeTurns("Alice")
+        await g.door("Alice").refreshView()
+        try await g.settle()
+
+        let puts = await g.door("Alice").calls.dropFirst(before).count { $0.call == .put && $0.peer == g.id("Bob") }
+        #expect(puts == 1, "Alice wrote \(puts) packets to Bob for one message")
+        let shown = g["Bob"].messages(in: room).count { $0.body == "once, to one person" }
+        #expect(shown == 1, "Bob shows the message \(shown) times")
+        let left = await g.cloud.everySentPacket.count
+        #expect(left == 0, "\(left) packets stayed in iCloud after they were acknowledged")
+    }
 }
