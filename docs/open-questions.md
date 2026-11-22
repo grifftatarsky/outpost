@@ -594,6 +594,26 @@ iCloud stored them, as approvals and removals already are, and hold it with a te
 
 <!-- COPY END 7e8fde84 -->
 
+<!-- COPY BEGIN 1cec850d [NEEDS HUMAN REVIEW] -->
+
+## A restored phone takes what the phone it replaced writes afterwards
+
+Found 2026-11-04 by a review, as a test on a branch that was never merged. Brought onto
+`release/0.1.0` on 2026-11-22 as a known issue (`ADeviceLeftBehindByARestoreTests`); it fails on
+today's code. Package suite only.
+
+After a restore, friends refuse anything the old phone writes past the last entry they had seen
+from it. The member's own devices are spared that rule, so a restored phone can be given its
+history. So the old phone, in somebody else's hands, can sign a new entry dated before the restore,
+and the member's restored phone takes it as her own.
+
+**I would:** have the restored phone take from the old phone only what a friend's entry shows that
+friend had seen, which is what the test asks for. It belongs with
+[the restore that reaches nobody](#a-phone-restored-with-the-recovery-key-reaches-nobody-when-the-old-phone-is-gone),
+since both change what a restored phone trusts.
+
+<!-- COPY END 1cec850d -->
+
 <!-- COPY BEGIN 80133628 [NEEDS HUMAN REVIEW] -->
 
 ## A removed member who has not heard can hand her room keys to a second identity
