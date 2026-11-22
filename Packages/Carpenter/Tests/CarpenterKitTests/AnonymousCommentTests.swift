@@ -36,7 +36,7 @@ struct AnonymousCommentTests {
         through mailbox: InMemoryMailbox
     ) async throws {
         let room = try await host.createRoom(named: name)
-        let invite = try await host.invite(joinerCode: guest.identityCode(), joining: room, mailbox: nil)
+        let invite = try await host.invite(joinerCode: await guest.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await guest.redeem(inviteCode: try invite.encoded())
         try await host.sync(through: mailbox)
         try await guest.accept(
@@ -256,7 +256,7 @@ struct OutpostConsentTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await bob.createRoom(named: "Lanterns")
-        let invite = try await bob.invite(joinerCode: alice.identityCode(), joining: room, mailbox: nil)
+        let invite = try await bob.invite(joinerCode: await alice.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await alice.redeem(inviteCode: try invite.encoded())
         try await bob.sync(through: mailbox)
         try await alice.accept(

@@ -58,22 +58,25 @@ worth attacking.
 |---|---|---|
 | `Curve25519.Signing` (Ed25519) | `Identity`, `DeviceKeys` | every signature in the system |
 | `Curve25519.KeyAgreement` (X25519) | `Identity.sharedSecret` | the one secret each pair of people share |
-| `ChaChaPoly` (RFC 8439 AEAD) | six files | every piece of ciphertext in the system |
-| `HKDF<SHA256>` | `EpochChain`, `Pairwise`, `SealedSiblingFeed` | turning one secret into several unrelated keys |
-| `HMAC<SHA256>` | `Pairwise` | the rotating addresses and the bell names |
+| `HPKE` with `XWingMLKEM768X25519_SHA256_AES_GCM_256` (RFC 9180 base mode; X-Wing, which is ML-KEM-768 with X25519; HKDF-SHA256; AES-256-GCM) | `DeviceSeal` | everything handed to one device: room keys, address salts, mail between a member's devices, and the identity a new device is approved with |
+| `ChaChaPoly` (RFC 8439 AEAD) | `Pairwise`, `EpochChain`, `SealedPayload`, `SealedAttachment`, `Deathmark`, `SyncEngine`, `SiblingFeed` | every other piece of ciphertext in the system |
+| `HKDF<SHA256>` | `EpochChain`, `Pairwise`, `SealedSiblingFeed`, `DeviceKeys` | turning one secret into several unrelated keys |
+| `HMAC<SHA256>` | `Pairwise`, `PhotoCopy` | the rotating addresses, which space is whose, and the names of photo copies |
 | `SHA256` | `Identity`, `Entry`, `SealedAttachment`, `ShortAuthenticationString` | identifiers, content hashes, fingerprints |
 | `SymmetricKey(size: .bits256)` | `EpochSecret.random`, `SealedAttachment.seal`, `SyncEngine.pack` | all random key material |
 
-There is **no hand-rolled cipher, curve, hash, MAC or KDF, and no custom padding, compression or
-encoding of plaintext before sealing**. There is also no injectable random-number seam in the
+There is **no hand-rolled cipher, curve, hash, MAC or KDF, and no custom padding or encoding of
+plaintext before sealing**. Packets and the records a member's devices write for each other are
+compressed with Apple's LZFSE before they are sealed ([ruled 2026-09-27](decisions.md#what-goes-to-icloud-is-compressed-before-it-is-sealed));
+this sentence said otherwise until 2026-09-28. In a packet, the words people wrote were already
+sealed before compression, so what compresses is structure. There is also no injectable random-number seam in the
 shipping path: `RandomSource` exists as a protocol but nothing in `Sources` outside its own file and
 the test fakes refers to it, so every byte of key material comes from CryptoKit's own generator and
 there is no place to substitute a weak one.
 
-The twelve files that are *ours* are `CanonicalBytes`, `Identity`, `IdentityStore`,
-`DeviceCertificate`, `DeviceRegistry`, `Pairwise`, `EpochChain`, `EpochGrant`, `SealedPayload`,
-`SealedAttachment`, `RecoveryKey` and `ShortAuthenticationString`, plus the way `Entry`, `SyncEngine`
-and `SiblingFeed` use them.
+The files that are *ours* are every file in `CarpenterKit/Crypto`, plus the way `Entry`, `SyncEngine`
+and `SiblingFeed` use them. (This used to name twelve files; by 2026-09-28 there were eighteen, so it
+names the folder instead.)
 
 **One thing done right that is usually done wrong.** The signing key and the key-agreement key are
 **two independent seeds**, not one seed used for both. Reusing a single Curve25519 private key as
@@ -89,17 +92,25 @@ separately, and each is validated as its own key type at construction.
 
 ## Who you are
 
-**In plain words.** There is no account. When the app first runs it makes two keys and those keys
-*are* you — there is nothing else to be. Nobody can look you up, because there is no directory and
-no name to look up; the only way anyone reaches you is if you hand them a code yourself.
+**In plain words.** There is no account. When the app first runs it makes one random secret, the
+recovery key, and every key that is you comes from it — there is nothing else to be. Nobody can look
+you up, because there is no directory and no name to look up; the only way anyone reaches you is if
+you hand them a code yourself.
 
-**What actually happens.** `Identity.generate()` produces an Ed25519 signing keypair and an X25519
-agreement keypair. Your public name is derived, not chosen:
+**What actually happens** (since 2026-09-27). `RecoverySecret.generate()` makes 32 random bytes.
+HKDF-SHA256 turns them into three seeds under separate labels: an Ed25519 identity signing key, an
+X25519 agreement key, and an Ed25519 **recovery signing key**. Devices are given the first two and
+the recovery key's public half; the recovery secret itself is shown to the member once and kept on no
+device. Your public name commits to all three public keys:
 
 ```
-ParticipantID = SHA256( "carpenter.participant-id.v1" ‖ len(signing) ‖ signing
-                                                     ‖ len(agreement) ‖ agreement )
+ParticipantID = SHA256( "carpenter.participant-id.v2" ‖ len(signing) ‖ signing
+                                                     ‖ len(agreement) ‖ agreement
+                                                     ‖ len(recovery) ‖ recovery )
 ```
+
+So a different recovery key is a different person: nobody holding the identity can swap in a recovery
+key of their own (`TheRecoveryKeyIsItsOwnKeyTests`).
 
 A device gets its own Ed25519 keypair, entirely separate, and its own derived name:
 
@@ -143,10 +154,10 @@ public func isAuthorized(_ device: DeviceID, at instant: Date) -> Bool {
 
 Three properties are worth naming because each is a decision:
 
-- **Authority is an interval, not a flag.** An entry is checked against the registry *at the entry's
-  own `wallTime`*, in `Replica.integrate`. Revoking a device does not retroactively invalidate what
-  it said before the revocation, which is what stops a lost phone from erasing a year of
-  conversation.
+- **Authority is an interval, not a flag.** An entry is checked against the registry in
+  `Replica.integrate`, by its number when the removal names a cutoff and by its `wallTime` when it
+  does not. Removing a device does not take back what the member's devices had already seen it say:
+  see *What a removed device wrote*, below.
 - **Revocation only ever moves earlier.** `revoke` takes `min(existing, new)`, so a second
   revocation cannot be used to *widen* a device's window.
 - **A certificate cannot be swapped.** `admit` refuses a certificate for a `DeviceID` already known
@@ -156,10 +167,136 @@ Three properties are worth naming because each is a decision:
 **Known weakness, named.** Authority is judged against a timestamp *the signing device itself wrote*.
 A malicious device that is about to be revoked can date its entries before its own revocation and
 they will verify. The mitigation in the product is that the sibling feed and the log make the
-back-dating visible rather than preventing it, and that turning the room key after a loss
-(`turnEveryKeyAfterALoss`) stops the device reading anything *new* regardless of what it claims to
-have written. This is the classic distributed-clock problem and it is not solved here; it is
+back-dating visible rather than preventing it, and that removing the device rotates the room keys and seals the new ones only to the member's
+remaining devices, so it stops reading anything *new* regardless of what it claims to have written. This is the classic distributed-clock problem and it is not solved here; it is
 bounded.
+
+**Each device also has a key for receiving** (since 2026-09-26; X-Wing since 2026-11-05).
+`DeviceKeys.sealingKey` is an X-Wing key (ML-KEM-768 with X25519) made from a 32-byte seed that
+HKDF-SHA256 derives from the device's signing seed under `carpenter.device-sealing-key.v1`, so it
+lives only where the signing key does. Its 1,216-byte public half is in the certificate as
+`sealingKey`, appended last to the signed fields and only when present, so every older certificate
+signs exactly the bytes it always did (`PerDeviceKeysTests` pins both older layouts by hand). A
+certificate whose sealing key is not a well-formed X-Wing public key is refused, because one bad key
+would make every seal to that member's devices fail. Until 2026-11-05 the receiving key was an X25519
+key, `agreementKey`; a certificate carrying one still verifies, and nothing is sealed to it any more.
+
+**A certificate is never replaced** (since 2026-11-05). Until then a registry took a second
+certificate for a device in place of the first if it had the same date and added a receiving key.
+Nothing in the app issued one, and once new certificates stopped carrying the X25519 key, anybody
+holding the identity could have used that rule to replace a restored device's certificate with one
+signed by the identity alone, naming a key of their own. A second certificate for a device a registry
+already holds is now ignored (`aCertificateIsNeverReplaced`).
+
+**A device other than the first is approved by another device** (since 2026-09-26). Its certificate
+names `approvedBy` and carries `approval`, a signature by that device's key over the same bytes the
+identity signs. `DeviceRegistry` replays certificates and removals in time order: a certificate
+counts if it has no approver (the first device, or one restored with the recovery key) or if its
+approver counted at the certificate's date. A removal names `revokedBy` and is signed by that device
+too, and counts only if that device counted at the removal's date. Order of arrival doesn't matter
+(`DeviceApprovalTests`).
+
+**Only the recovery key or an approval makes a device count** (since 2026-09-27). A certificate
+signed by the identity alone never counts, so holding the identity, which every approved device has,
+lets nobody in. The first device's certificate is signed by the recovery key when the identity is
+made. A certificate signed by the recovery key is a new root: the root is the recovery-signed
+certificate with the latest date *it* carries (the member's recovery key signed that date, so nobody
+else can move it), and only devices whose approvals lead back to the newest root count. Every device
+from an older root stops counting at the new root's date, including anything a thief added. Replaying
+an old recovery certificate, or one published late, changes nothing, because its date is older
+(`DeviceApprovalTests`, `WhatTheRegistryCountsTests`).
+
+That date is one the old device can write before, so since 2026-10-31 each contact also fixes a line
+for every older root's device the first time it hears of the newer root: the highest number of that
+device's feed it holds then, and the entry there (`Replica.fixSupersededLines`, kept in
+`PersistedState.supersededLines` and put back before the log is read). Past it nothing counts,
+whatever date it carries, and below it an entry still has to be dated before the restore. The line
+differs a little from contact to contact, but no contact takes anything new from the old device. The
+member's own devices are spared, because a restored device fills its history from its peers after
+it hears of the old root (`ADeviceLeftBehindByARestoreTests`).
+
+**Approvals and removals count in the order iCloud first stored them** (since 2026-09-27). Until then
+the registry ordered them by the dates their authors wrote, and a removed device that keeps the
+identity key could date an approval, or removals of the member's other devices, before its own
+removal (measured 2026-09-26). Now every approval and removal is also written to the member's zone as
+its own record, named `authority-<writer>-<digest>`, where the digest is SHA-256 over the event's
+signed fields and signatures. CloudKit stamps `creationDate` when a record ID is first saved and keeps
+it when the record is rewritten; a record deleted and saved again gets a new, later one. That is
+Apple's documentation for `CKRecord.creationDate`, and `iCloudKeepsTheFirstStoredTime` measures it
+on the rig. Because the name is the digest, a record rewritten with other contents keeps its old time
+but is refused when opened.
+
+`DeviceRegistry` replays events in stored-time order. An approval counts only if its approver counted
+at that stored time; a removal counts only if it names a device, never the identity key alone, that
+counted at that stored time. Learning an earlier stored time moves an event earlier; a later
+sighting never moves it later. A device times its own new approval or removal after everything it has
+already seen, then takes iCloud's time once its record is stored; a new device starts from its
+approver's times. Other members order a member's approvals and removals by when the packet carrying
+them was last stored (`modificationDate`, which a rewrite can only move later), and keep them across
+a relaunch. The claimed dates still bound which entries a device may sign. Tested in
+`WhatTheRegistryCountsTests`, `WritingOldDatesIntoICloudTests` and `RemembersRemovalsTests`, and live
+in `LiveSiblingFeedTests`.
+
+**What a removed device wrote** (since 2026-09-28). A removal names the last entry of that device's
+feed that the removing device held, by number and hash (`cutoff` and `head`, signed only when
+present). Nothing past it counts, whatever date it carries. A second entry under a number already
+filled is refused, and one that reached a device before the removal did is taken back when the
+removal arrives (`ARemovedDeviceStopsAtTheCutoffTests`). An entry under a number that only another
+room used cannot be checked yet. The room chain Griff ruled for on 2026-09-28
+([Decisions](decisions.md#a-removed-persons-words-stop-where-the-removal-saw-them)) closes it for a
+person removed from a room, not yet for a removed device, which Griff has asked to be closed
+([Open questions](decisions.md)).
+
+**A removal cannot erase what the member's devices had seen** (since 2026-10-31). The device that
+signs a removal chooses its cutoff, so a stolen phone could sign one with a cutoff of 0, or with no
+cutoff and a date before everything, and take every entry of the member's real phone off every
+friend's phone. So each contact checks a removal against what the member's devices had already
+shown. An entry's vector clock is its device's signed statement of how far it had read every feed,
+and a removal's cutoff is its remover's. `DeviceRegistry.noteWhatWasSeen` keeps, for each of the
+member's feeds, the furthest position each of their other devices has stated. A removal whose cutoff
+is below what its own remover, or any of the member's devices that still counts, had stated is
+contradicted: its cutoff and head are ignored, and the line is the furthest position stated. A
+removal that agrees with the evidence keeps its cutoff and head exactly as before. A removed
+device's statements stop counting as evidence for anybody else's removal, so a second stolen phone
+cannot vouch for the first once it is removed too. Entries that arrive before what vouches for them
+are tried again in the same batch (`Replica.integrate(_:)` over a list), so the order a packet or the
+log on disk holds them in does not matter (`ARemovalCannotEraseWhatWasSeenTests`).
+
+**A removal names the devices that stay** (since 2026-10-31). A stolen phone that still counts can
+approve a device and show it only to friends, so the member's own phones never list it. The app's
+removal now signs `remaining`, the member's devices that stay, appended under its own label and count
+only when present. A contact removes, at the removal's stored time, every device the removed one
+approved, directly or through others, that the list leaves out, and cuts it back to what the member's
+devices that still count had seen of it. Since 2026-11-04 that includes a device the removed one had
+already removed itself, so a cutoff the stolen phone chose does not outlive the stolen phone
+(`ADeviceTheRemovedOneApprovedTests`, `ADeviceTheStolenPhoneRemovedItselfTests`).
+
+**How much a registry keeps** (since 2026-11-04). Whoever holds the identity can mint certificates and
+removals, so a registry keeps them by who signed them: up to 16 approvals and 16 removals for each
+device that counted when the event was stored, 256 devices in the newest restore's lineage, and 256
+recovery certificates, which only the recovery key signs. Whatever has no signer that counted shares
+256 places of its own. A stolen phone therefore cannot use up a place of the member's own phone, and
+her removal and her restore are always kept (`AFullRegistryStillTakesARemovalTests`). What it can still
+do through devices it approves is in [Open questions](open-questions.md).
+
+**Outposts a removed device read** (since 2026-10-31). Only an Outpost's owner can change its key, so
+removing a device rotates the key of every room the member is in and of their own Outpost, and leaves
+other people's alone. Each owner rotates their Outpost's key the round they see one of its readers lose
+a device, whether removed, left off a removal's list or left behind by a restore, and seals the new key
+only to the reader's devices that remain (`ARemovedDeviceAndTheOutpostsItReadTests`).
+
+What it does not stop: anything a device does before its removal reaches iCloud; and a device still
+signed in to the Apple Account deleting records, which delays the member's other devices hearing of a
+removal (erasing it with Find My signs it out). A removed device can no longer add a device of its
+own: the identity alone lets nobody in.
+
+**How a new device gets in.** It writes a `request` record holding only its two public keys, its
+signing key and its X-Wing key, the one record in the zone that isn't sealed, because the device
+doesn't have the identity yet. The approving device answers with an `approval` record: the identity
+seeds, the certificates and the removals, sealed to the new device's X-Wing key with `DeviceSeal`. The
+six-character code both devices show is derived from both public keys (`DeviceRequest.code`), so a
+request with a substituted X-Wing key shows a different code. A request carrying an X25519 key instead
+is refused.
 
 ---
 
@@ -191,23 +328,45 @@ sides derive the same value without either being "first". The raw ECDH output is
 directly — it goes through HKDF with a domain-separated salt, which is correct and is the step most
 often skipped.
 
-From that one 32-byte secret, five unrelated things are derived, each under its own domain string so
-that none of them can be used to attack another:
+From that one 32-byte secret, these are derived, each under its own domain string so that none of
+them can be used to attack another (checked against `Pairwise.swift` and `PhotoCopy.swift`,
+2026-09-28):
 
 | Derived thing | Construction | Purpose |
 |---|---|---|
 | `recipientTag(window:for:)` | `HMAC-SHA256(key, "…recipient-tag.v1" ‖ window ‖ recipient)` | the rotating address a packet is left under |
-| `bellName(for:)` | `HMAC-SHA256(key, "…message-bell.v1" ‖ recipient)`, first 16 bytes hex | the push subscription name |
-| `shareOfferName(for:)` | `HMAC-SHA256(key, "…share-offer.v1" ‖ recipient)`, first 16 bytes hex | the rendezvous record name |
-| `shareOfferDigest(of:)` | `HMAC-SHA256(key, "…share-offer-digest.v1" ‖ url)`, first 16 bytes hex | detecting a substituted share URL |
-| `wrap` / `unwrap` | `ChaChaPoly` with the key directly, caller-supplied associated data | epoch grants, packet keys |
+| `pairHint` | `HMAC-SHA256(key, "…pair-space.v1")` | which of your spaces is for which person |
+| `PhotoCopyName(of:between:)` | `HMAC-SHA256(key, "…photo-copy-name.v1" ‖ photo)`, first 16 bytes hex | the name of that person's copy of a photo, and of their receipt for it |
+| `wrap` / `unwrap` | `ChaChaPoly` with the key directly, caller-supplied associated data | epoch grants, packet keys, receipts, room-entry links, photo copies and their labels |
 
-**Known weakness, named.** The pairwise secret is **static for the life of the two identities**.
-There is no ratchet. If somebody obtains your `agreementSeed`, they can derive every pairwise secret
-you have ever had or will ever have, with everyone, forever — and from those, unwrap every epoch
-grant they can collect. Identity compromise is total and permanent, and the only remedy is a new
-identity. This is stated again, deliberately, under [the recovery
-key](#the-recovery-key-is-the-whole-of-you-in-a-text-file).
+**The hidden address changes when a device is removed** (since 2026-09-27). Every device you approve
+holds your `agreementSeed`, and a device you later remove keeps it, so the secret above can be worked
+out by it for good. Removing a device now also gives you a new **address salt**: 32 random bytes kept
+in this device's own keychain (never the synchronized one, which reaches every device on the Apple
+Account) and handed to your other devices only sealed to each of them (`SiblingMail`). The secret
+every packet travels under becomes `PairwiseSecret.derive(mine:theirs:mySalt:theirSalt:)`: the same
+X25519 output, through HKDF under its own domain (`carpenter.pairwise-address.v1`), with both people's
+current salts in the `sharedInfo`, sorted by participant. Nobody with a salt means the old derivation,
+byte for byte (`AnAddressOnlyYourDevicesKnowTests`).
+
+Your contacts hear of it from an `AddressAnnouncement`: the salt sealed to each of *their* devices
+that counts (`DeviceSeal`), signed by one of yours, and adopted only if that device counted when
+iCloud stored the announcement, and only if it was stored after the one they already hold. So a
+removed device can't announce an address of its own, even one it signed before it was removed, and
+an old announcement delivered again can't take the address back. The announcement travels under the
+old secret, with your device certificates and removals in the same packet, and is sent again until
+the contact signs for it. For nine days after a change both sides still listen at the old addresses,
+so nothing written in between is lost, and everyone always listens at the original one, so a contact
+meeting you for the first time, or a device restored from the recovery key (which starts a new salt),
+can always reach you (`ChangingYourHiddenAddressTests`, every guard mutation-checked).
+
+**What a removed device can still do.** It can't work out the new addresses or open anything written
+under them. It can see, once per change per contact, that an announcement was left (it goes under the
+old address), read what was written under the old addresses during the nine days, and write junk under
+the original address that your devices collect and refuse. If it is still signed into your Apple
+Account it can also see how much you write, in your own outbox, without knowing to whom. A comment
+sealed for a wall's owner stays under the original secret, because it is kept in the log for good.
+This is stated again under [the recovery key](#the-recovery-key-is-a-skeleton-key-shown-once).
 
 ---
 
@@ -219,8 +378,8 @@ key](#the-recovery-key-is-the-whole-of-you-in-a-text-file).
 
 This is the least conventional part of the design and the part most worth attacking.
 
-**In plain words.** Every room has a key. When somebody leaves or a phone is lost, the room turns
-its key, and from that moment the old key opens nothing new. But old conversations must still be
+**In plain words.** Every room has a key. When somebody leaves or a phone is lost, the room's key
+is rotated, and from that moment the old key opens nothing new. But old conversations must still be
 readable — that is the entire point of an app where history lives on your own phone — so each new
 key carries a sealed copy of the one before it. Hold today's key and you can walk backwards through
 the whole conversation. That is a feature. It is also the biggest trade-off in the app, and it is
@@ -266,7 +425,7 @@ in another room even if the secret somehow escaped.
 
 - **Post-compromise security: yes.** Knowing epoch *N* tells you nothing about epoch *N+1*. The link
   at *N+1* is sealed **under** *N+1*'s key, not *N*'s, and *N+1* is a fresh random value distributed
-  only through pairwise-wrapped grants. Turning the key after a loss genuinely shuts the old holder
+  only through pairwise-wrapped grants. Rotating the key after a loss genuinely shuts the old holder
   out of everything said afterwards.
 - **Forward secrecy: no, deliberately.** Whoever holds the current secret and the links holds the
   entire history of the room. There is no point in time before which a compromise is harmless. This
@@ -295,6 +454,59 @@ wrapped: try peer.wrap(secret.material, context: Self.context(room: room, epoch:
 `adopt` refuses a grant for the wrong room before opening it. The filter on `links` is the access
 boundary in code form — whatever is left out of that array is history the recipient cannot reach.
 
+The pairwise-wrapped secret is sealed again to each of the recipient's devices that counts and has a
+receiving key (`DeviceSeal`: HPKE in base mode with X-Wing, HKDF-SHA256 and AES-256-GCM, its `info`
+binding the device and the room and epoch; see [What a recording of iCloud can open
+later](#what-a-recording-of-icloud-can-open-later)), and the plain pairwise copy is left empty.
+Opening needs the pairwise secret and the
+device key, so a removed device, which still has the identity, gets nothing. A grant with no device
+seals is never sent and is refused if one arrives (since 2026-09-27; until then a recipient with one
+device lacking a receiving key got a copy anybody with the identity could open). A device that finds
+a grant sealed only for its siblings passes it on to them (`ForwardedGrant`).
+
+**A grant is signed by the device that sent it** (since 2026-09-27). Until then nothing in a grant
+said which device sent it: it was only wrapped under the pairwise secret, which comes from the
+identity, so a removed device, which keeps the identity and the old room keys, could write a newer
+room key "from" its member to any friend, or "from" a friend to its member, into any zone its Apple
+Account can write to. The friend took it as the room's newest key and everything written afterwards
+was readable by the removed device. Now the sending device signs the grant over both people, itself,
+the room, the epoch and every sealed copy (`EpochGrant.signed`), and the recipient takes it only if
+that device counted in the sender's registry when iCloud stored the packet
+(`EpochGrant.isSigned`, `ARemovedDeviceCannotHandOutKeysTests`). What it does not stop: a friend who
+has not yet heard of the removal still takes a key the removed device signs; a removed device still
+signed in to the Apple Account can delay the news by deleting records.
+
+**Once the friend hears, that key stops counting** (since 2026-11-11, package suite only). A key
+counts by its key-change entry, and what a removed device wrote past its line is thrown out, so the
+entry goes. A key with no entry used to count on the word of the *person* who gave it. It now counts
+on the word of the *device* that signed the grant, while that device counts, and never when this
+phone has refused or thrown out a key change that made it (`trustedKey`, `keyChangesRefused`). That
+last part is for an honest friend who had not heard and passed the key on. What the friend wrote
+under the key before hearing stays readable by the removed device.
+
+**A key sealed to a device since removed is replaced** (since 2026-11-11, package suite only). A
+friend who has not heard of a removal seals whatever key it makes or passes on to the removed device
+too. Each device keeps a list of which room keys it sealed to which device
+(`PersistedState.keysSealed`), written before the grant is sent. When it learns one of those devices
+was removed and the room is still written under a key on the list, it gives the room a new key
+(`ARemovedDeviceGetsNoKeyThroughAFriendTests`).
+
+**A phone passes a key on only once it holds what the key's maker had seen** (built 2026-09-29; its tests
+pass in the package suite). Changing a room's key writes an entry into the room (`EpochChangeBody`, sealed under the old
+key) carrying the link, `heads` (the last entry of every feed in the room that the maker held) and
+`proof`: HMAC-SHA256 over the heads, keyed by HKDF-SHA256 from the *new* epoch secret with its own
+domain (`carpenter.epoch-change.v1`) and the room and epoch bound in. A member passes its newest key to
+everybody its member list shows as in (`grantsOwed`), and now only once it holds that entry, with a
+proof that checks under the key, and every entry the entry names. A phone that got the key before the
+removal that caused it (a round split across packets carries keys ahead of its entries; a member's
+other device hands keys over in a record of its own) keeps it until the removal arrives. A removed
+member can open the entry, since it is sealed under the old key, and copy it, but cannot write one
+that names less, because the proof takes the new key. The room's first key has no such entry and is
+passed on as before (`PassingOnANewKeyTests`, `AKeyChangeRecordTests`).
+
+Grants also travel sealed to their recipient under the pairwise secret now; before, each grant sat
+in the packet record as JSON with its room and epoch in the clear.
+
 **Known weakness, named.** A grant's `links` array is the *only* thing standing between a reader and
 the whole room. It is a list somebody has to get right, in a filter, in one place. There is no
 second check downstream asking "should this person be able to read that far back?" — by the time the
@@ -302,11 +514,37 @@ links are in their chain, the answer is yes and cannot be withdrawn. **This is t
 line in the codebase to audit**, and the failure mode is silent: too many links is not an error
 anywhere, it is a reader who can see more than intended and no log line anywhere says so.
 
-**Known weakness, named.** Two members advancing the same room's epoch at the same moment is
-untested and genuinely needs three real accounts to exercise — it is on
-[Proofs a rig cannot run](proofs-a-rig-cannot-run.md). If rival advances resolved differently on
-different devices, members would hold different secrets for the same epoch number and messages would
-stop opening for somebody, with no error that names the cause.
+**Several keys for one number** (built 2026-09-29; two gaps found on the first and second runs, both fixed 2026-09-30, and `AMadeUpKeyTests`, `AStrandedKeyTests` and `AKeyThatWaitsTests` pass in the package suite; not run on the rig). A phone holds every key it is given
+for an epoch number and opens with any of them (`EpochChain.hold`, `sealingKeys`). It writes under the
+newest key whose record of the change was written by somebody the room shows as in, the record matched
+to the key by its proof; a key whose record has not arrived counts only as the first held for its number
+and only while whoever gave it is in. Among several that count, every phone takes the lowest
+fingerprint (SHA-256 under `carpenter.epoch-fingerprint.v1`). This closes two holes: a key a member made
+up before being removed is no longer written under once the removal arrives, and the real key is taken
+beside it; and two members advancing the epoch at the same moment no longer leave phones on different
+keys (`AMadeUpKeyTests`). Each phone passes on every key that counts for the newest number, and every
+older key that a walk back from those cannot reach. The first run found the first half of why: a
+member whose key lost the tie stopped handing it out, and nobody else could read what they had written
+under it. The second found the other half: a link holds one number's key wrapped under the next
+number's, so a walk back from the newest key only ever recovers that key's own line, and the key that
+lost a tie was never handed to anybody who joined afterwards (`AStrandedKeyTests`). A walk back now tries
+each number's link under every key the phone holds for that number and keeps what it uncovers beside
+what is already there (`EpochChain.warm`); before that it followed one key per number and stopped dead
+at a number whose stored key was not the one that made the link. A key that
+reaches a phone still joining the room before its inviter's, or from somebody that phone does not yet
+show as in, waits until it does, and is dropped if the phone shows them removed or gone; the inviter's
+own key never waits, because until the phone can read the room nothing could ever release it
+(`AKeyThatWaitsTests`).
+One giver may add one key per number, unless the room's log holds a record of the change made under
+that key (since 2026-10-31, because a member who passed on somebody else's key, or whose two phones
+rotated at once, had their own key refused). Since 2026-11-04 that record has to be the giver's own,
+one person adds at most four keys to a number, and the cap of sixteen counts only keys no record shows
+anybody making, so one member's logged keys cannot crowd out another's
+(`TwoKeysFromOneMemberTests`, `OneMemberCannotCrowdANumberTests`). A key keeps counting when its maker leaves of their own accord, and
+stops only when they are removed; a phone that holds a removed member's key above the one it would
+write under makes a new key before writing a message (`WhenAKeysMakerGoesTests`).
+The two-advances case still needs three real accounts to prove over iCloud
+([Proofs a rig cannot run](proofs-a-rig-cannot-run.md)).
 
 ---
 
@@ -333,16 +571,25 @@ the key* and to *build the associated data*, so an altered epoch yields the wron
 authentication failure rather than a decryption. Likewise the author and device are bound in, so a
 ciphertext cannot be replayed as if written by somebody else.
 
+The reader holds up its side the same way. An entry is opened only with the chain of the room it
+names, or of its author's Outpost when it names none (`Entry.sealingRoom`), and `Entry.opened(using:)`
+refuses any other chain before it tries a key. Until 2026-10-31 the phone also tried every other
+chain it held and the pair secret with the author, so a contact who shared one room with you could
+write in another room of yours without its key (`AnEntryOpensOnlyInItsOwnRoomTests`).
+
 **Two readers, two ciphertexts.** `alsoFor` seals the *same plaintext a second time* under a
-pairwise secret. It is used for one case in the app: commenting on somebody's Outpost when you are
-not inside that wall's epoch. Your own devices read the room-key copy, the wall's owner reads the
-pairwise copy, and the two ciphertexts share no key. This is the safe way to do it — no key is used
-twice, no nonce is reused — and the small cost is that the message travels twice.
+pairwise secret. It is used for one case in the app: commenting on or reacting in somebody's Outpost
+when you are not inside that wall's epoch. The entry names no room and is sealed in your own
+Outpost's chain. Your own devices read the room-key copy, the wall's owner reads the pairwise copy,
+and the two ciphertexts share no key. This is the safe way to do it — no key is used twice, no nonce
+is reused — and the small cost is that the message travels twice. The owner's phone opens the
+pairwise copy only on an entry that names no room and only when it holds a comment or a reaction
+(`Entry.openedByTheWallsOwner`), so the copy cannot carry anything else.
 
 **Assumption named.** Every message in an epoch is sealed under **the same key** with a **random
 96-bit nonce**, which CryptoKit generates per seal. Random nonces under a fixed key are safe up to
 the birthday bound; at 2³² messages in a single epoch the probability of a repeat is on the order of
-2⁻³³. A room would have to send four billion messages without a single key turn to approach it. Not
+2⁻³³. A room would have to send four billion messages without a single key rotation to approach it. Not
 a concern, but it is an assumption rather than a guarantee, and it would stop being safe if epochs
 were ever made long-lived and high-volume at once.
 
@@ -360,7 +607,21 @@ is no way to put words in somebody's mouth.
 
 **What actually happens.** `Entry.signingPayload` is canonical bytes over
 `(author, device, seq, previous?, clock, wallTime, room?, payload)`, signed with the **device's**
-Ed25519 key. Two things about this are worth stating precisely because they are the questions a
+Ed25519 key. Since 2026-09-28 an entry in a room also signs a **room link**, appended last and only when
+present (`"room-link" ‖ hash of this device's last entry in the room`, empty for its first), so an older
+entry signs exactly the bytes it always did. A removal or a departure names the last entry of each of
+the person's devices, and only the chains those reach are shown (`RoomChains`, `TheRoomChainTests`).
+Since 2026-09-28 the member list follows the same chains (`Projection.standing`; its tests pass in the package suite, 2026-09-29), and a
+room entry without its link is refused
+([Open questions](decisions.md#a-removed-person-hears-last-and-the-first-removal-stands)). When
+two people remove each other without either removal naming the other, the first stands. First is the
+earliest time noted by another member who read it. Each member notes when its copy was stored, which
+is the latest of the copy's stored time and the stored times of what the phone needed to read it:
+the address, the signing device's certificate and the key. The remover tells the removed person once
+another member has noted the removal or every member's space holds it
+([Decisions](decisions.md#a-removed-person-hears-last-and-the-first-removal-stands); built
+2026-09-29, not yet run). Built
+2026-09-28, and the package suite passes; not yet run on the rig. Two things about this are worth stating precisely because they are the questions a
 reviewer asks:
 
 - **It signs the ciphertext, not the plaintext** — encrypt-then-sign. On its own that would leave a
@@ -396,6 +657,33 @@ trade for this architecture and it should never be described as if it were not.
 
 <!-- COPY END 3be1484d -->
 
+<!-- COPY BEGIN 1470960d [NEEDS HUMAN REVIEW] -->
+
+## Who founded a room
+
+**In plain words.** A room's ID is worked out from the person who made it, so nobody else can claim
+to have made it, however they date what they write.
+
+**What actually happens.** Everybody's standing in a room comes down from its founder, the one person
+who is in without an invitation. Until 2026-10-31 the founder was whoever wrote the first room profile
+in log order, and log order between unrelated entries follows the dates their writers chose. A member
+with a modified app could date a profile before the room existed and become its only member on every
+phone. Now `createRoom` draws 32 random bytes and the room's ID is the first 16 bytes of
+`SHA256("carpenter.room-founding.v1" ‖ founder ‖ kind ‖ those bytes)` (`RoomID.founded`). The first
+profile carries the bytes, sealed like any payload. A profile founds the room only if its author's ID,
+the kind it names and its bytes hash to the room's ID (`RoomProfileBody.founds`), so the founder and the
+room's kind are fixed when the room is made. A Solo cannot be made into a room or a room into a Solo,
+and a reader cannot make somebody's Outpost into a room, because an Outpost's ID is not made this way.
+A room whose profile carries no founding has no founder and nobody in it; that is every room made
+before this, by a decision recorded as proposed in
+[Decisions](decisions.md#a-rooms-id-names-its-founder). Matching a room ID for another founder means
+finding a second preimage of a 128-bit truncated hash. The package suite holds it
+(`ARoomIsFoundedByThePersonItsIDNamesTests`); none of it has run over iCloud.
+
+---
+
+<!-- COPY END 1470960d -->
+
 <!-- COPY BEGIN 2523f808 [NEEDS HUMAN REVIEW] -->
 
 ## The bytes everything is signed and sealed over
@@ -423,8 +711,8 @@ public static func payload(domain: String, fields: [Data]) -> Data {
 ```
 
 Every field is length-prefixed, big-endian, and every structure begins with its own domain string —
-there are **twenty-four** distinct domains in `Domain`, one per construction. That is the right
-shape and it is applied consistently.
+each construction has its own entry in `Domain`. That is the right layout and it is applied
+consistently.
 
 **The trap, which has already been sprung.** `CanonicalBytes.optional` emits a **presence byte**:
 
@@ -547,18 +835,48 @@ plain dictionary once, so a round owing one person keys to two rooms delivered t
 the rest, and then marked every owed grant issued because *a* packet had been written. Anything else
 addressed per peer has to be a list too.
 
-The record written to CloudKit (`PacketWire.fields`) carries exactly: the packet UUID, the
-outstanding tag list, the wrap tags, the wrapped keys, the sealed body, and the grant tags and
-values. **What that leaks, stated plainly:**
+**Where a packet is written** (since 2026-09-27). Into the sender's own space for one recipient: a
+zone in the sender's iCloud, shared read-only with that recipient's account alone. The record
+(`PacketWire.fields`) carries exactly: the packet UUID, the recipient's tag, the wrapped key, the
+sealed body, and the grant tags and values. **What that leaks, stated plainly:**
 
-- How many recipients a packet has (the length of the tag list).
-- Roughly how much was said (the ciphertext's size).
-- When it was written, and when each recipient collected — the tag is removed from `outstanding` as
-  each one acknowledges, so the relay watches the fan-out drain.
-- That a set of packets share a recipient *within one day*.
+- That this sender writes to this reader. The share names the reader's account, and Apple holds
+  every share list.
+- Roughly how much was said (the ciphertext's size), when it was written, and when the reader
+  collected it, because the reader's receipt appears in the reader's own space for the sender.
+- That one photo probably went to several people: the copies are written in one operation, at the
+  same moment, and are the same size. Since 2026-09-28 they share nothing else: each copy is sealed
+  again for its pair and named from the pair's secret, and no field names the photo
+  ([Photos and clips](#photos-and-clips)). Built 2026-09-28; not yet run on two accounts.
+- The pair's `hint`, a keyed hash of the pair's secret, which is the same in the two people's spaces
+  for each other. Apple can already match those two spaces from their share lists, so it adds
+  nothing.
+- The ring, sixteen random bytes rewritten when a round leaves something that should ring. It tells
+  Apple a message was left, which the packet's own time already does.
+
+**Receipts, in the reader's own space.** A reader never writes into the sender's space; iCloud refuses
+it (measured on the rig 2026-09-27: adding, changing and deleting a record and changing the share
+were all refused). The reader's device signs a receipt and seals it to the sender under the pairwise
+secret (`PacketReceipt`), and writes it into the reader's own space for the sender. The sender keeps
+its own record of who each packet was for, and a digest of what it wrote, and takes a packet back
+only once a device of the reader that still counts has signed for it, or the packet has outlived the
+address lookback (`TamperedPacketTests`, `NothingIsSnatchedTests`).
+
+**Photos the same way.** A photo's copy for each recipient sits in the sender's space for them. The
+reader signs for it with an `AttachmentReceipt`, the same shape as a packet receipt under its own
+domain (`carpenter.attachment-receipt.v1`). A receipt counts only if it was written after the copy it
+answers, so a copy sent again is not cleared by an old receipt (`NobodyButTheSenderClearsAPhotoTests`).
+
+**Who may say where a person is read.** A link to a space counts only if a device of that person that
+still counts sent it; a contact is read only from accounts such links name, and a space names the
+account in the newest one. A stolen device can move that name to its own account while it still
+counts, and removing it moves it back
+([accepted by Griff](decisions.md#a-stolen-device-can-redirect-your-contacts-until-you-remove-it),
+`WhoCanTellYouWhereToReadSomebodyTests`).
 
 It does not leak any participant identifier, any room identifier, any device identifier, or any
-plaintext. **Nothing is ever written with `record[key]` unsealed** — the rule in `CLAUDE.md` exists
+plaintext. **Nothing readable is written with `record[key]`**: every field is sealed except the pair
+hint, which is a keyed hash, and the ring, which is random bytes. The rule in `CLAUDE.md` exists
 because it was broken once, and that is the next section.
 
 ---
@@ -583,7 +901,25 @@ the digest before it touches the ciphertext:
 guard matches(ciphertext, reference) else { throw AttachmentError.digestMismatch }
 ```
 
-Size caps are enforced before sealing — 12 MB for an image, 40 MB for a video.
+Size caps are enforced before sealing: 12 MB for an image, 287 MB for a video, which is sealed in 16 MB pieces.
+
+**Each person's copy is sealed apart** (since 2026-09-28, [ruled by Griff](decisions.md#a-photo-is-copied-for-each-person-it-goes-to-and-each-copy-is-sealed-apart)).
+The sealed photo is copied into the sender's space for each person it is for, and each copy is
+sealed again under the pair's original secret (`PhotoCopy.seal`: `ChaChaPoly`, with the photo's
+number bound in under `carpenter.photo-copy.v1`). The copy's record is named from the same secret
+(`PhotoCopyName`), and the only other field that says which photo it is, the label, is the photo's
+number sealed under that secret with the copy's name bound in (`carpenter.photo-copy-label.v1`), so a
+label moved onto another copy does not open. The reader's receipt for the copy is named after the
+copy, not the photo. So two people's copies of one photo share no bytes and no name, and nothing
+written to iCloud carries the photo's number (`PhotoCopiesAreSealedApartTests`). The pair's original
+secret is used, not the address secret that changes when a device is removed, because the copy
+needs only to be unlinkable, not secret: the photo's own key travels inside the room.
+
+Opening checks the digest first: bytes that already match it are taken as they are, which is how a
+photo from the old shared outbox is still read; anything else must open under the pair's secret and
+then match (`PhotoCopy.open`). **What this does not hide:** the copies are the same size and are
+written at the same moment, so whoever can see several spaces can still guess that one photo went to
+several people. Built 2026-09-28, and the package suite passes; not yet run on two accounts.
 
 Separately, `CarpenterMedia.ImagePreparer.redrawn` draws every image into a fresh context before
 encoding, because ImageIO carries a source's Exif block — lens, original time, location — into a
@@ -616,6 +952,25 @@ with `(member, device)` as the AEAD's associated data. Only the holder of both s
 which is exactly right — a device restored from the recovery key can reopen its own feed, and
 nothing else can.
 
+Mail and catch-ups, which carry room keys, are sealed a second time around that: a random content
+key, sealed to each of the member's devices that is not removed with `DeviceSeal`. A device with no
+receiving key is left out, the way a grant leaves it out, and a record with no device left to seal to
+is not sent; until 2026-10-31 one such device made the whole record fall back to the identity alone,
+which a removed device holds (`MailBetweenDevicesIsSealedPerDeviceTests`). The small state
+record, which carries certificates, revocations and the member's people, is sealed under the identity
+only, so a new device can be read before anybody knows its receiving key.
+
+**Every one of these records is signed by the device that wrote it** (since 2026-09-27). The record's
+name says which device wrote it, and until then nothing proved it: anybody with the identity,
+including a removed device, could write a record in another device's name carrying room keys,
+forwarded keys or settings ("rooms deleted" among them), and the member's other devices took it.
+Now the writer signs the record over its name and sealed bytes, and carries its certificates. A
+record counts in full only if its writer counted when iCloud stored it. From a device that no longer
+counts, a record gives people and entries, which verify on their own, and nothing else; the one
+exception is a device the recovery key removed handing its writing and room keys to the restored
+device, which then gives each room a new key before writing
+(`ARemovedDeviceCannotWriteToSiblingsTests`).
+
 **Named because a reviewer will ask:** this uses an Ed25519 *seed* as HKDF input keying material, and
 key separation orthodoxy says do not use a signing key for anything but signing. It is safe here —
 Ed25519's scalar comes from SHA-512 over the seed, and this derivation uses a different function with
@@ -629,6 +984,80 @@ JSON. See below.
 ---
 
 <!-- COPY END 3f67ec76 -->
+
+<!-- COPY BEGIN 40915bb2 [NEEDS HUMAN REVIEW] -->
+
+## What a recording of iCloud can open later
+
+**In plain words.** Somebody who copies what sits in your iCloud today, Apple or anybody who gets
+into the account, could keep it until a quantum computer can break the maths behind most of this
+app's keys. Since 2026-11-05, every key handed to one of your devices is locked with a key made from
+two kinds of maths at once, the kind used before and a newer kind a quantum computer is not known to
+break, and opening it needs both broken. So that copy will not give up a room key, and without a room key nobody reads a message, a photo or a
+comment in a room. It will still give up who you talk to, when, and which rooms you share, and the
+words of a comment you leave on somebody's Outpost from outside its room.
+
+**What actually happens.** `DeviceSeal` is HPKE ([RFC 9180](https://www.rfc-editor.org/rfc/rfc9180))
+in base mode with CryptoKit's `XWingMLKEM768X25519_SHA256_AES_GCM_256`, confirmed in the iOS 27.1
+SDK's CryptoKit interface and in [Apple's
+article](https://developer.apple.com/documentation/cryptokit/enhancing-your-app-s-privacy-and-security-with-quantum-secure-workflows).
+X-Wing ([draft-connolly-cfrg-xwing-kem](https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/),
+an individual Internet-Draft, not an RFC) combines ML-KEM-768 ([FIPS
+203](https://csrc.nist.gov/pubs/fips/203/final)) with X25519, so its secret holds while either one
+does. The `info` is `"carpenter.device-seal.v2" ‖ device ‖ context`, where the context is each
+purpose's own canonical bytes: the room and epoch for a grant, the member, recipient and number for an
+address announcement, the member, writer and kind for a record between a member's devices, the
+approver and the request's keys for an approval. A seal opens only on the device it names and only
+under the context it was made with (`AKeyHandedToADeviceIsSealedWithXWingTests`). A seal carries a
+1,120-byte encapsulation and a 16-byte tag; the X25519 form carried a 32-byte key, a 12-byte nonce
+and a 16-byte tag.
+
+Every path a key travels, and what a recording of it yields once X25519 is broken:
+
+| What travels | What it carries | Sealed with | Once X25519 falls |
+|---|---|---|---|
+| A grant in a packet (`EpochGrant`) | a room's or an Outpost's key | the pair's secret, then X-Wing to each device | needs ML-KEM-768 too |
+| A grant passed on between a member's devices (`ForwardedGrant`) | the same | its own X-Wing seals, inside mail | needs ML-KEM-768 too |
+| Mail and catch-ups between a member's devices | room keys, address salts, forwarded grants, entries, settings | a key from the identity's seeds, then a content key sealed with X-Wing to each device | needs ML-KEM-768 too |
+| What a device removed by a restore leaves for the restored one | its entries and room keys | the same as a catch-up | needs ML-KEM-768 too |
+| An approval (`DeviceApproval`) | the identity's seeds, certificates and removals | X-Wing, to the key in the new device's request | needs ML-KEM-768 too |
+| An address announcement | a new address salt | X-Wing to each of the contact's devices | needs ML-KEM-768 too |
+| The state record between a member's devices | certificates, removals, people, photos held | a key from both identity seeds | needs the signing seed, which Ed25519 hashes before use ([RFC 8032](https://www.rfc-editor.org/rfc/rfc8032#section-5.1.5)), so no public key gives it up; it travels only in an approval |
+| A packet (`SyncEngine.pack`) | each entry's author, device, room, numbers, times and signature; certificates; repair; confirmations; photo asks | the pair's secret, from X25519 | opens; the entries' words need the room key |
+| Receipts for packets and photos | which device signed for what | the pair's secret | opens |
+| A photo's copy and its label | the photo, still sealed under its own key, which travels inside a room entry | the pair's secret | the copy's wrapper opens; the photo needs the room key |
+| A comment or reaction on somebody's Outpost from outside its room (`alsoFor`) | the words | the pair's secret | **opens** |
+| Links to each other's spaces | where to read a person | the pair's secret | opens |
+
+After an address change, packets travel under a secret that mixes in address salts, and those travel
+only under X-Wing. This brief does not count that as protection: a first contact, a pair whose members
+never changed address, and the original address everybody keeps listening at all use X25519 alone.
+How to put the pair's secret under ML-KEM too is an
+[open question](open-questions.md#a-recording-of-icloud-still-opens-everything-under-the-pairs-secret).
+Two things never reach iCloud and are not covered: tapping two phones (X25519 between the two phones,
+carrying codes, which are public) and the Secure Enclave key behind Outpost's own lock, which stays on
+the phone.
+
+**What it does not change.** Every signature is still Ed25519. A future attacker with a quantum
+computer could forge them, which matters for what they could do then, not for reading what was
+recorded. Everything recorded before 2026-11-05 used X25519 alone; the app has not reached TestFlight
+and the test accounts were reset, so no member's words are in it.
+
+**A seal in the old X25519 form is refused** (`PROPOSED`, see
+[Decisions](decisions.md#a-key-handed-to-a-device-is-sealed-with-x-wing)). It still decodes, so a
+stored grant or a packet that carries one keeps everything else, and opening it fails. A device whose
+certificate has no X-Wing key, one enrolled by an earlier build, is left out of every seal, as a device
+with no receiving key always was; it has to be removed and approved again.
+
+**Sizes from a peer.** An encapsulation longer than 1,120 bytes, or a sealed part longer than the
+1,000,000-byte record ceiling (`MailboxRules.recordByteCeiling`), is refused when the seal is decoded:
+no X-Wing encapsulation is longer and no record holds more. Walking a list of seals is linear in the
+bytes this device fetched.
+
+**Not run over iCloud.** The package suite holds every rule above. No seal of this kind has crossed
+CloudKit between two accounts.
+
+<!-- COPY END 40915bb2 -->
 
 <!-- COPY BEGIN 346c1b82 [NEEDS HUMAN REVIEW] -->
 
@@ -882,34 +1311,102 @@ comparison as matching is a note to yourself; it is not sent to anybody.
 
 <!-- COPY END d5b61974 -->
 
+<!-- COPY BEGIN d6713b39 [NEEDS HUMAN REVIEW] -->
+
+## Tapping two phones
+
+**In plain words.** Two people who are together can hold their iPhones against each other instead of
+sending codes. Each phone measures how far the other is with its ultra-wideband chip, and only when
+exactly one phone is touching does either screen ask to swap. Nothing leaves either phone until both
+people say yes, and then it goes straight across, sealed so that nobody nearby can read it. The codes
+that arrive are the same codes, checked the same way, and the characters the two people read still
+decide who they are talking to.
+
+> **Built 2026-09-28, and the package suite passes on Griff's Mac.** Not run on any phone. It needs
+> two iPhones with the ultra-wideband chip, so it is proved on TestFlight.
+
+**What actually happens.** `TapSwap` holds every rule, and `TappingPhonesTests` tries to break them.
+
+- **Finding each other.** Both screens advertise and browse a Bonjour service, `_tapswap._tcp`, with
+  peer-to-peer Wi-Fi on, under a random name made for that screen. Nothing reaches iCloud.
+- **The first hello** carries a Nearby Interaction discovery token, made fresh for that pair, and a
+  fresh X25519 public key. Everything after it is sealed with ChaChaPoly under an HKDF-SHA256 key from
+  the two keys, in its own domain (`carpenter.tap-swap.v1`), numbered so a message played back is
+  refused, and bound to its sender's key so one bounced back is refused too. A hello carrying the
+  phone's own key is refused, because a key agreed with itself would let its own messages be bounced
+  back and opened.
+- **Choosing the phone.** A phone counts as touching at 15 cm or less for three readings in a row, the
+  newest under a second old. It is chosen only if no other phone is that close and every phone that
+  arrived in the last two seconds has been measured. Another phone coming that close starts over.
+- **Asking.** The ask lasts 30 seconds. Each phone sends its code only after its own person has said
+  yes and the other phone has said yes or sent its code. It takes a code only from the chosen phone,
+  only after its own person's yes, at most eight hand-overs and 16 KB each. A phone that has sent its
+  code and hears a yes again sends its code again, because the other phone's ask can lapse just
+  before the code lands, and then that phone asks its person again.
+
+**What it does not do.**
+
+- **It is not proof of who is holding the other phone.** Those are the characters, as for any code.
+- **A relay can hear a code, and cannot change one unseen.** A modified app on a phone within Wi-Fi
+  range could pass the two phones' hellos between them, so that it sits in the middle while their real
+  distance is measured. It is caught if both phones also find each other directly, because then two
+  phones read as touching; the few moments before they do are a window. What it can learn is a code,
+  which is made to be handed out; a code it swaps in shows up as characters that do not match.
+- **Ultra-wideband distance can be shortened by an attacker.** A distance reduction attack on Apple's
+  U1 chip took a measurement from 12 m to 0 m in up to 4% of attempts with a USD 65 radio
+  ([Ghost Peak, USENIX Security 2022](https://www.usenix.org/conference/usenixsecurity22/presentation/leu)).
+  Three readings in a row and one touching phone at a time make it harder; the characters are the
+  check that holds.
+
+Griff ruled on 2026-09-28 to close both with a number, and it was built the same day; its tests pass in the package suite (2026-09-29), not yet on a phone.
+Each phone's hello carries `SHA-256("carpenter.tap-commitment.v1" ‖ key)` instead of the key; a phone
+shows its key only to the phone it is touching, once that phone's commitment has arrived, and only once
+per tap. Both phones then derive six digits from the two keys (`carpenter.tap-number.v1`), each is told
+which three its person says, and nothing seals until both have confirmed. A relay has to commit to its
+own keys before it sees either phone's, so it gets one guess in a million per tap, and a miss shows two
+different numbers ([Decisions](decisions.md#tapping-two-phones-swaps-codes)).
+
+<!-- COPY END d6713b39 -->
+
 <!-- COPY BEGIN 1470b595 [NEEDS HUMAN REVIEW] -->
 
-## The recovery key is the whole of you, in a text file
+## The recovery key is a skeleton key, shown once
 
-**In plain words.** The recovery key file contains your actual keys, in plain text. Anybody who opens
-that file *is* you, permanently, and there is no way to change it or cancel it. The file says so, in
-its own first paragraph.
+**In plain words.** The recovery key is one random secret that every key that is you comes from, plus
+one key nothing else has: the one that can make a device count without an approval. It is shown once,
+when you set up, until you say you've saved it, and then no device keeps it. Using it on a device
+brings your identity back there and removes every other device. There is no way to change it and no
+way to make another one, because a device that could make a new one could lock you out of your own
+identity. Anybody who has it can take your identity over.
 
-**What actually happens.** `RecoveryKey.text` writes both private seeds as **base64, unencrypted**,
-with a fingerprint and an eight-character checksum. There is no passphrase, no key-derivation
-function, no wrapping. The checksum is integrity only — it catches a mistyped file, not an attacker.
+**What actually happens.** `RecoveryKey.text` writes the 32-byte secret and a 3-byte check, in
+Crockford base32, grouped in fours (56 characters), under a header and the paragraph the member reads.
+Reading it accepts the whole file or the key alone, ignores dashes, spaces and case, reads O as 0 and
+I or L as 1, and refuses a key of the wrong length or a failed check as damaged. A file from the old
+format, which held the identity's two seeds, is refused as earlier (`ARecoveryKeyTests`,
+`RestoringFromAKeyTests`).
 
-This is a deliberate design, and the file is honest about it:
+From the secret come the identity signing seed, the agreement seed and the recovery signing seed, by
+HKDF-SHA256 under `carpenter.recovery-secret.v2` with a label each. A device holds the first two and
+the recovery key's public half. The creating device signs the first certificate with the recovery key,
+keeps the secret in its Keychain only until the member confirms it is saved
+(`IdentityStore.unsavedRecoveryKey`), then deletes it.
 
-> Anybody with this file can become you. There is no way to change it and no way to revoke it. Keep
-> it where you keep passwords, not where you keep photographs.
+Restoring derives the identity from the key, makes a new device key, and signs that device's
+certificate with the recovery key. That certificate is the newest root, so every other device stops
+counting at its date. A device that learns the recovery key removed it hands its own writing and room
+keys to the restored device, sealed to it alone, and erases itself. The restored device gives every
+room it gets a key for, from anybody, a new key before it writes anything there, because a removed
+device holds the old ones (`rekeyBeforeWriting`). Partners hand the member's room keys again whenever
+the member's set of devices changes. A restore also starts a new address salt, since the old one
+lived only on devices that are gone, and announces it the way a removal does.
 
-**Stated plainly as the largest key-management risk in the product.** Because the pairwise secret is
-static and derived from the agreement seed, whoever holds this file can derive every pairwise secret
-you will ever have, unwrap every epoch grant addressed to you, and sign as you. It is not a password
-that can be changed; it is the identity itself. The mitigations are all editorial — where the file
-is shown, what it says, and how it is offered — and they are the right place for the effort, because
-no amount of cryptography rescues a file the member emails to themselves.
+**The largest key-management risk in the product is still this file.** Whoever holds it is you. The
+mitigations are editorial — where it is shown, what it says, and that it is shown once — plus one
+structural one: no device holds it, so losing a phone never loses the recovery key.
 
-**Worth considering after TestFlight:** offering an optional passphrase over the file
-(`HKDF`/`PBKDF2` → `ChaChaPoly`) would cost one screen and would turn a stolen file from a total
-compromise into a slow one. It is not on the roadmap and this brief is not the place to add it —
-noting it here so it is on the record as a known, unaddressed cost.
+**Worth considering after TestFlight:** an optional passphrase over the file (a password-based KDF →
+`ChaChaPoly`) would turn a stolen file from a total compromise into a slow one.
 
 ---
 
@@ -919,30 +1416,166 @@ noting it here so it is on the record as a known, unaddressed cost.
 
 ## Where keys actually live
 
-**In plain words.** Your identity lives in your iCloud Keychain so a new phone can pick it up. The
-key belonging to *this particular phone* never leaves it. Everything on disk is encrypted by iOS and
-unreadable until you have unlocked the phone once after it boots.
+**In plain words.** Your identity lives only on your devices; a new phone gets it when one of yours
+approves it (since 2026-09-27; before that it was in iCloud Keychain, where any device signed in to
+the Apple Account got it). Every key, room keys included, stays on the device, not even in a backup.
+Everything on disk is encrypted by iOS, unreadable until you have unlocked the phone once after it
+boots, and left out of iCloud and computer backups.
 
 **What actually happens.**
 
 | Item | Keychain scope | Accessibility |
 |---|---|---|
-| `identity.keys` (both seeds, concatenated) | `.synchronized` — iCloud Keychain | `kSecAttrAccessibleAfterFirstUnlock` |
-| `device.signing` | `.device` — never leaves | `kSecAttrAccessibleAfterFirstUnlock` |
+| `identity.keys` (both seeds and the recovery key's public half) | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+| `device.signing`, `device.certificate`, every `epoch.*` room key | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+| `recovery.unsaved` (only until the member saves the key) | `.device` | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+
+With [Advanced On Device Security](#advanced-on-device-security) on, every one of them is
+`kSecAttrAccessibleWhenUnlockedThisDeviceOnly` instead.
 
 Everything uses `kSecUseDataProtectionKeychain: true`, and the log, media and document stores are
-written with `FileProtectionType.completeUntilFirstUserAuthentication`.
+written with `FileProtectionType.completeUntilFirstUserAuthentication`, or `.complete` with Advanced
+On Device Security on, in a directory marked `isExcludedFromBackup`.
+
+**Fixed 2026-09-27: the device's keys went into backups.** Until then every `.device` item was saved
+`kSecAttrAccessibleAfterFirstUnlock`, which Apple's documentation says migrates "to a new device when
+using encrypted backups", and the store was backed up. Under standard data protection Apple holds the
+keys to iCloud Backup, so a default iCloud Backup held the room keys and the sealed log together: the
+whole history, openable by whoever can open the backup. Items are now `ThisDeviceOnly`, an item saved
+the old way is moved when the app protects what it keeps (the first launch of a build that has not
+done it yet, since 2026-09-28; before that, the first time the item was read), and the store, the
+Focus room list and the diagnostics files are out of backups (`SystemKeychainTests`,
+`StoreLeftOutOfBackupsTests`). From
+Apple's documentation, not measured on a device. The cost: restoring a phone from a backup no longer
+brings this app back with it; the recovery key or another device's approval does.
 
 **Two consequences, named.** `afterFirstUnlock` means that on a phone which has been unlocked once
 since boot, the keys are available to the operating system even while the screen is locked. That is
 required — the app has to sync in the background and the notification extension has to decrypt a
-message to draw a banner — and it is a real reduction from `WhenUnlocked`. And the identity's
-presence in iCloud Keychain means its safety rests on Apple's escrow design (end-to-end, with
-hardware-enforced passcode attempt limits) rather than on anything this app does.
+message to draw a banner — and it is a real reduction from `WhenUnlocked`. A member who would rather
+give up both can turn on [Advanced On Device Security](#advanced-on-device-security).
 
 ---
 
 <!-- COPY END 4b91a7f5 -->
+
+<!-- COPY BEGIN 9c27f287 [NEEDS HUMAN REVIEW] -->
+
+## The app lock
+
+**In plain words.** The app can ask for its own code, or Face ID, before it shows anything. The code
+is not stored; something only the right code can match is. It is a door on the app's screens, not a
+second layer of encryption on what the app stores.
+
+**What actually happens.** `AppLock` keeps a 32-byte random salt and PBKDF2-HMAC-SHA256 of the code
+over it, 300,000 rounds, compared in constant time. It sits in the keychain as `app.lock`, `.device`
+scope (`AfterFirstUnlockThisDeviceOnly`), so it never leaves the phone, never reaches a backup, and
+survives deleting the app. Every try is written down as a failure before the code is checked and
+cleared only if the code was right. After five failures each further try waits: 1, 5, 15 minutes, then
+an hour. The wait is timed by `CLOCK_MONOTONIC` together with the kernel's boot session id, so setting
+the date does nothing, and a restart starts the wait over rather than ending it
+(`AppLockTests`, `AppLockControllerTests`).
+
+Face ID is asked for with `deviceOwnerAuthenticationWithBiometrics` and no passcode fallback, and it
+counts only when `LAContext.domainState.biometry.stateHash` matches the one taken when Face ID was
+turned on or the code was last entered, so a face enrolled since, by somebody who knows the phone's
+passcode, does not open it.
+
+The fields the code is typed into declare no content type (since 2026-11-05). They used to say
+`.password` and `.newPassword`, which tells iOS's password AutoFill the field holds an account
+password and invites it to offer saving the code to the Passwords app, and from there to iCloud
+Keychain, where the phone's passcode opens it: the one thing the app's code exists to be different
+from. A secure field already keeps what is typed out of the keyboard's learned words. Whether iOS
+still shows its Passwords key above the keyboard on a secure field with no type has not been looked
+at on a phone; the lint refuses either type coming back.
+
+**What it does not do.** Somebody who can read the phone's storage directly, with a forensic tool or
+a modified app, is not stopped by it: the store is protected by iOS's file protection and the
+keychain, as it is without the lock. A 4-digit code's verifier could be tried against all 10,000
+codes in minutes by anybody who already had the keychain item; the counted tries only bind somebody
+using the app. Griff ruled on 2026-09-28 for an opt-in that does stop a copy being read,
+[Advanced On Device Security](#advanced-on-device-security).
+
+<!-- COPY END 9c27f287 -->
+
+<!-- COPY BEGIN eb2e47b3 [NEEDS HUMAN REVIEW] -->
+
+## Advanced On Device Security
+
+**In plain words.** Off unless you turn it on. With it on, what the app keeps on your iPhone (the
+history, names, photos and every key) can be read only while the iPhone is unlocked. Somebody who
+takes it while it is locked and copies its storage gets files they cannot open without the iPhone's
+passcode, and the passcode can only be tried on that iPhone. While it is locked the app fetches
+nothing: messages wait, sealed, in the sender's iCloud and arrive when you unlock it, and a
+notification says only that something arrived.
+
+> **Built 2026-09-28, and the package suite passes on Griff's Mac.** Not yet tried with the phone
+> locked. The package tests model a locked phone with a fake keychain, and the keychain half passes on
+> the simulator. On an iPhone, files are written with the protection the setting names
+> (`FileProtectionTests`, 2026-09-28); a simulator does not keep a file's protection class.
+
+**What actually happens.** No new cryptography: the app asks iOS for its strongest protection, which
+iOS already ties to the passcode and to the phone's own hardware key.
+
+- **Files.** The log, the state, photos and clips, every avatar, the Focus room list, the rest of the
+  app's folder in Application Support, and the scratch folder are written and kept
+  as `FileProtectionType.complete`, which Apple describes as "stored in an encrypted format on disk
+  and cannot be read from or written to while the device is locked or booting"
+  ([Apple](https://developer.apple.com/documentation/foundation/fileprotectiontype/complete)). Apple's
+  security guide says the key for that class is discarded shortly after the phone locks, ten seconds
+  when it asks for the passcode immediately
+  ([Apple Platform Security](https://support.apple.com/guide/security/data-protection-classes-secb010e978a/web)).
+  Every store reads the setting at the moment it writes (`ProtectionDial`, `ProtectedFiles`).
+- **Scratch files.** A picked clip, a clip being prepared, a sealed copy waiting to upload and a clip
+  opened for playing are written into one folder, `ScratchSpace`, and nowhere else; the lint fails on
+  any other use of the temporary directory. The folder is made with the protection the setting names
+  and each file is given it again once written, because a file copied in or written by AVFoundation
+  does not reliably take its folder's class: Apple's own engineer says a new item takes its parent's
+  class, and that an atomic write or a copy can keep the class of wherever it started
+  ([Apple Developer Forums](https://developer.apple.com/forums/thread/24483)). The folder is emptied at
+  launch and by every erase. On an iPhone, `FileProtectionTests` checks a copied file ends up
+  `complete`; it has not been run since it was written.
+- **Keys.** Every keychain item is `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`: "can be accessed
+  only while the device is unlocked by the user"
+  ([Apple](https://developer.apple.com/documentation/security/ksecattraccessiblewhenunlockedthisdeviceonly)).
+- **The choice** is a keychain item, `storage.protection`, holding what was chosen and what has been
+  applied. A choice that cannot be read counts as on (`ProtectionChoice.read`).
+- **Changing it** records the choice, then re-protects every key and every file already kept, then
+  marks it applied. Interrupted, it finishes the next time the app opens. Changes run one at a time,
+  so the choice, its record and every key end up agreeing (`SealedWhileLockedTests`).
+- **Reading a key never changes how it is protected**, since 2026-09-28. A read used to move a key to
+  the ordinary protection, and the notification extension reads the same keys, so every push would
+  have undone the setting (`SystemKeychainTests.readingChangesNothing`).
+- **While the phone is locked** (`UIApplication.isProtectedDataAvailable` is false), the app runs no
+  round and no device sync, loads nothing and signs for nothing, and it loads when iOS says protected
+  data is available again. A write refused because the phone locked during a round is not signed for,
+  so the sender offers it again, and it is not counted as damage in the history check. The
+  notification extension cannot open the keychain, so it shows the plain banner at once and leaves
+  the number on the icon alone.
+
+**What it does not do.**
+
+- **Nothing without a passcode.** "Data protection is enabled automatically when the user sets an
+  active passcode for the device"
+  ([Apple](https://developer.apple.com/documentation/uikit/encrypting-your-app-s-files)). The switch
+  cannot be turned on while the iPhone has none.
+- **Nothing against somebody who knows the passcode.** Outpost's own lock as the seal is the choice
+  that would. The lock is built and guards the screens, and seals nothing ([The app lock](#the-app-lock)).
+  The vault that would seal with its code, `Vault` with `SealedDocumentStore`, is written and tested in
+  the package and nothing in the app calls it, so today what the lock covers is protected only by the
+  phone's lock ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
+- **Not everything the app keeps.** Its preferences (theme, favourite emoji, which rooms a Focus lets
+  through and which photos you chose to show, each by a random identifier) and the device-sync
+  engine's bookkeeping stay readable once the phone has been unlocked after it starts. None of them is
+  a message, a name, a photo or a key, but promise 1 covers them, so they are to be sealed too; not
+  built yet.
+
+**What it costs.** Nothing arrives in the background while the phone is locked, and every banner in
+that time says only "New message". A phone left locked for longer than a packet waits is like one that
+was off that long, and promise 2 says nothing is lost, so collecting what arrives while locked, sealed,
+is owed ([Decisions](decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
+
+<!-- COPY END eb2e47b3 -->
 
 <!-- COPY BEGIN 6442968d [NEEDS HUMAN REVIEW] -->
 
@@ -1011,9 +1644,12 @@ Stated so that nobody mistakes its silence for a clean bill.
   is heavily unit-tested against intended behavior, and has not been fuzzed or attacked.
 - **Three-party cryptographic cases are unproven over the real transport**, and genuinely need a
   third Apple Account — see [Proofs a rig cannot run](proofs-a-rig-cannot-run.md).
-- **No post-quantum anything.** X25519 and Ed25519 are classical. Harvest-now-decrypt-later applies
-  to everything this app has ever sealed. Apple's own protocols are moving to PQ3-style hybrids; this
-  is not, and nothing in the product should imply otherwise.
+- **Post-quantum only for what is handed to one device.** Since 2026-11-05 every key handed to a
+  device is sealed with X-Wing, so a recording of iCloud cannot later yield a room key, and with it
+  any message, without breaking ML-KEM-768. Everything sealed under the pair's secret is still X25519
+  alone, every signature is still Ed25519, and everything recorded before 2026-11-05 is X25519 alone.
+  [What a recording of iCloud can open later](#what-a-recording-of-icloud-can-open-later) has the map,
+  and nothing in the product should claim more than it.
 
 ---
 
@@ -1038,7 +1674,8 @@ In the order a person is most likely to find something:
    produces, it cannot fail the way the real one fails.
 
 The tests worth reading alongside: `SealBindingTests` (pins the wire format by hand),
-`SiblingFeedIsSealedTests`, `EpochDistributionTests`, `DeviceTrustTests`, `CanonicalBytesTests`, and
+`SiblingFeedIsSealedTests`, `EpochDistributionTests`, `DeviceTrustTests`, `CanonicalBytesTests`,
+`AKeyHandedToADeviceIsSealedWithXWingTests`, and
 `App/CarpenterTests/LiveSiblingFeedTests.swift`, which fetches a record back off real CloudKit and
 asserts it contains no epoch secret.
 

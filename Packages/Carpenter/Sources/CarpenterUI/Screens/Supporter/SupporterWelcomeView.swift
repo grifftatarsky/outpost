@@ -29,7 +29,7 @@ struct SupporterWelcomeView: View {
                 Image(systemName: "party.popper.fill")
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(palette.accentColor)
-                    .font(.system(size: 96))
+                    .scaledSystemFont(96)
                     .symbolEffect(.wiggle.byLayer, options: .repeat(.periodic(delay: 0.6)), isActive: !reduceMotion)
                     .padding(.top, 32)
                     .accessibilityHidden(true)
@@ -162,7 +162,7 @@ struct SupporterWelcomeView: View {
                 Button {
                     answer(false)
                 } label: {
-                    Text("Not now", bundle: .module)
+                    Text("Not now", bundle: .module).primaryAction()
                 }
                 .quietActionButton()
                 // COPY END 7d3bb100

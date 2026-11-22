@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("Controls that are drawn do something", .serialized)
+@Suite("Controls that are drawn do something", .serialized, .tags(.ui))
 struct NoDeadControlsTests {
     @Test("A code that has not parsed is not a code")
     func aCodeThatHasNotParsedIsNotACode() async throws {
@@ -46,8 +46,7 @@ struct NoDeadControlsTests {
         try await other.createIdentity(displayName: "Outie")
 
         let room = try await host.createRoom(named: "Kitchen")
-        let invite = try await host.invite(
-            joinerCode: other.identityCode(), joining: room, mailbox: nil)
+        let invite = try await host.invite(joinerCode: await other.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await other.redeem(inviteCode: try invite.encoded())
         try await host.sync(through: mailbox)
         try await other.accept(

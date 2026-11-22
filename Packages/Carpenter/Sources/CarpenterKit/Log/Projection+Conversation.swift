@@ -3,25 +3,26 @@ import Foundation
 extension Projection {
     // MARK: Conversation
 
-    private func draws(_ entry: RenderedEntry, notIn out: Set<EntryHash>) -> Bool {
+    func draws(_ entry: RenderedEntry, notIn out: Set<EntryHash>) -> Bool {
         !out.contains(entry.id) || entry.author == viewer
     }
 
     public func messages(in room: RoomID, outOfRoom out: Set<EntryHash> = []) -> [Message] {
-        rendered
-            .filter { $0.room == room && $0.isConversation && draws($0, notIn: out) }
+        entries(in: room)
+            .filter { $0.isConversation && draws($0, notIn: out) }
             .map(message)
     }
 
     public func transcript(
-        in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = []
+        in room: RoomID, opening: (RenderedEntry) -> Payload?, outOfRoom out: Set<EntryHash> = [],
+        roster: RoomRoster
     ) -> [TranscriptEntry] {
         var items: [TranscriptEntry] = []
-        var founder: ParticipantID?
+        let founder = foundings[room]?.author
         var named = false
         var offers: [Data: MembershipAttestation] = [:]
 
-        for entry in rendered where entry.room == room {
+        for entry in entries(in: room) {
             guard draws(entry, notIn: out) else { continue }
             if entry.isConversation {
                 items.append(.message(message(entry)))
@@ -31,23 +32,28 @@ extension Projection {
             let kind: RoomNotice.Kind?
             switch entry.type {
             case .roomProfile:
-                guard case .text(let name) = entry.content else { continue }
-                if founder == nil { founder = entry.author }
+                guard roster.counted.contains(entry.id), case .text(let name) = entry.content,
+                    named || entry.founds != nil
+                else { continue }
                 kind = named
                     ? .renamed(by: member(entry.author), to: name)
-                    : entry.roomKind == .solo
+                    : entry.founds == .solo
                         ? .startedSolo(by: member(entry.author))
                         : .created(by: member(entry.author), named: name)
                 named = true
 
             case .joinRequest:
-                guard let body = try? opening(entry)?.decode(JoinRequestBody.self) else { continue }
+                guard roster.counted.contains(entry.id),
+                    let body = try? opening(entry)?.decode(JoinRequestBody.self)
+                else { continue }
                 offers[body.attestation.signature] = body.attestation
                 kind = .invited(
                     member(body.attestation.joiner), by: member(body.attestation.inviter))
 
             case .joinConfirmed:
-                guard let body = try? opening(entry)?.decode(JoinConfirmedBody.self) else { continue }
+                guard roster.counted.contains(entry.id),
+                    let body = try? opening(entry)?.decode(JoinConfirmedBody.self)
+                else { continue }
                 kind = .confirmed(member(body.joiner))
 
             case .soloCheck:
@@ -98,13 +104,13 @@ extension Projection {
         in room: RoomID, opening: (RenderedEntry) -> Payload?
     ) -> ReadEvidence {
         var positionOfEntry: [EntryHash: Int] = [:]
-        for (position, entry) in rendered.enumerated() where entry.room == room {
+        for (position, entry) in positioned(in: room) {
             positionOfEntry[entry.id] = position
         }
 
         var steps: [ReadEvidence.Mark] = []
-        for entry in rendered
-        where entry.room == room && entry.type == .readReceipt && entry.author != viewer {
+        for entry in entries(in: room)
+        where entry.type == .readReceipt && entry.author != viewer {
             guard let payload = opening(entry),
                 let body = try? JSONDecoder().decode(ReadReceiptBody.self, from: payload.body),
                 let position = positionOfEntry[body.target]
@@ -118,13 +124,13 @@ extension Projection {
         in room: RoomID, byEachMember opening: (RenderedEntry) -> Payload?
     ) -> [ParticipantID: ReadEvidence] {
         var positionOfEntry: [EntryHash: Int] = [:]
-        for (position, entry) in rendered.enumerated() where entry.room == room {
+        for (position, entry) in positioned(in: room) {
             positionOfEntry[entry.id] = position
         }
 
         var steps: [ParticipantID: [ReadEvidence.Mark]] = [:]
-        for entry in rendered
-        where entry.room == room && entry.type == .readReceipt && entry.author != viewer {
+        for entry in entries(in: room)
+        where entry.type == .readReceipt && entry.author != viewer {
             guard let payload = opening(entry),
                 let body = try? JSONDecoder().decode(ReadReceiptBody.self, from: payload.body),
                 let position = positionOfEntry[body.target]
@@ -139,7 +145,7 @@ extension Projection {
         in room: RoomID, opening: (RenderedEntry) -> Payload?
     ) -> Set<ParticipantID> {
         var reports: [ParticipantID: Bool] = [:]
-        for entry in rendered where entry.room == room && entry.type == .readPolicy {
+        for entry in entries(in: room) where entry.type == .readPolicy {
             guard let payload = opening(entry),
                 let body = try? JSONDecoder().decode(ReadPolicyBody.self, from: payload.body)
             else { continue }
@@ -148,10 +154,14 @@ extension Projection {
         return Set(reports.filter(\.value).keys)
     }
 
+    public func unsent(in room: RoomID, by author: ParticipantID, past sent: VectorClock) -> Set<EntryHash> {
+        Set(entries(in: room).lazy.filter { $0.author == author && $0.seq > sent[$0.feedKey] }.map(\.id))
+    }
+
     public func positions(in room: RoomID) -> [MessageID: Int] {
         var found: [MessageID: Int] = [:]
-        for (position, entry) in rendered.enumerated()
-        where entry.room == room && entry.isConversation {
+        for (position, entry) in positioned(in: room)
+        where entry.isConversation {
             found[MessageID(entry: entry.id)] = position
         }
         return found

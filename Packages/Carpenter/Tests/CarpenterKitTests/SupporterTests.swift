@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("How long a free year lasts")
+@Suite("How long a free year lasts", .tags(.ui))
 struct SupporterStandingTests {
     private let claimed = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -68,7 +68,7 @@ struct SupporterStandingTests {
 }
 
 @MainActor
-@Suite("The Supporter badge", .serialized)
+@Suite("The Supporter badge", .serialized, .tags(.ui))
 struct SupporterBadgeTests {
     private func joined(clock: TestClock = TestClock(now: TestSession.now)) async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID
@@ -83,7 +83,7 @@ struct SupporterBadgeTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -148,7 +148,7 @@ struct SupporterBadgeTests {
         await bob.setShowsSupporterBadge(true)
 
         let second = try await alice.createRoom(named: "Second")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: second, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: second, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))

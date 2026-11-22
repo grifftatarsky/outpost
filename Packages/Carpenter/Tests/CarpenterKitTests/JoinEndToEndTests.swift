@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("A fourth member joins")
+@Suite("A fourth member joins", .tags(.membership))
 struct JoinEndToEndTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -17,10 +17,10 @@ struct JoinEndToEndTests {
         var id: ParticipantID { author.identity.id }
     }
 
-    private func room() throws -> (RoomID, EpochSecret, EpochChain) {
-        let id = RoomID()
+    private func room(foundedBy founder: Identity) throws -> (RoomID, Payload, EpochChain, EpochSecret) {
+        let (id, profile) = try TestFounding.room(by: founder.id)
         let (chain, secret) = EpochChain.create(room: id)
-        return (id, secret, chain)
+        return (id, profile, chain, secret)
     }
 
     private func confirm(
@@ -38,7 +38,7 @@ struct JoinEndToEndTests {
     ) throws {
         for index in residents.indices {
             try residents[index].replica.integrate(entry)
-            let rendered = Fold.render([entry], using: residents[index].chain)
+            let rendered = LogRenderer.render([entry], using: residents[index].chain)
             if let first = rendered.first {
                 residents[index].roster.apply(first, body: payload)
             }
@@ -47,10 +47,11 @@ struct JoinEndToEndTests {
 
     @Test("Alice, Bob and Carol each verify Dave's attestation for themselves")
     func fourthMemberJoins() throws {
-        let (roomID, founding, chain) = try room()
+        let founder = Identity.generate()
+        let (roomID, profile, chain, founding) = try room(foundedBy: founder)
 
         var alice = Resident(
-            author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain)
+            author: Author(identity: founder, chain: chain), roster: RoomRoster(room: roomID), chain: chain)
         var bob = Resident(
             author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain)
         var carol = Resident(
@@ -64,9 +65,8 @@ struct JoinEndToEndTests {
             for other in residents { try residents[index].replica.meet(other.author) }
         }
 
-        let named = try residents[0].author.append(
-            Payload.roomProfile(name: "Hangar 7"), at: start, room: roomID)
-        try broadcast(named, try Payload.roomProfile(name: "Hangar 7"), to: &residents)
+        let named = try residents[0].author.append(profile, at: start, room: roomID)
+        try broadcast(named, profile, to: &residents)
 
         for joiner in [1, 2] {
             let invite = try TestInvite.issue(
@@ -122,7 +122,7 @@ struct JoinEndToEndTests {
             )
             verifiedBy.append(residents[index].id)
 
-            let admission = try Payload.admission(of: residents[3].id, admitted: true)
+            let admission = try Payload.admission(of: residents[3].id, admitted: true, invitation: attestation.signature)
             let entry = try residents[index].author.append(
                 admission, at: start.addingTimeInterval(240), room: roomID)
             try broadcast(entry, admission, to: &residents)
@@ -150,7 +150,7 @@ struct JoinEndToEndTests {
         daveChain.adopt(advanced.secret, at: .initial.next)
         try daveChain.record(advanced.link)
 
-        let history = Fold.render(dave.replica.entries(in: roomID), using: daveChain)
+        let history = LogRenderer.render(dave.replica.entries(in: roomID), using: daveChain)
         let texts = history.compactMap { entry -> String? in
             if case .text(let value) = entry.content { return value }
             return nil
@@ -161,10 +161,11 @@ struct JoinEndToEndTests {
 
     @Test("One member refusing withholds their keys without splitting the roster")
     func aRefusalIsLoud() throws {
-        let (roomID, _, chain) = try room()
+        let founder = Identity.generate()
+        let (roomID, profile, chain, _) = try room(foundedBy: founder)
 
         var residents = [
-            Resident(author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain),
+            Resident(author: Author(identity: founder, chain: chain), roster: RoomRoster(room: roomID), chain: chain),
             Resident(author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain),
             Resident(author: Author(chain: chain), roster: RoomRoster(room: roomID), chain: chain),
         ]
@@ -172,32 +173,40 @@ struct JoinEndToEndTests {
             for other in residents { try residents[index].replica.meet(other.author) }
         }
 
-        let named = try residents[0].author.append(
-            Payload.roomProfile(name: "Hangar 7"), at: start, room: roomID)
-        try broadcast(named, try Payload.roomProfile(name: "Hangar 7"), to: &residents)
+        let named = try residents[0].author.append(profile, at: start, room: roomID)
+        try broadcast(named, profile, to: &residents)
 
-        let admitBob = try Payload.admission(of: residents[1].id, admitted: true)
+        let bobsInvite = try TestInvite.issue(
+            joining: roomID, joinerKeys: residents[1].author.identity.publicKeys,
+            by: residents[0].author.identity, at: start)
+        let bobsRequest = try Payload.joinRequest(bobsInvite)
         try broadcast(
-            try residents[0].author.append(admitBob, at: start, room: roomID), admitBob,
+            try residents[0].author.append(bobsRequest, at: start, room: roomID), bobsRequest,
             to: &residents)
+        try confirm(
+            bobsInvite, by: residents[1].author.identity,
+            relayedBy: 0, to: &residents, at: start.addingTimeInterval(5))
+        for resident in residents {
+            #expect(resident.roster.members.contains(residents[1].id), "precondition: Bob is in")
+        }
 
         let attestation = try TestInvite.issue(
             joining: roomID, joinerKeys: residents[2].author.identity.publicKeys,
             by: residents[0].author.identity, at: start)
         let request = try Payload.joinRequest(attestation)
         try broadcast(
-            try residents[2].author.append(request, at: start.addingTimeInterval(10), room: roomID),
+            try residents[0].author.append(request, at: start.addingTimeInterval(10), room: roomID),
             request, to: &residents)
         try confirm(
             attestation, by: residents[2].author.identity,
             relayedBy: 0, to: &residents, at: start.addingTimeInterval(15))
 
-        let yes = try Payload.admission(of: residents[2].id, admitted: true)
+        let yes = try Payload.admission(of: residents[2].id, admitted: true, invitation: attestation.signature)
         try broadcast(
             try residents[0].author.append(yes, at: start.addingTimeInterval(20), room: roomID),
             yes, to: &residents)
 
-        let no = try Payload.admission(of: residents[2].id, admitted: false)
+        let no = try Payload.admission(of: residents[2].id, admitted: false, invitation: attestation.signature)
         try broadcast(
             try residents[1].author.append(no, at: start.addingTimeInterval(30), room: roomID),
             no, to: &residents)

@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("Membership attestations")
+@Suite("Membership attestations", .tags(.membership))
 struct MembershipAttestationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -117,7 +117,7 @@ struct MembershipAttestationTests {
     }
 }
 
-@Suite("Room roster")
+@Suite("Room roster", .tags(.membership))
 struct RoomRosterTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -142,9 +142,11 @@ struct RoomRosterTests {
     @Test("Whoever names the room founded it, and needs no attestation")
     func founder() throws {
         let alice = Identity.generate()
+        let (room, profile) = try TestFounding.room(by: alice.id)
+
         var roster = RoomRoster(room: room)
 
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         #expect(roster.founder == alice.id)
         #expect(roster.members == [alice.id])
@@ -156,11 +158,12 @@ struct RoomRosterTests {
         let outsider = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         let forged = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
 
         #expect(throws: MembershipError.inviterNotAMember) {
             try roster.verify(
@@ -173,8 +176,9 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         let elsewhere = try TestInvite.issue(
             joining: RoomID(), joinerKeys: joiner.publicKeys, by: alice, at: start)
@@ -189,14 +193,15 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: .anyMember, by: alice.id)
 
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
-            rendered(joiner.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
+            rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
         roster.apply(
             rendered(alice.id, .joinConfirmed, hash: 102),
             body: try Payload.joinConfirmed(
@@ -206,7 +211,7 @@ struct RoomRosterTests {
 
         roster.apply(
             rendered(alice.id, .admission, hash: 3),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
 
         #expect(roster.pending(for: alice.id, at: start).isEmpty)
         #expect(roster.members.contains(joiner.id))
@@ -218,10 +223,11 @@ struct RoomRosterTests {
         let bob = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         let bobsInvite = try TestInvite.issue(
-            joining: room, joinerKeys: bob.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: bob.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 8), body: try Payload.joinRequest(bobsInvite))
         roster.apply(
@@ -230,9 +236,9 @@ struct RoomRosterTests {
                 try JoinConfirmedBody.signed(confirming: bobsInvite, by: bob)))
 
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
-            rendered(joiner.id, .joinRequest, hash: 3), body: try Payload.joinRequest(attestation))
+            rendered(alice.id, .joinRequest, hash: 3), body: try Payload.joinRequest(attestation))
         roster.apply(
             rendered(alice.id, .joinConfirmed, hash: 103),
             body: try Payload.joinConfirmed(
@@ -240,10 +246,10 @@ struct RoomRosterTests {
 
         roster.apply(
             rendered(alice.id, .admission, hash: 4),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
         roster.apply(
             rendered(bob.id, .admission, hash: 5),
-            body: try Payload.admission(of: joiner.id, admitted: false))
+            body: try Payload.admission(of: joiner.id, admitted: false, invitation: attestation.signature))
 
         #expect(roster.members.contains(joiner.id))
 
@@ -261,13 +267,14 @@ struct RoomRosterTests {
         let bob = Identity.generate()
         let carol = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: .anyMember, by: alice.id)
 
         for (offset, joiner) in [bob, carol].enumerated() {
             let attestation = try TestInvite.issue(
-                joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+                joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
             roster.apply(
                 rendered(alice.id, .joinRequest, hash: UInt8(2 + offset)),
                 body: try Payload.joinRequest(attestation))
@@ -277,7 +284,7 @@ struct RoomRosterTests {
                     try JoinConfirmedBody.signed(confirming: attestation, by: joiner)))
             roster.apply(
                 rendered(alice.id, .admission, hash: UInt8(10 + offset)),
-                body: try Payload.admission(of: joiner.id, admitted: true))
+                body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
         }
 
         #expect(roster.members == [alice.id, bob.id, carol.id])
@@ -288,10 +295,11 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2),
             body: try Payload.joinRequest(attestation))
@@ -313,14 +321,13 @@ struct RoomRosterTests {
         let alice = Identity.generate()
         let bob = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(alice.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         roster.set(access: .anyMember, by: alice.id)
 
         let first = try TestInvite.issue(
-            joining: room, joinerKeys: bob.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: bob.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(first))
         roster.apply(
@@ -332,7 +339,7 @@ struct RoomRosterTests {
             "the fixture let them in before they had confirmed anything")
 
         let second = try TestInvite.issue(
-            joining: room, joinerKeys: bob.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: bob.publicKeys, by: alice, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 4), body: try Payload.joinRequest(second))
         roster.apply(
@@ -352,21 +359,26 @@ struct RoomRosterTests {
         #expect(roster.admissions[bob.id]?.isEmpty != false)
     }
 
-    @Test("A relayed join request is recorded against the joiner, not the messenger")
-    func requestsMayBeRelayed() throws {
+    @Test("A join request is recorded against the joiner, and only when its inviter writes it")
+    func requestsAreWrittenByTheirInviter() throws {
         let alice = Identity.generate()
         let joiner = Identity.generate()
         let relay = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: alice, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: alice, at: start)
 
         roster.apply(
             rendered(relay.id, .joinRequest, hash: 2), body: try Payload.joinRequest(attestation))
+        #expect(roster.requests[joiner.id] == nil, "somebody other than the inviter wrote it")
 
+        roster.apply(
+            rendered(alice.id, .joinRequest, hash: 3), body: try Payload.joinRequest(attestation))
         #expect(roster.requests[joiner.id] == attestation)
-        #expect(roster.requests[relay.id] == nil)
+        #expect(roster.requests[alice.id] == nil)
     }
 
     @Test("Relaying cannot launder an attestation from outside the room")
@@ -375,11 +387,12 @@ struct RoomRosterTests {
         let outsider = Identity.generate()
         let joiner = Identity.generate()
 
+        let (room, profile) = try TestFounding.room(by: alice.id)
         var roster = RoomRoster(room: room)
-        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(alice.id, .roomProfile, hash: 1), body: profile)
 
         let forged = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: outsider, at: start)
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 2), body: try Payload.joinRequest(forged))
 
@@ -390,7 +403,7 @@ struct RoomRosterTests {
     }
 }
 
-@Suite("Invites out of band")
+@Suite("Invites out of band", .tags(.membership))
 struct InviteCodecTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -444,7 +457,7 @@ struct InviteCodecTests {
     }
 }
 
-@Suite("A joiner checking their own invite")
+@Suite("A joiner checking their own invite", .tags(.membership))
 struct JoinerVerificationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -518,7 +531,7 @@ struct JoinerVerificationTests {
     }
 }
 
-@Suite("The invite envelope")
+@Suite("The invite envelope", .tags(.membership))
 struct InviteEnvelopeTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -528,30 +541,30 @@ struct InviteEnvelopeTests {
             by: Identity.generate(), at: start)
     }
 
-    @Test("An invite carries the mailbox address with the attestation")
-    func carriesMailbox() throws {
-        let url = URL(string: "https://www.icloud.com/share/abc123")!
-        let invite = Invite(attestation: try attestation(), mailbox: url)
+    @Test("An invite carries the inviter's link, signed so a changed link is refused")
+    func carriesASignedLink() throws {
+        let inviter = Identity.generate()
+        let attestation = try TestInvite.issue(
+            joining: RoomID(), joinerKeys: Identity.generate().publicKeys, by: inviter, at: start)
+        let link = PairLink(account: "_inviter", url: URL(string: "https://www.icloud.com/share/abc123")!)
+        let invite = Invite(attestation: attestation, pair: try SignedPairLink.sign(link, by: inviter))
 
         let restored = try Invite.decoded(from: try invite.encoded())
+        #expect(restored.verifiedPair == link)
 
-        #expect(restored == invite)
-        #expect(restored.mailbox == url)
+        let swapped = Invite(
+            attestation: attestation,
+            pair: SignedPairLink(
+                link: PairLink(account: "_thief", url: link.url), signature: try #require(invite.pair).signature))
+        #expect(swapped.verifiedPair == nil, "a link changed in transit was taken as the inviter's")
+        let signedBySomebodyElse = Invite(attestation: attestation, pair: try SignedPairLink.sign(link, by: Identity.generate()))
+        #expect(signedBySomebodyElse.verifiedPair == nil, "a link signed by somebody other than the inviter was taken")
     }
 
     @Test("An invite with no mailbox is still an invite")
     func mailboxIsOptional() throws {
-        let invite = Invite(attestation: try attestation(), mailbox: nil)
+        let invite = Invite(attestation: try attestation())
         #expect(try Invite.decoded(from: try invite.encoded()) == invite)
-    }
-
-    @Test("A bare attestation decodes as an invite with no mailbox")
-    func bareAttestationStillWorks() throws {
-        let bare = try attestation()
-        let restored = try Invite.decoded(from: try bare.encoded())
-
-        #expect(restored.attestation == bare)
-        #expect(restored.mailbox == nil)
     }
 
     @Test("Rubbish is still refused")

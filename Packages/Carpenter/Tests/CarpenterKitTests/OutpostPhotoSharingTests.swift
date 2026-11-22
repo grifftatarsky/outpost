@@ -31,7 +31,7 @@ struct OutpostPhotoSharingTests {
         try await bob.createIdentity(displayName: "Bob")
         try await carol.createIdentity(displayName: "Carol")
         let room = try await bob.createRoom(named: "Lanterns")
-        let invite = try await bob.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let invite = try await bob.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try invite.encoded())
         try await bob.sync(through: mailbox)
         try await carol.accept(

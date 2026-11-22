@@ -5,11 +5,11 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("A message that cannot be sent", .serialized)
+@Suite("A message that cannot be sent", .serialized, .tags(.sync))
 @MainActor
 struct SendFailureTests {
     private func scratch() -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-send-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-send-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }

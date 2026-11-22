@@ -7,6 +7,8 @@ public enum DeliveryState: Hashable, Sendable {
 
     case noRecipients
 
+    case notCollected
+
     case delivered
 
     case notReported
@@ -15,7 +17,7 @@ public enum DeliveryState: Hashable, Sendable {
 
     public var isCollected: Bool {
         switch self {
-        case .pending, .sent, .noRecipients: false
+        case .pending, .sent, .noRecipients, .notCollected: false
         case .delivered, .notReported, .displayed: true
         }
     }

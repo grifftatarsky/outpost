@@ -5,11 +5,11 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Failures that used to be silent")
+@Suite("Failures that used to be silent", .timeLimit(.minutes(10)), .tags(.storage))
 struct SilentFailureTests {}
 
 @MainActor
-@Suite("Asking a Keychain that will not answer", .serialized)
+@Suite("Asking a Keychain that will not answer", .serialized, .timeLimit(.minutes(10)), .tags(.storage))
 struct UnreadableKeychainTests {
     private func session(
         _ keychain: any KeychainStore, hasMember: Bool
@@ -84,7 +84,7 @@ struct UnreadableKeychainTests {
 }
 
 @MainActor
-@Suite("Revoking a device that cannot turn the key", .serialized)
+@Suite("Revoking a device that cannot rotate the key", .serialized, .timeLimit(.minutes(10)), .tags(.storage))
 struct RevocationReportingTests {
     private func pair(
         keychain: any KeychainStore
@@ -96,16 +96,18 @@ struct RevocationReportingTests {
         await first.load()
         try await first.createIdentity(displayName: "Griff")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let second = TestSession.make(keychain: keychain)
+        let second = TestSession.make(keychain: InMemoryKeychainStore())
+        second.checkAccount(with: StubAccountRegistry(hasMember: true))
         second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        await second.settleRegistration(attempts: 1)
+        try await first.approveNewDevice(second)
 
         let other = try #require(second.enrolment?.device.id)
 
         try await second.setDisplayName("Griff")
 
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while first.devices.count < 2, Date() < deadline {
             await second.refreshDeviceSync()
             await first.refreshDeviceSync()
@@ -116,7 +118,7 @@ struct RevocationReportingTests {
         return (first, second, other)
     }
 
-    @Test("A revocation that turns every key raises nothing")
+    @Test("A revocation that rotates every key raises nothing")
     func cleanRevocationDoesNotThrow() async throws {
         let (first, _, other) = try await pair(keychain: InMemoryKeychainStore())
         let room = try await first.createRoom(named: "Kitchen")
@@ -125,11 +127,11 @@ struct RevocationReportingTests {
         try await first.revoke(other)
 
         let after = try #require(first.epoch(of: room))
-        #expect(after > before, "revoking did not turn the room's key")
+        #expect(after > before, "revoking did not rotate the room's key")
     }
 
-    @Test("A key that cannot be turned is said, not swallowed")
-    func keyThatCannotTurnIsReported() async throws {
+    @Test("A key that cannot be rotated is said, not swallowed")
+    func keyThatCannotRotateIsReported() async throws {
         let keychain = HalfWritableKeychainStore()
         let (first, _, other) = try await pair(keychain: keychain)
         _ = try await first.createRoom(named: "Kitchen")
@@ -138,17 +140,17 @@ struct RevocationReportingTests {
 
         do {
             try await first.revoke(other)
-            Issue.record("the key could not be turned and nothing was raised")
+            Issue.record("the key could not be rotated and nothing was raised")
         } catch let error as AppSessionError {
-            guard case .keyNotTurned(let rooms) = error else {
+            guard case .keyNotRotated(let rooms) = error else {
                 Issue.record("raised \(error) rather than naming the half that failed")
                 return
             }
-            #expect(rooms >= 1, "the error did not say how many rooms went unturned")
+            #expect(rooms >= 1, "the error did not say how many rooms were not rotated")
         }
     }
 
-    @Test("The device is revoked even when its rooms' keys did not turn")
+    @Test("The device is revoked even when its rooms' keys were not rotated")
     func theRevocationItselfStillHolds() async throws {
         let keychain = HalfWritableKeychainStore()
         let (first, _, other) = try await pair(keychain: keychain)
@@ -179,5 +181,6 @@ actor HalfWritableKeychainStore: KeychainStore {
     }
 
     func remove(_ key: KeychainKey) throws { items[key] = nil }
-    func removeAll() throws { items = [:] }
+    func removeAll(_ scope: KeychainScope) throws { if scope == .device { items = [:] } }
+    func protect(as protection: StorageProtection) throws {}
 }

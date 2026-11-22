@@ -1,9 +1,10 @@
+import CryptoKit
 import Foundation
 import Testing
 
 @testable import CarpenterKit
 
-@Suite("Identity and device keys")
+@Suite("Identity and device keys", .tags(.crypto))
 struct IdentityTests {
     @Test("A generated identity has both a signing and an agreement key")
     func generation() throws {
@@ -28,25 +29,29 @@ struct IdentityTests {
         #expect(identity.id.rawValue.count == 32)
     }
 
-    @Test("Changing either public key changes the participant ID")
-    func participantIDCoversBothKeys() {
-        let first = Identity.generate()
-        let second = Identity.generate()
+    @Test("Changing any of the three public keys changes the participant ID")
+    func participantIDCoversEveryKey() {
+        let first = Identity.generate().publicKeys
+        let second = Identity.generate().publicKeys
 
-        let mixed = IdentityPublicKeys(
-            signing: first.publicKeys.signing,
-            agreement: second.publicKeys.agreement
-        )
-
-        #expect(mixed.participantID != first.id)
-        #expect(mixed.participantID != second.id)
+        let mixes = [
+            IdentityPublicKeys(signing: second.signing, agreement: first.agreement, recovery: first.recovery),
+            IdentityPublicKeys(signing: first.signing, agreement: second.agreement, recovery: first.recovery),
+            IdentityPublicKeys(signing: first.signing, agreement: first.agreement, recovery: second.recovery),
+        ]
+        for mixed in mixes {
+            #expect(mixed.participantID != first.participantID)
+            #expect(mixed.participantID != second.participantID)
+        }
+        #expect(Set(mixes.map(\.participantID)).count == 3)
     }
 
     @Test("An identity rebuilt from its stored bytes is the same identity")
     func seedRoundTrip() throws {
         let identity = Identity.generate()
         let restored = try Identity(
-            signingSeed: identity.signingSeed, agreementSeed: identity.agreementSeed)
+            signingSeed: identity.signingSeed, agreementSeed: identity.agreementSeed,
+            recoveryKey: identity.publicKeys.recovery)
 
         #expect(restored.id == identity.id)
         #expect(restored.publicKeys == identity.publicKeys)
@@ -54,11 +59,17 @@ struct IdentityTests {
 
     @Test("Seeds of the wrong length are rejected rather than silently truncated")
     func rejectsMalformedSeeds() {
+        let recovery = RecoverySecret.generate().publicKey
         #expect(throws: CryptoError.self) {
-            try Identity(signingSeed: Data([1, 2, 3]), agreementSeed: Data(repeating: 0, count: 32))
+            try Identity(signingSeed: Data([1, 2, 3]), agreementSeed: Data(repeating: 0, count: 32), recoveryKey: recovery)
         }
         #expect(throws: CryptoError.self) {
-            try Identity(signingSeed: Data(repeating: 0, count: 32), agreementSeed: Data([1]))
+            try Identity(signingSeed: Data(repeating: 0, count: 32), agreementSeed: Data([1]), recoveryKey: recovery)
+        }
+        #expect(throws: CryptoError.self) {
+            try Identity(
+                signingSeed: Data(repeating: 0, count: 32), agreementSeed: Data(repeating: 1, count: 32),
+                recoveryKey: Data([1, 2]))
         }
     }
 
@@ -67,8 +78,9 @@ struct IdentityTests {
         let seedA = Data(repeating: 7, count: 32)
         let seedB = Data(repeating: 9, count: 32)
 
-        let first = try Identity(signingSeed: seedA, agreementSeed: seedB)
-        let second = try Identity(signingSeed: seedA, agreementSeed: seedB)
+        let recovery = Data(repeating: 3, count: 32)
+        let first = try Identity(signingSeed: seedA, agreementSeed: seedB, recoveryKey: recovery)
+        let second = try Identity(signingSeed: seedA, agreementSeed: seedB, recoveryKey: recovery)
 
         #expect(first.id == second.id)
     }
@@ -110,5 +122,63 @@ struct IdentityTests {
 
         #expect(try DeviceKeys.isValidSignature(signature, for: message, publicKey: device.publicKey))
         #expect(try !identity.publicKeys.isValidSignature(signature, for: message))
+    }
+
+    @Test("An identity's keys and ID are the ones its seeds derive, however it was made")
+    func identityDerivesFromItsSeeds() throws {
+        let generated = Identity.generate()
+        let reread = try Identity(
+            signingSeed: generated.signingSeed, agreementSeed: generated.agreementSeed,
+            recoveryKey: generated.publicKeys.recovery)
+
+        let signing = try Curve25519.Signing.PrivateKey(rawRepresentation: generated.signingSeed)
+        let agreement = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: generated.agreementSeed)
+        let derived = IdentityPublicKeys(
+            signing: signing.publicKey.rawRepresentation, agreement: agreement.publicKey.rawRepresentation,
+            recovery: try #require(generated.recovery).publicKey)
+
+        #expect(generated.publicKeys == derived)
+        #expect(generated.id == derived.participantID)
+        #expect(reread == generated)
+        #expect(reread.id == generated.id)
+    }
+
+    @Test("A device's public key and ID are the ones its seed derives, however it was made")
+    func deviceDerivesFromItsSeed() throws {
+        let generated = DeviceKeys.generate()
+        let reread = try DeviceKeys(signingSeed: generated.signingSeed)
+        let derived = try Curve25519.Signing.PrivateKey(rawRepresentation: generated.signingSeed)
+            .publicKey.rawRepresentation
+
+        #expect(generated.publicKey == derived)
+        #expect(generated.id == DeviceID(publicKey: derived))
+        #expect(reread == generated)
+    }
+
+    @Test("A malformed seed is refused, not stored")
+    func malformedSeedsAreRefused() {
+        #expect(throws: CryptoError.self) {
+            try Identity(
+                signingSeed: Data([1, 2, 3]), agreementSeed: Data(count: 32),
+                recoveryKey: RecoverySecret.generate().publicKey)
+        }
+        #expect(throws: CryptoError.self) { try DeviceKeys(signingSeed: Data([1, 2, 3])) }
+    }
+
+    @Test("A deny-list fingerprint is the lowercase hex SHA-256 of the participant ID")
+    func denyListFingerprintIsPinned() {
+        let person = ParticipantID(rawValue: Data(repeating: 7, count: 32))
+        #expect(
+            DenyList.fingerprint(of: person)
+                == "4bb06f8e4e3a7715d201d573d0aa423762e55dabd61a2c02278fa56cc6d294e0")
+    }
+
+    @Test("An empty deny list holds nobody, and a listed person is held")
+    func denyListMembership() {
+        let person = ParticipantID(rawValue: Data(repeating: 7, count: 32))
+        #expect(!DenyList.empty.contains(person))
+        let listed = DenyList(version: 1, updated: "", fingerprints: [DenyList.fingerprint(of: person)])
+        #expect(listed.contains(person))
+        #expect(!listed.contains(ParticipantID(rawValue: Data(repeating: 8, count: 32))))
     }
 }

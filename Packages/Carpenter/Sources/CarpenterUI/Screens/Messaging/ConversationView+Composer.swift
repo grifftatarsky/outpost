@@ -1,5 +1,6 @@
 import CarpenterKit
 import CarpenterMedia
+import os
 import PhotosUI
 import SwiftUI
 
@@ -12,16 +13,6 @@ extension ConversationView {
         let steps = CompositionPlan.steps(text: outgoing, itemCount: items.count)
         guard !steps.isEmpty else { return }
 
-        // COPY BEGIN 21ed86cf [NEEDS HUMAN REVIEW]
-        if items.contains(where: { $0.needsTrim(limit: VideoPreparer.maximumDuration) }) {
-            problem = String(
-                localized: "Trim the video to a minute before sending.", bundle: .module,
-                comment: "Send was tapped with a clip over the limit in the composer")
-            failures += 1
-            return
-        }
-        // COPY END 21ed86cf
-
         draft = ""
         staged = []
         sent += 1
@@ -30,19 +21,24 @@ extension ConversationView {
         Task {
             for step in steps {
                 let reason: String?
+                let unsent: ArraySlice<StagedAttachment>
                 switch step {
                 case .text(let words):
                     reason = await onSend(words)
+                    unsent = []
                 case .media(let index, let caption):
                     guard let onAttach else { return }
                     let item = items[index]
                     sending.append(item.kind)
+                    if item.picked.isMadeToFit { fittingNow += 1 }
                     reason = await onAttach(item.picked, caption)
+                    if item.picked.isMadeToFit { fittingNow -= 1 }
                     if let position = sending.firstIndex(of: item.kind) { sending.remove(at: position) }
+                    unsent = items[index...]
                 }
                 guard let reason else { continue }
                 if draft.isEmpty { draft = outgoing }
-                if staged.isEmpty { staged = items }
+                if staged.isEmpty { staged = Array(unsent) }
                 problem = reason
                 failures += 1
                 return
@@ -56,14 +52,14 @@ extension ConversationView {
 
         let picked: PickedMedia?
         if isClip {
-            picked = (try? await item.loadTransferable(type: PickedClip.self)).map { .video($0.url) }
+            picked = (try? await item.loadTransferable(type: PickedClip.self)).map { .video($0.file) }
         } else {
             picked = (try? await item.loadTransferable(type: Data.self)).map { .image($0) }
         }
         // COPY BEGIN 0790e13e [NEEDS HUMAN REVIEW]
         guard let picked else {
             problem = String(
-                localized: "That could not be read from your library.", bundle: .module,
+                localized: "Photo or video cannot be read", bundle: .module,
                 comment: "The picker handed back something that would not load")
             failures += 1
             return
@@ -76,19 +72,59 @@ extension ConversationView {
                 (try? ImagePreparer.thumbnail(data, edge: 240)).map(DecodedImage.init)
             }.value
             staged.append(StagedAttachment(picked: picked, kind: .image, thumbnail: thumbnail))
-        case .video(let url):
-            let poster = await MediaLoader.poster(of: url)
-            let duration = try? await VideoPreparer.duration(of: url)
-            #if os(iOS)
-                Diagnostics.sync.notice(
-                    """
-                    media: staged a clip of \(duration.map { Int($0) } ?? -1, privacy: .public)s; \
-                    the system trimmer \(VideoTrimmerView.canTrim(url) ? "can" : "cannot", privacy: .public) edit it
-                    """)
-            #endif
+        case .video(let clip), .videoToFit(let clip):
+            let poster = await MediaLoader.poster(of: clip.url)
+            let duration = try? await VideoPreparer.duration(of: clip.url)
+            Diagnostics.sync.notice(
+                "media: staged a clip of \(duration.map { Int($0) } ?? -1, privacy: .public)s")
             staged.append(
-                StagedAttachment(picked: picked, kind: .video, thumbnail: poster, duration: duration))
+                StagedAttachment(
+                    picked: picked, kind: .video, thumbnail: poster, duration: duration,
+                    tooLarge: VideoPreparer.sizeIfTooLarge(clip.url)))
         }
+    }
+
+    private var clipTooLarge: Int? {
+        staged.filter { !$0.picked.isMadeToFit }.compactMap(\.tooLarge).max()
+    }
+
+    @ViewBuilder private var fitOffer: some View {
+        // COPY BEGIN 819afbbd [NEEDS HUMAN REVIEW]
+        if let bytes = clipTooLarge {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("This video is \(size). Videos up to 287 MB can be sent.", bundle: .module)
+                    .foregroundStyle(palette.secondaryText)
+                Spacer(minLength: 0)
+                Button {
+                    for index in staged.indices where staged[index].tooLarge != nil {
+                        staged[index].picked = staged[index].picked.madeToFit
+                    }
+                } label: {
+                    Text("Make it fit", bundle: .module).bold()
+                }
+                .buttonStyle(.borderless)
+            }
+            .font(CarpenterFont.footnote)
+            .padding(.horizontal, 12)
+            .transition(.opacity)
+        }
+        // COPY END 819afbbd
+        // COPY BEGIN e49eda14 [NEEDS HUMAN REVIEW]
+        if fittingNow > 0 {
+            Text("Making the video smaller so it fits…", bundle: .module)
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .padding(.horizontal, 12)
+                .transition(.opacity)
+        } else if clipTooLarge == nil, staged.contains(where: \.picked.isMadeToFit) {
+            Text("It will be made smaller to fit when it is sent.", bundle: .module)
+                .font(CarpenterFont.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .padding(.horizontal, 12)
+                .transition(.opacity)
+        }
+        // COPY END e49eda14
     }
 
     var composer: some View {
@@ -139,6 +175,7 @@ extension ConversationView {
                     .padding(.horizontal, 12)
                     .transition(.opacity)
             }
+            fitOffer
             composerRow
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: problem)
@@ -182,6 +219,12 @@ extension ConversationView {
     }
 
     private var composerControls: some View {
+        heldableControls
+            .disabled(iCloudHold)
+            .opacity(iCloudHold ? 0.5 : 1)
+    }
+
+    private var heldableControls: some View {
         HStack(alignment: .bottom, spacing: CarpenterMetrics.composerSpacing) {
             if onAttach != nil {
                 // COPY BEGIN 814da02a [NEEDS HUMAN REVIEW]
@@ -233,6 +276,7 @@ extension ConversationView {
                             .foregroundStyle(.white)
                             .frame(width: 30, height: 30)
                             .background(palette.accentFill, in: .circle)
+                            .reachable(width: 30, height: 30)
                     }
                     .accessibilityLabel(Text("Send", bundle: .module))
                     .padding(.trailing, 4)
@@ -266,14 +310,10 @@ extension ConversationView {
             .padding(.top, 10)
         }
         .scrollIndicators(.hidden)
-        .presentingTrimmer($trimming, maximumDuration: VideoPreparer.maximumDuration) { item, url in
-            trimmed(item, to: url)
-        }
     }
 
     private func stagedTile(_ item: StagedAttachment) -> some View {
-        let needsTrim = item.needsTrim(limit: VideoPreparer.maximumDuration)
-        return ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topTrailing) {
             Group {
                 if let thumbnail = item.thumbnail {
                     thumbnail.image.resizable().scaledToFill()
@@ -285,23 +325,18 @@ extension ConversationView {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(alignment: .bottomLeading) {
                 if item.kind == .video, let duration = item.duration {
-                    HStack(spacing: 3) {
-                        if needsTrim { Image(systemName: "scissors") }
-                        Text(MediaBubbleView.length(duration))
-                    }
+                    Text(MediaBubbleView.length(duration))
                     .font(.caption2.weight(.semibold).monospacedDigit())
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(needsTrim ? palette.destructiveFill : Color.black.opacity(CarpenterMetrics.mediaOverlayDimming), in: Capsule())
+                    .background(Color.black.opacity(CarpenterMetrics.mediaOverlayDimming), in: Capsule())
                     .padding(4)
                 }
             }
-            .contentShape(.rect)
-            .onTapGesture { if needsTrim { trimming = item } }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(tileLabel(item, needsTrim: needsTrim))
-            .accessibilityAddTraits(needsTrim ? [.isImage, .isButton] : [.isImage])
+            .accessibilityLabel(tileLabel(item))
+            .accessibilityAddTraits(.isImage)
 
             // COPY BEGIN 402dc267 [NEEDS HUMAN REVIEW]
             Button {
@@ -312,6 +347,7 @@ extension ConversationView {
                     .foregroundStyle(palette.primaryText)
                     .frame(width: 22, height: 22)
                     .background(palette.neutralFillStrong, in: Circle())
+                    .reachable(width: 22, height: 22)
             }
             .buttonStyle(.plain)
             .offset(x: 6, y: -6)
@@ -321,24 +357,13 @@ extension ConversationView {
     }
 
     // COPY BEGIN 3034cc7f [NEEDS HUMAN REVIEW]
-    private func tileLabel(_ item: StagedAttachment, needsTrim: Bool) -> Text {
-        switch (item.kind, needsTrim) {
-        case (.image, _):
+    private func tileLabel(_ item: StagedAttachment) -> Text {
+        switch item.kind {
+        case .image:
             Text("Photo, ready to send", bundle: .module)
-        case (.video, false):
+        case .video:
             Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), ready to send", bundle: .module)
-        case (.video, true):
-            Text("Video, \(MediaBubbleView.length(item.duration ?? 0)), longer than a minute. Double-tap to trim.", bundle: .module)
         }
     }
     // COPY END 3034cc7f
-
-    private func trimmed(_ item: StagedAttachment, to url: URL) {
-        guard let index = staged.firstIndex(where: { $0.id == item.id }) else { return }
-        if case .video(let original) = item.picked { try? FileManager.default.removeItem(at: original) }
-        staged[index].picked = .video(url)
-        Task {
-            staged[index].duration = try? await VideoPreparer.duration(of: url)
-        }
-    }
 }

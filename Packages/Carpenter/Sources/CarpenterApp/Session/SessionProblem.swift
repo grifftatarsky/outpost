@@ -5,6 +5,7 @@ public enum SessionProblem {
     public static func sentence(for error: any Error) -> String {
         if let membership = error as? MembershipError { return sentence(for: membership) }
         if let mailbox = error as? MailboxFailure { return sentence(for: mailbox) }
+        if isOutOfSpace(error) { return outOfSpace }
         guard let refusal = error as? AppSessionError else { return error.localizedDescription }
 
         switch refusal {
@@ -27,7 +28,7 @@ public enum SessionProblem {
                 bundle: .module, comment: "An edit with no words in it")
         case .unknownMessage:
             return String(
-                localized: "This device no longer has the entry behind that.",
+                localized: "This device no longer has that message.",
                 bundle: .module, comment: "The entry is not on this device")
         case .cannotWriteThere:
             return String(
@@ -62,14 +63,43 @@ public enum SessionProblem {
                 localized: "That code came from a device that is already set up, so there is nothing to add.",
                 bundle: .module, comment: "The pasted offer carries no device subkey")
             // COPY END cd81b719
-        case .keyNotTurned(let rooms):
+        case .tooBigToSend:
+            // COPY BEGIN 08d03bb8 [NEEDS HUMAN REVIEW]
+            return String(
+                localized: "That is too long to send as one message. Split it into a few.",
+                bundle: .module, comment: "A message too big to fit in anything the mailbox carries")
+            // COPY END 08d03bb8
+        case .keyNotRotated(let rooms):
             // COPY BEGIN 8947ed4f [NEEDS HUMAN REVIEW]
             return String(
-                localized: "That device is out. ^[\(rooms) conversation](inflect: true) has not turned its key yet, so it can still read what is said there until something does.",
-                bundle: .module, comment: "A device was revoked but some rooms did not turn their key")
+                localized: "That device is out, but the key for ^[\(rooms) conversation](inflect: true) has not been rotated yet, so the device can still read new messages there until it is.",
+                bundle: .module, comment: "A device was revoked but some rooms' keys were not rotated")
             // COPY END 8947ed4f
+        case .protectionUnfinished:
+            // COPY BEGIN 1248d4d6 [NEEDS HUMAN REVIEW]
+            return String(
+                localized: "Some of what this iPhone keeps could not be changed yet. It is tried again the next time the app opens.",
+                bundle: .module, comment: "Advanced On Device Security could not re-protect everything stored")
+            // COPY END 1248d4d6
         }
     }
+
+    private static func isOutOfSpace(_ error: any Error) -> Bool {
+        let found = error as NSError
+        switch found.domain {
+        case NSCocoaErrorDomain: return found.code == CocoaError.fileWriteOutOfSpace.rawValue
+        case NSPOSIXErrorDomain: return found.code == Int(ENOSPC)
+        default: return false
+        }
+    }
+
+    // COPY BEGIN ced31827 [NEEDS HUMAN REVIEW]
+    private static var outOfSpace: String {
+        String(
+            localized: "This phone is out of space, so the app could not write down what it keeps. Free some space in Settings, then try again.",
+            bundle: .module, comment: "The device's storage is full")
+    }
+    // COPY END ced31827
 
     // COPY BEGIN 9b7ca357 [NEEDS HUMAN REVIEW]
     public static func sentence(for refusal: MailboxFailure) -> String {

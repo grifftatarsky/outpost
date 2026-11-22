@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("One member, two devices")
+@Suite("One member, two devices", .tags(.membership))
 struct MultiDeviceTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let chain = EpochChain.create(room: RoomID()).chain
@@ -18,10 +18,10 @@ struct MultiDeviceTests {
         let phone = DeviceKeys.generate()
         let mac = DeviceKeys.generate()
 
-        let phoneCertificate = try DeviceCertificate.issue(
+        let phoneCertificate = try DeviceCertificate.recovered(
             for: phone.publicKey, by: identity, at: start)
         let macCertificate = try DeviceCertificate.issue(
-            for: mac.publicKey, by: identity, at: start.addingTimeInterval(60))
+            for: mac.publicKey, by: identity, at: start.addingTimeInterval(60), approvedBy: phone)
 
         var hastur = Replica()
         hastur.introduce(identity.publicKeys)
@@ -32,20 +32,20 @@ struct MultiDeviceTests {
         let fromPhone = try Entry.append(
             to: nil, author: identity.id, device: phone, clock: VectorClock(),
             wallTime: start.addingTimeInterval(120), room: room,
-            payload: try seal("posted from the phone"))
+            payload: try seal("posted from the phone"), roomLink: RoomLink(previous: nil))
 
         var seen = VectorClock()
         seen.observe(fromPhone.feedKey, seq: fromPhone.seq)
         let fromMac = try Entry.append(
             to: nil, author: identity.id, device: mac, clock: seen,
             wallTime: start.addingTimeInterval(180), room: room,
-            payload: try seal("and from the Mac"))
+            payload: try seal("and from the Mac"), roomLink: RoomLink(previous: nil))
 
         #expect(try hastur.integrate(fromPhone) == .accepted)
         #expect(try hastur.integrate(fromMac) == .accepted)
         #expect(!hastur.hasDiverged)
 
-        let rendered = Fold.render(hastur.entries(in: room), using: chain)
+        let rendered = LogRenderer.render(hastur.entries(in: room), using: chain)
         #expect(rendered.count == 2)
         #expect(Set(rendered.map(\.author)) == [identity.id])
         #expect(Set(rendered.map(\.device)) == [phone.id, mac.id])
@@ -60,8 +60,8 @@ struct MultiDeviceTests {
 
         var replica = Replica()
         replica.introduce(identity.publicKeys)
-        try replica.admit(DeviceCertificate.issue(for: phone.publicKey, by: identity, at: start))
-        try replica.admit(DeviceCertificate.issue(for: mac.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.recovered(for: phone.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.issue(for: mac.publicKey, by: identity, at: start, approvedBy: phone))
 
         for device in [phone, mac] {
             try replica.integrate(
@@ -83,32 +83,34 @@ struct MultiDeviceTests {
 
         var replica = Replica()
         replica.introduce(identity.publicKeys)
-        try replica.admit(DeviceCertificate.issue(for: kept.publicKey, by: identity, at: start))
-        try replica.admit(DeviceCertificate.issue(for: lost.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.recovered(for: kept.publicKey, by: identity, at: start))
+        try replica.admit(DeviceCertificate.issue(for: lost.publicKey, by: identity, at: start, approvedBy: kept))
 
         let room = RoomID()
         let beforeLoss = try Entry.append(
             to: nil, author: identity.id, device: lost, clock: VectorClock(),
             wallTime: start.addingTimeInterval(60), room: room,
-            payload: try seal("said before the phone was lost"))
+            payload: try seal("said before the phone was lost"), roomLink: RoomLink(previous: nil))
         try replica.integrate(beforeLoss)
 
         let revokedAt = start.addingTimeInterval(3_600)
-        try replica.revoke(DeviceRevocation.issue(for: lost.id, by: identity, at: revokedAt))
+        try replica.revoke(DeviceRevocation.issue(
+            for: lost.id, by: identity, at: revokedAt, from: kept,
+            cutoff: beforeLoss.seq, head: beforeLoss.hash, remaining: [kept.id]))
 
         let afterLoss = try Entry.append(
             to: beforeLoss, author: identity.id, device: lost, clock: beforeLoss.clock,
             wallTime: revokedAt.addingTimeInterval(60), room: room,
-            payload: try seal("posted by a thief"))
+            payload: try seal("posted by a thief"), roomLink: RoomLink(previous: nil))
         #expect(throws: LogError.unauthorizedDevice) { try replica.integrate(afterLoss) }
 
         let carryOn = try Entry.append(
             to: nil, author: identity.id, device: kept, clock: VectorClock(),
             wallTime: revokedAt.addingTimeInterval(120), room: room,
-            payload: try seal("replacement phone"))
+            payload: try seal("replacement phone"), roomLink: RoomLink(previous: nil))
         #expect(try replica.integrate(carryOn) == .accepted)
 
-        let rendered = Fold.render(replica.entries(in: room), using: chain)
+        let rendered = LogRenderer.render(replica.entries(in: room), using: chain)
         #expect(rendered.map(\.id) == [beforeLoss.hash, carryOn.hash])
     }
 }

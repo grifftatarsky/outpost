@@ -7,21 +7,20 @@ public struct StagedAttachment: Identifiable, Sendable {
     public let kind: MediaKind
     public let thumbnail: DecodedImage?
     public var duration: TimeInterval?
+    public var tooLarge: Int?
 
     public init(
         id: UUID = UUID(), picked: PickedMedia, kind: MediaKind, thumbnail: DecodedImage?,
-        duration: TimeInterval? = nil
+        duration: TimeInterval? = nil, tooLarge: Int? = nil
     ) {
         self.id = id
+        self.tooLarge = tooLarge
         self.picked = picked
         self.kind = kind
         self.thumbnail = thumbnail
         self.duration = duration
     }
 
-    public func needsTrim(limit: TimeInterval) -> Bool {
-        kind == .video && (duration ?? 0) > limit
-    }
 }
 
 public enum CompositionStep: Equatable, Sendable {

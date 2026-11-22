@@ -1,4 +1,6 @@
+import CarpenterKit
 import SwiftUI
+import TipKit
 
 #if DEBUG
     import CarpenterUI
@@ -12,10 +14,18 @@ struct CarpenterMain: App {
         @NSApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
     #endif
 
+    init() {
+        try? Tips.configure()
+        try? ScratchSpace.shared.empty()
+    }
+
     @ViewBuilder private var root: some View {
         #if DEBUG
             if let shot = SiteShot.requested() {
                 SiteShotView(shot)
+                    .task { await PermissionAsk.runIfAsked() }
+            } else if let copy = CopyShot.requested() {
+                CopyShotView(copy)
             } else {
                 AppRootView()
             }

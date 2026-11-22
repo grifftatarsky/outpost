@@ -3,9 +3,8 @@ import SwiftUI
 
 public enum CarpenterMetrics {
     public static let screenMargin: CGFloat = 20
-    public static let rowVerticalPadding: CGFloat = 11
-    public static let conversationGutter: CGFloat = 8
-    public static let conversationRowPadding: CGFloat = 7
+    public static let conversationGutter: CGFloat = 0
+    public static let conversationRowPadding: CGFloat = 8
     public static let hairline: CGFloat = 0.5
     public static let mediaOverlayDimming = 0.55
 
@@ -47,7 +46,7 @@ public enum CarpenterMetrics {
 
     // MARK: Avatars
 
-    public static let roomAvatar: CGFloat = 45
+    public static let roomAvatar: CGFloat = 48
     public static let compactRoomAvatar: CGFloat = 40
     public static let composerAvatar: CGFloat = 40
     public static let messageAvatar: CGFloat = 28
@@ -61,5 +60,15 @@ extension View {
     public func tappable() -> some View {
         frame(minWidth: CarpenterMetrics.hitTarget, minHeight: CarpenterMetrics.hitTarget)
             .contentShape(Rectangle())
+    }
+
+    public func reachable(width: CGFloat, height: CGFloat) -> some View {
+        let across = max(0, (CarpenterMetrics.hitTarget - width) / 2)
+        let down = max(0, (CarpenterMetrics.hitTarget - height) / 2)
+        return padding(.horizontal, across)
+            .padding(.vertical, down)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -across)
+            .padding(.vertical, -down)
     }
 }

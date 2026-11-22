@@ -1,6 +1,6 @@
 import CarpenterKit
-import CryptoKit
 import Foundation
+import os
 
 // MARK: Photos and clips, on the way out and on the way back
 
@@ -12,143 +12,376 @@ extension AppSession {
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
         guard !refusesToDraw(from: author) else { return nil }
-        let sealed = try await sealedAttachment(attachment.reference, from: author, through: mailbox)
-        return try sealed.map { try SealedAttachment.open($0, with: attachment.reference) }
+        let reference = attachment.reference
+        guard reference.parts == nil else { throw AttachmentError.tooLarge }
+        let sealed = try await sealedPiece(
+            reference.id, digest: reference.digest, from: author, through: mailbox)
+        return try sealed.map { try SealedAttachment.open($0, with: reference) }
+    }
+
+    public func writeClip(
+        for attachment: MediaAttachment, sentBy author: ParticipantID,
+        through mailbox: any MediaMailbox, to file: URL
+    ) async throws -> Bool {
+        guard !refusesToDraw(from: author) else { return false }
+        let reference = attachment.reference
+        guard reference.parts != nil else {
+            guard let data = try await attachmentData(for: attachment, sentBy: author, through: mailbox) else {
+                return false
+            }
+            let handle = try FileHandle(forWritingTo: file)
+            defer { try? handle.close() }
+            try handle.truncate(atOffset: 0)
+            try handle.write(contentsOf: data)
+            return true
+        }
+        return try await SealedAttachment.openParts(reference, into: file) { [self] part in
+            try await sealedPiece(part.id, digest: part.digest, from: author, through: mailbox)
+        }
     }
 
     public func holdsAttachment(_ id: AttachmentID) async -> Bool {
         (try? await storage.media.sealed(for: id)) != nil
     }
 
-    private func sealedAttachment(
-        _ reference: AttachmentReference, from author: ParticipantID,
+    func sealedPiece(
+        _ id: AttachmentID, digest: Data, from author: ParticipantID,
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
-        if let held = try await storage.media.sealed(for: reference.id) { return held }
-        if let inFlight = attachmentTasks[reference.id] { return try await inFlight.value }
+        if let held = try await storage.media.sealed(for: id) { return held }
+        if let inFlight = attachmentTasks[id] { return try await inFlight.value }
 
         let task = Task<Data?, any Error> {
-            try await fetchAttachment(reference, from: author, through: mailbox)
+            try await fetchPiece(id, digest: digest, from: author, through: mailbox)
         }
-        attachmentTasks[reference.id] = task
-        defer { attachmentTasks[reference.id] = nil }
+        attachmentTasks[id] = task
+        defer { attachmentTasks[id] = nil }
         return try await task.value
     }
 
-    private func fetchAttachment(
-        _ reference: AttachmentReference, from author: ParticipantID,
+    private func fetchPiece(
+        _ id: AttachmentID, digest: Data, from author: ParticipantID,
         through mailbox: any MediaMailbox
     ) async throws -> Data? {
-        let tags = collectionTags(for: author)
-        let name = Diagnostics.fingerprint(reference.id.rawValue.uuidString)
-        let bytes: Data?
+        let name = Diagnostics.fingerprint(id.rawValue.uuidString)
+        let downloaded: Data?
         do {
-            bytes = try await mailbox.download(reference.id, hint: tags)
+            downloaded = try await downloadCopy(of: id, from: author, through: mailbox)
         } catch {
-            attachmentRetryAfter[reference.id] = clock.now.addingTimeInterval(Self.attachmentRetryInterval)
+            attachmentRetryAfter[id] = clock.now.addingTimeInterval(Self.attachmentRetryInterval)
             Diagnostics.sync.error(
                 "media: could not fetch \(name, privacy: .public) (\(String(describing: error), privacy: .public))")
             throw error
         }
-        guard let bytes else {
+        guard let downloaded else {
             Diagnostics.sync.notice("media: no outbox holds \(name, privacy: .public) any more")
             return nil
         }
-        guard SealedAttachment.matches(bytes, reference) else {
+        let bytes: Data
+        do {
+            bytes = try openCopy(downloaded, of: id, matching: digest, from: author)
+        } catch {
             Diagnostics.sync.error(
                 "media: \(name, privacy: .public) downloaded but does not match the entry's digest; not kept")
-            throw AttachmentError.digestMismatch
+            throw error
         }
-        try await storage.media.store(bytes, for: reference.id)
+        try await storage.media.store(bytes, for: id)
         Diagnostics.sync.notice(
             "media: fetched \(name, privacy: .public) bytes=\(bytes.count, privacy: .public)")
 
-        if !tags.isEmpty { await acknowledge(attachment: reference.id, by: tags, through: mailbox) }
+        await signFor(id, from: author, through: mailbox)
         return bytes
     }
 
     private static let attachmentRetryInterval: TimeInterval = 30
 
+    static let attachmentKeptFor = SyncSession.packetWaitsFor
+
+    private func signFor(_ id: AttachmentID, from author: ParticipantID, through mailbox: any MediaMailbox) async {
+        guard let enrolment, let peer = peers().first(where: { $0.them == author }) else { return }
+        let receipt: SealedReceipt
+        do {
+            receipt = try AttachmentReceipt.seal(
+                id, under: peer.incomingTag(window: SyncSession.window(at: clock.now)),
+                as: enrolment.identity.id, by: enrolment.device, to: peer.secret)
+        } catch {
+            Diagnostics.sync.error(
+                "media: could not sign for an attachment (\(String(describing: error), privacy: .public))")
+            return
+        }
+        await acknowledge(attachment: id, from: author, with: receipt, through: mailbox)
+    }
+
     private func acknowledge(
-        attachment id: AttachmentID, by tags: Set<RecipientTag>, through mailbox: any MediaMailbox
+        attachment id: AttachmentID, from sender: ParticipantID, with receipt: SealedReceipt,
+        through mailbox: any MediaMailbox
     ) async {
         do {
-            try await mailbox.acknowledge(attachment: id, by: tags)
+            guard let copy = photoCopyName(of: id, for: sender), let device = enrolment?.device.id else {
+                throw MailboxError.unknownPeer
+            }
+            try await mailbox.acknowledge(
+                copy: copy, from: sender, with: receipt, by: device, in: try currentPairs())
             attachmentAcknowledgementsOwed[id] = nil
         } catch {
-            attachmentAcknowledgementsOwed[id] = tags
+            attachmentAcknowledgementsOwed[id] = OwedPhotoReceipt(receipt: receipt, sender: sender)
             Diagnostics.sync.error(
-                "media: could not acknowledge an attachment; will retry (\(String(describing: error), privacy: .public))")
+                "media: could not sign for an attachment; will retry (\(String(describing: error), privacy: .public))")
         }
     }
 
-    func collectionTags(for author: ParticipantID) -> Set<RecipientTag> {
-        guard let peer = peers().first(where: { $0.them == author }) else { return [] }
-        return SyncSession.recentTags(for: peer, at: clock.now)
+    func recordAttachmentsSent(_ ids: [AttachmentID], to people: Set<ParticipantID>) async {
+        noteAttachmentsSent(ids, to: people)
+        do { try await saveState() } catch {
+            Diagnostics.sync.error(
+                "media: could not write down who a photo is for (\(String(describing: error), privacy: .public))")
+        }
     }
 
-    func collectAttachments(
-        from entries: [Entry], through mailbox: any MediaMailbox
-    ) async {
-        for entry in entries {
-            guard let chain = chain(sealing: entry),
-                let payload = entry.opened(using: chain), payload.type == .media,
-                let body = try? payload.decode(MediaBody.self),
-                !refusesToDraw(from: entry.author)
-            else { continue }
-            for picture in body.all {
-                guard !(attachmentRetryAfter[picture.attachment.id].map { $0 > clock.now } ?? false)
-                else { continue }
-                do {
-                    _ = try await sealedAttachment(
-                        picture.attachment, from: entry.author, through: mailbox)
-                } catch {
+    func noteAttachmentsSent(_ ids: [AttachmentID], to people: Set<ParticipantID>) {
+        let addressed = people.intersection(peers().map(\.them))
+        for id in ids {
+            var record = persisted.attachmentsSent[id] ?? SentAttachmentRecord(people: [], sentAt: clock.now)
+            record.people.formUnion(addressed)
+            record.sentAt = clock.now
+            persisted.attachmentsSent[id] = record
+        }
+    }
+
+    func settleAttachmentsSent(through mailbox: any MediaMailbox) async {
+        guard let enrolment, !persisted.attachmentsSent.isEmpty else { return }
+        let ownDevices =
+            (replica.registry(for: enrolment.identity.id)?.activeDevices ?? []).subtracting([enrolment.device.id])
+        let stored: [AttachmentID: [StoredPhotoCopy]]
+        do {
+            stored = copiesByPhoto(try await mailbox.storedCopies(in: try currentPairs())).named
+        } catch {
+            Diagnostics.sync.error(
+                "media: could not read the outbox to see who has collected what (\(String(describing: error), privacy: .public))")
+            return
+        }
+        let byPerson = Dictionary(peers().map { ($0.them, $0) }, uniquingKeysWith: { first, _ in first })
+        var cleared = 0
+        var putBack = 0
+        for id in Array(persisted.attachmentsSent.keys) where !uploading.contains(id) {
+            guard var record = persisted.attachmentsSent[id] else { continue }
+            let copies = stored[id] ?? []
+            var owed: Set<ParticipantID> = []
+            for person in record.people {
+                guard byPerson[person] != nil, let registry = replica.registry(for: person) else {
+                    owed.insert(person)
+                    continue
                 }
+                let ways = secrets(with: person)
+                for receipt in copies.filter({ $0.to == person }).flatMap(\.receipts) {
+                    for secret in ways {
+                        guard let signed = AttachmentReceipt.open(
+                            receipt, for: id, from: person, with: secret, by: registry)
+                        else { continue }
+                        record.collectedBy.insert(signed.device)
+                        break
+                    }
+                }
+                if !registry.activeDevices.isSubset(of: record.collectedBy) { owed.insert(person) }
+            }
+            persisted.attachmentsSent[id] = record
+
+            let everybody = owed.isEmpty && ownDevices.isSubset(of: record.collectedBy)
+            let expired = clock.now.timeIntervalSince(record.sentAt) > Self.attachmentKeptFor
+            if everybody || expired {
+                if !copies.isEmpty {
+                    do { try await mailbox.delete(copies: Set(copies.map(\.name)), in: try currentPairs()) } catch {
+                        Diagnostics.sync.error(
+                            "media: could not clear a collected attachment (\(String(describing: error), privacy: .public))")
+                        continue
+                    }
+                }
+                if persisted.attachmentsSent[id]?.people == record.people { persisted.attachmentsSent[id] = nil }
+                cleared += 1
+                continue
+            }
+            let recipients = addressed(
+                to: owed.filter { person in !copies.contains { $0.to == person } }.compactMap { byPerson[$0] })
+            guard !recipients.isEmpty else { continue }
+            let ciphertext: Data
+            do {
+                guard let held = try await storage.media.sealed(for: id) else {
+                    persisted.attachmentsSent[id] = nil
+                    Diagnostics.sync.error("media: an attachment left the outbox early and this device no longer holds it")
+                    continue
+                }
+                ciphertext = held
+            } catch {
+                Diagnostics.sync.error(
+                    "media: could not read the kept copy of an attachment (\(String(describing: error), privacy: .public))")
+                continue
+            }
+            do {
+                try await uploadCopies(
+                    of: OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
+                putBack += 1
+            } catch {
+                Diagnostics.sync.error(
+                    "media: could not put back an attachment that left the outbox early (\(String(describing: error), privacy: .public))")
             }
         }
-        for (id, tags) in attachmentAcknowledgementsOwed {
-            await acknowledge(attachment: id, by: tags, through: mailbox)
+        if cleared > 0 || putBack > 0 {
+            Diagnostics.sync.notice(
+                """
+                media: cleared \(cleared, privacy: .public) attachment(s) everybody collected or that waited too long; \
+                put back \(putBack, privacy: .public) that left the outbox before everybody had them
+                """)
+        }
+    }
+
+    func collectOwnPhotos(through mailbox: any MediaMailbox) async {
+        guard let me = enrolment?.identity.id else { return }
+        let held = entriesByHash
+        persisted.photosOwed.formIntersection(held.keys)
+        for entry in persisted.photosOwed.compactMap({ held[$0] }) where entry.author == me {
+            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain) else { continue }
+            guard payload.type == .media, let body = try? payload.decode(MediaBody.self) else {
+                persisted.photosOwed.remove(entry.hash)
+                continue
+            }
+            var everyPiece = true
+            for picture in body.all {
+                let reference = picture.attachment
+                let pieces = reference.parts.map { $0.map { ($0.id, $0.digest) } } ?? [(reference.id, reference.digest)]
+                for (id, digest) in pieces {
+                    if ((try? await storage.media.sealed(for: id)) ?? nil) != nil {
+                        persisted.ownPhotosHeld.insert(id)
+                        continue
+                    }
+                    await fetchOwnPiece(id, digest: digest, through: mailbox)
+                    if !persisted.ownPhotosHeld.contains(id) { everyPiece = false }
+                }
+            }
+            if everyPiece { persisted.photosOwed.remove(entry.hash) }
+        }
+    }
+
+    private func fetchOwnPiece(_ id: AttachmentID, digest: Data, through mailbox: any MediaMailbox) async {
+        guard let pairs = try? currentPairs() else { return }
+        for peer in peers() {
+            guard let copy = photoCopyName(of: id, for: peer.them) else { continue }
+            guard let downloaded = try? await mailbox.ownCopy(copy, in: pairs) else { continue }
+            guard let bytes = try? PhotoCopy.open(downloaded, of: id, matching: digest, between: peer.secret) else {
+                continue
+            }
+            do {
+                try await storage.media.store(bytes, for: id)
+                persisted.ownPhotosHeld.insert(id)
+                Diagnostics.sync.notice(
+                    "media: took a photo this member sent out of its own outbox for another of its devices")
+            } catch {
+                Diagnostics.sync.error(
+                    "media: could not keep a photo taken from this member's own outbox (\(String(describing: error), privacy: .public))")
+            }
+            return
+        }
+    }
+
+    func notePhotosHeld(_ photos: [AttachmentID], by device: DeviceID) {
+        for photo in photos where persisted.attachmentsSent[photo] != nil {
+            persisted.attachmentsSent[photo]?.collectedBy.insert(device)
+        }
+    }
+
+    func notePhotosOwed(_ entries: [Entry]) {
+        for entry in entries { persisted.photosOwed.insert(entry.hash) }
+    }
+
+    func collectAttachments(through mailbox: any MediaMailbox) async {
+        let held = entriesByHash
+        persisted.photosOwed.formIntersection(held.keys)
+        for entry in persisted.photosOwed.compactMap({ held[$0] }) where entry.author != enrolment?.identity.id {
+            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain) else { continue }
+            guard payload.type == .media, let body = try? payload.decode(MediaBody.self),
+                !refusesToDraw(from: entry.author)
+            else {
+                persisted.photosOwed.remove(entry.hash)
+                continue
+            }
+            var everyPiece = true
+            for picture in body.all {
+                let reference = picture.attachment
+                let pieces = reference.parts.map { $0.map { ($0.id, $0.digest) } } ?? [(reference.id, reference.digest)]
+                for (id, digest) in pieces {
+                    guard !(attachmentRetryAfter[id].map { $0 > clock.now } ?? false) else {
+                        everyPiece = false
+                        continue
+                    }
+                    do {
+                        _ = try await sealedPiece(id, digest: digest, from: entry.author, through: mailbox)
+                    } catch {
+                        everyPiece = false
+                        break
+                    }
+                }
+            }
+            if everyPiece { persisted.photosOwed.remove(entry.hash) }
+        }
+        for (id, owed) in attachmentAcknowledgementsOwed {
+            await acknowledge(attachment: id, from: owed.sender, with: owed.receipt, through: mailbox)
         }
     }
 
     func sweepAttachments(through mailbox: any MediaMailbox) async {
         guard !sweptAttachments, enrolment != nil else { return }
         sweptAttachments = true
-        let waiting: [AttachmentID: Set<RecipientTag>]
+        let stored: (named: [AttachmentID: [StoredPhotoCopy]], unreadable: [StoredPhotoCopy])
         do {
-            waiting = try await mailbox.sweepableAttachments()
+            stored = copiesByPhoto(try await mailbox.storedCopies(in: try currentPairs()))
         } catch {
             sweptAttachments = false
             Diagnostics.sync.error(
                 "media: could not read the outbox to sweep it (\(String(describing: error), privacy: .public))")
             return
         }
-        var referenced = attachmentsThisMemberSent()
-        if !persisted.uploadsLeftForOthers.isEmpty, let stored = try? await mailbox.pendingAttachments() {
-            persisted.uploadsLeftForOthers.removeAll { stored[$0] == nil && waiting[$0] == nil }
-        }
-        referenced.formUnion(persisted.uploadsLeftForOthers)
-        for id in waiting.keys where !referenced.contains(id) && !uploading.contains(id) {
-            do {
-                try await mailbox.delete(attachment: id)
-                Diagnostics.sync.notice("media: swept an upload no entry names")
-            } catch {
-                Diagnostics.sync.error(
-                    "media: could not sweep an orphaned upload (\(String(describing: error), privacy: .public))")
+        persisted.uploadsLeftForOthers.removeAll { stored.named[$0] == nil }
+        let referenced = attachmentsThisMemberSent().union(persisted.uploadsLeftForOthers)
+        let kept = Set([ownPhotoReference?.id, ownOutpostPhotoReference?.id].compactMap { $0 })
+        let settled = clock.now.addingTimeInterval(-MailboxRules.sweepAge)
+        let abandoned = clock.now.addingTimeInterval(-2 * Self.attachmentKeptFor)
+
+        var unnamed = stored.unreadable.filter { $0.storedAt < settled }.map(\.name)
+        var unwatched: [PhotoCopyName] = []
+        for (id, copies) in stored.named where !uploading.contains(id) {
+            let waiting = copies.filter { $0.storedAt < settled }
+            guard let written = waiting.map(\.modifiedAt).max() else { continue }
+            if !referenced.contains(id) {
+                unnamed += waiting.map(\.name)
+            } else if written < abandoned, !kept.contains(id), persisted.attachmentsSent[id] == nil {
+                unwatched += waiting.map(\.name)
             }
+        }
+        await deleteCopies(unwatched, through: mailbox, because: "no device of this member is looking after them")
+        await deleteCopies(unnamed, through: mailbox, because: "no entry names them")
+    }
+
+    private func deleteCopies(_ copies: [PhotoCopyName], through mailbox: any MediaMailbox, because reason: String) async {
+        guard !copies.isEmpty else { return }
+        do {
+            try await mailbox.delete(copies: Set(copies), in: try currentPairs())
+            Diagnostics.sync.notice(
+                "media: cleared \(copies.count, privacy: .public) upload(s) \(reason, privacy: .public)")
+        } catch {
+            Diagnostics.sync.error(
+                "media: could not clear uploads \(reason, privacy: .public) (\(String(describing: error), privacy: .public))")
         }
     }
 
     private func attachmentsThisMemberSent() -> Set<AttachmentID> {
         guard let enrolment else { return [] }
+        let open = entryOpener()
         var ids: Set<AttachmentID> = []
         for entry in replica.allEntries where entry.author == enrolment.identity.id {
-            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain)
-            else { continue }
+            guard let payload = open(entry) else { continue }
             switch payload.type {
             case .media:
                 if let body = try? payload.decode(MediaBody.self) {
-                    for picture in body.all { ids.insert(picture.attachment.id) }
+                    for picture in body.all { ids.formUnion(picture.attachment.transferIDs) }
                 }
             case .memberPhoto:
                 if let reference = (try? payload.decode(MemberPhotoBody.self))?.reference {
@@ -159,5 +392,56 @@ extension AppSession {
             }
         }
         return ids
+    }
+
+    // MARK: One copy for each person, sealed for that pair
+
+    func photoCopyName(of photo: AttachmentID, for person: ParticipantID) -> PhotoCopyName? {
+        baseSecret(with: person).map { PhotoCopyName(of: photo, between: $0) }
+    }
+
+    func uploadCopies(of attachment: OutgoingAttachment, through mailbox: any MediaMailbox) async throws {
+        let copies = try attachment.copies(between: { baseSecret(with: $0) })
+        try await mailbox.upload(copies, in: try currentPairs())
+    }
+
+    func downloadCopy(of photo: AttachmentID, from sender: ParticipantID, through mailbox: any MediaMailbox)
+        async throws -> Data?
+    {
+        guard let copy = photoCopyName(of: photo, for: sender) else { throw MailboxError.unknownPeer }
+        return try await mailbox.download(copy, of: photo, from: sender, in: try currentPairs())
+    }
+
+    func openCopy(_ downloaded: Data, of photo: AttachmentID, matching digest: Data, from sender: ParticipantID) throws
+        -> Data
+    {
+        guard let pair = baseSecret(with: sender) else { throw AttachmentError.digestMismatch }
+        return try PhotoCopy.open(downloaded, of: photo, matching: digest, between: pair)
+    }
+
+    func deleteEveryCopy(of photos: [AttachmentID], through mailbox: any MediaMailbox) async throws {
+        let pairs = peopleInTouch().compactMap { baseSecret(with: $0) }
+        let copies = Set(photos.flatMap { photo in pairs.map { PhotoCopyName(of: photo, between: $0) } })
+        guard !copies.isEmpty else { return }
+        try await mailbox.delete(copies: copies, in: try currentPairs())
+    }
+
+    func copiesByPhoto(_ copies: [StoredPhotoCopy]) -> (
+        named: [AttachmentID: [StoredPhotoCopy]], unreadable: [StoredPhotoCopy]
+    ) {
+        var pairs: [ParticipantID: PairwiseSecret] = [:]
+        var named: [AttachmentID: [StoredPhotoCopy]] = [:]
+        var unreadable: [StoredPhotoCopy] = []
+        for copy in copies {
+            if pairs[copy.to] == nil { pairs[copy.to] = baseSecret(with: copy.to) }
+            guard let pair = pairs[copy.to], let label = copy.label,
+                let photo = PhotoCopy.photo(labelled: label, named: copy.name, between: pair)
+            else {
+                unreadable.append(copy)
+                continue
+            }
+            named[photo, default: []].append(copy)
+        }
+        return (named, unreadable)
     }
 }

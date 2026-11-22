@@ -5,6 +5,8 @@ public struct RoomRoster: Hashable, Sendable {
 
     public private(set) var founder: ParticipantID?
 
+    public private(set) var name: String?
+
     public private(set) var requests: [ParticipantID: MembershipAttestation] = [:]
 
     private var admissionsByInvitation: [Data: Set<ParticipantID>] = [:]
@@ -41,15 +43,19 @@ public struct RoomRoster: Hashable, Sendable {
 
     private var spent: Set<Data> = []
 
+    public private(set) var counted: Set<EntryHash> = []
+
     public struct Removal: Hashable, Sendable {
         public let removed: ParticipantID
         public let by: ParticipantID
         public let at: Date
+        public let entry: EntryHash
 
-        public init(removed: ParticipantID, by: ParticipantID, at: Date) {
+        public init(removed: ParticipantID, by: ParticipantID, at: Date, entry: EntryHash) {
             self.removed = removed
             self.by = by
             self.at = at
+            self.entry = entry
         }
     }
 
@@ -209,7 +215,7 @@ public struct RoomRoster: Hashable, Sendable {
     }
 
     public mutating func set(access newAccess: RoomAccess, by author: ParticipantID) {
-        guard author == founder else { return }
+        guard author == founder, established.contains(author) else { return }
         access = newAccess
     }
 
@@ -220,8 +226,8 @@ public struct RoomRoster: Hashable, Sendable {
 
         guard isOpen(attestation) else { return false }
 
-        let admitters = admissionsByInvitation[attestation.signature] ?? []
-        let refusers = refusalsByInvitation[attestation.signature] ?? []
+        let admitters = (admissionsByInvitation[attestation.signature] ?? []).intersection(established)
+        let refusers = (refusalsByInvitation[attestation.signature] ?? []).intersection(established)
 
         switch access {
         case .open:
@@ -265,7 +271,7 @@ public struct RoomRoster: Hashable, Sendable {
             against: inviterKeys, at: instant, allowingExpired: allowingExpired)
     }
 
-    // MARK: Folding
+    // MARK: Building the member list from the log
 
     public static let rosterShaping: Set<PayloadType> = [
         .roomProfile, .roomAccess, .joinRequest, .joinConfirmed, .invitationRescinded, .admission,
@@ -275,10 +281,14 @@ public struct RoomRoster: Hashable, Sendable {
     public mutating func apply(_ entry: RenderedEntry, body: Payload) {
         switch body.type {
         case .roomProfile:
-            if founder == nil {
+            guard let profile = try? body.decode(RoomProfileBody.self) else { return }
+            if founder == nil, profile.founds(room, by: entry.author) {
                 founder = entry.author
                 establish(entry.author)
             }
+            guard established.contains(entry.author) else { return }
+            name = profile.name
+            counted.insert(entry.id)
 
         case .roomAccess:
             guard let body = try? body.decode(RoomAccessBody.self) else { return }
@@ -286,19 +296,25 @@ public struct RoomRoster: Hashable, Sendable {
 
         case .joinRequest:
             guard let request = try? body.decode(JoinRequestBody.self),
-                request.attestation.room == room
+                request.attestation.room == room,
+                request.attestation.inviter == entry.author,
+                established.contains(entry.author),
+                request.attestation.isAuthentic
             else { return }
             requests[request.attestation.joiner] = request.attestation
+            counted.insert(entry.id)
 
             if isAdmitted(request.attestation.joiner) {
                 establish(request.attestation.joiner)
             }
 
         case .joinConfirmed:
-            guard let confirmation = try? body.decode(JoinConfirmedBody.self),
+            guard established.contains(entry.author),
+                let confirmation = try? body.decode(JoinConfirmedBody.self),
                 let attestation = requests[confirmation.joiner],
                 (try? confirmation.verify(confirming: attestation)) != nil
             else { return }
+            counted.insert(entry.id)
             let at = entry.wallTime
             if let already = confirmations[attestation.signature] {
                 confirmations[attestation.signature] = Swift.min(already, at)
@@ -317,9 +333,10 @@ public struct RoomRoster: Hashable, Sendable {
             rescinded.insert(taken.invitation)
 
         case .admission:
-            guard let decision = try? body.decode(AdmissionBody.self) else { return }
-            guard let invitation = decision.invitation ?? requests[decision.joiner]?.signature
+            guard established.contains(entry.author),
+                let decision = try? body.decode(AdmissionBody.self)
             else { return }
+            let invitation = decision.invitation
             if decision.admitted {
                 admissionsByInvitation[invitation, default: []].insert(entry.author)
                 refusalsByInvitation[invitation]?.remove(entry.author)
@@ -333,7 +350,7 @@ public struct RoomRoster: Hashable, Sendable {
 
         case .removal:
             guard let body = try? body.decode(RemovalBody.self) else { return }
-            apply(removalOf: body.removed, by: entry.author, at: entry.wallTime)
+            apply(removalOf: body.removed, by: entry.author, at: entry.wallTime, entry: entry.id)
 
         case .departure:
             apply(departureOf: entry.author, at: entry.wallTime, entry: entry.id)
@@ -349,14 +366,16 @@ public struct RoomRoster: Hashable, Sendable {
         departures[person] = nil
     }
 
-    private mutating func apply(removalOf removed: ParticipantID, by author: ParticipantID, at when: Date) {
+    private mutating func apply(
+        removalOf removed: ParticipantID, by author: ParticipantID, at when: Date, entry: EntryHash
+    ) {
         guard established.contains(author), established.contains(removed) else { return }
 
         guard removed != author else { return }
 
         guard removals[removed] == nil else { return }
 
-        removals[removed] = Removal(removed: removed, by: author, at: when)
+        removals[removed] = Removal(removed: removed, by: author, at: when, entry: entry)
         established.remove(removed)
 
         if let attestation = requests[removed] {
@@ -365,6 +384,13 @@ public struct RoomRoster: Hashable, Sendable {
         }
         spend(requests[removed])
         requests[removed] = nil
+        endInvitations(madeBy: removed)
+    }
+
+    private mutating func endInvitations(madeBy inviter: ParticipantID) {
+        for attestation in requests.values where attestation.inviter == inviter && !established.contains(attestation.joiner) {
+            spend(attestation)
+        }
     }
 
     private mutating func spend(_ attestation: MembershipAttestation?) {
@@ -389,7 +415,7 @@ public struct RoomRoster: Hashable, Sendable {
         requests[member] = nil
     }
 
-    public var keyTurner: ParticipantID? {
+    public var keyRotator: ParticipantID? {
         if let founder, established.contains(founder) { return founder }
         return established.min { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
     }

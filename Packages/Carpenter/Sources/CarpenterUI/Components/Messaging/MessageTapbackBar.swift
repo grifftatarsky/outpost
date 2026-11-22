@@ -126,7 +126,7 @@ public struct MessageReactions: View {
         var others: [Reaction] = []
         for (emoji, people) in reactions {
             for person in people {
-                let hex = person.rawValue.map { String(format: "%02x", $0) }.joined()
+                let hex = person.rawValue.lowercaseHex
                 let reaction = Reaction(emoji: emoji, isMine: emoji == mine, id: "\(emoji)|\(hex)")
                 if emoji == mine, own.isEmpty { own.append(reaction) } else { others.append(reaction) }
             }

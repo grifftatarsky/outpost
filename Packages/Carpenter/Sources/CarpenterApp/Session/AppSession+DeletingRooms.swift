@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 
 // MARK: Deleting a conversation this member is no longer in
 
@@ -11,7 +12,10 @@ extension AppSession {
         }
         let feed = FeedKey(author: enrolment.identity.id, device: enrolment.device.id)
         let sent = persisted.syncedFrontier[feed]
-        let unsent = replica.allEntries.contains { $0.room == room && $0.feedKey == feed && $0.seq > sent }
+        let owed = persisted.entriesOwed.values.reduce(into: Set<EntryHash>()) { $0.formUnion($1) }
+        let unsent = replica.allEntries.contains {
+            $0.room == room && $0.feedKey == feed && ($0.seq > sent || owed.contains($0.hash))
+        }
         return unsent ? .departureNotSent : .allowed
     }
 
@@ -140,7 +144,7 @@ extension AppSession {
             persisted.holesNoticed[room] = nil
             persisted.askedAutomatically[room] = nil
             persisted.reviewsPostponed[room] = nil
-            persisted.epochTurnsOwed.removeAll { $0 == room }
+            persisted.keyRotationsOwed.removeAll { $0 == room }
             persisted.repairs.removeAll { $0.room == room }
             persisted.restoreAsks.removeAll { $0.room == room }
             furthestSeen[room] = nil
@@ -157,7 +161,7 @@ extension AppSession {
         switch payload.type {
         case .media:
             guard let body = try? payload.decode(MediaBody.self) else { return [] }
-            return Set(body.all.map(\.attachment.id))
+            return Set(body.all.flatMap(\.attachment.transferIDs))
         case .memberPhoto:
             return (try? payload.decode(MemberPhotoBody.self))?.reference.map { [$0.id] } ?? []
         default:

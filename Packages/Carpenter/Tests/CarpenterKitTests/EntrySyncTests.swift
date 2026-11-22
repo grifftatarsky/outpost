@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Device sync", .serialized)
+@Suite("Device sync", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 @MainActor
 struct EntrySyncTests {
     private func pair() -> (relay: InMemoryEntrySync.Relay, keychain: InMemoryKeychainStore) {
@@ -13,7 +13,7 @@ struct EntrySyncTests {
     }
 
     private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while Date() < deadline {
             if condition() { return }
             await session.refreshDeviceSync()
@@ -31,11 +31,11 @@ struct EntrySyncTests {
         await original.load()
         try await original.createIdentity(displayName: "Griff")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let incoming = TestSession.make(keychain: keychain)
+        let incoming = TestSession.make(keychain: await keychain.sibling())
         let incomingSync = InMemoryEntrySync(relay: relay)
         incoming.syncDevices(through: incomingSync)
         await incoming.load()
+        try await original.approveNewDevice(incoming)
 
         let room = try await original.createRoom(named: "Kitchen")
         try await original.send("door code changed", to: room)
@@ -51,7 +51,7 @@ struct EntrySyncTests {
         #expect(incoming.messages(in: room).contains { $0.body == "door code changed" })
     }
 
-    @Test("Opening the app is enough, even if nothing announced itself")
+    @Test("Opening the app on both devices is enough, even if nothing announced itself")
     func openingTheAppFetchesWithoutBeingTold() async throws {
         let relay = InMemoryEntrySync.Relay(announces: false)
         let keychain = InMemoryKeychainStore()
@@ -62,11 +62,11 @@ struct EntrySyncTests {
         await original.load()
         try await original.createIdentity(displayName: "Griff")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let incoming = TestSession.make(keychain: keychain)
+        let incoming = TestSession.make(keychain: await keychain.sibling())
         let incomingSync = InMemoryEntrySync(relay: relay)
         incoming.syncDevices(through: incomingSync)
         await incoming.load()
+        try await original.approveNewDevice(incoming)
 
         let room = try await original.createRoom(named: "Kitchen")
         try await original.send("door code changed", to: room)
@@ -75,9 +75,14 @@ struct EntrySyncTests {
             incoming.messages(in: room).isEmpty,
             "arrived without being fetched — this relay does not announce")
 
-        await settle(incoming) {
-            incoming.rooms.first?.name == "Kitchen"
-                && incoming.messages(in: room).contains { $0.body == "door code changed" }
+        let deadline = TestDeadline.fromNow
+        while Date() < deadline,
+            !(incoming.rooms.first?.name == "Kitchen"
+                && incoming.messages(in: room).contains { $0.body == "door code changed" })
+        {
+            await original.refreshDeviceSync()
+            await incoming.refreshDeviceSync()
+            try? await Task.sleep(for: .milliseconds(25))
         }
 
         #expect(incoming.rooms.first?.name == "Kitchen")

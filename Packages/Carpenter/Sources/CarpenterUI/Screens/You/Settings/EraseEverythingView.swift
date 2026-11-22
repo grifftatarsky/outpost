@@ -21,16 +21,16 @@ public struct EraseEverythingView: View {
                 Section {
                     fact(
                         "trash",
-                        Text("Your member identity and every room key are erased from this device and from iCloud Keychain.", bundle: .module))
+                        Text("Your member identity and every room key are erased from this device.", bundle: .module))
                     fact(
                         "icloud",
-                        Text("Every feed, every packet and every photo in flight that this Apple Account holds in iCloud is deleted.", bundle: .module))
+                        Text("Everything this app keeps in your iCloud is deleted, including messages and photos nobody has received yet.", bundle: .module))
                     fact(
                         "internaldrive",
                         Text("Your history on this device goes with it, photos and clips included.", bundle: .module))
                     fact(
                         "iphone.gen3",
-                        Text("Your other devices lose the identity too, the next time they check. They cannot get it back.", bundle: .module))
+                        Text("Your other devices erase themselves the next time they reach iCloud. One that never reaches it again keeps what it has.", bundle: .module))
                 } header: {
                     Text("What is erased", bundle: .module).sectionHeading()
                 }
@@ -97,7 +97,7 @@ public struct EraseEverythingView: View {
                 Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
             } message: {
                 Text(
-                    "Your identity goes from this device, from your iCloud Keychain, and from every other device you have. There is no undo and nobody can restore this for you.",
+                    "This device erases now. Your other devices erase themselves when they next reach iCloud, and one that never does keeps what it has. There is no undo.",
                     bundle: .module)
             // COPY END a12e6eb2
             }

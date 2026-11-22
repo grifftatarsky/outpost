@@ -71,7 +71,7 @@ public struct OutpostAccessSheet: View {
                 }
             } message: {
                 Text(
-                    "\(person.displayName) collects your whole Outpost onto their own device. You can stop them getting anything new, but you cannot take back what they have.",
+                    "\(person.displayName) downloads your whole Outpost to their device. You can stop them getting anything new, but you can't take back what they have.",
                     bundle: .module)
             }
             .alert(
@@ -90,7 +90,7 @@ public struct OutpostAccessSheet: View {
         Section {
             if windows.isEmpty {
                 // COPY BEGIN 4c645cc7 [NEEDS HUMAN REVIEW]
-                Text("Nothing. They have never collected a post from here.", bundle: .module)
+                Text("Nothing. They've never downloaded a post from here.", bundle: .module)
                     .font(CarpenterFont.rowDetail)
                     .foregroundStyle(palette.secondaryText)
             } else {
@@ -101,7 +101,7 @@ public struct OutpostAccessSheet: View {
                             .foregroundStyle(palette.primaryText)
                         Spacer(minLength: 0)
                         if window.isOpen {
-                            Text("Still collecting", bundle: .module)
+                            Text("Still downloading", bundle: .module)
                                 .font(CarpenterFont.rowDetail)
                                 .foregroundStyle(palette.accentColor)
                         }
@@ -152,7 +152,7 @@ public struct OutpostAccessSheet: View {
         switch standing {
         case .everything:
             return Text(
-                "You have already given them everything, and that cannot be taken back. Stopping ends what they collect from now on.",
+                "They already have everything you've posted, and that can't be taken back. Stopping ends what they receive from now on.",
                 bundle: .module)
         case .none, .from:
             return Text(
@@ -181,11 +181,11 @@ public struct OutpostAccessSheet: View {
                 bundle: .module)
         case .everything:
             return Text(
-                "They collect every post on this wall, including everything from before you met. This cannot be undone.",
+                "They download every post on this Outpost, including everything from before you met. This can't be undone.",
                 bundle: .module)
         case .no:
             return Text(
-                "Today's period ends. They keep what they have already collected, and nothing you post from now reaches them.",
+                "Today's period ends. They keep what they've already downloaded, and nothing you post from now on reaches them.",
                 bundle: .module)
         }
     }

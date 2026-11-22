@@ -26,6 +26,16 @@ public enum SyncError: Error, Hashable, Sendable {
     case packetUnreadable
 }
 
+public struct PhotoAsk: Hashable, Sendable, Codable {
+    public let entry: EntryHash
+    public let attachment: AttachmentID
+
+    public init(entry: EntryHash, attachment: AttachmentID) {
+        self.entry = entry
+        self.attachment = attachment
+    }
+}
+
 public enum SyncEngine {
     public struct Delivery: Sendable {
         public let entries: [Entry]
@@ -36,13 +46,17 @@ public enum SyncEngine {
         public let requests: [RepairRequest]
         public let answers: [RepairAnswer]
         public let notifyWalls: [ParticipantID]?
+        public let notifyWallsAsOf: Date?
         public let confirmations: [JoinConfirmedBody]
+        public let asks: [PhotoAsk]
+        public let addresses: [AddressAnnouncement]
 
         public init(
             entries: [Entry], certificates: [DeviceCertificate], revocations: [DeviceRevocation],
             grants: [EpochGrant], requests: [RepairRequest] = [], answers: [RepairAnswer] = [],
             identities: [IdentityPublicKeys] = [], notifyWalls: [ParticipantID]? = nil,
-            confirmations: [JoinConfirmedBody] = []
+            notifyWallsAsOf: Date? = nil,
+            confirmations: [JoinConfirmedBody] = [], asks: [PhotoAsk] = [], addresses: [AddressAnnouncement] = []
         ) {
             self.entries = entries
             self.identities = identities
@@ -52,7 +66,10 @@ public enum SyncEngine {
             self.requests = requests
             self.answers = answers
             self.notifyWalls = notifyWalls
+            self.notifyWallsAsOf = notifyWallsAsOf
             self.confirmations = confirmations
+            self.asks = asks
+            self.addresses = addresses
         }
     }
 
@@ -64,13 +81,17 @@ public enum SyncEngine {
         var requests: [RepairRequest] = []
         var answers: [RepairAnswer] = []
         var notifyWalls: [ParticipantID]?
+        var notifyWallsAsOf: Date?
         var confirmations: [JoinConfirmedBody] = []
+        var asks: [PhotoAsk] = []
+        var addresses: [AddressAnnouncement] = []
 
         init(
             entries: [Entry] = [], certificates: [DeviceCertificate] = [],
             revocations: [DeviceRevocation] = [], requests: [RepairRequest] = [],
             answers: [RepairAnswer] = [], identities: [IdentityPublicKeys] = [],
-            notifyWalls: [ParticipantID]? = nil, confirmations: [JoinConfirmedBody] = []
+            notifyWalls: [ParticipantID]? = nil, notifyWallsAsOf: Date? = nil,
+            confirmations: [JoinConfirmedBody] = [], asks: [PhotoAsk] = [], addresses: [AddressAnnouncement] = []
         ) {
             self.entries = entries
             self.identities = identities
@@ -79,7 +100,10 @@ public enum SyncEngine {
             self.requests = requests
             self.answers = answers
             self.notifyWalls = notifyWalls
+            self.notifyWallsAsOf = notifyWallsAsOf
             self.confirmations = confirmations
+            self.asks = asks
+            self.addresses = addresses
         }
 
         init(from decoder: any Decoder) throws {
@@ -94,8 +118,11 @@ public enum SyncEngine {
             requests = try container.decodeIfPresent([RepairRequest].self, forKey: .requests) ?? []
             answers = try container.decodeIfPresent([RepairAnswer].self, forKey: .answers) ?? []
             notifyWalls = try container.decodeIfPresent([ParticipantID].self, forKey: .notifyWalls)
+            notifyWallsAsOf = try container.decodeIfPresent(Date.self, forKey: .notifyWallsAsOf)
             confirmations =
                 try container.decodeIfPresent([JoinConfirmedBody].self, forKey: .confirmations) ?? []
+            asks = try container.decodeIfPresent([PhotoAsk].self, forKey: .asks) ?? []
+            addresses = try container.decodeIfPresent([AddressAnnouncement].self, forKey: .addresses) ?? []
         }
     }
 
@@ -111,7 +138,10 @@ public enum SyncEngine {
         answers: [RepairAnswer] = [],
         identities: [IdentityPublicKeys] = [],
         notifyWalls: [ParticipantID]? = nil,
-        confirmations: [JoinConfirmedBody] = []
+        notifyWallsAsOf: Date? = nil,
+        confirmations: [JoinConfirmedBody] = [],
+        asks: [PhotoAsk] = [],
+        addresses: [AddressAnnouncement] = []
     ) throws -> SyncPacket {
         let contentKey = SymmetricKey(size: .bits256)
         let context = wrapContext(id: id)
@@ -119,9 +149,10 @@ public enum SyncEngine {
         let body = Body(
             entries: entries, certificates: certificates, revocations: revocations,
             requests: requests, answers: answers, identities: identities,
-            notifyWalls: notifyWalls, confirmations: confirmations)
+            notifyWalls: notifyWalls, notifyWallsAsOf: notifyWalls == nil ? nil : notifyWallsAsOf,
+            confirmations: confirmations, asks: asks, addresses: addresses)
         let sealed = try ChaChaPoly.seal(
-            try JSONEncoder().encode(body), using: contentKey, authenticating: context)
+            Compressed.pack(try JSONEncoder().encode(body)), using: contentKey, authenticating: context)
 
         var wraps: [RecipientTag: Data] = [:]
         for peer in peers {
@@ -133,7 +164,7 @@ public enum SyncEngine {
         var addressed: [RecipientTag: [Data]] = [:]
         for issued in granting {
             addressed[issued.to.outgoingTag(window: window), default: []].append(
-                try JSONEncoder().encode(issued.grant))
+                try issued.to.secret.wrap(try JSONEncoder().encode(issued.grant), context: grantContext(id: id)))
         }
 
         return SyncPacket(
@@ -156,22 +187,29 @@ public enum SyncEngine {
             throw SyncError.packetUnreadable
         }
 
-        let grants = (packet.grants[tag] ?? []).compactMap {
-            try? JSONDecoder().decode(EpochGrant.self, from: $0)
+        let grants = (packet.grants[tag] ?? []).compactMap { sealed in
+            (try? peer.secret.unwrap(sealed, context: grantContext(id: packet.id)))
+                .flatMap { try? JSONDecoder().decode(EpochGrant.self, from: $0) }
         }
 
-        let body = try JSONDecoder().decode(Body.self, from: plaintext)
+        let body = try JSONDecoder().decode(Body.self, from: try Compressed.unpack(plaintext))
         return Delivery(
             entries: body.entries, certificates: body.certificates,
             revocations: body.revocations, grants: grants, requests: body.requests,
             answers: body.answers, identities: body.identities, notifyWalls: body.notifyWalls,
-            confirmations: body.confirmations)
+            notifyWallsAsOf: body.notifyWallsAsOf,
+            confirmations: body.confirmations, asks: body.asks, addresses: body.addresses)
+    }
+
+    private static func grantContext(id: PacketID) -> Data {
+        CanonicalBytes.payload(
+            domain: Domain.grantEnvelope, fields: [CanonicalBytes.uuid(id.rawValue)])
     }
 
     private static func wrapContext(id: PacketID) -> Data {
         CanonicalBytes.payload(
             domain: Domain.syncPacket,
-            fields: [withUnsafeBytes(of: id.rawValue.uuid) { Data($0) }]
+            fields: [CanonicalBytes.uuid(id.rawValue)]
         )
     }
 }

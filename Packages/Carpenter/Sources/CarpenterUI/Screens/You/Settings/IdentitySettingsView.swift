@@ -13,6 +13,7 @@ struct IdentitySettingsView: View {
     let onRename: ((String) async -> String?)?
     let onAvatarChange: ((PickedAvatar?) async -> Void)?
     @Environment(\.ownAvatar) private var ownAvatar
+    @Environment(\.tapToSwap) private var tapToSwap
     @State private var pickedAvatar: PhotosPickerItem?
     @State private var choosingAvatar = false
 
@@ -125,6 +126,23 @@ struct IdentitySettingsView: View {
             }
             // COPY END b67a4def
 
+            if let tapToSwap, !identityCode.isEmpty {
+                // COPY BEGIN cdd906bc [NEEDS HUMAN REVIEW]
+                Section {
+                    Button { tapToSwap.start() } label: {
+                        SettingsRow(
+                            icon: "iphone.radiowaves.left.and.right",
+                            title: Text("Tap phones to swap codes", bundle: .module))
+                    }
+                } footer: {
+                    Text(
+                        "When you're together, hold your iPhones against each other instead of sending a code. Your codes go straight from one phone to the other, and only after each of you says yes.",
+                        bundle: .module)
+                }
+                .groupedRowSurface()
+                // COPY END cdd906bc
+            }
+
             // COPY BEGIN a018d8bc [NEEDS HUMAN REVIEW]
             Section {
                 SettingsRow(
@@ -132,7 +150,7 @@ struct IdentitySettingsView: View {
                     title: Text("Where your keys are", bundle: .module))
             } footer: {
                 Text(
-                    "Your keys are kept in your iCloud Keychain, so another device signed into this Apple Account finds them there. If the keychain goes too, your recovery key is the way back — it returns you, and your conversations are asked for from the people who were in them.",
+                    "Your keys are kept on this device only. A new device gets them when one of your devices approves it. If you lose every device, your recovery key is the way back — it returns you, removes every other device, and your conversations are asked for from the people who were in them.",
                     bundle: .module)
             }
             .groupedRowSurface()

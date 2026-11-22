@@ -25,14 +25,17 @@ struct AppRootView: View {
     @State var redeeming = false
     @State var restoring = false
 
-    @State var sheetPreferences = RoomsListPreferences()
+    @State var roomsListPreferences = RoomsListPreferences()
     @State var arrivingInvite: String?
     @State var arrivingCode: ArrivingCode?
     @AppStorage("onboarding.tourSeen") var tourSeen = false
     @AppStorage("onboarding.syncedSplashSeen") var syncedSplashSeen = false
+    @AppStorage("onboarding.lockOffered") var lockOffered = false
+    @State var lockOfferOpen = false
+    @AppStorage("siri.donationsForgotten") var siriDonationsForgotten = false
+    @State var appLock = AppLockController(store: AppRootView.appLockStore, vault: LockVault.keeper)
     @State var syncing = false
     @State var syncAgain = false
-    @State var lastRendezvous = Date.distantPast
     @State var lastSync = Date.distantPast
     @State var mediaBytes: Int?
     @Environment(\.scenePhase) private var scenePhase
@@ -42,25 +45,48 @@ struct AppRootView: View {
     @State var messagePushArmed = false
     @State var openRoom: RoomID?
 
-    @State var session = AppSession(storage: .onDisk(), clock: UITestMode.clock)
+    @State var session = AppSession(
+        storage: .onDisk(profile: TestProfileWorld.launch.session?.profile), clock: UITestMode.clock)
+    @State var testSession: TestSession? = TestProfileWorld.launch.session
+    @State var testProfiles = TestProfileWorld.launch.profiles
+    @State var switchingWorld = false
 
     @State var problem: ActionProblem?
 
-    let cloud = CloudKitMailbox(
-        container: .default(),
-        directory: PeerZoneDirectory(store: AppRootView.mailboxDirectoryStore()))
+    #if os(iOS)
+        @State var tapSwapper: TapSwapper?
+    #endif
+    @State var tappingPhones = false
+    @State var tapArrivals: [String] = []
+    @State var tappedCodes: Set<String> = []
+
+    static let pairIndex = PairIndex()
+
+    let cloud = CloudKitMailbox(container: .default(), index: AppRootView.pairIndex)
     #if DEBUG
         let rig = FileMailbox.fromLaunchArguments()
     #endif
 
     var mailbox: any Mailbox {
+        if let testSession { return testSession.mailbox }
         #if DEBUG
             if let rig { return rig }
         #endif
         return cloud
     }
 
+    var deathmarkBoard: CloudKitDeathmarkBoard? {
+        if testSession != nil { return nil }
+        #if DEBUG
+            if rig != nil { return nil }
+        #endif
+        return Self.cloudDeathmarks
+    }
+
+    static let cloudDeathmarks = CloudKitDeathmarkBoard(container: .default())
+
     var accountRegistry: any AccountRegistry {
+        if testSession != nil { return NoOtherMember() }
         #if DEBUG
             if rig != nil { return RigAccount() }
         #endif
@@ -71,6 +97,7 @@ struct AppRootView: View {
     }
 
     var media: any MediaMailbox {
+        if let testSession { return testSession.mailbox }
         #if DEBUG
             if let rig { return rig }
         #endif
@@ -98,11 +125,12 @@ struct AppRootView: View {
         #if DEBUG
             DebugActions(
                 checkMailbox: { await checkMailbox() },
-                rotateMailboxShare: { await rotateMailboxShare() },
                 pretendFocus: { silenced in
                     pretendedFocus = silenced ? true : nil
                     await session.reportFocus(silenced: silenced)
-                })
+                },
+                fitTest: { url, progress in await fitTest(url, progress: progress) },
+                contactSpaceTest: { step in await ContactSpaceTest.run(step) })
         #else
             nil
         #endif
@@ -111,25 +139,22 @@ struct AppRootView: View {
     // COPY BEGIN 7740e80c [NEEDS HUMAN REVIEW]
     var body: some View {
         content
-            .alert(
-                Text(problem?.title ?? ""),
-                isPresented: Binding(
-                    get: { problem != nil },
-                    set: { showing in if !showing { problem = nil } }),
-                presenting: problem
-            ) { _ in
-                Button { problem = nil } label: { Text("OK") }
-            } message: { problem in
-                Text(problem.detail)
-            }
+            .environment(\.reportedProblem, $problem)
+            .presentingProblems($problem)
+            .approvingDevices(
+                session.state == .ready ? session.deviceRequests.first : nil,
+                onApprove: { request in
+                    Task {
+                        await attempting("That device was not approved", "approve") {
+                            try await session.approveDevice(request)
+                        }
+                    }
+                },
+                onDecline: { request in Task { await session.declineDevice(request) } })
     }
     // COPY END 7740e80c
 
-    struct ActionProblem: Identifiable {
-        let id = UUID()
-        let title: String
-        let detail: String
-    }
+    typealias ActionProblem = ReportedProblem
 
     func reporting(_ log: String, _ action: () async throws -> Void) async -> String? {
         do {
@@ -177,7 +202,8 @@ struct AppRootView: View {
                             stall: why,
                             onRetry: { await session.retryRegistration() },
                             onRestore: { restoring = true },
-                            onNuke: { await nuke() }
+                            onNuke: { await nuke() },
+                            testProfiles: testProfilesControl
                         )
                     #else
                         RegistrationStalledView(
@@ -189,16 +215,7 @@ struct AppRootView: View {
                 }
                 .themed(.default)
                 .sheet(isPresented: $restoring) {
-                    NavigationStack {
-                        RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
-                            await reporting("restore from a recovery key") {
-                                try await session.restore(
-                                    fromRecoveryKey: key, askingPeers: asksPeers,
-                                    afterALoss: afterALoss)
-                            }
-                        })
-                    }
-                    .themed(.default)
+                    restoreSheet
                 }
 
             case .onboarding(.newIdentity) where !tourSeen:
@@ -218,16 +235,7 @@ struct AppRootView: View {
                 )
                 .themed(.default)
                 .sheet(isPresented: $restoring) {
-                    NavigationStack {
-                        RestoreFromKeyView(restore: { key, asksPeers, afterALoss in
-                            await reporting("restore from a recovery key") {
-                                try await session.restore(
-                                    fromRecoveryKey: key, askingPeers: asksPeers,
-                                    afterALoss: afterALoss)
-                            }
-                        })
-                    }
-                    .themed(.default)
+                    restoreSheet
                 }
 
             case .onboarding(.nameOnly):
@@ -239,6 +247,21 @@ struct AppRootView: View {
                     invitePending: arrivingInvite != nil
                 )
                 .themed(.default)
+
+            case .ready where session.hasUnsavedRecoveryKey:
+                NavigationStack {
+                    RecoveryKeyView(
+                        text: session.recoveryKeyText() ?? "",
+                        fingerprint: session.recoveryKeyFingerprint ?? "",
+                        onSaved: { await session.noteRecoveryKeySaved() })
+                }
+                .themed(.default)
+
+            case .ready where !lockOffered && !notificationsExplained && appLock.lock == nil && !UITestMode.isOn:
+                notificationsStep
+
+            case .ready where !lockOffered && (appLock.lock == nil || lockOfferOpen) && !UITestMode.isOn:
+                lockOffer
 
             case .ready where session.enrolment?.deviceIsNew == true && !syncedSplashSeen:
                 DeviceSyncedView(
@@ -255,16 +278,45 @@ struct AppRootView: View {
             case .ready:
                 ready
 
+            case .awaitingApproval:
+                AwaitingApprovalView(
+                    code: session.approvalCode ?? "", askFailed: session.askedForApproval == false,
+                    onAskAgain: { await session.askForApprovalAgain() }, onRecoveryKey: { restoring = true })
+                    .themed(.default)
+                    .sheet(isPresented: $restoring) { restoreSheet }
+                    .task {
+                        while session.state == .awaitingApproval, !Task.isCancelled {
+                            await session.refreshDeviceSync()
+                            try? await Task.sleep(for: .seconds(4))
+                        }
+                    }
+
+            case .removed:
+                RemovedDeviceView(onRestore: { restoring = true })
+                    .themed(.default)
+                    .sheet(isPresented: $restoring) {
+                        restoreSheet
+                    }
+
             case .failed(let reason):
-                // COPY BEGIN 9c1a5749 [NEEDS HUMAN REVIEW]
-                ContentUnavailableView(
-                    "Something is wrong with this device's data",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(reason)
-                )
-                // COPY END 9c1a5749
+                DataProblemView(reason: reason) {
+                    await session.load()
+                    await finishOpening()
+                }
+                .themed(.default)
             }
         }
+    }
+
+    var restoreSheet: some View {
+        NavigationStack {
+            RestoreFromKeyView(restore: { key, asksPeers in
+                await reporting("restore from a recovery key") {
+                    try await session.restore(fromRecoveryKey: key, askingPeers: asksPeers)
+                }
+            })
+        }
+        .themed(.default)
     }
 
     var content: some View {
@@ -278,12 +330,14 @@ struct AppRootView: View {
         .environment(\.ownOutpostAvatar, ownOutpostAvatar)
         .environment(\.viewerID, session.viewer.id)
         .environment(\.supporters, session.supporterBadges)
+        .safeAreaInset(edge: .bottom) { testSessionEscape }
         .sheet(isPresented: $askingOutpostNotifications) {
             NavigationStack {
                 OutpostNotificationsAskView { wanted in
                     await session.setOutpostNotifications(wanted ? .default : .none)
                 }
             }
+            .themed(.default)
         }
         .sheet(isPresented: $explainingNotifications) {
             PermissionExplainerView(
@@ -299,6 +353,7 @@ struct AppRootView: View {
                     }
                 })
                 .interactiveDismissDisabled()
+                .themed(.default)
         }
         .onChange(of: safety.blocksKnownAbusers) { _, on in session.enforcesDenyList = on }
         .onChange(of: safety.blursEveryPhoto) { _, on in
@@ -306,23 +361,18 @@ struct AppRootView: View {
         }
         .task {
             mediaLoader = makeMediaLoader()
-            ownAvatar = Self.decodeAvatar(avatarStore.load())
-            personAvatars = personAvatarStore.loadAll().compactMapValues { Self.decodeAvatar($0) }
-            if session.showsOthersAvatars {
-                sharedAvatars = personAvatarStore.loadAllPublished(.rooms)
-                    .compactMapValues { Self.decodeAvatar($0) }
-                outpostAvatars = personAvatarStore.loadAllPublished(.outpost)
-                    .compactMapValues { Self.decodeAvatar($0) }
-            }
-            resolveOwnOutpostAvatar()
             screening = await SystemMediaScreen().availability()
             session.enforcesDenyList = safety.blocksKnownAbusers
             #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--ask-outpost-notifications") {
+                    askingOutpostNotifications = true
+                }
                 if ProcessInfo.processInfo.arguments.contains("--reset-account") {
                     Diagnostics.identity.notice("launch: --reset-account given; clearing this account")
                     await attempting(
                         String(localized: "This account was not cleared"), "reset account"
-                    ) { try await wipe() }
+                    ) { try await wipe(leavingDeathmark: false) }
+                    try? await deathmarkBoard?.clear()
                     Diagnostics.identity.notice("launch: the account is cleared; stopping")
                     exit(0)
                 }
@@ -334,29 +384,20 @@ struct AppRootView: View {
                 }
             #endif
 
-            await (mailbox as? CloudKitMailbox)?.restoreDirectory()
-
             session.checkAccount(with: accountRegistry)
 
-            await session.load()
+            await openSession()
             #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--forget-supporter") {
                     await session.forgetSupporterYear()
                 }
             #endif
-            await session.settleRegistration()
-            await session.nameThisDeviceIfUnnamed(HardwareName.ofThisDevice)
-            startDeviceSync()
-
-            var delay = 1
-            while session.isWaitingForAnIdentity {
-                try? await Task.sleep(for: .seconds(delay))
-                if Task.isCancelled { break }
-                if await session.recheckForSyncedIdentity() { break }
-                delay = min(delay * 2, 30)
-            }
+            await finishOpening()
         }
-        .onChange(of: session.state) { _, _ in startDeviceSync() }
+        .onChange(of: session.state) { _, state in
+            startDeviceSync()
+            if state == .removed { Task { await dropWhatTheErasedSessionShowed() } }
+        }
         .task(id: session.state) { await settleDistribution() }
         .task { PushArrivals.shared.onArrival { await syncNow() } }
         .task {
@@ -373,6 +414,22 @@ struct AppRootView: View {
         .onChange(of: openRoom) { _, room in
             PushDesk.viewing = room.map(MessageNotification.thread(for:))
         }
+        .onReceive(NotificationCenter.default.publisher(for: .CKAccountChanged)) { _ in
+            Task { await syncNow() }
+        }
+        #if os(iOS)
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: UIApplication.protectedDataWillBecomeUnavailableNotification)
+            ) { _ in
+                session.phoneLocked(true)
+            }
+            .onReceive(
+                NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)
+            ) { _ in
+                Task { await reopenIfUnlocked() }
+            }
+        #endif
         .onReceive(NotificationCenter.default.publisher(for: Self.becameActive)) { _ in
             Task {
                 await session.recheckForSyncedIdentity()
@@ -382,9 +439,37 @@ struct AppRootView: View {
         .onChange(of: badgeCount, initial: true) { _, count in
             Task { await PushRegistration.setBadge(count) }
         }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            appLock.sceneChanged(to: phase)
+        }
+        .onChange(of: appLock.isCovered, initial: true) { _, covered in
+            coverForLock(covered)
+        }
+        .onChange(of: session.sealsWhileLocked, initial: true) { _, sealed in
+            appLock.coversWhenAway = sealed
+        }
+        .task {
+            configureAppLock()
+            await appLock.load()
+            await reopenAfterTheLockOpened()
+        }
+        .onChange(of: appLock.isLocked) { _, locked in
+            guard !locked else { return }
+            Task { await reopenAfterTheLockOpened() }
+        }
+        .task { await forgetOldSiriDonations() }
+        .environment(\.appLock, appLock)
+        .environment(\.deviceSecurity, deviceSecurity)
+        .environment(\.tapToSwap, tapToSwap)
+        .overlay {
+            if !appLock.loaded {
+                Rectangle().fill(.background).ignoresSafeArea()
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task {
+                await reopenIfUnlocked()
                 await session.recheckForSyncedIdentity()
 
                 await syncNow()
@@ -406,11 +491,8 @@ struct AppRootView: View {
                 },
                 accept: { code in
                     do {
-                        let invite = try await session.redeem(inviteCode: code)
-                        if let url = invite.mailbox {
-                            try await CloudKitMailbox.accept(url, in: .default())
-                            await (mailbox as? CloudKitMailbox)?.subscribeForInbox()
-                        }
+                        try await session.redeem(inviteCode: code)
+                        if let cloud = mailbox as? CloudKitMailbox { await cloud.subscribeForInbox() }
                         await syncNow()
                         return nil
                     } catch {
@@ -420,22 +502,35 @@ struct AppRootView: View {
             )
             .themed(.default)
         }
-        .sheet(item: $arrivingCode) { code in
+        #if os(iOS)
+            .sheet(isPresented: $tappingPhones, onDismiss: { finishTapping() }) {
+                if let tapSwapper {
+                    TapToSwapView(phase: tapSwapper.phase, number: tapSwapper.number, trouble: tapSwapper.trouble) {
+                        tapSwapper.accept()
+                    }
+                    .themed(.default)
+                }
+            }
+        #endif
+        .sheet(item: $arrivingCode, onDismiss: { openWhatArrived() }) { code in
             AddSomeoneView(
                 rooms: { session.rooms.filter { !$0.isDirect } },
                 code: code.value,
                 onAdd: { room, joinerCode in
-                    let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
                     do {
-                        return try await session.invite(
-                            joinerCode: joinerCode, joining: room, mailbox: url)
+                        let issued = try await session.invite(
+                            joinerCode: joinerCode, joining: room, through: mailbox)
+                        #if os(iOS)
+                            handBack(issued, to: joinerCode)
+                        #endif
+                        return .issued(issued)
                     } catch {
                         Diagnostics.identity.error(
                             "invite failed: \(String(describing: error), privacy: .public)")
-                        return nil
+                        return .refused(SessionProblem.sentence(for: error))
                     }
                 },
-                preferences: sheetPreferences,
+                preferences: roomsListPreferences,
                 connections: session.connections(),
                 onCreateRoom: { name, access, people in
                     await createRoom(named: name, access: access, inviting: people)
@@ -486,17 +581,11 @@ struct AppRootView: View {
     ) async -> [ParticipantID: Invite] {
         guard !people.isEmpty else { return [:] }
 
-        let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
-
         var missed: [String] = []
         var issued: [ParticipantID: Invite] = [:]
         for person in people.sorted(by: { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }) {
             do {
-                guard let keys = session.publicKeys(of: person) else {
-                    throw AppSessionError.noIdentity
-                }
-                issued[person] = try await session.invite(
-                    joinerCode: try keys.encoded(), joining: room, mailbox: url)
+                issued[person] = try await session.invite(person, joining: room, through: mailbox)
             } catch {
                 Diagnostics.identity.error(
                     "invite failed while making a room: \(String(describing: error), privacy: .public)")

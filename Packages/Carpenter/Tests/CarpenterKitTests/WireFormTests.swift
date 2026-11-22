@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Wire form")
+@Suite("Wire form", .tags(.crypto))
 struct WireFormTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -64,11 +64,13 @@ struct WireFormTests {
         #expect(
             keys == [
                 "author", "device", "seq", "previous", "clock", "wallTime", "room", "payload",
-                "signature",
+                "roomLink", "signature",
             ])
 
         let payload = fields?["payload"] as? [String: Any]
         #expect(Set(payload?.keys ?? [:].keys) == ["epoch", "ciphertext"])
+        let link = fields?["roomLink"] as? [String: Any]
+        #expect(Set(link?.keys ?? [:].keys) == ["previous"])
     }
 
     @Test("An entry verifies and forwards without being readable")
@@ -91,7 +93,7 @@ struct WireFormTests {
         var alice = Author()
         let entry = try alice.post("private", at: start)
 
-        let rendered = Fold.render([entry], using: EpochChain(room: RoomID()))
+        let rendered = LogRenderer.render([entry], using: EpochChain(room: RoomID()))
 
         #expect(rendered.count == 1)
         #expect(rendered.first?.content == .sealed)

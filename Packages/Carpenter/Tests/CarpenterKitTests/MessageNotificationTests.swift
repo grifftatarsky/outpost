@@ -1,7 +1,7 @@
 import CarpenterKit
 import Testing
 
-@Suite("Message notification copy")
+@Suite("Message notification copy", .tags(.ui))
 struct MessageNotificationTests {
     private let room = RoomID()
 

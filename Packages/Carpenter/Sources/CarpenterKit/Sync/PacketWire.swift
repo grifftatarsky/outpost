@@ -1,6 +1,6 @@
 import Foundation
 
-public enum PacketField: Hashable, Sendable {
+public enum PacketField: Hashable, Sendable, Codable {
     case string(String)
     case data(Data)
     case dataList([Data])
@@ -43,11 +43,10 @@ public enum PacketWire {
             case .dataList(let tags)? = fields[wrapTags],
             case .dataList(let values)? = fields[wrapValues],
             case .data(let payload)? = fields[ciphertext],
-            tags.count == values.count
+            tags.count == values.count, Set(tags).count == tags.count
         else { return nil }
 
-        let wraps = Dictionary(
-            uniqueKeysWithValues: zip(tags.map(RecipientTag.init(rawValue:)), values))
+        let wraps = Dictionary(zip(tags.map(RecipientTag.init(rawValue:)), values)) { first, _ in first }
 
         var grants: [RecipientTag: [Data]] = [:]
         if case .dataList(let grantKeys)? = fields[grantTags],
@@ -59,8 +58,17 @@ public enum PacketWire {
             }
         }
 
-        return SyncPacket(
-            id: PacketID(rawValue: uuid), wraps: wraps, ciphertext: payload, grants: grants)
+        return SyncPacket(id: PacketID(rawValue: uuid), wraps: wraps, ciphertext: payload, grants: grants)
+    }
+
+    public static func receiptFields(_ receipt: SealedReceipt) -> [String: PacketField] {
+        [PairWire.receiptTag: .data(receipt.tag.rawValue), PairWire.receiptSealed: .data(receipt.sealed)]
+    }
+
+    public static func receipt(from fields: [String: PacketField]) -> SealedReceipt? {
+        guard case .data(let tag)? = fields[PairWire.receiptTag], case .data(let sealed)? = fields[PairWire.receiptSealed]
+        else { return nil }
+        return SealedReceipt(tag: RecipientTag(rawValue: tag), sealed: sealed)
     }
 
     public static func outstanding(in fields: [String: PacketField]) -> [Data] {

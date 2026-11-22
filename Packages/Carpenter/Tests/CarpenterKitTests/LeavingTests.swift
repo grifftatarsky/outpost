@@ -4,19 +4,17 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Leaving a room")
+@Suite("Leaving a room", .tags(.membership))
 struct LeavingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func room() throws -> (alice: Author, sam: Author, room: RoomID, entries: [Entry]) {
-        let chain = EpochChain.create(room: RoomID())
-        var alice = Author(chain: chain.chain)
-        let sam = Author(chain: chain.chain)
-        let room = chain.chain.room
+        var (alice, room, profile) = try Author.founding()
+        let sam = Author(chain: alice.chain)
 
         var entries: [Entry] = []
         entries.append(
-            try alice.append(try Payload.roomProfile(name: "Hangar 7"), at: start, room: room))
+            try alice.append(profile, at: start, room: room))
         let invite = try TestInvite.issue(
             joining: room, joinerKeys: sam.identity.publicKeys, by: alice.identity, at: start)
         entries.append(
@@ -32,7 +30,7 @@ struct LeavingTests {
 
     private func roster(_ entries: [Entry], _ chain: EpochChain, in room: RoomID) -> RoomRoster {
         var roster = RoomRoster(room: room)
-        for rendered in Fold.render(entries, using: chain) where rendered.room == room {
+        for rendered in LogRenderer.render(entries, using: chain) where rendered.room == room {
             guard let payload = entries.first(where: { $0.hash == rendered.id })?.opened(using: chain)
             else { continue }
             roster.apply(rendered, body: payload)
@@ -47,14 +45,14 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
-        let folded = roster(entries, alice.chain, in: room)
-        #expect(!folded.members.contains(sam2.identity.id), "they are still counted as a member")
-        #expect(folded.departure(of: sam2.identity.id) != nil, "the room does not know they left")
+        let current = roster(entries, alice.chain, in: room)
+        #expect(!current.members.contains(sam2.identity.id), "they are still counted as a member")
+        #expect(current.departure(of: sam2.identity.id) != nil, "the room does not know they left")
         #expect(
-            folded.removal(of: sam2.identity.id) == nil,
-            "leaving was folded as a removal, which invents a remover")
+            current.removal(of: sam2.identity.id) == nil,
+            "leaving was counted as a removal, which invents a remover")
     }
 
     @Test("Somebody who left may not write to the room")
@@ -62,34 +60,34 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         #expect(!roster(entries, alice.chain, in: room).mayWrite(sam2.identity.id))
     }
 
-    @Test("A departure from somebody who was never in the room folds to nothing")
+    @Test("A departure from somebody who was never in the room counts for nothing")
     func aStrangerCannotLeave() throws {
         let (alice, _, room, entries) = try room()
         var stranger = Author(chain: alice.chain)
         let theirs = try stranger.append(
-            try Payload.departure(), at: start.addingTimeInterval(10), room: room)
+            try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room)
 
-        let folded = roster(entries + [theirs], alice.chain, in: room)
-        #expect(folded.departures.isEmpty, "a room announced a stranger leaving it")
+        let current = roster(entries + [theirs], alice.chain, in: room)
+        #expect(current.departures.isEmpty, "a room announced a stranger leaving it")
     }
 
     @Test("Leaving twice is leaving once")
-    func leavingTwiceFoldsOnce() throws {
+    func leavingTwiceCountsOnce() throws {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(20), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(20), room: room))
 
-        let folded = roster(entries, alice.chain, in: room)
-        #expect(folded.departures.count == 1)
-        #expect(folded.departure(of: sam2.identity.id)?.at == start.addingTimeInterval(10))
+        let current = roster(entries, alice.chain, in: room)
+        #expect(current.departures.count == 1)
+        #expect(current.departure(of: sam2.identity.id)?.at == start.addingTimeInterval(10))
     }
 
     @Test("Being asked back, and confirming again, clears the departure")
@@ -97,7 +95,7 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         let again = try TestInvite.issue(
             joining: room, joinerKeys: sam2.identity.publicKeys, by: alice.identity,
@@ -115,12 +113,12 @@ struct LeavingTests {
                     try JoinConfirmedBody.signed(confirming: again, by: sam2.identity)),
                 at: start.addingTimeInterval(22), room: room))
 
-        let folded = roster(entries, alice.chain, in: room)
-        #expect(folded.members.contains(sam2.identity.id), "they were not let back in")
+        let current = roster(entries, alice.chain, in: room)
+        #expect(current.members.contains(sam2.identity.id), "they were not let back in")
         #expect(
-            folded.departure(of: sam2.identity.id) == nil,
+            current.departure(of: sam2.identity.id) == nil,
             "a member standing in the room is still being told they left it")
-        #expect(folded.mayWrite(sam2.identity.id))
+        #expect(current.mayWrite(sam2.identity.id))
     }
 
     @Test("Replaying the invitation somebody left on lets nobody back in")
@@ -129,7 +127,7 @@ struct LeavingTests {
         var sam2 = sam
         let spent = try #require(roster(entries, alice.chain, in: room).requests[sam2.identity.id])
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         entries.append(
             try alice.append(
@@ -140,11 +138,11 @@ struct LeavingTests {
                     try JoinConfirmedBody.signed(confirming: spent, by: sam2.identity)),
                 at: start.addingTimeInterval(31), room: room))
 
-        let folded = roster(entries, alice.chain, in: room)
+        let current = roster(entries, alice.chain, in: room)
         #expect(
-            !folded.members.contains(sam2.identity.id),
+            !current.members.contains(sam2.identity.id),
             "a departure was undone by replaying the invitation it ended")
-        #expect(folded.departure(of: sam2.identity.id) != nil)
+        #expect(current.departure(of: sam2.identity.id) != nil)
     }
 
     // MARK: What the room draws
@@ -163,7 +161,7 @@ struct LeavingTests {
         let before = try sam2.append(
             try Payload.post("before I left"), at: start.addingTimeInterval(10), room: room)
         let departure = try sam2.append(
-            try Payload.departure(), at: start.addingTimeInterval(20), room: room)
+            try Payload.departure(heads: [before.hash]), at: start.addingTimeInterval(20), room: room)
         let after = try sam2.append(
             try Payload.post("after I left"), clock: seeing(alice.feedKey, seq: 1),
             at: start.addingTimeInterval(30), room: room)
@@ -171,7 +169,8 @@ struct LeavingTests {
 
         let chain = alice.chain
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain),
+            chains: RoomChains(entries))
         let out = projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -188,11 +187,11 @@ struct LeavingTests {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
         let chain = alice.chain
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let notices = projected.transcript(
             in: room,
             opening: { rendered in entries.first { $0.hash == rendered.id }?.opened(using: chain) }
@@ -212,45 +211,45 @@ struct LeavingTests {
             "leaving was announced as a removal")
     }
 
-    // MARK: Who turns the key
+    // MARK: Who rotates the key
 
-    @Test("The founder turns the key when somebody leaves")
-    func theFounderTurnsIt() throws {
+    @Test("The founder rotates the key when somebody leaves")
+    func theFounderRotatesIt() throws {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
-        #expect(roster(entries, alice.chain, in: room).keyTurner == alice.identity.id)
+        #expect(roster(entries, alice.chain, in: room).keyRotator == alice.identity.id)
     }
 
-    @Test("When the founder leaves, the same remaining member turns it on every device")
-    func theLowestIdentityTurnsIt() throws {
+    @Test("When the founder leaves, the same remaining member rotates it on every device")
+    func theLowestIdentityRotatesIt() throws {
         var (alice, sam, room, entries) = try room()
-        var sam2 = sam
+        let sam2 = sam
         entries.append(
-            try alice.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try alice.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
 
-        let folded = roster(entries, alice.chain, in: room)
-        #expect(folded.keyTurner == sam2.identity.id, "the room left its key to nobody")
-        #expect(!folded.members.contains(alice.identity.id))
+        let current = roster(entries, alice.chain, in: room)
+        #expect(current.keyRotator == sam2.identity.id, "the room left its key to nobody")
+        #expect(!current.members.contains(alice.identity.id))
     }
 
-    @Test("An empty room has nobody to turn its key")
-    func anEmptyRoomTurnsNothing() throws {
+    @Test("An empty room has nobody to rotate its key")
+    func anEmptyRoomRotatesNothing() throws {
         var (alice, sam, room, entries) = try room()
         var sam2 = sam
         entries.append(
-            try sam2.append(try Payload.departure(), at: start.addingTimeInterval(10), room: room))
+            try sam2.append(try Payload.departure(heads: []), at: start.addingTimeInterval(10), room: room))
         entries.append(
-            try alice.append(try Payload.departure(), at: start.addingTimeInterval(20), room: room))
+            try alice.append(try Payload.departure(heads: []), at: start.addingTimeInterval(20), room: room))
 
-        #expect(roster(entries, alice.chain, in: room).keyTurner == nil)
+        #expect(roster(entries, alice.chain, in: room).keyRotator == nil)
     }
 }
 
 @MainActor
-@Suite("Leaving a room, from the app", .serialized)
+@Suite("Leaving a room, from the app", .serialized, .tags(.membership))
 struct SessionLeavingTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -264,8 +263,7 @@ struct SessionLeavingTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -305,7 +303,6 @@ struct SessionLeavingTests {
         let (alice, bob, room, mailbox) = try await joined()
         let them = try #require(bob.enrolment?.identity.id)
 
-        // No `chosenIn`: this member allowed them deliberately, not because of any room.
         try await alice.allowOutpost(them, everything: true)
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -390,8 +387,8 @@ struct SessionLeavingTests {
         }
     }
 
-    @Test("Somebody who remains turns the key, and the leaver does not")
-    func theRoomTurnsItsKey() async throws {
+    @Test("Somebody who remains rotates the key, and the leaver does not")
+    func theRoomRotatesItsKey() async throws {
         let (alice, bob, room, mailbox) = try await joined()
         let before = try #require(alice.epoch(of: room))
 
@@ -399,26 +396,26 @@ struct SessionLeavingTests {
         try await bob.sync(through: mailbox)
         #expect(
             bob.epoch(of: room) == before,
-            "the member who left turned the key, so they hold what comes next")
+            "the member who left rotated the key, so they hold what comes next")
 
         try await alice.sync(through: mailbox)
         #expect(
             try #require(alice.epoch(of: room)) > before,
-            "nobody turned the key after somebody left")
+            "nobody rotated the key after somebody left")
     }
 
-    @Test("The key turns once, however often the room syncs afterwards")
-    func theKeyTurnsOnce() async throws {
+    @Test("The key is rotated once, however often the room syncs afterwards")
+    func theKeyRotatesOnce() async throws {
         let (alice, bob, room, mailbox) = try await joined()
 
         try await bob.leave(room)
         try await bob.sync(through: mailbox)
         try await alice.sync(through: mailbox)
-        let turned = try #require(alice.epoch(of: room))
+        let rotated = try #require(alice.epoch(of: room))
 
         try await alice.sync(through: mailbox)
         try await alice.sync(through: mailbox)
 
-        #expect(alice.epoch(of: room) == turned, "the key turned again for a departure already answered")
+        #expect(alice.epoch(of: room) == rotated, "the key was rotated again for a departure already answered")
     }
 }

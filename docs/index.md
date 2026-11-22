@@ -40,7 +40,6 @@ is iPhone, and the [desktop roadmap](desktop-roadmap.md) is sequenced after the 
 
 - [Testing](testing.md) and [the simulator rig](simulator-rig.md): the suites, and how anything that
   crosses the network is proved.
-- [Design](design.md): where the design boards are and what they do not cover.
 - `CLAUDE.md` in the repository root: the rules the lint enforces and the traps this codebase has
   fallen into.
 

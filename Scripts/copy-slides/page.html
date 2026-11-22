@@ -1,0 +1,436 @@
+<meta charset="utf-8">
+<title>Screen Copy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f3f6f5; --surface: #ffffff; --sunk: #eaf0ee; --text: #16201d; --muted: #5a6a65; --faint: #8a9994;
+  --line: #d6dfdc; --accent: #2b7867; --accent-ink: #ffffff; --accent-soft: #dcefe9; --new: #9a5b00; --new-soft: #fbead0;
+  --done: #2b7867; --focus: #2b786755;
+  --sans: "IBM Plex Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e1312; --surface: #161e1c; --sunk: #1c2624; --text: #e3ebe8; --muted: #97a8a3; --faint: #6d7d78;
+    --line: #2a3633; --accent: #5cbca5; --accent-ink: #0b1210; --accent-soft: #1d3530; --new: #f0b45c; --new-soft: #3a2a12;
+    --done: #5cbca5; --focus: #5cbca555;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1312; --surface: #161e1c; --sunk: #1c2624; --text: #e3ebe8; --muted: #97a8a3; --faint: #6d7d78;
+  --line: #2a3633; --accent: #5cbca5; --accent-ink: #0b1210; --accent-soft: #1d3530; --new: #f0b45c; --new-soft: #3a2a12;
+  --done: #5cbca5; --focus: #5cbca555;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--sans); }
+button, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.top .count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.top .how { color: var(--muted); font-size: 13px; flex: 1 1 320px; }
+.top .save { font-size: 12px; color: var(--faint); font-family: var(--mono); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+.layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: calc(100% - 50px); }
+nav { border-right: 1px solid var(--line); background: var(--surface); padding: 12px 0 40px; overflow-y: auto; max-height: calc(100vh - 50px);
+  position: sticky; top: 50px; }
+nav h2 { margin: 16px 16px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+nav h2.newhead { color: var(--new); }
+nav a { display: flex; align-items: baseline; gap: 8px; padding: 4px 16px; color: var(--text); text-decoration: none; font-size: 14px; }
+nav a:hover { background: var(--sunk); }
+nav a.here { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+nav a .tick { width: 14px; flex: none; color: var(--done); font-size: 12px; }
+nav a .n { margin-left: auto; color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+nav a.isdone { color: var(--faint); }
+
+main { padding: 16px 24px 80px; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; }
+.head .crumb { color: var(--muted); font-size: 13px; }
+.head h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
+.head .spacer { flex: 1; }
+.head .pos { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.slide { display: grid; grid-template-columns: minmax(220px, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.shots { position: sticky; top: 66px; display: grid; gap: 12px; max-height: calc(100vh - 80px); overflow-y: auto; padding-bottom: 8px; }
+.shots figure { margin: 0; }
+.shots img { display: block; width: 100%; max-width: 100%; border-radius: 14px; border: 1px solid var(--line); background: var(--sunk); cursor: zoom-in; }
+.shots figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.noshot { border: 1px dashed var(--line); border-radius: 14px; padding: 28px 16px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface); }
+
+.areas { display: grid; gap: 16px; min-width: 0; }
+.area { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 16px; display: grid; gap: 12px; }
+.area.isnew { border-color: var(--new); box-shadow: inset 3px 0 0 var(--new); }
+.where { margin: 0; color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: baseline; }
+.chip { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 7px; border-radius: 99px; }
+.chip.new { background: var(--new-soft); color: var(--new); }
+.chip.reviewed { background: var(--sunk); color: var(--muted); }
+
+.render { background: var(--sunk); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.render.alertbox { justify-items: center; text-align: center; max-width: 320px; margin-inline: auto; width: 100%; border: 1px solid var(--line); background: var(--surface); }
+.r-ScreenTitle { font-size: 22px; font-weight: 700; letter-spacing: -0.015em; }
+.r-Title, .r-AlertTitle, .r-SheetTitle, .r-CardTitle, .r-EmptyTitle { font-size: 17px; font-weight: 600; }
+.r-Heading { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.r-Text, .r-Message, .r-CardText, .r-EmptyText, .r-AlertMessage, .r-SheetMessage, .r-ChoiceDetail { font-size: 15px; }
+.r-Footnote { font-size: 13px; color: var(--muted); }
+.r-Button { font-size: 15px; color: var(--accent); font-weight: 500; }
+.r-Row, .r-Switch, .r-Choice, .r-RowValue, .r-SwitchDetail { font-size: 15px; display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: var(--surface); border-radius: 8px; }
+.r-Switch::after { content: ""; margin-left: auto; flex: none; width: 34px; height: 20px; border-radius: 99px; background: var(--accent); opacity: .8; }
+.r-Choice::after { content: "✓"; margin-left: auto; color: var(--accent); font-weight: 700; }
+.r-Row::after { content: "›"; margin-left: auto; color: var(--faint); }
+.r-Placeholder { font-size: 15px; color: var(--faint); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--surface); }
+.r-VoiceOver { font-size: 13px; color: var(--muted); font-style: italic; }
+.r-VoiceOver::before { content: "VoiceOver: "; font-style: normal; font-weight: 600; }
+.render .gone { text-decoration: line-through; opacity: .5; }
+.render .changed { background: var(--accent-soft); border-radius: 4px; }
+.render .ph { font-family: var(--mono); font-size: .88em; color: var(--accent); }
+
+.inputs { display: grid; gap: 10px; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 12px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: baseline; }
+.field label .when { font-weight: 400; color: var(--faint); }
+.field label .reset { margin-left: auto; font-weight: 500; color: var(--accent); background: none; border: 0; padding: 0; font-size: 12px; }
+textarea { width: 100%; resize: vertical; min-height: 38px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); line-height: 1.4; }
+textarea:focus { outline: 2px solid var(--focus); border-color: var(--accent); }
+textarea.edited { border-color: var(--accent); background: var(--accent-soft); }
+textarea.note { font-size: 13px; min-height: 32px; }
+
+.foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; align-items: center; }
+.foot .spacer { flex: 1; }
+
+.zoom { position: fixed; inset: 0; background: #000c; display: grid; place-items: center; z-index: 20; padding: 16px; cursor: zoom-out; }
+.zoom img { max-height: 100%; max-width: 100%; border-radius: 16px; }
+.empty { color: var(--muted); padding: 40px 0; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  nav { position: static; max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  main { padding: 16px; }
+  .slide { grid-template-columns: 1fr; }
+  .shots { position: static; max-height: none; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+</style>
+
+<div class="top">
+  <h1>Screen Copy</h1>
+  <span class="count" id="count"></span>
+  <span class="how">Edit any box; empty a box to remove that text. Mark a screen done once you've read all of it, and tell me when a batch is finished.</span>
+  <span class="save" id="save"></span>
+  <button class="btn" id="copyall">Copy my edits</button>
+</div>
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="main"><p class="empty">Loading the screens…</p></main>
+</div>
+
+<script>
+const SECTIONS = [
+  ["getting-started", "Getting started"], ["inbox", "Inbox"], ["conversations", "Conversations"],
+  ["membership", "Rooms & membership"], ["outposts", "Outposts"], ["notifications", "Notifications"],
+  ["safety", "Safety & privacy"], ["you", "You & settings"], ["supporter", "Supporter"], ["system", "System, sync & errors"],
+];
+const CLASS = {
+  "Screen title": "ScreenTitle", "Title": "Title", "Alert title": "AlertTitle", "Sheet title": "SheetTitle",
+  "Card title": "CardTitle", "Empty-state title": "EmptyTitle", "Heading": "Heading", "Text": "Text", "Message": "Message",
+  "Card text": "CardText", "Empty-state text": "EmptyText", "Alert message": "AlertMessage", "Sheet message": "SheetMessage",
+  "Footnote": "Footnote", "Button": "Button", "Row": "Row", "Row value": "RowValue", "Switch": "Switch",
+  "Switch detail": "SwitchDetail", "Choice": "Choice", "Choice detail": "ChoiceDetail", "Placeholder": "Placeholder",
+  "VoiceOver": "VoiceOver",
+};
+
+let slides = [];
+let index = 0;
+const edits = new Map();
+const notes = new Map();
+const done = new Map();
+let db = null;
+const pending = new Map();
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const withPlaceholders = (t) => esc(t).replace(/\{[^}]+\}/g, (m) => `<span class="ph">${m}</span>`);
+
+function localGet(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
+function localSet(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+
+function currentText(area, s) {
+  const e = edits.get(`${area.id}-${s.i}`);
+  return e ? e.proposed : s.text;
+}
+
+function renderNav() {
+  const nav = $("#nav");
+  const here = slides[index]?.key;
+  const link = (s, i) => {
+    const d = done.get(s.key);
+    const n = s.areas.length;
+    return `<a href="#${s.key}" data-i="${i}" class="${s.key === here ? "here" : ""} ${d ? "isdone" : ""}">
+      <span class="tick">${d ? "✓" : ""}</span><span>${esc(s.name)}</span><span class="n">${n}</span></a>`;
+  };
+  let html = "";
+  const fresh = slides.map((s, i) => [s, i]).filter(([s]) => s.new);
+  if (fresh.length) {
+    html += `<h2 class="newhead">New or changed by Claude</h2>` + fresh.map(([s, i]) => link(s, i)).join("");
+  }
+  for (const [key, name] of SECTIONS) {
+    const inSection = slides.map((s, i) => [s, i]).filter(([s]) => s.area === key);
+    if (!inSection.length) continue;
+    html += `<h2>${esc(name)}</h2>` + inSection.map(([s, i]) => link(s, i)).join("");
+  }
+  const other = slides.map((s, i) => [s, i]).filter(([s]) => !SECTIONS.some(([k]) => k === s.area));
+  if (other.length) html += `<h2>Elsewhere</h2>` + other.map(([s, i]) => link(s, i)).join("");
+  nav.innerHTML = html;
+  const current = $("a.here", nav);
+  if (current) current.scrollIntoView({ block: "nearest" });
+}
+
+function renderCount() {
+  const total = slides.length;
+  const finished = slides.filter((s) => done.get(s.key)).length;
+  const changed = [...edits.values()].filter((e) => e.proposed !== e.original).length;
+  $("#count").textContent = `${finished} of ${total} screens done · ${changed} edit${changed === 1 ? "" : "s"}`;
+}
+
+function renderArea(area) {
+  const isAlert = area.strings.some((s) => s.el === "Alert title" || s.el === "Sheet title");
+  const lines = area.strings.map((s) => {
+    const text = currentText(area, s);
+    const cls = CLASS[s.el] || "Text";
+    const state = text.trim() === "" ? "gone" : text !== s.text ? "changed" : "";
+    const shown = text.trim() === "" ? s.text : text;
+    return `<div class="r-${cls}"><span class="${state}">${withPlaceholders(shown).replace(/\n/g, "<br>")}</span></div>`;
+  }).join("");
+  const fields = area.strings.map((s) => {
+    const key = `${area.id}-${s.i}`;
+    const text = currentText(area, s);
+    const edited = text !== s.text;
+    return `<div class="field">
+      <label for="f-${key}">${esc(s.el || "Text")}${s.when ? `<span class="when">only when ${esc(s.when)}</span>` : ""}
+        ${edited ? `<button class="reset" data-reset="${key}">Undo my change</button>` : ""}</label>
+      <textarea id="f-${key}" data-key="${key}" data-area="${area.id}" data-i="${s.i}" rows="${Math.min(8, Math.max(1, Math.ceil(text.length / 70)))}"
+        class="${edited ? "edited" : ""}">${esc(text)}</textarea></div>`;
+  }).join("");
+  const reviewed = /HUMAN REVIEWED/.test(area.status || "");
+  return `<section class="area ${area.new ? "isnew" : ""}" id="a-${area.id}">
+    <p class="where">${area.new ? `<span class="chip new">New or changed</span>` : ""}${reviewed ? `<span class="chip reviewed">You reviewed this</span>` : ""}<span>${esc(area.context)}</span></p>
+    <div class="render ${isAlert ? "alertbox" : ""}">${lines}</div>
+    <div class="inputs">${fields}
+      <textarea class="note" data-note="${area.id}" rows="1" placeholder="Note to Claude (optional)">${esc(notes.get(area.id)?.note || "")}</textarea>
+    </div>
+  </section>`;
+}
+
+function renderSlide() {
+  const s = slides[index];
+  const main = $("#main");
+  if (!s) { main.innerHTML = `<p class="empty">Nothing left to review.</p>`; return; }
+  const shots = (s.shots || []).length
+    ? s.shots.map((p) => `<figure><img src="${esc(p.src)}" alt="${esc(p.name)}" loading="lazy"><figcaption>${esc(p.name)}</figcaption></figure>`).join("")
+    : `<div class="noshot">${esc(s.noPicture || "No picture of this one yet.")}</div>`;
+  const section = SECTIONS.find(([k]) => k === s.area)?.[1] || "Elsewhere";
+  const isDone = !!done.get(s.key);
+  main.innerHTML = `
+    <div class="head">
+      <div><div class="crumb">${esc(section)}</div><h2>${esc(s.name)}</h2></div>
+      <span class="spacer"></span>
+      <span class="pos">${index + 1} of ${slides.length}</span>
+      <button class="btn" data-go="-1">← Previous</button>
+      <button class="btn" data-go="1">Next →</button>
+    </div>
+    <div class="slide">
+      <div class="shots">${shots}</div>
+      <div class="areas">${s.areas.map(renderArea).join("")}
+        <div class="foot">
+          <button class="btn ${isDone ? "on" : "primary"}" id="donebtn">${isDone ? "✓ Done with this screen" : "Done with this screen"}</button>
+          <span class="spacer"></span>
+          <button class="btn" data-go="1">Next screen →</button>
+        </div>
+      </div>
+    </div>`;
+  main.scrollTop = 0;
+  window.scrollTo({ top: 0 });
+}
+
+function render() { renderNav(); renderSlide(); renderCount(); }
+
+function go(i) {
+  if (!slides.length) return;
+  index = (i + slides.length) % slides.length;
+  try { history.replaceState(null, "", "#" + slides[index].key); } catch {}
+  localSet("screen-copy-at", slides[index].key);
+  render();
+}
+
+function flash(text) { $("#save").textContent = text; }
+
+async function persist(key) {
+  const e = edits.get(key);
+  if (!db) { localSet("screen-copy-edits", [...edits.values()]); flash("kept in this browser only"); return; }
+  try {
+    const ref = db.collection("edits").doc(key);
+    if (!e || e.proposed === e.original) await ref.delete(); else await ref.set(e);
+    flash("saved");
+  } catch (err) { flash("not saved: " + (err?.code || "error")); }
+}
+
+async function persistNote(areaId) {
+  const n = notes.get(areaId);
+  if (!db) { localSet("screen-copy-notes", [...notes.values()]); return; }
+  try {
+    const ref = db.collection("edits").doc(`${areaId}-note`);
+    if (!n || !n.note.trim()) await ref.delete(); else await ref.set(n);
+    flash("saved");
+  } catch (err) { flash("not saved: " + (err?.code || "error")); }
+}
+
+async function persistDone(key) {
+  const d = done.get(key);
+  if (!db) { localSet("screen-copy-done", [...done.keys()]); return; }
+  try {
+    const ref = db.collection("screens").doc(key);
+    const slide = slides.find((s) => s.key === key);
+    if (d) await ref.set({ done: true, name: slide?.name || key, chunks: (slide?.areas || []).map((a) => a.id), updatedAt: Date.now() }); else await ref.delete();
+    flash("saved");
+  } catch (err) { flash("not saved: " + (err?.code || "error")); }
+}
+
+function later(key, fn) {
+  clearTimeout(pending.get(key));
+  pending.set(key, setTimeout(() => { pending.delete(key); fn(); }, 600));
+  flash("saving…");
+}
+
+function areaOf(id) { for (const s of slides) for (const a of s.areas) if (a.id === id) return [s, a]; return []; }
+
+document.addEventListener("input", (ev) => {
+  const t = ev.target;
+  if (t.dataset.key) {
+    const [s, area] = areaOf(t.dataset.area);
+    const str = area.strings[Number(t.dataset.i)];
+    const key = t.dataset.key;
+    if (t.value === str.text) edits.delete(key);
+    else edits.set(key, { chunk: area.id, index: str.i, file: area.file, line: str.line, original: str.text, proposed: t.value, updatedAt: Date.now() });
+    t.classList.toggle("edited", t.value !== str.text);
+    const box = t.closest(".area");
+    const fresh = document.createElement("div");
+    fresh.innerHTML = renderArea(area);
+    const render = $(".render", fresh);
+    $(".render", box).replaceWith(render);
+    renderCount();
+    later(key, () => persist(key));
+  } else if (t.dataset.note) {
+    const id = t.dataset.note;
+    const [s, area] = areaOf(id);
+    notes.set(id, { chunk: id, note: t.value, file: area?.file, updatedAt: Date.now() });
+    later("note-" + id, () => persistNote(id));
+  }
+});
+
+document.addEventListener("click", async (ev) => {
+  const t = ev.target.closest("button, a, img");
+  if (!t) return;
+  if (t.dataset.go) { go(index + Number(t.dataset.go)); return; }
+  if (t.dataset.i && t.tagName === "A") { ev.preventDefault(); go(Number(t.dataset.i)); return; }
+  if (t.dataset.reset) {
+    const key = t.dataset.reset;
+    edits.delete(key);
+    renderSlide(); renderCount();
+    persist(key);
+    return;
+  }
+  if (t.id === "donebtn") {
+    const key = slides[index].key;
+    if (done.get(key)) done.delete(key); else done.set(key, true);
+    renderNav(); renderCount();
+    t.classList.toggle("on", !!done.get(key)); t.classList.toggle("primary", !done.get(key));
+    t.textContent = done.get(key) ? "✓ Done with this screen" : "Done with this screen";
+    persistDone(key);
+    return;
+  }
+  if (t.id === "copyall") {
+    const out = JSON.stringify({ edits: [...edits.values()], notes: [...notes.values()].filter((n) => n.note.trim()), done: [...done.keys()] }, null, 1);
+    try { await navigator.clipboard.writeText(out); flash("copied"); }
+    catch {
+      const box = document.createElement("textarea"); box.value = out; box.style.minHeight = "200px";
+      $("#main").prepend(box); box.select(); flash("select and copy the box above");
+    }
+    return;
+  }
+  if (t.tagName === "IMG" && t.closest(".shots")) {
+    const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<img src="${t.src}" alt="">`;
+    z.addEventListener("click", () => z.remove()); document.body.append(z);
+  }
+});
+
+window.addEventListener("hashchange", () => {
+  const at = slides.findIndex((s) => s.key === location.hash.slice(1));
+  if (at >= 0 && at !== index) go(at);
+});
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.target.closest("textarea")) return;
+  if (ev.key === "ArrowRight") go(index + 1);
+  if (ev.key === "ArrowLeft") go(index - 1);
+  if (ev.key === "Escape") document.querySelector(".zoom")?.remove();
+});
+
+function subscribe() {
+  db.collection("edits").onSnapshot((snap) => {
+    let touched = false;
+    for (const ch of snap.docChanges()) {
+      const id = ch.doc.id; const data = ch.doc.data();
+      if (id.endsWith("-note")) {
+        const areaId = id.slice(0, -5);
+        if (ch.type === "removed") notes.delete(areaId); else notes.set(areaId, { ...data });
+      } else if (!pending.has(id)) {
+        if (ch.type === "removed") edits.delete(id); else edits.set(id, { ...data });
+      }
+      touched = true;
+    }
+    if (touched && !document.activeElement?.closest("textarea")) renderSlide();
+    renderCount();
+  }, (err) => flash("could not load saved edits: " + (err?.code || "error")));
+  db.collection("screens").onSnapshot((snap) => {
+    for (const ch of snap.docChanges()) {
+      if (ch.type === "removed") done.delete(ch.doc.id); else done.set(ch.doc.id, true);
+    }
+    renderNav(); renderCount();
+    const btn = $("#donebtn");
+    if (btn && slides[index]) {
+      const d = !!done.get(slides[index].key);
+      btn.classList.toggle("on", d); btn.classList.toggle("primary", !d);
+      btn.textContent = d ? "✓ Done with this screen" : "Done with this screen";
+    }
+  });
+}
+
+(async () => {
+  try {
+    slides = await (await fetch("slides.json")).json();
+  } catch {
+    $("#main").innerHTML = `<p class="empty">The screen list did not load.</p>`;
+    return;
+  }
+  for (const e of localGet("screen-copy-edits", [])) edits.set(`${e.chunk}-${e.index}`, e);
+  for (const n of localGet("screen-copy-notes", [])) notes.set(n.chunk, n);
+  for (const k of localGet("screen-copy-done", [])) done.set(k, true);
+  const wanted = (location.hash || "").slice(1) || localGet("screen-copy-at", "");
+  const at = slides.findIndex((s) => s.key === wanted);
+  index = at >= 0 ? at : 0;
+  render();
+  try {
+    db = await window.claude?.use?.("db");
+  } catch { db = null; }
+  if (db) { flash(""); subscribe(); } else flash("kept in this browser only");
+})();
+</script>

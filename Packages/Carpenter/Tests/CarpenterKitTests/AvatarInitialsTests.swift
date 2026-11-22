@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("Avatar initials")
+@Suite("Avatar initials", .tags(.ui))
 struct AvatarInitialsTests {
     @Test(
         "A multi-word name reduces to the first letter of its first two significant words",

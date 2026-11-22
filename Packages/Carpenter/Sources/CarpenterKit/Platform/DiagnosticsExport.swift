@@ -10,6 +10,7 @@ public enum DiagnosticsExport {
     public static func write(
         to url: URL, window: TimeInterval = 30 * 60, throttled: Bool = true
     ) {
+        #if DEBUG
         let now = Date()
         let skip = !throttled ? false : lastWritten.withLock { last -> Bool in
             guard now.timeIntervalSince(last) < minimumInterval else {
@@ -31,6 +32,7 @@ public enum DiagnosticsExport {
         }
         let text = lines.joined(separator: "\n") + "\n"
         try? text.write(to: url, atomically: true, encoding: .utf8)
+        #endif
     }
 
     private static let minimumInterval: TimeInterval = 30
@@ -43,6 +45,7 @@ public enum DiagnosticsExport {
     }
 
     public static func note(_ line: String) {
+        #if DEBUG
         guard let url = groupURL else { return }
         let stamped = "\(Date().ISO8601Format()) \(line)\n"
         guard let data = stamped.data(using: .utf8) else { return }
@@ -54,6 +57,7 @@ public enum DiagnosticsExport {
         } else {
             try? data.write(to: url)
         }
+        #endif
     }
 
     public static var groupURL: URL? {

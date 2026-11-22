@@ -5,11 +5,11 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("A packet whose address has rotated", .serialized)
+@Suite("A packet whose address has rotated", .serialized, .tags(.sync))
 @MainActor
 struct StrandedPacketTests {
     private func scratch() -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-stranded-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-stranded-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }
@@ -39,7 +39,7 @@ struct StrandedPacketTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
 
         try await alice.sync(through: mailbox)
@@ -71,7 +71,7 @@ struct StrandedPacketTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.sync(through: mailbox)
@@ -100,7 +100,7 @@ struct StrandedPacketTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.sync(through: mailbox)
@@ -108,13 +108,17 @@ struct StrandedPacketTests {
         try await bob.sync(through: mailbox)
 
         try await alice.send("acknowledge me", to: room)
-        try await alice.sync(through: mailbox)
+        let sent = try await alice.sync(through: mailbox)
+        let packet = try #require(sent.written.last?.packet)
+        #expect(await mailbox.everySentPacket[packet] != nil, "precondition: the packet is waiting")
 
         clock.advance(by: SyncSession.tagWindow * 2)
         try await bob.sync(through: mailbox)
+        #expect(await mailbox.everySentPacket[packet]?.receipts.isEmpty == false, "Bob read it and signed for nothing")
+        try await alice.sync(through: mailbox)
 
         #expect(
-            try await mailbox.pendingRecipients().isEmpty,
+            await mailbox.everySentPacket[packet] == nil,
             "the packet was read but left outstanding, so it will never be deleted")
     }
 }

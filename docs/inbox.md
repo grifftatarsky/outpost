@@ -22,6 +22,74 @@ is in `CLAUDE.md` under the traps, and what happened is in git. Checked against 
 
 <!-- COPY END 718b2f42 -->
 
+<!-- COPY BEGIN 6d1038e9 [NEEDS HUMAN REVIEW] -->
+
+## Where the app was changed away from a board without Griff seeing it
+
+**The list row names no sender.** Ruled on 2026-09-13: the board is overruled and Messages' row
+stands. See [Decisions](decisions.md#the-rooms-list-row-is-messages-and-board-53-is-overruled) for
+what that costs.
+
+**Search became a tab.** The first attempt was an inline field with
+`.searchToolbarBehavior(.minimize)`, chosen for the collapsed glass magnifier. On a 402pt phone that
+crams the clear and the dismiss into one capsule while a 440pt phone separates them — the same build,
+two devices. Apple's guidance turns on the scope of the search: a search covering a whole app is a
+tab, and the inline field under a title is for a search scoped to one section. Griff caught the first
+answer and quoted the page.
+
+**The notification defaults were Claude's and are now ruled.** New posts default to *By Outpost* —
+only the walls a member has turned on. Replies on posts you commented on and comments on your posts
+are on; replies on posts you *reacted to* and likes are off, and likes are the only kind that arrives
+quietly. Confirmed 2026-09-13: the two that are on are somebody answering you, and the two that are
+off are a tap and a thread you touched once.
+
+<!-- COPY END 6d1038e9 -->
+
+<!-- COPY BEGIN d254fcc5 [NEEDS HUMAN REVIEW] -->
+
+## What the set does not settle, and neither does the app
+
+**Nothing has been checked on a device at a real Dynamic Type size.** The boards are HTML
+approximations drawn at 1:1, and the app's own accessibility pass covers targets, Dynamic Type and
+contrast, and on 2026-09-16 every screen was walked at the largest type size on a simulator. A
+phone at that size has not been looked at, and the VoiceOver walk waits for TestFlight on Griff's
+ruling of 2026-09-17. A photo's reactions pill is not named in that pass and may not have been
+looked at the largest size.
+
+**Two platforms are undrawn, and the claim has changed rather than the app.** Ruled 2026-09-13: the
+product is an iPhone app until TestFlight. The Mac window keeps working because Griff uses it; it is
+not offered or described. Every Mac and iPad decision in it is still Claude's.
+
+**Light mode is not drawn.** Two boards define the values and four use them. Every color the app
+picks for itself was measured in both appearances on 2026-09-17, so light mode is measured rather than
+inferred, but it was never designed screen by screen.
+
+**Transitions are not drawn.** Sheets, tab switches and navigation use the system's motion. The one
+motion the app adds, the accent retint, was recorded frame by frame and kept on Griff's ruling of
+2026-09-16.
+
+<!-- COPY END d254fcc5 -->
+
+<!-- COPY BEGIN 182fa583 [NEEDS HUMAN REVIEW] -->
+
+## Things tried and abandoned, so they are not tried again
+
+**Swipe-to-remove, twice.** A swipe action is as wide as its content and the row slides by that much,
+so on a person row whose name is one short word the swipe pushed the row off its own leading edge. It
+left a member being asked to remove somebody whose name and face had scrolled out of view. A context
+menu replaced it and is better: it draws the row as its own preview, so the person stays on screen
+under the destructive verb.
+
+**`.submitLabel(.send)` on the composer.** It renames the return key, takes the newline away, and
+still does not submit — measured, then reverted. The arrow in the field sends; ↵ writes a second
+line.
+
+**The search glyph taking the app's accent.** `.tint()` does not reach `searchable()`, and
+`UISearchBar.appearance().tintColor` does not reach iOS 26's collapsed search button. Both were tried
+on device. The toolbar's menu glyph is drawn in the primary ink to match it instead.
+
+<!-- COPY END 182fa583 -->
+
 <!-- COPY BEGIN 9d913254 [NEEDS HUMAN REVIEW] -->
 
 ## Privacy, on the wire
@@ -52,8 +120,8 @@ from a real loss. `IntegrityReport` counts it as *Carried for other people* on t
 Not read on the rig yet.
 
 **A clip plays from a readable file for the length of a launch.** `AVPlayer` reads files, so an opened
-clip sits in the temporary directory, under complete file protection, until the next launch clears
-it. A resource loader that decrypts ranges on demand would end it.
+clip sits in the scratch folder, under complete file protection, until the next launch or an erase
+clears it. A resource loader that decrypts ranges on demand would end it.
 
 **A stolen unlocked phone gives up everything that phone holds.** The in-app lock was canceled because
 iOS locks apps behind Face ID better than the app could. What is still missing is a sentence where the
@@ -69,9 +137,17 @@ app talks about what somebody with the phone can see, saying that iOS does the l
 **A grant can reach somebody just removed.** If a removal entry fails to verify in a round (a device
 certificate not yet arrived), that device holds the new epoch with a stale roster, and the next
 outbound round could hand the removed member the new key. `AppSession.withholdsKeys` holds a room's
-keys for one round when the last round refused something and somebody has been removed from that room.
-The rule is tested; the round is not, because building a real mid-round refusal on top of a real
-removal needs a third participant.
+keys for the round that first refused something, when somebody has been removed from that room, and
+the next round passes them on whether or not the refusal has cleared. `ARefusedPacketHoldsKeysOnceTests`
+holds the round. A removal that stays refused past that one round does not hold keys any longer,
+because a hold that lasts as long as a refusal is one any contact can leave in place for good.
+
+**A reader whose access was stopped can still comment.** Stopping somebody rotates the Outpost's key,
+but they keep the older keys, and a comment written under one still opens for the owner and every
+reader, so it is drawn under the posts they already knew. Only what the owner writes decides access;
+nothing checks who wrote a comment. A time cannot settle it, because the author chooses their own
+dates. Reasoned from the code on 2026-09-26, not tested; the same shape as a removed member writing
+into a room, which `RoomRoster` now ignores.
 
 **Two concurrent advances could mint rival secrets for the same epoch.** *An audit's claim, not
 verified.* One advancer is guaranteed per membership change, not per epoch number; two members removing
@@ -89,8 +165,9 @@ A third Apple Account without Advanced Data Protection would settle it over Clou
 **`requests` holds one invitation per person, so any member can decide which offer is on the table.**
 Re-appending an earlier invitation's bytes makes it current again. Keying confirmations and admissions
 by invitation guarantees an answer matches the offer it answers; it does not stop the offer being
-swapped. The `.joinRequest` fold checks neither the signature nor the inviter's membership; both are
-checked at write time only.
+swapped. Only the inviter can swap it now, because a request counts only when its inviter writes it as a
+member, and since 2026-10-31 only when its signature checks out and the person it names is the owner of
+the keys it carries (`NobodyIsListedWithoutSigningTests`).
 
 <!-- COPY END e80f8f25 -->
 
@@ -175,7 +252,7 @@ longer; the fix is to wait on the write.
 **The UI tests run only by hand.** `CarpenterUITests` holds the accessibility audits and the rig steps,
 which need booted simulators and minutes each. CI does not run them.
 
-**Nothing measures cost outside the fold and screen reads.** `CausalOrder` on a long log, a round as the
+**Nothing measures cost outside building the projection and screen reads.** `CausalOrder` on a long log, a round as the
 outbox grows, and laying out a long transcript are unmeasured.
 
 <!-- COPY END 88dfd060 -->
@@ -192,20 +269,61 @@ the room before ringing.
 **A fetch reads whole zones.** `everything(in:of:)` pages a zone's change feed from the start every
 round, with no change token. Correct, since a packet must be re-readable until acknowledged, but the
 cost grows with what is in flight rather than what is new. Logs have shown 89 records scanned to find
-one.
+one. The scan's fields include each packet's ciphertext, so every packet in a peer's outbox comes down
+whole, including those addressed to somebody else: a member whose phone is off for a week leaves a
+growing pile in every outbox, and everybody else downloads it every round. A routing scan (packet ID
+and `outstanding` only) followed by a fetch by ID of the packets addressed to us would bring down only
+ours. Reasoned from the code on 2026-09-26, not measured.
+
+**A photo is fetched whole, however big it is.** The forty-megabyte sealing ceiling is the sender's;
+a recipient downloads whatever asset a media entry names, automatically, and reads it into memory in
+one piece before anything can weigh it. A modified client could name a very large one and every
+recipient would fetch and hold it. CloudKit does not say how big an asset is before it is downloaded,
+so a limit needs the size declared inside the sealed entry and a fetch that can stop early. Reasoned
+from the code on 2026-09-26, not measured.
+
+**Coming back to the app syncs twice.** `AppRootView` answers both `didBecomeActiveNotification` and
+`scenePhase` becoming `.active`, and on iPhone both fire together — returning to the app, closing
+Control Center, dismissing a system alert. Each runs `recheckForSyncedIdentity()` and `syncNow()`, so
+the second finds a round in flight and queues another: two full rounds for every return. Keeping the
+notification for the Mac only would leave one. Read from the code on 2026-09-26, not observed on a
+device.
 
 **Nothing cleans up bells.** One record per channel, overwritten, never deleted, because a delete would
 ring the bell.
 
-**The sibling feed is one record that only grows.** `CloudKitEntrySync` writes a device's whole sealed
-feed, every entry, certificate and room key it holds and the member's preferences, into one field and
-republishes it after every write. CloudKit accepted 16MB in a field, so it is not a wall yet, but a
-member's hundredth message republishes the first ninety-nine to every device. Not measured at any real
-size.
-
 <!-- COPY END b81482a3 -->
 
+<!-- COPY BEGIN 9a32fa33 [NEEDS HUMAN REVIEW] -->
+
+**A send rebuilds the whole projection.** Measured 2026-09-26 in a release build at 2,010 entries:
+8.3ms a send, 5.7ms of it the rebuild, and it grows with the log. A member's own new entry is causally
+last, so it could be added to the existing projection instead of rebuilding it; that is the next
+step if sends feel slow, and it wants a test that compares the incremental result with a full rebuild
+after random changes. Sealing the sibling feed after a send (42ms at that size) no longer happens on the
+main actor. The same day, at larger sizes on a Mac in a release build: at 5,000 entries a send took
+22ms (15ms of it the rebuild) and opening the app 234ms; at 20,000 opening the app took 971ms, and
+after room summaries were read from the projection's index and the rebuild stopped copying each entry
+three times, a send took 86ms (64ms the rebuild, 25ms of that the causal sort) and drawing a
+2,000-message room 4.8ms. A phone is slower; not measured on one.
+
+**What a session remembers costs about half the log again.** Since 2026-09-26 the session keeps every
+entry it has opened (the plaintext, and what it draws) so a rebuild does not decrypt and decode the
+log again. Measured at 2,010 short messages: the plaintexts about 200KB beside an 820KB log, and the
+drawn entries about as much again. The notification extension loads the whole log under a memory
+limit of about 24MB and reloads up to six times a push, so it gains the most time and has the least
+room. Its footprint has never been measured.
+
+**A second device learns what the first collected at least two minutes late.** A packet is addressed
+to the member, not to a device, so whichever of a member's devices fetches it first acknowledges it
+for all of them. The other catches up through history repair, which waits `holeSettlingDelay` (two
+minutes) before asking. Not a loss, but a delay no simulator can show — same-account multi-device is
+hardware-only.
+
+<!-- COPY END 9a32fa33 -->
+
 <!-- COPY BEGIN 08ff1025 [NEEDS HUMAN REVIEW] -->
+
 
 ## Unwired or unwatched
 
@@ -242,7 +360,7 @@ representable or a hand-drawn overlay, which native-first argues against.
 that finishes after a menu closed does not present it, so set the item in the menu action and let the
 sheet fetch what it needs.
 
-**A sheet handed a snapshot of `session.rooms` shows what had loaded.** On a cold start a room's name
+**A sheet handed a snapshot of `session.rooms` shows what had loaded.** On a clean restart a room's name
 arrives over a second or two, so a link tapped during launch can open a picker on an incomplete list.
 `AddSomeoneView` re-reads on every draw; other sheets that capture a name at presentation have not been
 checked.
@@ -253,8 +371,10 @@ the picker looking for the new room. It should make the room and issue the invit
 **A picture chosen for an Outpost stays on one device**, like a photo chosen for somebody in People.
 
 **A keychain error a member reads says nothing.** When an account went *Temporarily Unavailable* on the
-rig, the app showed "CarpenterKeychain.KeychainError error 1." and loaded fine next launch. Two
-questions: what it should say, and whether one failed keychain read should stop a launch at all.
+rig, the app showed "CarpenterKeychain.KeychainError error 1." and loaded fine next launch. The screen
+has a *Try again* now (2026-11-05), and a full disk has its own sentence; a keychain error still
+shows the raw words. Two questions: what it should say, and whether one failed keychain read should
+stop a launch at all.
 
 **Some readouts hand-roll what a `List` would give them.** `JoinRequestsView` and `IntegrityView`
 would become `Form`s cheaply. The accent and icon pickers are legitimately custom grids.
@@ -264,7 +384,7 @@ view. Putting the empty state in an overlay above the list was tried on 2026-09-
 nothing, because the overlay covers the list's refresh indicator; it was reverted. The foreground loop
 syncs every 20 seconds regardless. Worth a look with the HIG open.
 
-**"13 of 16" sits below the fold on the longest check-up questions.** The position is in the section
+**"13 of 16" is off screen on the longest check-up questions.** The position is in the section
 footer, under the Next button's inset until you scroll.
 
 **The Focus permission prompt holds the check-up's finish.** Choosing to share Do Not Disturb asks the
@@ -272,6 +392,14 @@ system for Focus access, and nothing is saved until that alert is answered, so a
 stuck behind a sheet.
 
 <!-- COPY END 53ec92bc -->
+
+<!-- COPY BEGIN e43ece3d [NEEDS HUMAN REVIEW] -->
+
+**The reaction bar stays on screen after Details opens.** Holding a message shows the row of
+reactions above its menu; choosing Details pushes the detail page and the row is still drawn over it.
+Seen on bullet 2026-11-05 at 19:20, once. Not chased.
+
+<!-- COPY END e43ece3d -->
 
 <!-- COPY BEGIN 6444fc57 [NEEDS HUMAN REVIEW] -->
 
@@ -347,19 +475,63 @@ pass across the tree, with `cross-fade only` added to the cross-fades.
 
 <!-- COPY BEGIN 16d05a2e [NEEDS HUMAN REVIEW] -->
 
-### The conversation screen still costs ~3,500µs a read
+### What the conversation screen costs a read
 
-`deliveryMarks(in:of:)` is most of it:
-`peers()` about 800µs, `unsentEntries()` about 700µs. Neither can be cached on a fold alone, because
-blocking and the synced frontier change without one, and a stale one looks like a message that did not
-send. `ProjectionCostTests` pins both reads at 5,000µs so they cannot get worse.
+Measured 2026-09-26 in a release build: a 200-message room reads in about 420µs beside a 2,010-entry
+log. `deliveryMarks(in:of:)` no longer builds `peers()` (it asks `hasSomebodyToReach`, which stops at
+the first) or walks `unsentEntries()` (it asks the room, through `Projection.unsent`). Neither answer
+is cached with the projection, because blocking and the synced frontier change without the log changing, and a stale one looks
+like a message that did not send. `ProjectionCostTests` pins `messages(in:)` and `transcript(in:)`
+at 5,000µs.
 
-**Doc comments survive in the source.** Despite the rule that the repository has no comments, 152
-lines of `///` remain, for example in `ShortAuthenticationString.swift` and
-`MembershipAttestation.swift`, plus a few `//` lines such as one in `RootView+Phone.swift`. The lint
-does not catch `///`. Found 2026-09-17 during the documentation pass.
+**The lint does not catch `///`.** The 152 lines of doc comments found on 2026-09-17 were removed
+on 2026-09-26 and none remain, but nothing stops one coming back.
 
 **`AppIcon.appiconset` carries Mac sizes of an old drawing.** The Mac is not offered.
 
 <!-- COPY END 16d05a2e -->
 
+
+<!-- COPY BEGIN 12295e6f [NEEDS HUMAN REVIEW] -->
+
+**Six tests hold a wall-clock bound and fail when the machine is busy.** `WhatIsUnsentTests` failed
+once under a full run on 2026-09-28, and on 2026-11-04, at a load average near 1,000, it failed with
+two `ProjectionCostTests`, `WhatALaunchWritesTests`, and two device-sync tests whose five-second
+deadline ran out. All six passed ten runs out of ten once the load fell. The device-sync deadlines are
+a minute now. The fifteen tests that time themselves are tagged `timing` and still hold their bounds
+in wall-clock time; a timing bound measured while 2,000 other tests run is a guess about the
+machine's load. See [how the suite holds up](testing.md#how-the-package-suite-holds-up-measured-2026-11-04).
+
+<!-- COPY END 12295e6f -->
+
+<!-- COPY BEGIN 8599b81d [NEEDS HUMAN REVIEW] -->
+
+## Per-pair spaces, noticed 2026-09-28
+
+- **A change of devices rings every contact.** A round that tells contacts a device was added or
+  removed rings all of them (`ringing: announcing ? peers()` in `AppSession+Sync.swift`), and the ring
+  is a visible notification. What the notification extension draws when there is no message behind
+  it has not been looked at on a phone.
+- **Empty spaces for codes from earlier builds stay in iCloud.** Until 2026-09-28 every launch before
+  a round finished made one more. Nothing removes them except erasing every space on a reset.
+- **A signed link is not tied to the code or invite it came in.** It could be copied into another;
+  with an honest signer the account is still the signer's own, so the most it does is stall a join.
+- **One space per contact, however many callers ask at once, is only checked in the fake.** The
+  CloudKit side holds the work in flight (`PairIndex.zone(for:making:)`), and nothing in the suite
+  can reach it.
+
+<!-- COPY END 8599b81d -->
+
+<!-- COPY BEGIN 4165cfd0 [NEEDS HUMAN REVIEW] -->
+
+## The keychain while the phone is locked, noticed 2026-09-28
+
+- **The shared keychain group is found once per process, with a probe that needs the phone
+  unlocked.** `SharedKeychain.group` adds and deletes a probe item with no accessibility given, which
+  Apple defaults to `WhenUnlocked`, and keeps the answer in a `static let`. A process that starts
+  while the phone is locked, a push waking the app, gets `nil` for the rest of its life and files
+  every key it writes in the app's own group, where the notification extension cannot read it. The
+  next process that reads the key moves it back, so nothing is lost, but banners can be plain until
+  then. Not measured.
+
+<!-- COPY END 4165cfd0 -->

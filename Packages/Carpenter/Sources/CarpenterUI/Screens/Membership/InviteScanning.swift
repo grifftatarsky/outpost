@@ -1,4 +1,5 @@
 import SwiftUI
+import Vision
 
 #if os(iOS)
     import AVFoundation
@@ -92,7 +93,6 @@ enum ScanAttempt: Equatable {
 
     struct CameraRefusedNote: View {
         @Environment(\.palette) private var palette
-        @Environment(\.openURL) private var openURL
 
         let access: CameraAccess
 
@@ -113,14 +113,10 @@ enum ScanAttempt: Equatable {
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
-                    if let settings = URL(string: UIApplication.openSettingsURLString) {
-                        Button { openURL(settings) } label: {
-                            Text("Open Settings", bundle: .module)
-                                .font(CarpenterFont.footnote.weight(.semibold))
-                        }
+                    OpenSettingsButton()
+                        .font(CarpenterFont.footnote.weight(.semibold))
                         .tint(palette.accentColor)
                         .tappable()
-                    }
                 // COPY END 0e0bd3cd
                 }
             case .granted, .undecided:
@@ -225,11 +221,11 @@ enum ScanAttempt: Equatable {
                 // COPY BEGIN b3bbfd73 [NEEDS HUMAN REVIEW]
                 AdaptiveStack(spacing: 10) {
                     Button { wantsToScan = true } label: {
-                        Text("Turn on scanning", bundle: .module)
+                        Text("Turn on scanning", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                     Button { scanning = .off } label: {
-                        Text("Not now", bundle: .module)
+                        Text("Not now", bundle: .module).primaryAction()
                     }
                     .quietActionButton()
                 }

@@ -6,10 +6,21 @@ import SwiftUI
 
 extension YouView {
     var masthead: some View {
-        AnimatedMark(size: 68)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, -AnimatedMark.touchInset)
-            .padding(.bottom, 4)
+        HStack(alignment: .center, spacing: 0) {
+            AnimatedMark(size: 68, onTap: { markBubbles.markTapped() })
+                .padding(.leading, -AnimatedMark.touchInset)
+            if let bubble = markBubbles.current {
+                SpeechBubble(
+                    text: bubble.text,
+                    onClose: bubble.closable ? { markBubbles.close(bubble.id) } : nil
+                )
+                .offset(y: -18)
+                .transition(.opacity)  // cross-fade only
+            }
+            Spacer(minLength: 0)
+        }
+        .animation(.default, value: markBubbles.current?.id)  // cross-fade only
+        .padding(.bottom, 4)
     }
 
     var identityRow: some View {
@@ -154,6 +165,32 @@ extension YouView {
         .groupedRowSurface()
     }
 
+    private func appLockRow(_ appLock: AppLockController) -> some View {
+        // COPY BEGIN 9c39d599 [NEEDS HUMAN REVIEW]
+        NavigationLink {
+            AppLockSettingsView(controller: appLock)
+        } label: {
+            SettingsRow(
+                icon: "lock.fill", tone: .device,
+                title: Text("App lock", bundle: .module),
+                detail: appLock.lock == nil ? Text("Off", bundle: .module) : Text("On", bundle: .module))
+        }
+        // COPY END 9c39d599
+    }
+
+    private func deviceSecurityRow(_ setting: DeviceSecuritySetting) -> some View {
+        // COPY BEGIN 52316da3 [NEEDS HUMAN REVIEW]
+        NavigationLink {
+            DeviceSecuritySettingsView(setting: setting)
+        } label: {
+            SettingsRow(
+                icon: "lock.shield.fill", tone: .device,
+                title: Text("Advanced On Device Security", bundle: .module),
+                detail: setting.isOn ? Text("On", bundle: .module) : Text("Off", bundle: .module))
+        }
+        // COPY END 52316da3
+    }
+
     var thisDevice: some View {
         Section {
             // COPY BEGIN 07edb102 [NEEDS HUMAN REVIEW]
@@ -164,23 +201,25 @@ extension YouView {
                     Text(verbatim: ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file))
                 })
             if let recoveryKey {
-                NavigationLink {
-                    RecoveryKeyView(
-                        text: recoveryKey.text(), fingerprint: recoveryKey.fingerprint,
-                        isFirstTime: false, onSaved: recoveryKey.onSaved)
-                } label: {
-                    SettingsRow(
-                        icon: recoveryKey.savedAt == nil
-                            ? "exclamationmark.triangle.fill" : "key.horizontal.fill",
-                        tone: recoveryKey.savedAt == nil ? .destructive : .device,
-                        title: Text("Recovery key", bundle: .module),
-                        detail: recoveryKey.savedAt.map {
-                            Text(
-                                "Last saved \($0.formatted(date: .abbreviated, time: .omitted))",
-                                bundle: .module)
-                        } ?? Text("Never saved", bundle: .module))
-                }
+                SettingsRow(
+                    icon: recoveryKey.savedAt == nil
+                        ? "exclamationmark.triangle.fill" : "key.horizontal.fill",
+                    tone: recoveryKey.savedAt == nil ? .destructive : .device,
+                    title: Text("Recovery key", bundle: .module),
+                    detail: recoveryKey.savedAt.map {
+                        Text(
+                            "Saved \($0.formatted(date: .abbreviated, time: .omitted))",
+                            bundle: .module)
+                    } ?? Text("Never saved", bundle: .module))
             }
+            if let appLock {
+                appLockRow(appLock)
+            }
+            #if os(iOS)
+                if let deviceSecurity {
+                    deviceSecurityRow(deviceSecurity)
+                }
+            #endif
             NavigationLink {
                 IntegrityView(report: integrity)
             } label: {
@@ -230,6 +269,19 @@ extension YouView {
             }
             // COPY END 93d36060
             #if DEBUG
+            if let testProfiles {
+                NavigationLink {
+                    TestProfilesView(control: testProfiles)
+                } label: {
+                    // COPY BEGIN 2ef85f54 [NEEDS HUMAN REVIEW]
+                    SettingsRow(
+                        icon: "testtube.2", tone: .device,
+                        title: Text("Test profiles", bundle: .module),
+                        detail: testProfiles.active.map { Text(verbatim: $0.name) }
+                            ?? Text("iCloud", bundle: .module))
+                    // COPY END 2ef85f54
+                }
+            }
             if let debugActions {
                 NavigationLink {
                     DebugMenuView(

@@ -11,9 +11,16 @@ final class RigChecks: XCTestCase {
         try? FileManager.default.createDirectory(atPath: exchange, withIntermediateDirectories: true)
     }
 
+    var roomName: String { ProcessInfo.processInfo.environment["RIG_ROOM"] ?? "Checks" }
+
+    func names(_ variable: String) -> [String] {
+        (ProcessInfo.processInfo.environment[variable] ?? "").split(separator: ",").map(String.init)
+    }
+
     func launch(_ extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["--mailbox", "/tmp/outpost-rig-mailbox"] + extra
+        let offline = ProcessInfo.processInfo.environment["RIG_OFFLINE"] == "1" ? ["--mailbox-refuses", "full"] : []
+        app.launchArguments += ["--mailbox", "/tmp/outpost-rig-mailbox"] + offline + extra
         app.launch()
         _ = app.wait(for: .runningForeground, timeout: 20)
         return app
@@ -29,23 +36,51 @@ final class RigChecks: XCTestCase {
 
     func tapIfThere(_ app: XCUIApplication, _ label: String, timeout: TimeInterval = 2, scrolling: Bool = false) -> Bool {
         let button = app.buttons.matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", label, label + ",")).firstMatch
-        if button.waitForExistence(timeout: timeout), button.isHittable {
-            button.tap()
-            return true
+        if button.waitForExistence(timeout: timeout), stillThere(button) {
+            return tapped(button)
         }
         guard scrolling else { return false }
         for _ in 0..<5 {
             app.swipeUp()
-            if button.exists, button.isHittable {
-                button.tap()
-                return true
+            if stillThere(button) {
+                return tapped(button)
             }
         }
         return false
     }
 
+    func copyFromTheShareSheet(_ app: XCUIApplication) {
+        let cell = app.cells.matching(NSPredicate(format: "label == %@", "Copy")).firstMatch
+        let button = app.buttons["Copy"].firstMatch
+        if cell.waitForExistence(timeout: 5) {
+            cell.tap()
+        } else if button.exists {
+            button.tap()
+        } else {
+            app.swipeDown()
+        }
+    }
+
+    func tapped(_ element: XCUIElement) -> Bool {
+        var landed = false
+        XCTExpectFailure("a screen changing under the tap takes the element away before it lands", strict: false) {
+            element.tap()
+            landed = true
+        }
+        return landed
+    }
+
+    func stillThere(_ element: XCUIElement) -> Bool {
+        var there = false
+        XCTExpectFailure("a screen changing under the check makes the element vanish before it is read", strict: false) {
+            there = element.exists && element.isHittable
+        }
+        return there
+    }
+
     func settle(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        var idle = 0
         for _ in 0..<30 {
             var tapped = false
             for label in ["Allow", "Don’t Allow"] where springboard.buttons[label].exists {
@@ -53,18 +88,31 @@ final class RigChecks: XCTestCase {
                 tapped = true
                 break
             }
+            if !tapped, app.buttons["I've saved it"].exists {
+                tapped = saveTheRecoveryKey(app)
+            }
             if !tapped {
                 for label in [
-                    "Familiar and open", "Use these settings", "Not now", "Continue without it",
+                    "Familiar and open", "Use these settings", "Not now", "Not for now", "Continue without it",
                     "Continue", "Get started", "Skip", "Next", "Finish", "Done",
                 ] where tapIfThere(app, label, timeout: 0.5) {
                     tapped = true
                     break
                 }
             }
-            if !tapped { break }
+            idle = tapped ? 0 : idle + 1
+            if idle >= 3 { break }
             sleep(1)
         }
+    }
+
+    func saveTheRecoveryKey(_ app: XCUIApplication) -> Bool {
+        guard tapIfThere(app, "Save key", timeout: 2) else { return false }
+        sleep(2)
+        copyFromTheShareSheet(app)
+        sleep(1)
+        guard tapIfThere(app, "I've saved it", timeout: 5) else { return false }
+        return tapIfThere(app, "It's saved", timeout: 3)
     }
 
     func write(_ value: String, to name: String) {
@@ -76,7 +124,7 @@ final class RigChecks: XCTestCase {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    func testFifthOnboards() throws {
+    func onboard(as name: String) {
         let app = launch()
         sleep(3)
         _ = tapIfThere(app, "Skip")
@@ -87,14 +135,142 @@ final class RigChecks: XCTestCase {
                 field.tap()
                 sleep(1)
             }
-            field.typeText("Fifth")
+            field.typeText(name)
             sleep(1)
             XCTAssertTrue(tapIfThere(app, "Create my identity", timeout: 3), "could not create the identity")
         }
         sleep(3)
         settle(app)
         sleep(2)
-        shoot(app, "fifth-home")
+        shoot(app, "\(name.lowercased())-home")
+    }
+
+    func testFifthOnboards() throws {
+        onboard(as: ProcessInfo.processInfo.environment["RIG_NAME"] ?? "Fifth")
+    }
+
+    func testANewMemberSavesTheKeyAndLocksTheApp() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["--mailbox", "/tmp/outpost-lock-check"]
+        app.launch()
+        _ = app.wait(for: .runningForeground, timeout: 20)
+        sleep(3)
+        _ = tapIfThere(app, "Skip")
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "no name field")
+        field.tap()
+        field.typeText("Lockwood")
+        XCTAssertTrue(tapIfThere(app, "Create my identity", timeout: 3), "could not create the identity")
+
+        let saved = app.buttons["I've saved it"]
+        XCTAssertTrue(saved.waitForExistence(timeout: 15), "the recovery key was not shown at setup")
+        shoot(app, "lock-1-recovery-key")
+        XCTAssertFalse(saved.isEnabled, "the key could be marked saved before it was saved anywhere")
+        XCTAssertTrue(tapIfThere(app, "Save key"), "no way to save the key")
+        sleep(2)
+        app.swipeDown()
+        sleep(1)
+        XCTAssertFalse(saved.isEnabled, "closing the share sheet without saving let the member go on")
+        XCTAssertTrue(tapIfThere(app, "Save key"), "the key could not be saved a second time")
+        sleep(2)
+        shoot(app, "lock-2-share-sheet")
+        copyFromTheShareSheet(app)
+        sleep(1)
+        XCTAssertTrue(saved.waitForExistence(timeout: 5) && saved.isEnabled, "saving did not let the member go on")
+        saved.tap()
+        shoot(app, "lock-3-is-it-saved")
+        XCTAssertTrue(tapIfThere(app, "It's saved", timeout: 3), "no confirmation")
+
+        XCTAssertTrue(
+            app.buttons["Continue"].firstMatch.waitForExistence(timeout: 10), "notifications were not offered before the lock")
+        XCTAssertFalse(app.staticTexts["Lock the app"].firstMatch.exists, "the lock was offered before notifications")
+        shoot(app, "lock-3b-notifications-first")
+        XCTAssertTrue(tapIfThere(app, "Continue", timeout: 3))
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        if springboard.buttons["Allow"].waitForExistence(timeout: 8) { springboard.buttons["Allow"].tap() }
+        _ = tapIfThere(app, "Not for now", timeout: 5)
+
+        XCTAssertTrue(
+            app.staticTexts["Lock the app"].firstMatch.waitForExistence(timeout: 10), "the lock was not offered at setup")
+        shoot(app, "lock-4-offer")
+        XCTAssertTrue(app.buttons["Not now"].firstMatch.isHittable, "the offer can't be declined as it opens")
+        let fields = app.secureTextFields
+        fields.element(boundBy: 0).tap()
+        fields.element(boundBy: 0).typeText("482913")
+        XCTAssertTrue(fields.element(boundBy: 1).isHittable, "the keyboard or the buttons cover the second field")
+        fields.element(boundBy: 1).tap()
+        fields.element(boundBy: 1).typeText("482913")
+        shoot(app, "lock-5-code-typed")
+        let lockButton = app.buttons["Lock the app"].firstMatch
+        XCTAssertTrue(lockButton.waitForExistence(timeout: 3), "no button to finish")
+        sleep(1)
+        XCTAssertTrue(lockButton.isHittable, "the keyboard still covers the button once both codes match")
+        lockButton.tap()
+        let makePrivate = app.alerts.buttons["Make them private"].firstMatch
+        XCTAssertTrue(makePrivate.waitForExistence(timeout: 5), "setting the lock did not offer private notifications")
+        shoot(app, "lock-5b-private-notifications")
+        makePrivate.tap()
+        sleep(2)
+        settle(app)
+
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+        let locked = app.staticTexts.matching(NSPredicate(format: "label ENDSWITH %@", "is locked")).firstMatch
+        XCTAssertTrue(locked.waitForExistence(timeout: 10), "the app opened without its lock")
+        XCTAssertFalse(
+            app.buttons["You"].firstMatch.exists,
+            "the app under the lock could still be reached, by VoiceOver or anything that reads the screen's elements")
+        shoot(app, "lock-6-locked")
+        for digit in "000000" { app.buttons[String(digit)].firstMatch.tap() }
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "That's not it")).firstMatch
+                .waitForExistence(timeout: 10),
+            "a wrong code did not say so")
+        shoot(app, "lock-7-wrong-code")
+        for digit in "482913" { app.buttons[String(digit)].firstMatch.tap() }
+        XCTAssertTrue(app.buttons["You"].firstMatch.waitForExistence(timeout: 10), "the right code did not open the app")
+        shoot(app, "lock-8-open")
+
+        app.terminate()
+        app.launch()
+        _ = app.wait(for: .runningForeground, timeout: 20)
+        XCTAssertTrue(locked.waitForExistence(timeout: 15), "the app started again without its lock")
+        XCTAssertFalse(app.textFields.firstMatch.exists, "a locked phone was taken for an empty one and offered setup")
+        shoot(app, "lock-8b-started-again")
+        for digit in "482913" { app.buttons[String(digit)].firstMatch.tap() }
+        XCTAssertTrue(
+            app.buttons["You"].firstMatch.waitForExistence(timeout: 15), "the code did not open the app after it started again")
+        app.buttons["You"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Lockwood"].firstMatch.waitForExistence(timeout: 10),
+            "what the phone keeps did not come back once the lock opened")
+        shoot(app, "lock-8c-still-lockwood")
+
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+        XCTAssertTrue(locked.waitForExistence(timeout: 10), "the app opened without its lock the second time")
+        for _ in 0..<4 where app.keyboards.count == 0 {
+            app.secureTextFields.firstMatch.tap()
+            sleep(1)
+        }
+        shoot(app, "lock-9-keyboard-up")
+        let forgot = app.buttons["Forgot the code?"].firstMatch
+        XCTAssertTrue(forgot.waitForExistence(timeout: 5), "no way back for somebody who forgot the code")
+        XCTAssertTrue(forgot.isHittable, "the keyboard covers the way back")
+        forgot.tap()
+        let erase = app.alerts.buttons["Erase"].firstMatch
+        XCTAssertTrue(erase.waitForExistence(timeout: 5), "forgetting did not ask before erasing")
+        shoot(app, "lock-10-forgot")
+        erase.tap()
+        sleep(4)
+        XCTAssertFalse(locked.exists, "the lock stayed up after the phone's copy was erased")
+        let fresh = app.textFields.firstMatch
+        XCTAssertTrue(
+            fresh.waitForExistence(timeout: 20) || app.buttons["Skip"].firstMatch.exists,
+            "erasing did not bring the phone back to the start")
+        shoot(app, "lock-11-erased")
     }
 
     func testOfferShown() throws {
@@ -117,20 +293,7 @@ final class RigChecks: XCTestCase {
     }
 
     func testTrigOnboards() throws {
-        let app = launch()
-        sleep(3)
-        _ = tapIfThere(app, "Skip")
-        sleep(1)
-        let field = app.textFields.firstMatch
-        if field.waitForExistence(timeout: 5) {
-            field.tap()
-            field.typeText("Trig")
-            _ = tapIfThere(app, "Create my identity")
-        }
-        sleep(3)
-        settle(app)
-        sleep(2)
-        shoot(app, "trig-home")
+        onboard(as: "Trig")
     }
 
     func testShareCode() throws {
@@ -266,16 +429,16 @@ final class RigChecks: XCTestCase {
         settle(app)
         app.buttons["Rooms"].firstMatch.tap()
         sleep(1)
-        if !app.staticTexts["Checks"].firstMatch.waitForExistence(timeout: 3) {
+        if !app.staticTexts[roomName].firstMatch.waitForExistence(timeout: 3) {
             XCTAssertTrue(tapIfThere(app, "Make a room", timeout: 3) || tapIfThere(app, "New room", timeout: 3))
             let name = app.textFields["Name"].firstMatch
             XCTAssertTrue(name.waitForExistence(timeout: 5))
             name.tap()
-            name.typeText("Checks")
+            name.typeText(roomName)
             XCTAssertTrue(tapIfThere(app, "Create"))
             sleep(3)
         }
-        app.staticTexts["Checks"].firstMatch.tap()
+        app.staticTexts[roomName].firstMatch.tap()
         sleep(2)
         shoot(app, "invite-1-room")
         XCTAssertTrue(roomMenu(app, "Invite someone"))
@@ -300,7 +463,12 @@ final class RigChecks: XCTestCase {
         settle(app)
         app.buttons["Rooms"].firstMatch.tap()
         sleep(1)
-        XCTAssertTrue(tapIfThere(app, "I have an invite", timeout: 3))
+        shoot(app, "join-0-rooms")
+        if !tapIfThere(app, "I have an invite", timeout: 3) {
+            XCTAssertTrue(tapIfThere(app, "Rooms list options", timeout: 3), "no way in to an invite")
+            sleep(1)
+            XCTAssertTrue(tapIfThere(app, "Join with an invite", timeout: 3))
+        }
         sleep(1)
         let field = entry(app, "Paste the invite")
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -310,7 +478,10 @@ final class RigChecks: XCTestCase {
         XCTAssertTrue(tapIfThere(app, "Read the invite", timeout: 3))
         sleep(2)
         shoot(app, "join-2-read")
-        _ = tapIfThere(app, "They match", timeout: 3)
+        XCTAssertFalse(
+            app.staticTexts["That invite is not usable. It may have expired."].firstMatch.exists,
+            "the invite this device was handed was refused")
+        XCTAssertTrue(tapIfThere(app, "They match", timeout: 5), "no way to say the characters match")
         sleep(2)
         shoot(app, "join-3-matched")
         _ = tapIfThere(app, "Done", timeout: 3)
@@ -322,11 +493,12 @@ final class RigChecks: XCTestCase {
         settle(app)
         app.buttons["Rooms"].firstMatch.tap()
         sleep(1)
-        let room = app.staticTexts["Checks"].firstMatch
-        XCTAssertTrue(room.waitForExistence(timeout: 10), "Checks is not in the list")
+        let room = app.staticTexts[roomName].firstMatch
+        if !room.waitForExistence(timeout: 20) { shoot(app, "rooms-without-\(roomName)") }
+        XCTAssertTrue(room.exists, "\(roomName) is not in the list")
         room.tap()
         sleep(3)
-        _ = tapIfThere(app, "Open Checks", timeout: 2)
+        _ = tapIfThere(app, "Open \(roomName)", timeout: 2)
         sleep(1)
         _ = tapIfThere(app, "Not now", timeout: 1)
     }
@@ -352,13 +524,38 @@ final class RigChecks: XCTestCase {
         return tapIfThere(app, item, timeout: 3)
     }
 
+    func testRunsARound() throws {
+        let app = launch()
+        sleep(3)
+        settle(app)
+        let wanted = ProcessInfo.processInfo.environment["RIG_ROOM"] ?? ""
+        if wanted.isEmpty {
+            sleep(8)
+        } else {
+            app.buttons["Rooms"].firstMatch.tap()
+            _ = app.staticTexts[wanted].firstMatch.waitForExistence(timeout: 120)
+            sleep(4)
+        }
+        shoot(app, "round-\(ProcessInfo.processInfo.environment["RIG_NAME"] ?? "device")")
+    }
+
     func testQuadSays() throws {
         let app = launch()
         sleep(3)
         openChecks(app)
-        send(app, "hello from Quad")
+        send(app, ProcessInfo.processInfo.environment["RIG_SAY"] ?? "hello from Quad")
         sleep(8)
         shoot(app, "q-said")
+    }
+
+    func testSees() throws {
+        let expected = try XCTUnwrap(ProcessInfo.processInfo.environment["RIG_EXPECT"], "set RIG_EXPECT to the words to wait for")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        let message = app.staticTexts[expected].firstMatch
+        XCTAssertTrue(message.waitForExistence(timeout: 120), "\(expected) never arrived")
+        shoot(app, "seen")
     }
 
     func testTrigBlockSheet() throws {
@@ -442,22 +639,80 @@ final class RigChecks: XCTestCase {
         let app = launch()
         sleep(3)
         openChecks(app)
+        remove("Quad", in: app)
+        sleep(8)
+        shoot(app, "r-4-removed")
+    }
+
+    func remove(_ name: String, in app: XCUIApplication) {
         XCTAssertTrue(roomMenu(app, "Who is in this room"))
         sleep(2)
         shoot(app, "r-1-members")
-        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Quad")).firstMatch
-        XCTAssertTrue(row.waitForExistence(timeout: 3))
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 3), "\(name) is not in the member list")
         row.press(forDuration: 1.0)
         sleep(1)
         shoot(app, "r-2-row-menu")
         XCTAssertTrue(tapIfThere(app, "Remove from room", timeout: 3))
         sleep(1)
         shoot(app, "r-3-confirm")
-        let confirm = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Remove Quad")).firstMatch
+        let confirm = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Remove \(name)")).firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 3))
         confirm.tap()
+    }
+
+    func testRemoves() throws {
+        let removed = try XCTUnwrap(ProcessInfo.processInfo.environment["RIG_REMOVE"], "set RIG_REMOVE to who to remove")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        remove(removed, in: app)
+        sleep(3)
+        _ = tapIfThere(app, "Done", timeout: 3)
+        if let said = ProcessInfo.processInfo.environment["RIG_SAY"] {
+            sleep(1)
+            send(app, said)
+        }
         sleep(8)
         shoot(app, "r-4-removed")
+    }
+
+    func testStaysOpen() throws {
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        sleep(UInt32(ProcessInfo.processInfo.environment["RIG_SECONDS"].flatMap { UInt32($0) } ?? 30))
+        shoot(app, "open-\(roomName.lowercased())")
+    }
+
+    func testRecordsMembers() throws {
+        let people = names("RIG_PEOPLE")
+        XCTAssertFalse(people.isEmpty, "set RIG_PEOPLE to the names to look for")
+        let record = try XCTUnwrap(ProcessInfo.processInfo.environment["RIG_RECORD"], "set RIG_RECORD to a file name")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        sleep(UInt32(ProcessInfo.processInfo.environment["RIG_SECONDS"].flatMap { UInt32($0) } ?? 30))
+        XCTAssertTrue(roomMenu(app, "Who is in this room"))
+        sleep(2)
+        shoot(app, "members-\(record)")
+        write(people.map { "\($0)=\(shows(app, $0) ? "in" : "out")" }.joined(separator: ","), to: record)
+    }
+
+    func shows(_ app: XCUIApplication, _ name: String) -> Bool {
+        let rows = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name))
+        return (0..<rows.count).contains { stillThere(rows.element(boundBy: $0)) }
+    }
+
+    func testNeverSees() throws {
+        let unexpected = try XCTUnwrap(
+            ProcessInfo.processInfo.environment["RIG_EXPECT"], "set RIG_EXPECT to the words that must not arrive")
+        let app = launch()
+        sleep(3)
+        openChecks(app)
+        let message = app.staticTexts[unexpected].firstMatch
+        XCTAssertFalse(message.waitForExistence(timeout: 90), "\(unexpected) reached this phone")
+        shoot(app, "never-seen")
     }
 
     func testQuadDeletes() throws {

@@ -11,7 +11,7 @@ public enum Diagnostics {
 
     public static func fingerprint(_ data: Data) -> String {
         guard !data.isEmpty else { return "empty" }
-        return String(SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined().prefix(8))
+        return String(Data(SHA256.hash(data: data)).lowercaseHex.prefix(8))
     }
 
     public static func fingerprint(_ text: String) -> String {

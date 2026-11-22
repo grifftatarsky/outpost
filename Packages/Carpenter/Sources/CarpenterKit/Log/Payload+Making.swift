@@ -67,17 +67,23 @@ extension Payload {
     }
     // COPY END 8750ff7f
 
-    public static func removal(of member: ParticipantID) throws -> Payload {
+    public static func removal(of member: ParticipantID, heads: [EntryHash]) throws -> Payload {
         Payload(
-            type: .removal, body: try encode(RemovalBody(removed: member)), fallbackText: nil)
+            type: .removal, body: try encode(RemovalBody(removed: member, heads: heads)), fallbackText: nil)
     }
 
-    public static func departure() throws -> Payload {
-        Payload(type: .departure, body: try encode(DepartureBody()), fallbackText: nil)
+    public static func removalNoted(_ removal: EntryHash, storedAt: Date) throws -> Payload {
+        Payload(
+            type: .removalNoted, body: try encode(RemovalNotedBody(removal: removal, storedAt: storedAt)),
+            fallbackText: nil)
+    }
+
+    public static func departure(heads: [EntryHash]) throws -> Payload {
+        Payload(type: .departure, body: try encode(DepartureBody(heads: heads)), fallbackText: nil)
     }
 
     public static func admission(
-        of joiner: ParticipantID, admitted: Bool, invitation: Data? = nil
+        of joiner: ParticipantID, admitted: Bool, invitation: Data
     ) throws -> Payload {
         Payload(
             type: .admission,
@@ -86,9 +92,11 @@ extension Payload {
             fallbackText: nil)
     }
 
-    public static func epochChange(_ link: EpochLink) throws -> Payload {
+    public static func epochChange(
+        _ link: EpochLink, heads: [EntryHash], under secret: EpochSecret
+    ) throws -> Payload {
         Payload(
-            type: .epochChange, body: try encode(EpochChangeBody(link: link)),
+            type: .epochChange, body: try encode(EpochChangeBody(link: link, heads: heads, under: secret)),
             fallbackText: nil)
     }
 
@@ -106,14 +114,18 @@ extension Payload {
         Payload(type: .readPolicy, body: try encode(ReadPolicyBody(reports: reports)))
     }
 
-    public static func roomProfile(name: String, kind: RoomKind = .room) throws -> Payload {
+    public static func roomProfile(name: String, kind: RoomKind = .room, founding: Data? = nil) throws -> Payload {
         Payload(
-            type: .roomProfile, body: try encode(RoomProfileBody(name: name, kind: kind)),
+            type: .roomProfile, body: try encode(RoomProfileBody(name: name, kind: kind, founding: founding)),
             fallbackText: name)
     }
 
     public static func focusStatus(_ status: FocusStatusBody) throws -> Payload {
         Payload(type: .focusStatus, body: try encode(status))
+    }
+
+    public static func pairLink(_ body: PairLinkBody) throws -> Payload {
+        Payload(type: .pairLink, body: try encode(body))
     }
 
     public static func supporterBadge(shows: Bool) throws -> Payload {
@@ -148,8 +160,10 @@ extension Payload {
         return Payload(type: .media, body: try encode(body), fallbackText: body.line)
     }
 
+    private static let bodyDecoder = JSONDecoder()
+
     public func decode<T: Decodable>(_ type: T.Type) throws -> T {
-        try JSONDecoder().decode(T.self, from: body)
+        try Self.bodyDecoder.decode(T.self, from: body)
     }
 
     private static func encode(_ value: some Encodable) throws -> Data {

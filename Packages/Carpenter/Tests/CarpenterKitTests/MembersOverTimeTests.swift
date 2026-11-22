@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("A room that grows", .serialized)
+@Suite("A room that grows", .serialized, .tags(.membership))
 struct MembersOverTimeTests {
     private func member(_ name: String, at directory: URL? = nil, keychain: InMemoryKeychainStore = InMemoryKeychainStore(), media: MemoryMediaStore = MemoryMediaStore()) async throws -> AppSession {
         let session = TestSession.make(keychain: keychain, at: directory, media: media)
@@ -27,8 +27,7 @@ struct MembersOverTimeTests {
         _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
         alongside everyone: [AppSession], through mailbox: InMemoryMailbox
     ) async throws {
-        let invite = try await inviter.invite(
-            joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+        let invite = try await inviter.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await joiner.redeem(inviteCode: try invite.encoded())
         try await settle(everyone + [joiner], through: mailbox)
     }
@@ -97,7 +96,7 @@ struct MembersOverTimeTests {
         var keychains: [String: InMemoryKeychainStore] = [:]
         var stores: [String: MemoryMediaStore] = [:]
         func scratch(_ name: String) -> URL {
-            let url = URL.temporaryDirectory.appending(path: "carpenter-grow-\(name)-\(UUID().uuidString)")
+            let url = TestScratch.root.appending(path: "carpenter-grow-\(name)-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
             directories[name] = url
             keychains[name] = InMemoryKeychainStore()
@@ -215,7 +214,7 @@ struct MembersOverTimeTests {
 }
 
 @MainActor
-@Suite("Who a device writes to", .serialized)
+@Suite("Who a device writes to", .serialized, .tags(.membership))
 struct AddressedPeersTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6
@@ -229,8 +228,7 @@ struct AddressedPeersTests {
         _ joiner: AppSession, to room: RoomID, by inviter: AppSession,
         through mailbox: InMemoryMailbox
     ) async throws {
-        let invite = try await inviter.invite(
-            joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+        let invite = try await inviter.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await joiner.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await inviter.sync(through: mailbox)
@@ -263,10 +261,10 @@ struct AddressedPeersTests {
         let before = Set(await mailbox.writtenPackets)
         try await alice.send("said in our room", to: ours)
         try await alice.sync(through: mailbox)
-        let waiting = try await mailbox.pendingDeliveries()
+        let waiting = await mailbox.everySentPacket
         let fresh = await mailbox.writtenPackets.filter { !before.contains($0) }
         #expect(fresh.count == 1, "precondition: Alice's round wrote exactly one packet")
-        let recipients = try #require(fresh.first.flatMap { waiting[$0] })
+        let recipients = try #require(fresh.first.flatMap { waiting[$0]?.recipients })
         #expect(
             recipients.count == 1,
             "Alice addressed somebody she has never met — every entry she writes reaches them")

@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Device certificates")
+@Suite("Device certificates", .tags(.membership))
 struct DeviceCertificateTests {
     private let issuedAt = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -76,7 +76,8 @@ struct DeviceCertificateTests {
         let device = DeviceKeys.generate()
         let certificate = try DeviceCertificate.issue(
             for: device.publicKey, by: identity, at: issuedAt)
-        let revocation = try DeviceRevocation.issue(for: device.id, by: identity, at: issuedAt)
+        let revocation = try DeviceRevocation.issue(
+            for: device.id, by: identity, at: issuedAt, from: device, cutoff: 0, head: nil, remaining: [])
 
         var crossed = certificate
         crossed.signature = revocation.signature
@@ -104,7 +105,7 @@ struct DeviceCertificateTests {
     }
 }
 
-@Suite("Device registry")
+@Suite("Device registry", .tags(.membership))
 struct DeviceRegistryTests {
     private let issuedAt = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -118,7 +119,7 @@ struct DeviceRegistryTests {
         let identity = Identity.generate()
         let device = DeviceKeys.generate()
         var registry = DeviceRegistry(identity: identity.publicKeys)
-        try registry.admit(DeviceCertificate.issue(for: device.publicKey, by: identity, at: issuedAt))
+        try registry.admit(DeviceCertificate.recovered(for: device.publicKey, by: identity, at: issuedAt))
         return Enrolled(identity: identity, device: device, registry: registry)
     }
 
@@ -162,7 +163,9 @@ struct DeviceRegistryTests {
         let revokedAt = issuedAt.addingTimeInterval(3_600)
 
         try enrolled.registry.revoke(
-            DeviceRevocation.issue(for: enrolled.device.id, by: enrolled.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device,
+                cutoff: 0, head: nil, remaining: [enrolled.device.id]))
 
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt))
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(1)))
@@ -174,7 +177,9 @@ struct DeviceRegistryTests {
         let revokedAt = issuedAt.addingTimeInterval(3_600)
 
         try enrolled.registry.revoke(
-            DeviceRevocation.issue(for: enrolled.device.id, by: enrolled.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device,
+                cutoff: 0, head: nil, remaining: [enrolled.device.id]))
 
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: issuedAt))
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(-1)))
@@ -187,7 +192,9 @@ struct DeviceRegistryTests {
 
         #expect(throws: CryptoError.participantMismatch) {
             try enrolled.registry.revoke(
-                DeviceRevocation.issue(for: enrolled.device.id, by: impostor, at: issuedAt))
+                DeviceRevocation.issue(
+                    for: enrolled.device.id, by: impostor, at: issuedAt, from: enrolled.device,
+                    cutoff: 0, head: nil, remaining: [enrolled.device.id]))
         }
         #expect(enrolled.registry.isAuthorized(enrolled.device.id, at: issuedAt))
     }
@@ -199,14 +206,15 @@ struct DeviceRegistryTests {
         #expect(throws: CryptoError.unknownDevice) {
             try enrolled.registry.revoke(
                 DeviceRevocation.issue(
-                    for: DeviceKeys.generate().id, by: enrolled.identity, at: issuedAt))
+                    for: DeviceKeys.generate().id, by: enrolled.identity, at: issuedAt, from: enrolled.device,
+                    cutoff: 0, head: nil, remaining: [enrolled.device.id]))
         }
     }
 
     @Test("Admitting the same certificate twice is idempotent")
     func idempotentAdmit() throws {
         var enrolled = try enrol()
-        let certificate = try DeviceCertificate.issue(
+        let certificate = try DeviceCertificate.recovered(
             for: enrolled.device.publicKey, by: enrolled.identity, at: issuedAt)
 
         try enrolled.registry.admit(certificate)
@@ -232,12 +240,14 @@ struct DeviceRegistryTests {
     @Test("A revoked device cannot be re-admitted by replaying its original certificate")
     func revocationSurvivesReplay() throws {
         var enrolled = try enrol()
-        let certificate = try DeviceCertificate.issue(
+        let certificate = try DeviceCertificate.recovered(
             for: enrolled.device.publicKey, by: enrolled.identity, at: issuedAt)
         let revokedAt = issuedAt.addingTimeInterval(3_600)
 
         try enrolled.registry.revoke(
-            DeviceRevocation.issue(for: enrolled.device.id, by: enrolled.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: enrolled.device.id, by: enrolled.identity, at: revokedAt, from: enrolled.device,
+                cutoff: 0, head: nil, remaining: [enrolled.device.id]))
         try enrolled.registry.admit(certificate)
 
         #expect(!enrolled.registry.isAuthorized(enrolled.device.id, at: revokedAt.addingTimeInterval(1)))

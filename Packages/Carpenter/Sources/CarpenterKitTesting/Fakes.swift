@@ -22,29 +22,6 @@ public final class TestClock: Clock {
     }
 }
 
-public final class SeededRandomSource: RandomSource {
-    private let state: Mutex<UInt64>
-
-    public init(seed: UInt64) {
-        state = Mutex(seed)
-    }
-
-    public func bytes(count: Int) -> Data {
-        state.withLock { state in
-            var output = Data(capacity: count)
-            while output.count < count {
-                state &+= 0x9E37_79B9_7F4A_7C15
-                var z = state
-                z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
-                z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
-                z ^= z >> 31
-                withUnsafeBytes(of: z.littleEndian) { output.append(contentsOf: $0) }
-            }
-            return output.prefix(count)
-        }
-    }
-}
-
 public struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
 
@@ -62,47 +39,127 @@ public struct SeededGenerator: RandomNumberGenerator {
 }
 
 public actor InMemoryKeychainStore: KeychainStore {
-    private struct Item {
-        let data: Data
-        let scope: KeychainScope
+    public actor Synced {
+        fileprivate var items: [KeychainKey: Data] = [:]
+
+        public init() {}
     }
 
-    private var items: [KeychainKey: Item] = [:]
+    public struct LockedPhone: Error {}
+    public struct ProcessEnded: Error {}
 
-    public init() {}
+    private let synced: Synced
+    private let dial: ProtectionDial
+    private var local: [KeychainKey: Data] = [:]
+    private var protections: [KeychainKey: StorageProtection] = [:]
 
-    public func data(for key: KeychainKey) throws -> Data? { items[key]?.data }
+    public private(set) var writes = 0
+    public private(set) var phoneIsLocked = false
+    private var processEnded = false
 
-    public func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) throws {
-        items[key] = Item(data: data, scope: scope)
+    public func endProcess() { processEnded = true }
+
+    public init(syncingThrough synced: Synced = Synced(), protection dial: ProtectionDial = ProtectionDial()) {
+        self.synced = synced
+        self.dial = dial
     }
 
-    public func remove(_ key: KeychainKey) throws { items[key] = nil }
+    public func sibling() -> InMemoryKeychainStore {
+        InMemoryKeychainStore(syncingThrough: synced)
+    }
 
-    public func removeAll() throws { items = [:] }
+    private init(
+        synced: Synced, dial: ProtectionDial, local: [KeychainKey: Data], protections: [KeychainKey: StorageProtection]
+    ) {
+        self.synced = synced
+        self.dial = dial
+        self.local = local
+        self.protections = protections
+    }
 
-    public func scope(for key: KeychainKey) -> KeychainScope? { items[key]?.scope }
+    public func copy() -> InMemoryKeychainStore {
+        InMemoryKeychainStore(synced: synced, dial: dial, local: local, protections: protections)
+    }
+
+    public func data(for key: KeychainKey) async throws -> Data? {
+        if let data = local[key] {
+            guard !(phoneIsLocked && protections[key] == .whileUnlocked) else { throw LockedPhone() }
+            return data
+        }
+        return await synced.item(key)
+    }
+
+    public func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) async throws {
+        guard !processEnded else { throw ProcessEnded() }
+        guard !(phoneIsLocked && dial.current == .whileUnlocked) else { throw LockedPhone() }
+        writes += 1
+        switch scope {
+        case .synchronized:
+            local[key] = nil
+            protections[key] = nil
+            await synced.set(data, for: key)
+        case .device:
+            local[key] = data
+            protections[key] = dial.current
+            await synced.set(nil, for: key)
+        }
+    }
+
+    public func remove(_ key: KeychainKey) async throws {
+        guard !processEnded else { throw ProcessEnded() }
+        local[key] = nil
+        protections[key] = nil
+    }
+
+    public func removeAll(_ scope: KeychainScope) async throws {
+        guard !processEnded else { throw ProcessEnded() }
+        switch scope {
+        case .device:
+            local = [:]
+            protections = [:]
+        case .synchronized:
+            await synced.clear()
+        }
+    }
+
+    public func protect(as protection: StorageProtection) async throws {
+        let touchesSealed = protection == .whileUnlocked || protections.values.contains(.whileUnlocked)
+        guard !(phoneIsLocked && touchesSealed) else { throw LockedPhone() }
+        for key in local.keys { protections[key] = protection }
+    }
+
+    public func lockPhone() { phoneIsLocked = true }
+
+    public func unlockPhone() { phoneIsLocked = false }
+
+    public var protectedKeys: [KeychainKey: StorageProtection] { protections }
+
+    public func scope(for key: KeychainKey) async -> KeychainScope? {
+        if local[key] != nil { return .device }
+        return await synced.item(key) == nil ? nil : .synchronized
+    }
 
     public var synchronizedItems: [KeychainKey: Data] {
-        items
-            .filter { $0.value.scope == .synchronized }
-            .mapValues(\.data)
+        get async { await synced.all() }
     }
 }
 
+extension InMemoryKeychainStore.Synced {
+    fileprivate func item(_ key: KeychainKey) -> Data? { items[key] }
+    fileprivate func set(_ data: Data?, for key: KeychainKey) { items[key] = data }
+    fileprivate func clear() { items = [:] }
+    fileprivate func all() -> [KeychainKey: Data] { items }
+}
+
 public actor InMemoryMailbox: Mailbox, MediaMailbox {
-    private struct Stored {
-        var fields: [String: PacketField]
-        var outstanding: Set<RecipientTag>
-        var storedAt: Date = .distantPast
+    public struct Ring: Hashable, Sendable {
+        public let from: ParticipantID
+        public let to: ParticipantID
+        public let reached: Set<String>
     }
 
     private let clock: any Clock
-
-    private var stored: [PacketID: Stored] = [:]
-    private var order: [PacketID] = []
-    public var writtenPackets: [PacketID] { order }
-    private var attachments: [AttachmentID: Stored] = [:]
+    private var store = LocalPairStore()
     private var pendingFailure: MailboxError?
     private var packetFailures: [Int: MailboxError] = [:]
     private var uploadFailures: [Int: MailboxError] = [:]
@@ -110,7 +167,8 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
     public private(set) var writeCount = 0
     public private(set) var fetchCount = 0
     public private(set) var acknowledgeCount = 0
-    public private(set) var bells: [MessageBell] = []
+    public private(set) var withdrawCount = 0
+    public private(set) var rings: [Ring] = []
     public private(set) var uploadCount = 0
     public private(set) var downloadCount = 0
     public private(set) var attachmentAcknowledgeCount = 0
@@ -120,134 +178,296 @@ public actor InMemoryMailbox: Mailbox, MediaMailbox {
         self.clock = clock
     }
 
-    public var storedPacketCount: Int { stored.count }
-    public var storedAttachmentCount: Int { attachments.count }
+    public var writtenPackets: [PacketID] { store.packetOrder }
+
+    private var packetRecords: [(url: URL, name: String, record: LocalPairStore.Record)] {
+        store.allRecords.filter { UUID(uuidString: $0.name) != nil }
+    }
+
+    private var photoOf: [PhotoCopyName: AttachmentID] = [:]
+
+    private func copies(of photo: AttachmentID) -> [PhotoCopyName] {
+        photoOf.filter { $0.value == photo }.map(\.key)
+    }
+
+    public var storedPacketCount: Int { packetRecords.count }
+    public var storedAttachmentIDs: Set<AttachmentID> {
+        Set(store.everyStoredCopy.compactMap { photoOf[$0.name] })
+    }
+    public var storedAttachmentCount: Int { storedAttachmentIDs.count }
+    public var storedCopyCount: Int { store.everyStoredCopy.count }
 
     public var serverWrites: Int {
-        writeCount + acknowledgeCount + bells.count + uploadCount + attachmentAcknowledgeCount
-            + attachmentDeleteCount
+        writeCount + acknowledgeCount + withdrawCount + rings.count + uploadCount
+            + attachmentAcknowledgeCount + attachmentDeleteCount
     }
 
-    // MARK: Attachments
+    public var everySentPacket: [PacketID: SentPacket] { store.everySentPacket }
 
-    public func upload(_ attachment: OutgoingAttachment) throws {
-        uploadCount += 1
-        if let failure = pendingFailure {
-            pendingFailure = nil
-            throw failure
+    public var everyStoredCopy: [StoredPhotoCopy] { store.everyStoredCopy }
+
+    public var storedRecords: [(name: String, fields: [String: PacketField])] {
+        store.allRecords.map { (name: $0.name, fields: $0.record.fields) }
+    }
+
+    public var everyPendingAttachment: [AttachmentID: SentAttachment] {
+        var found: [AttachmentID: SentAttachment] = [:]
+        for copy in store.everyStoredCopy {
+            guard let photo = photoOf[copy.name] else { continue }
+            let before = found[photo]
+            found[photo] = SentAttachment(
+                recipients: copy.recipients.union(before?.recipients ?? []),
+                receipts: (before?.receipts ?? []) + copy.receipts)
         }
-        if let failure = uploadFailures.removeValue(forKey: uploadCount) { throw failure }
-        attachments[attachment.id] = Stored(
-            fields: AttachmentWire.fields(of: attachment), outstanding: attachment.recipients,
-            storedAt: clock.now)
+        return found
     }
 
-    public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) throws -> Data? {
-        downloadCount += 1
-        guard let entry = attachments[id] else { return nil }
-        guard tags.isEmpty || !entry.outstanding.isDisjoint(with: tags) else { return nil }
-        return AttachmentWire.attachment(from: entry.fields)?.ciphertext
+    public func spaceCount(of participant: ParticipantID) -> Int {
+        store.spaces.values.filter { $0.owner == participant }.count
     }
 
-    public func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) throws {
-        guard var entry = attachments[id] else { throw MailboxError.unknownPacket }
-        attachmentAcknowledgeCount += 1
-        entry.outstanding.subtract(tags)
-        if entry.outstanding.isEmpty {
-            attachments[id] = nil
-        } else {
-            attachments[id] = entry
-        }
+    public func readers(ofSpaceOf owner: ParticipantID) -> [Set<String>] {
+        store.spaces.values.filter { $0.owner == owner }.map(\.joined)
     }
 
-    public func pendingAttachments() throws -> [AttachmentID: Set<RecipientTag>] {
-        attachments.reduce(into: [:]) { found, entry in found[entry.key] = entry.value.outstanding }
+    // MARK: Pairing
+
+    public func account(in pairs: Pairs) -> String { seat(pairs) }
+
+    private var signedInAs: String?
+
+    private func seat(_ pairs: Pairs) -> String { signedInAs ?? LocalPairStore.account(of: pairs.me) }
+
+    public nonisolated func signedIn(as account: String) -> SignedInMailbox { SignedInMailbox(base: self, account: account) }
+
+    func acting<T: Sendable>(as account: String, _ body: @Sendable (isolated InMemoryMailbox) throws -> T) rethrows -> T {
+        signedInAs = account
+        defer { signedInAs = nil }
+        return try body(self)
     }
 
-    public func sweepableAttachments() throws -> [AttachmentID: Set<RecipientTag>] {
-        let settled = clock.now.addingTimeInterval(-MailboxRules.sweepAge)
-        return attachments.reduce(into: [:]) { found, entry in
-            guard entry.value.storedAt < settled else { return }
-            found[entry.key] = entry.value.outstanding
-        }
+    public func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+        try store.space(for: peer, naming: account, in: pairs, as: seat(pairs))
     }
 
-    public func delete(attachment id: AttachmentID) throws {
-        attachmentDeleteCount += 1
-        attachments[id] = nil
+    public func spaceForACode(in pairs: Pairs) -> URL { store.spaceForACode(in: pairs, as: seat(pairs)) }
+
+    public func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+        try store.claim(url, for: peer, naming: account, in: pairs, as: seat(pairs))
     }
 
-    public func forget(packet id: PacketID) {
-        stored[id] = nil
-        order.removeAll { $0 == id }
+    public func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) -> JoinOutcome {
+        store.join(link, of: peer, in: pairs, as: seat(pairs))
     }
 
-    public func forget(attachment id: AttachmentID) {
-        attachments[id] = nil
+    public func reads(_ peer: ParticipantID, in pairs: Pairs) -> Bool {
+        store.reads(peer, in: pairs, as: seat(pairs))
     }
 
-    public func failNextWrite(with error: MailboxError) {
-        pendingFailure = error
+    public func close(_ peer: ParticipantID, in pairs: Pairs) { store.close(peer, in: pairs, as: seat(pairs)) }
+
+    public func stopSharing(with peer: ParticipantID, in pairs: Pairs) {
+        store.stopSharing(with: peer, in: pairs, as: seat(pairs))
     }
 
-    public func failWrite(number: Int, with error: MailboxError) {
-        packetFailures[writeCount + number] = error
-    }
+    public func leave(_ peer: ParticipantID, in pairs: Pairs) { store.leave(peer, in: pairs, as: seat(pairs)) }
 
-    public func failUpload(number: Int, with error: MailboxError) {
-        uploadFailures[uploadCount + number] = error
-    }
+    // MARK: Packets
 
-    public var largestPacketBytes: Int {
-        stored.values.compactMap { entry -> Int? in
-            if case .data(let bytes)? = entry.fields[PacketWire.ciphertext] { return bytes.count }
-            return nil
-        }.max() ?? 0
-    }
-
-    public func put(_ packet: SyncPacket) throws {
+    public func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) throws {
         writeCount += 1
         if let failure = pendingFailure {
             pendingFailure = nil
             throw failure
         }
         if let failure = packetFailures.removeValue(forKey: writeCount) { throw failure }
-        let fields = PacketWire.fields(of: packet)
-        let weight = MailboxRules.weigh(fields)
-        guard weight <= MailboxRules.recordByteCeiling else {
-            throw MailboxError.recordTooLarge(
-                bytes: weight, ceiling: MailboxRules.recordByteCeiling)
-        }
-        stored[packet.id] = Stored(
-            fields: fields, outstanding: packet.recipients, storedAt: clock.now)
-        order.append(packet.id)
+        try store.put(packet, to: peer, in: pairs, as: seat(pairs), at: clock.now)
     }
 
-    public func fetch(for tags: Set<RecipientTag>) throws -> [SyncPacket] {
+    public func ring(_ peer: ParticipantID, in pairs: Pairs) throws {
+        let reached = try store.ring(peer, in: pairs, as: seat(pairs), at: clock.now)
+        rings.append(Ring(from: pairs.me, to: peer, reached: reached))
+    }
+
+    public func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) -> [SyncPacket] {
         fetchCount += 1
-        return order.compactMap { stored[$0] }
-            .filter { !$0.outstanding.isDisjoint(with: tags) }
-            .compactMap { PacketWire.packet(from: $0.fields) }
+        let account = seat(pairs)
+        let lastStored = Dictionary(
+            store.records(inSpaceOf: peer, forMe: pairs, as: account).map { ($0.name, $0.record.modifiedAt) },
+            uniquingKeysWith: { first, _ in first })
+        let found = store.fetch(from: peer, for: tags, in: pairs, as: account).map { packet in
+            var packet = packet
+            packet.storedAt = lastStored[packet.id.rawValue.uuidString] ?? packet.storedAt
+            return packet
+        }
+        return inSameInstantOrder(found)
     }
 
-    public func pendingDeliveries() throws -> [PacketID: Set<RecipientTag>] {
-        stored.reduce(into: [:]) { found, entry in found[entry.key] = entry.value.outstanding }
-    }
-
-    public func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) throws {
-        guard var entry = stored[id] else { throw MailboxError.unknownPacket }
-        acknowledgeCount += 1
-
-        entry.outstanding.subtract(tags)
-        if entry.outstanding.isEmpty {
-            stored[id] = nil
-            order.removeAll { $0 == id }
-        } else {
-            stored[id] = entry
+    public func fetch(
+        from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs, seenIn view: LocalPairStore
+    ) -> [SyncPacket] {
+        fetchCount += 1
+        var seen = view
+        let account = seat(pairs)
+        let lastStored = Dictionary(
+            seen.records(inSpaceOf: peer, forMe: pairs, as: account).map { ($0.name, $0.record.modifiedAt) },
+            uniquingKeysWith: { first, _ in first })
+        return seen.fetch(from: peer, for: tags, in: pairs, as: account).map { packet in
+            var packet = packet
+            packet.storedAt = lastStored[packet.id.rawValue.uuidString] ?? packet.storedAt
+            return packet
         }
     }
 
-    public func ring(_ bell: MessageBell) throws { bells.append(bell) }
+    public func view() -> LocalPairStore { store }
+
+    public var now: Date { clock.now }
+
+    public func stamps(inSpaceOf peer: ParticipantID, in pairs: Pairs) -> Set<String> {
+        Set(store.records(inSpaceOf: peer, forMe: pairs, as: seat(pairs)).map { "\($0.name) \($0.record.modifiedAt)" })
+    }
+
+    public func grantCount(in packet: PacketID) -> Int {
+        store.allRecords.first { $0.name == packet.rawValue.uuidString }
+            .flatMap { PacketWire.packet(from: $0.record.fields) }?.grants.values.reduce(0) { $0 + $1.count } ?? 0
+    }
+
+    public func sender(of packet: PacketID) -> ParticipantID? {
+        store.allRecords.first { $0.name == packet.rawValue.uuidString }.flatMap { store.spaces[$0.url]?.owner }
+    }
+
+    public func sentPackets(in pairs: Pairs, seenIn view: LocalPairStore) -> [PacketID: SentPacket] {
+        view.sentPackets(in: pairs, as: seat(pairs))
+    }
+
+    private var instant: (window: TimeInterval, generator: SeededGenerator)?
+
+    public func sameInstant(within window: TimeInterval, seed: UInt64) {
+        instant = (window, SeededGenerator(seed: seed))
+    }
+
+    private func inSameInstantOrder(_ packets: [SyncPacket]) -> [SyncPacket] {
+        guard var drawn = instant else { return packets }
+        var ordered: [SyncPacket] = []
+        var group: [SyncPacket] = []
+        for packet in packets {
+            if let first = group.first, let at = packet.storedAt, let start = first.storedAt,
+                at.timeIntervalSince(start) > drawn.window
+            {
+                ordered += group.shuffled(using: &drawn.generator)
+                group = []
+            }
+            group.append(packet)
+        }
+        ordered += group.shuffled(using: &drawn.generator)
+        instant = drawn
+        return ordered
+    }
+
+    public func acknowledge(
+        _ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs
+    ) throws {
+        acknowledgeCount += 1
+        try store.acknowledge(id, from: peer, with: receipt, in: pairs, as: seat(pairs), at: clock.now)
+    }
+
+    public func sentPackets(in pairs: Pairs) -> [PacketID: SentPacket] { store.sentPackets(in: pairs, as: seat(pairs)) }
+
+    public func withdraw(_ id: PacketID, in pairs: Pairs) {
+        withdrawCount += 1
+        store.withdraw(id, as: seat(pairs))
+    }
+
+    public func lookAgain() {}
+
+    // MARK: Photos
+
+    public func upload(_ copies: PhotoCopies, in pairs: Pairs) throws {
+        uploadCount += 1
+        if let failure = pendingFailure {
+            pendingFailure = nil
+            throw failure
+        }
+        if let failure = uploadFailures.removeValue(forKey: uploadCount) { throw failure }
+        try store.upload(copies, in: pairs, as: seat(pairs), at: clock.now)
+        for copy in copies.copies.values { photoOf[copy.name] = copies.photo }
+    }
+
+    public func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs)
+        -> Data?
+    {
+        downloadCount += 1
+        return store.download(copy, from: sender, in: pairs, as: seat(pairs))
+    }
+
+    public func acknowledge(
+        copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+        in pairs: Pairs
+    ) throws {
+        attachmentAcknowledgeCount += 1
+        try store.acknowledge(
+            copy: copy, from: sender, with: receipt, by: device, in: pairs, as: seat(pairs), at: clock.now)
+    }
+
+    public func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) -> Data? {
+        store.ownCopy(copy, in: pairs, as: seat(pairs))
+    }
+
+    public func storedCopies(in pairs: Pairs) -> [StoredPhotoCopy] {
+        store.storedCopies(in: pairs, as: seat(pairs))
+    }
+
+    public func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) {
+        attachmentDeleteCount += 1
+        store.delete(copies: copies, as: seat(pairs))
+    }
+
+    // MARK: What a test can reach in and do
+
+    public func tamper(attachment id: AttachmentID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
+        for copy in copies(of: id) { store.change(copy.recordName, change, at: clock.now) }
+    }
+
+    public func tamper(packet id: PacketID, _ change: @Sendable (inout [String: PacketField]) -> Void) {
+        store.change(id.rawValue.uuidString, change, at: clock.now)
+    }
+
+    public func forget(packet id: PacketID) { store.forgetPacket(id) }
+
+    public func delete(packet id: PacketID) { store.forgetPacket(id) }
+
+    public func forget(attachment id: AttachmentID) {
+        for account in Set(store.spaces.values.map(\.account)) {
+            for copy in copies(of: id) { store.remove(copy.recordName, fromEverySpaceIn: account) }
+        }
+    }
+
+    public func failNextWrite(with error: MailboxError) { pendingFailure = error }
+
+    public func failWrite(number: Int, with error: MailboxError) { packetFailures[writeCount + number] = error }
+
+    public func failUpload(number: Int, with error: MailboxError) { uploadFailures[uploadCount + number] = error }
+
+    public var largestPacketBytes: Int {
+        packetRecords.compactMap { entry -> Int? in
+            if case .data(let bytes)? = entry.record.fields[PacketWire.ciphertext] { return bytes.count }
+            return nil
+        }.max() ?? 0
+    }
+
+    public func storedCiphertextBytes(of packets: [PacketID]) -> Int {
+        let wanted = Set(packets.map(\.rawValue.uuidString))
+        return packetRecords.filter { wanted.contains($0.name) }.reduce(0) { total, entry in
+            guard case .data(let body)? = entry.record.fields[PacketWire.ciphertext] else { return total }
+            return total + body.count
+        }
+    }
+
+    public func pendingRecipients(in pairs: Pairs) -> Set<RecipientTag> {
+        store.sentPackets(in: pairs, as: seat(pairs)).values.reduce(into: Set<RecipientTag>()) { tags, sent in
+            tags.formUnion(sent.recipients.subtracting(sent.receipts.map(\.tag)))
+        }
+    }
 }
 
 public actor RefusingGroupKeychainStore: KeychainStore {
@@ -273,7 +493,8 @@ public actor RefusingGroupKeychainStore: KeychainStore {
     }
 
     public func remove(_ key: KeychainKey) throws { items[key] = nil }
-    public func removeAll() throws { items = [:] }
+    public func removeAll(_ scope: KeychainScope) throws { if scope == .device { items = [:] } }
+    public func protect(as protection: StorageProtection) throws {}
 }
 
 public actor UnreadableKeychainStore: KeychainStore {
@@ -301,34 +522,11 @@ public actor UnreadableKeychainStore: KeychainStore {
     }
 
     public func remove(_ key: KeychainKey) throws { items[key] = nil }
-    public func removeAll() throws { items = [:] }
-}
+    public func removeAll(_ scope: KeychainScope) throws { if scope == .device { items = [:] } }
 
-public actor FailingMailbox: Mailbox, MediaMailbox {
-    public struct Refused: Error {}
-
-    public init() {}
-
-    public func put(_ packet: SyncPacket) async throws { throw Refused() }
-    public func fetch(for tags: Set<RecipientTag>) async throws -> [SyncPacket] { throw Refused() }
-    public func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) async throws { throw Refused() }
-    public func pendingDeliveries() async throws -> [PacketID: Set<RecipientTag>] { throw Refused() }
-    public func ring(_ bell: MessageBell) async throws { throw Refused() }
-    public func upload(_ attachment: OutgoingAttachment) async throws { throw Refused() }
-    public func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) async throws -> Data? {
-        throw Refused()
+    public func protect(as protection: StorageProtection) throws {
+        guard readable else { throw Refused() }
     }
-    public func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) async throws {
-        throw Refused()
-    }
-    public func sweepableAttachments() async throws -> [AttachmentID: Set<RecipientTag>] {
-        throw Refused()
-    }
-
-    public func pendingAttachments() async throws -> [AttachmentID: Set<RecipientTag>] {
-        throw Refused()
-    }
-    public func delete(attachment id: AttachmentID) async throws { throw Refused() }
 }
 
 public actor FakeMediaScreen: MediaScreen {
@@ -350,7 +548,6 @@ public actor FakeMediaScreen: MediaScreen {
 
     public func flag(_ data: Data) { sensitive.insert(data) }
     public func setRefuses(_ refuses: Bool) { self.refuses = refuses }
-    public func setAvailability(_ availability: ScreeningAvailability) { state = availability }
 
     public func isSensitive(image data: Data) throws -> Bool {
         looks += 1
@@ -402,7 +599,7 @@ public actor MemoryLogStore: LogStore {
         for entry in entries {
             let record = try encoder.encode(entry)
             guard record.count <= maximumRecordBytes else {
-                throw StorageError.unreadable
+                throw StorageError.recordTooLarge
             }
             written.append(record)
         }
@@ -412,15 +609,17 @@ public actor MemoryLogStore: LogStore {
     public func loadAll() async throws -> LoadedLog {
         let decoder = JSONDecoder()
         var entries: [Entry] = []
+        var discarded = 0
         for record in records {
-            guard let entry = try? decoder.decode(Entry.self, from: record) else {
-                return LoadedLog(
-                    entries: entries, discardedTrailingBytes: record.count,
-                    termination: .undecodableRecord)
+            if let entry = try? decoder.decode(Entry.self, from: record) {
+                entries.append(entry)
+            } else {
+                discarded += record.count
             }
-            entries.append(entry)
         }
-        return LoadedLog(entries: entries, discardedTrailingBytes: 0, termination: .complete)
+        return LoadedLog(
+            entries: entries, discardedBytes: discarded,
+            termination: discarded > 0 ? .undecodableRecord : .complete)
     }
 
     public func removeAll() async throws { records = [] }
@@ -442,13 +641,6 @@ public actor MemoryLogStore: LogStore {
     }
 }
 
-/// A `ParticipantID` and a `DeviceID` are SHA256 digests, always 32 bytes, and `FeedKey` leans on
-/// that: it concatenates the two without length prefixes, so a fixture of some other width is a
-/// fixture that could not exist in the app. Decoding now refuses one.
-///
-/// Test fixtures used to be written as `Data([1])` because nothing stopped them. `WideID.of([1])`
-/// keeps the seed bytes at the front — so a failure still reads as "the one starting 01" — and pads
-/// to the width the real thing has.
 public enum WideID {
     public static func of(_ seed: [UInt8]) -> Data {
         var bytes = seed
@@ -457,16 +649,15 @@ public enum WideID {
     }
 }
 
-/// Invitations for tests, with a commitment that can be opened again later.
-///
-/// Every real invitation carries `SHA256` of a nonce the joiner picked, and the verification phrase
-/// cannot be computed without that nonce — which is the whole point, because it leaves the inviter
-/// nothing to grind with. A test that built an attestation by hand had no nonce to hand back.
-///
-/// So the nonce here is **derived from the joiner's own signing key** rather than random: any test,
-/// anywhere, can recover it from the attestation without having threaded it through. That is safe
-/// precisely because it is not safe — a predictable nonce is exactly what the commitment is supposed
-/// to prevent, so this must never leave the testing module.
+public enum TestFounding {
+    public static func room(
+        named name: String = "Hangar 7", by founder: ParticipantID, as kind: RoomKind = .room
+    ) throws -> (room: RoomID, profile: Payload) {
+        let (room, founding) = RoomID.founding(by: founder, as: kind)
+        return (room, try Payload.roomProfile(name: name, kind: kind, founding: founding))
+    }
+}
+
 public enum TestInvite {
     public static func nonce(for joinerKeys: IdentityPublicKeys) -> Data {
         Data(SHA256.hash(data: Data("carpenter.test-nonce".utf8) + joinerKeys.signing))
@@ -505,7 +696,6 @@ public enum TestInvite {
 }
 
 extension MembershipAttestation {
-    /// The phrase, opened with the testing nonce. `nil` in production terms means "not yet".
     public var testPhrase: String {
         verificationPhrase(opening: TestInvite.nonce(for: self)) ?? ""
     }

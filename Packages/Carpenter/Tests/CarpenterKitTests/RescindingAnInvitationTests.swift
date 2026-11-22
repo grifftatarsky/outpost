@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Taking an invitation back")
+@Suite("Taking an invitation back", .tags(.membership))
 struct RescindingAnInvitationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -19,10 +19,9 @@ struct RescindingAnInvitationTests {
     }
 
     private func founded(by founder: Identity, access: RoomAccess = .open) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         if access != .open { roster.set(access: access, by: founder.id) }
         return roster
     }
@@ -31,7 +30,7 @@ struct RescindingAnInvitationTests {
         _ joiner: Identity, by inviter: Identity, to roster: inout RoomRoster, hash: UInt8
     ) throws -> MembershipAttestation {
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: hash),
             body: try Payload.joinRequest(attestation))
@@ -89,7 +88,7 @@ struct RescindingAnInvitationTests {
             body: try Payload.invitationRescinded(of: attestation))
         roster.apply(
             rendered(inviter.id, .admission, hash: 5, at: 20),
-            body: try Payload.admission(of: joiner.id, admitted: true))
+            body: try Payload.admission(of: joiner.id, admitted: true, invitation: attestation.signature))
 
         #expect(!roster.members.contains(joiner.id), "an admission overrode a rescind")
     }
@@ -135,7 +134,7 @@ struct RescindingAnInvitationTests {
         #expect(roster.wasRescinded(joiner.id))
     }
 
-    @Test("A stranger's withdrawal is not folded")
+    @Test("A stranger's withdrawal is ignored")
     func aStrangerCannotWithdraw() throws {
         let inviter = Identity.generate()
         let stranger = Identity.generate()
@@ -166,7 +165,7 @@ struct RescindingAnInvitationTests {
 
         roster.apply(
             rendered(inviter.id, .removal, hash: 5, at: 5),
-            body: try Payload.removal(of: other.id))
+            body: try Payload.removal(of: other.id, heads: []))
         roster.apply(
             rendered(other.id, .invitationRescinded, hash: 6, at: 10),
             body: try Payload.invitationRescinded(of: attestation))
@@ -187,7 +186,7 @@ struct RescindingAnInvitationTests {
         let theirs = try invite(other, by: founder, to: &roster, hash: 2)
         try confirm(theirs, by: other, relayedBy: founder, to: &roster, hash: 3)
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: other, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: other, at: start)
         roster.apply(
             rendered(other.id, .joinRequest, hash: 4),
             body: try Payload.joinRequest(attestation))
@@ -234,7 +233,7 @@ struct RescindingAnInvitationTests {
             body: try Payload.invitationRescinded(of: first))
 
         let second = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start.addingTimeInterval(20))
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start.addingTimeInterval(20))
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: 4, at: 20),
             body: try Payload.joinRequest(second))
@@ -316,7 +315,7 @@ struct RescindingAnInvitationTests {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: RoomID(), joinerKeys: joiner.publicKeys, by: inviter, at: start)
 
         let fallback = try #require(try Payload.invitationRescinded(of: attestation).fallbackText)
         #expect(!fallback.isEmpty)
@@ -324,7 +323,7 @@ struct RescindingAnInvitationTests {
 }
 
 @MainActor
-@Suite("Taking an invitation back, through the session", .serialized)
+@Suite("Taking an invitation back, through the session", .serialized, .tags(.membership))
 struct SessionRescindTests {
     private func pair() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -353,8 +352,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         let bobID = try #require(bob.enrolment?.identity.id)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await alice.rescind(invite.attestation)
         #expect(alice.pendingInvitations(in: room).isEmpty, "the purged invitation is still listed")
 
@@ -394,8 +392,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         try await join(bob, into: room, of: alice, through: mailbox)
 
-        let invite = try await alice.invite(
-            joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await settle([alice, bob], mailbox)
 
         await #expect(throws: MembershipError.notAMember) {
@@ -408,7 +405,7 @@ struct SessionRescindTests {
         for session in [alice, bob] {
             #expect(
                 session.roster(of: room).wasRescinded(carolID),
-                "a member's withdrawal of somebody else's offer was not folded")
+                "a member's withdrawal of somebody else's offer was ignored")
         }
     }
 
@@ -422,8 +419,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         try await join(bob, into: room, of: alice, through: mailbox)
 
-        let invite = try await alice.invite(
-            joinerCode: carol.identityCode(), joining: room, mailbox: nil, lasting: .indefinite)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .indefinite)
         try await settle([alice, bob], mailbox)
         try await alice.leave(room)
         try await settle([alice, bob], mailbox, rounds: 8)
@@ -446,7 +442,7 @@ struct SessionRescindTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         let bobID = try #require(bob.enrolment?.identity.id)
 
-        let first = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let first = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await alice.rescind(first.attestation)
 
         try await join(bob, into: room, of: alice, through: mailbox)

@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: This member's own devices, and the feed between them
 
@@ -19,34 +20,149 @@ extension AppSession {
                 return
             }
 
-            await engine.onIncoming { [weak self] sealed, device in
-                await self?.take(sealed, from: device)
+            await engine.onIncoming { [weak self] record in
+                await self?.take(record)
             }
 
-            await self.sendOwnEntriesNow()
-            try? await engine.refresh()
+            if self.enrolment != nil {
+                self.sendOwnEntries()
+            } else {
+                await self.requestApproval(through: engine)
+            }
+            try? await engine.readEverything()
         }
     }
 
-    private func take(_ sealed: SealedSiblingFeed, from device: DeviceID) async {
-        guard let enrolment else { return }
-        guard let feed = try? sealed.open(with: enrolment.identity, from: device) else {
-            integrity.unreadableSiblingFeeds += 1
-            Diagnostics.sync.error(
-                "device sync: a sibling record would not open (\(Diagnostics.fingerprint(device.rawValue), privacy: .public))")
+    func requestApproval(through engine: any EntrySync) async {
+        guard enrolment == nil, let pendingDevice else { return }
+        do {
+            try await engine.send([try DeviceRequest(for: pendingDevice).record()], deleting: [])
+            askedForApproval = true
+            Diagnostics.identity.notice("approval: asked this member's other devices to approve this one")
+        } catch {
+            askedForApproval = false
+            Diagnostics.identity.error(
+                "approval: could not ask for approval: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    public func askForApprovalAgain() async {
+        guard let deviceSync else { return }
+        await requestApproval(through: deviceSync)
+    }
+
+    private func take(_ record: SiblingRecord) async {
+        if enrolment == nil {
+            if case .approval(let target) = record.name.kind, target == pendingDevice?.id {
+                await takeApproval(record)
+            }
             return
         }
-        await take(feed)
+        guard let enrolment else { return }
+        let me = enrolment.device.id
+        let writer = record.name.writer
+        guard writer != me else { return }
+        if case .catchUp(let target) = record.name.kind, target != me { return }
+        if case .mail(let number) = record.name.kind, persisted.siblingMail.hasTaken(mail: number, from: writer) {
+            return
+        }
+        switch record.name.kind {
+        case .request:
+            noteRequest(record)
+            return
+        case .approval:
+            return
+        case .authority:
+            await takeAuthority(record)
+            return
+        case .state, .mail, .catchUp:
+            break
+        }
+
+        let feed: SiblingFeed
+        do {
+            feed = try await record.sealed.openInBackground(
+                with: enrolment.identity, from: writer, as: record.name.kind, reading: enrolment.device)
+        } catch CryptoError.notSealedForThisDevice {
+            Diagnostics.sync.notice(
+                "device sync: a record from another of your devices was not sealed for this one")
+            return
+        } catch {
+            integrity.unreadableSiblingFeeds += 1
+            Diagnostics.sync.error(
+                "device sync: a sibling record would not open (\(Diagnostics.fingerprint(writer.rawValue), privacy: .public))")
+            return
+        }
+        let storedAt = record.modified ?? clock.now
+        guard let trust = await take(feed, from: record, storedAt: storedAt), trust != .none else { return }
+        guard trust == .full else {
+            await persistOrReport("what this device took from a removed device") { try await saveState() }
+            return
+        }
+
+        switch record.name.kind {
+        case .state:
+            persisted.siblingMail.noteState(
+                from: writer, cursors: feed.collected, at: feed.writtenAt ?? clock.now, me: me)
+        case .mail(let number) where everythingHeldIsOnDisk:
+            persisted.siblingMail.took(mail: number, from: writer)
+        case .catchUp where everythingHeldIsOnDisk:
+            persisted.siblingMail.took(catchUpThrough: feed.through ?? 0, from: writer)
+        case .mail, .catchUp, .request, .approval, .authority:
+            break
+        }
+        persisted.siblingMail.shared(feed.epochs)
+        persisted.siblingMail.shared(feed.entries)
+        persisted.siblingMail.shared(feed.people)
+        notePhotosHeld(feed.photosHeld, by: writer)
+        for forwarded in feed.asks { takeAsks([forwarded.ask], from: forwarded.from) }
+        if record.name.kind != .state {
+            persisted.siblingMail.shared(feed.addresses)
+            await keepAddresses(fromSibling: feed.addresses)
+        }
+        for forwarded in feed.forwarded where trust == .full {
+            guard let secret = pairwiseSecret(with: forwarded.from) else { continue }
+            try? await adopt(
+                forwarded.grant, from: Peer(secret: secret, them: forwarded.from, me: enrolment.identity.id),
+                storedAt: forwarded.storedAt ?? record.modified ?? clock.now)
+        }
+        await persistOrReport("what this device has collected from your other devices") {
+            try await saveState()
+        }
+        sendOwnEntries()
     }
 
-    private func take(_ feed: SiblingFeed) async {
-        guard let enrolment else { return }
+    enum SiblingTrust: Equatable {
+        case full
+        case handOver
+        case historical
+        case none
+    }
+
+    func siblingTrust(of record: SiblingRecord, storedAt: Date) -> SiblingTrust {
+        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return .none }
+        let writer = record.name.writer
+        guard let key = registry.signingKey(for: writer),
+            record.sealed.isSigned(by: key, member: enrolment.identity.id, device: writer, as: record.name.kind)
+        else { return .none }
+        if registry.counts(writer, storedAt: storedAt) { return .full }
+        if case .catchUp(let target) = record.name.kind, target == enrolment.device.id,
+            let standing = registry.standing(of: writer), standing.removedByRecovery,
+            standing.revokedBy == enrolment.device.id
+        {
+            return .handOver
+        }
+        return .historical
+    }
+
+    private func take(_ feed: SiblingFeed, from record: SiblingRecord, storedAt: Date) async -> SiblingTrust? {
+        guard let enrolment else { return nil }
 
         if let member = feed.member, member != enrolment.identity.id {
             integrity.feedsFromOtherMembers += 1
             Diagnostics.sync.error(
                 "device sync: ignored a feed belonging to another member (\(Diagnostics.fingerprint(member.rawValue), privacy: .public))")
-            return
+            return nil
         }
         if feed.member == nil {
             Diagnostics.sync.notice("device sync: a feed did not say whose it is; verifying entries")
@@ -59,23 +175,47 @@ extension AppSession {
 
         replica.introduce(enrolment.identity.publicKeys)
         let certificatesBefore = Set(knownCertificates())
-        for certificate in feed.certificates {
-            do {
-                try replica.admit(certificate)
-            } catch {
-                integrity.certificatesRefused += 1
-                Diagnostics.sync.error(
-                    "device sync: refused a certificate for one of your own devices — entries it signed cannot verify here (\(String(describing: error), privacy: .public))")
+        guard
+            await takeAuthority(
+                certificates: feed.certificates, revocations: feed.revocations, storedAt: storedAt)
+        else { return nil }
+
+        let trust = siblingTrust(of: record, storedAt: storedAt)
+        guard trust != .none else {
+            integrity.unreadableSiblingFeeds += 1
+            Diagnostics.identity.error(
+                "device sync: refused a record no device of this member signed while it counted")
+            if Set(knownCertificates()) != certificatesBefore {
+                persisted.certificates = knownCertificates()
+                await persistOrReport("a certificate for another of your devices") { try await saveState() }
             }
+            return trust
+        }
+        let fromRemoved = trust != .full
+        for keys in feed.people where keys.participantID != enrolment.identity.id {
+            replica.introduce(keys)
+            if !persisted.knownKeys.contains(keys) { persisted.knownKeys.append(keys) }
+        }
+        let epochs = trust == .historical ? [] : feed.epochs
+        if !fromRemoved {
+            takeClaimTimes(feed.claimTimes)
+            takeRemovalsHeard(feed.removalsHeard)
         }
 
-        let deletedAfterMerge = persisted.preferences.merged(with: feed.preferences).roomsDeleted
-        for held in feed.epochs
-        where chains[held.room]?.knownEpochs.contains(held.epoch) != true
+        let preferences = fromRemoved ? MemberPreferences() : feed.preferences
+        let deletedAfterMerge = persisted.preferences.merged(with: preferences).roomsDeleted
+        for held in epochs
+        where chains[held.room]?.heldSecrets(at: held.epoch).contains(EpochSecret(material: held.material)) != true
             && !deletedAfterMerge.contains(held.room)
         {
+            if fromRemoved, !persisted.rekeyBeforeWriting.contains(held.room) {
+                persisted.rekeyBeforeWriting.insert(held.room)
+                Diagnostics.identity.notice(
+                    "device sync: took a room key from a removed device; the room gets a new key before anything is written")
+            }
             var chain = chains[held.room] ?? EpochChain(room: held.room)
-            chain.adopt(EpochSecret(material: held.material), at: held.epoch)
+            let records = keyRecords(in: held.room)
+            chain.hold(EpochSecret(material: held.material), at: held.epoch, recordedBy: { records(held.epoch, $0) })
             chains[held.room] = chain
 
             await persistOrReport("a room key from another of your devices") {
@@ -84,10 +224,11 @@ extension AppSession {
             }
         }
 
-        let mergedPreferences = persisted.preferences.merged(with: feed.preferences)
+        let mergedPreferences = persisted.preferences.merged(with: preferences)
         let preferencesChanged = mergedPreferences != persisted.preferences
         if preferencesChanged {
             persisted.preferences = mergedPreferences
+            projectionInputsChanged()
             await persistOrReport("settings from another of your devices") {
                 try await saveState()
             }
@@ -95,17 +236,23 @@ extension AppSession {
             refresh()
         }
 
+        let fromSiblings = feed.entries.filter { $0.device != enrolment.device.id }
+        let checked = await replica.signatureChecks(for: fromSiblings)
         var taken: [Entry] = []
-        for entry in feed.entries where entry.device != enrolment.device.id {
+        for (entry, outcome) in replica.integrate(fromSiblings, checked: checked) {
             do {
-                _ = try replica.integrate(entry)
+                switch try outcome.get() {
+                case .accepted, .forked:
+                    taken.append(entry)
+                    entriesNotWrittenDown.append(entry)
+                case .alreadyPresent: taken.append(entry)
+                case .tooLarge: integrity.rejectedFromPeers += 1
+                }
             } catch {
                 integrity.unverifiableFromOwnDevices += 1
                 Diagnostics.sync.error(
                     "device sync: an entry from one of your own devices did not verify — usually a certificate that has not arrived (\(String(describing: error), privacy: .public))")
-                continue
             }
-            taken.append(entry)
         }
 
         persisted.spentEntries = replica.spentEntries
@@ -117,11 +264,12 @@ extension AppSession {
                 }
                 refresh()
             }
-            return
+            return trust
         }
 
+        notePhotosOwed(taken)
         await persistOrReport("history from another of your devices") {
-            try await storage.log.append(taken)
+            try await writeDownWhatIsOwed()
         }
 
         persisted.certificates = knownCertificates()
@@ -137,10 +285,30 @@ extension AppSession {
         }
 
         Diagnostics.sync.notice("took \(taken.count, privacy: .public) entries from another device")
+        return trust
+    }
+
+    private func takeRemovalsHeard(_ removals: [RemovalHeard]) {
+        guard let me = enrolment?.identity.id else { return }
+        let before = replica
+        for heard in removals
+        where heard.revocation.participant != me && replica.registry(for: heard.revocation.participant) != nil {
+            do {
+                try replica.revoke(heard.revocation, storedAt: heard.storedAt)
+            } catch {
+                Diagnostics.identity.error(
+                    "device sync: refused a friend's device removal another of your devices passed on")
+            }
+        }
+        persisted.siblingMail.shared(removals.map(\.revocation))
+        guard replica.knownRevocations.count != before.knownRevocations.count else { return }
+        replica.fixSupersededLines(sparing: me)
+        noteKeyChangesRefused(among: Self.entriesTurnedAway([], from: before, to: replica))
+        recordAuthority()
     }
 
     public func refreshDeviceSync() async {
-        guard let deviceSync else { return }
+        guard let deviceSync, !storageIsSealed else { return }
         do {
             try await deviceSync.refresh()
         } catch {
@@ -149,67 +317,165 @@ extension AppSession {
         }
     }
 
-    private func sendOwnEntriesNow() async {
-        guard let deviceSync, let enrolment else { return }
-
-        let mine = replica.allEntries.filter { $0.device == enrolment.device.id }
-
-        do {
-            let feed = SiblingFeed(
-                entries: mine, certificates: knownCertificates(), epochs: heldEpochs(),
-                member: enrolment.identity.id, writtenAt: clock.now,
-                preferences: persisted.preferences)
-            try await deviceSync.send(
-                try SealedSiblingFeed.seal(
-                    feed, for: enrolment.identity, on: enrolment.device.id),
-                from: enrolment.device.id)
-        } catch {
-            Diagnostics.sync.error(
-                "device sync catch-up failed: \(String(describing: error), privacy: .public)")
+    private func siblingRecipients(for kind: SiblingRecord.Kind, among active: [DeviceID]) -> [DeviceRecipient] {
+        guard let enrolment, let registry = replica.registry(for: enrolment.identity.id) else { return [] }
+        let devices: [DeviceID]
+        switch kind {
+        case .state, .request, .approval, .authority: return []
+        case .mail: devices = active
+        case .catchUp(let target): devices = [target]
+        }
+        return devices.compactMap { device in
+            registry.sealingKey(for: device).map { DeviceRecipient(device: device, sealingKey: $0) }
         }
     }
 
-    private func heldEpochs() -> [HeldEpoch] {
+    func heldEpochs() -> [HeldEpoch] {
         chains.flatMap { room, chain in
-            chain.knownEpochs.compactMap { epoch in
-                (try? chain.secret(for: epoch)).map {
-                    HeldEpoch(room: room, epoch: epoch, material: $0.material)
-                }
+            chain.knownEpochs.flatMap { epoch in
+                chain.heldSecrets(at: epoch).map { HeldEpoch(room: room, epoch: epoch, material: $0.material) }
             }
         }
     }
 
     func sendOwnEntries() {
-        guard deviceSync != nil, enrolment != nil else { return }
+        guard deviceSync != nil, enrolment != nil, !isHeldByICloud else { return }
         if publishing {
             publishAgain = true
             return
         }
-        publishing = true
-        Task { await publishOwnEntries() }
+        passingOn = Task { await publishOwnEntries() }
     }
 
-    private func publishOwnEntries() async {
-        defer { publishing = false }
+    func ownDevicesCanCollectWhatThisOneHolds() async -> Bool {
+        sendOwnEntries()
+        return await passingOn?.value ?? true
+    }
+
+    private func publishOwnEntries() async -> Bool {
+        defer { passingOn = nil }
+        var stored = true
 
         repeat {
             publishAgain = false
-            guard let deviceSync, let enrolment else { return }
+            guard let deviceSync, enrolment != nil else { return false }
+            await publishAuthority(through: deviceSync)
+            guard let enrolment else { return false }
+            let me = enrolment.device.id
+            let now = clock.now
+            let held = heldEpochs()
+            let people = replica.knownParticipants.compactMap { replica.registry(for: $0)?.identity }
+                .sorted { $0.participantID.rawValue.lexicographicallyPrecedes($1.participantID.rawValue) }
+            let preferencesDigest = try? SiblingMail.digest(of: persisted.preferences)
+            let addresses = addressBook.held
+            let removalsOfOthers = replica.knownRevocations.filter { $0.participant != enrolment.identity.id }
+                .sorted { $0.digest.lexicographicallyPrecedes($1.digest) }
+            let heard: ([DeviceRevocation]) -> [RemovalHeard] = { [stored = replica.storedTimes] removals in
+                removals.map { RemovalHeard(revocation: $0, storedAt: stored[$0.digest] ?? now) }
+            }
+            let plan = persisted.siblingMail.plan(
+                entries: replica.allEntries, held: held, people: people, preferences: preferencesDigest,
+                addresses: addresses, removals: removalsOfOthers, me: me,
+                revoked: Set(persisted.revocations.map(\.device)), now: now)
 
+            let photosHeld = persisted.ownPhotosHeld.sorted { $0.rawValue.uuidString < $1.rawValue.uuidString }
+            let asks = persisted.photoAsks.map {
+                ForwardedAsk(from: $0.from, ask: PhotoAsk(entry: $0.entry, attachment: $0.attachment))
+            }
+            let state = SiblingFeed(
+                entries: [], certificates: knownCertificates(), member: enrolment.identity.id,
+                collected: persisted.siblingMail.cursors, revocations: persisted.revocations, people: people,
+                photosHeld: photosHeld, asks: asks)
+            let digest = try? SiblingMail.digest(of: state, on: now)
+
+            var drafts: [(kind: SiblingRecord.Kind, feed: SiblingFeed)] = []
+            if digest == nil || digest != persisted.siblingMail.lastState {
+                drafts.append((.state, SiblingFeed(
+                    entries: [], certificates: state.certificates, member: state.member, writtenAt: now,
+                    collected: state.collected, revocations: state.revocations, people: people,
+                    photosHeld: photosHeld, asks: asks)))
+            }
+            if let mail = plan.mail {
+                let carried = Set(mail.entries.map(\.hash))
+                drafts.append((.mail(mail.number), SiblingFeed(
+                    entries: mail.entries, certificates: state.certificates, epochs: mail.epochs,
+                    member: enrolment.identity.id, writtenAt: now,
+                    preferences: mail.carriesPreferences ? persisted.preferences : MemberPreferences(),
+                    forwarded: mail.forwarded, people: mail.people, addresses: mail.addresses,
+                    claimTimes: persisted.claimTimes.filter { carried.contains($0.key) },
+                    removalsHeard: heard(mail.removals))))
+            }
+            if !plan.catchUpsFor.isEmpty {
+                func catchUp(_ entries: [Entry]) -> SiblingFeed {
+                    SiblingFeed(
+                        entries: entries, certificates: state.certificates, epochs: held,
+                        member: enrolment.identity.id, writtenAt: now, preferences: persisted.preferences,
+                        through: plan.through, revocations: persisted.revocations, people: people,
+                        addresses: addresses, claimTimes: persisted.claimTimes,
+                        removalsHeard: heard(removalsOfOthers))
+                }
+                let everything = catchUp(replica.allEntries)
+                for target in plan.catchUpsFor {
+                    drafts.append((.catchUp(for: target), everything))
+                }
+            }
+            let deleting = plan.deletions.map { SiblingRecord.Name(writer: me, kind: $0) }
+
+            let before = persisted.siblingMail
             do {
-                let feed = SiblingFeed(
-                    entries: replica.allEntries.filter { $0.device == enrolment.device.id },
-                    certificates: knownCertificates(), epochs: heldEpochs(),
-                    member: enrolment.identity.id, writtenAt: clock.now,
-                    preferences: persisted.preferences)
-                try await deviceSync.send(
-                    try SealedSiblingFeed.seal(
-                        feed, for: enrolment.identity, on: enrolment.device.id),
-                    from: enrolment.device.id)
+                var records: [SiblingRecord] = []
+                for draft in drafts {
+                    let recipients = siblingRecipients(for: draft.kind, among: plan.recipients)
+                    guard !recipients.isEmpty || !draft.kind.carriesKeys else {
+                        Diagnostics.sync.error(
+                            "device sync: no device this record was for has a receiving key; room keys are never sealed under the identity alone, so it was not sent")
+                        continue
+                    }
+                    records.append(SiblingRecord(
+                        name: SiblingRecord.Name(writer: me, kind: draft.kind),
+                        sealed: try await SealedSiblingFeed.sealInBackground(
+                            draft.feed, for: enrolment.identity, on: me, as: draft.kind, to: recipients,
+                            signedBy: enrolment.device)))
+                }
+                let isCatchUp: (SiblingRecord) -> Bool = {
+                    if case .catchUp = $0.name.kind { true } else { false }
+                }
+                let (catchUps, mailAndState) = (records.filter(isCatchUp), records.filter { !isCatchUp($0) })
+                if !mailAndState.isEmpty || !deleting.isEmpty {
+                    let landed = try await deviceSync.send(mailAndState, deleting: deleting)
+                    let mailLanded = mailAndState.allSatisfy { !$0.name.kind.carriesKeys || landed[$0.name] != nil }
+                    guard mailLanded else { throw DeviceMailNotStored() }
+                }
+                let catchUpsWritten = await storeCatchUps(catchUps, through: deviceSync)
+                persisted.siblingMail.commit(
+                    plan, stateWritten: drafts.contains { $0.kind == .state } ? digest : nil,
+                    catchUpsWritten: catchUpsWritten)
+                stored = true
             } catch {
+                stored = false
                 Diagnostics.sync.error(
                     "device sync send failed: \(String(describing: error), privacy: .public)")
             }
+            if persisted.siblingMail != before {
+                await persistOrReport("what this device has sent to your other devices") {
+                    try await saveState()
+                }
+            }
         } while publishAgain
+        return stored
+    }
+
+    private func storeCatchUps(_ catchUps: [SiblingRecord], through deviceSync: any EntrySync) async -> Bool {
+        guard !catchUps.isEmpty else { return true }
+        do {
+            let landed = try await deviceSync.send(catchUps, deleting: [])
+            return catchUps.allSatisfy { landed[$0.name] != nil }
+        } catch {
+            Diagnostics.sync.error(
+                "device sync: a catch-up for another device was not stored: \(String(describing: error), privacy: .public)")
+            return false
+        }
     }
 }
+
+struct DeviceMailNotStored: Error {}

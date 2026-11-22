@@ -49,10 +49,6 @@ public enum Accent: String, CaseIterable, Hashable, Sendable, Codable {
         }
     }
 
-    public var valuePairDescription: String {
-        "#\(Self.hexString(darkValue)) / #\(Self.hexString(lightValue))"
-    }
-
     private static let darkTintOpacity = 0.22
     private static let lightTintOpacity = 0.13
 
@@ -80,9 +76,5 @@ public enum Accent: String, CaseIterable, Hashable, Sendable, Codable {
         case .oliveDrab: 0x6071_20
         case .monochrome: 0x3A3C_42
         }
-    }
-
-    private static func hexString(_ value: UInt32) -> String {
-        String(format: "%06X", value)
     }
 }

@@ -2,10 +2,6 @@ import CarpenterKit
 import CarpenterMedia
 import SwiftUI
 
-// Compiled only into a debug build. Gating the *call site* is not enough: the view is still
-// compiled, so its words reach the shipped binary and the string catalogue a translator
-// works from. Measured 2026-09-15 — `strings` on a Release build returned "Blur every
-// photo", "Rotate mailbox share" and "Show message delay".
 #if DEBUG
 
 struct DebugMenuView: View {
@@ -24,19 +20,10 @@ struct DebugMenuView: View {
                     SettingsRow(
                         icon: "tray.full",
                         title: Text("Check mailbox", bundle: .module),
-                        detail: Text("Put one packet through CloudKit and report each step", bundle: .module)
+                        detail: Text("Report the spaces in iCloud this device can reach", bundle: .module)
                     )
                 }
 
-                Button { Task { await actions.rotateMailboxShare() } } label: {
-                    SettingsRow(
-                        icon: "arrow.triangle.2.circlepath",
-                        title: Text("Rotate mailbox share", bundle: .module),
-                        detail: Text(
-                            "Erase this member's outbox and share it afresh. Every peer then holds a dead offer until the rendezvous heals it.",
-                            bundle: .module)
-                    )
-                }
                 Button { Task { await actions.pretendFocus(true) } } label: {
                     SettingsRow(
                         icon: "moon.fill",
@@ -50,6 +37,28 @@ struct DebugMenuView: View {
                     SettingsRow(
                         icon: "moon",
                         title: Text("Pretend the Focus ended", bundle: .module))
+                }
+                if let fitTest = actions.fitTest {
+                    NavigationLink {
+                        FitTestView(run: fitTest)
+                    } label: {
+                        SettingsRow(
+                            icon: "stopwatch",
+                            title: Text("Test Make it fit", bundle: .module),
+                            detail: Text("Time the fit, the upload and the fetch of one video", bundle: .module)
+                        )
+                    }
+                }
+                if let contactSpaceTest = actions.contactSpaceTest {
+                    NavigationLink {
+                        ContactSpaceTestView(run: contactSpaceTest)
+                    } label: {
+                        SettingsRow(
+                            icon: "bell.badge",
+                            title: Text("Test a contact's space", bundle: .module),
+                            detail: Text("Which changes in a contact's space notify this phone", bundle: .module)
+                        )
+                    }
                 }
                 NavigationLink {
                     HapticsProbeView()

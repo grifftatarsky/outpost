@@ -6,12 +6,12 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("The privacy check-up", .serialized)
+@Suite("The privacy check-up", .serialized, .tags(.ui))
 struct PrivacyCheckupTests {
     @Test("A new member is asked once, and not again after a relaunch")
     func askedOnce() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "checkup-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "checkup-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let session = TestSession.make(keychain: keychain, at: directory)

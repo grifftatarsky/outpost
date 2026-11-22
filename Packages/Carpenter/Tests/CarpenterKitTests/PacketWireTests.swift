@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Packet wire mapping")
+@Suite("Packet wire mapping", .tags(.sync))
 struct PacketWireTests {
     private func peers() throws -> (mine: Peer, theirs: Peer) {
         let a = Identity.generate()
@@ -91,6 +91,20 @@ struct PacketWireTests {
         #expect(PacketWire.packet(from: [PacketWire.packetID: .string("not-a-uuid")]) == nil)
     }
 
+    @Test("A packet naming one address twice is refused rather than stopping the device that reads it")
+    func aRepeatedAddressIsRefused() throws {
+        let (mine, _) = try peers()
+        var author = Author()
+        let packet = try SyncEngine.pack([try author.post("twice", at: TestSession.now)], for: [mine], window: 7)
+
+        var fields = PacketWire.fields(of: packet)
+        let tag = try #require(packet.wraps.keys.first).rawValue
+        fields[PacketWire.wrapTags] = .dataList([tag, tag])
+        fields[PacketWire.wrapValues] = .dataList([Data([1]), Data([2])])
+
+        #expect(PacketWire.packet(from: fields) == nil)
+    }
+
     @Test("The in-memory mailbox carries a grant through the wire mapping")
     func fakeMailboxSerialises() async throws {
         let (mine, theirs) = try peers()
@@ -99,11 +113,12 @@ struct PacketWireTests {
         let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: mine.secret)
 
         let mailbox = InMemoryMailbox()
+        let (asMine, asTheirs) = try await link(mine, theirs, through: mailbox)
         let packet = try SyncEngine.pack(
             [], for: [mine], granting: [(to: mine, grant: grant)], window: 7)
-        try await mailbox.put(packet)
+        try await mailbox.put(packet, to: mine.them, in: asMine)
 
-        let collected = try await mailbox.fetch(for: theirs.incomingTag(window: 7))
+        let collected = await mailbox.fetch(from: mine.me, for: [theirs.incomingTag(window: 7)], in: asTheirs)
         #expect(collected.count == 1)
         #expect(collected.first?.grants == packet.grants, "the fake mailbox skipped serialisation")
     }

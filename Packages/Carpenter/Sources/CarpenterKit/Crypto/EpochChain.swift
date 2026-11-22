@@ -33,6 +33,10 @@ public struct EpochSecret: Hashable, Sendable {
     public static func random() -> EpochSecret {
         EpochSecret(material: SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) })
     }
+
+    public var fingerprint: Data {
+        Data(SHA256.hash(data: CanonicalBytes.payload(domain: Domain.epochFingerprint, fields: [material])))
+    }
 }
 
 public struct EpochLink: Hashable, Sendable, Codable {
@@ -52,11 +56,50 @@ public struct EpochLink: Hashable, Sendable, Codable {
     }
 }
 
+extension EpochChangeBody {
+    public init(link: EpochLink, heads: [EntryHash], under secret: EpochSecret) {
+        self.init(
+            link: link, heads: heads,
+            proof: Data(
+                HMAC<SHA256>.authenticationCode(for: Self.naming(heads), using: Self.key(of: link, under: secret))))
+    }
+
+    public func isAuthentic(under secret: EpochSecret) -> Bool {
+        HMAC<SHA256>.isValidAuthenticationCode(
+            proof, authenticating: Self.naming(heads), using: Self.key(of: link, under: secret))
+    }
+
+    private static func naming(_ heads: [EntryHash]) -> Data {
+        CanonicalBytes.payload(domain: Domain.epochChange, fields: heads.map(\.rawValue))
+    }
+
+    private static func key(of link: EpochLink, under secret: EpochSecret) -> SymmetricKey {
+        EpochChain.changeKey(for: secret, room: link.room, epoch: link.epoch)
+    }
+}
+
 public struct EpochChain: Sendable {
+    public struct Giver: Hashable, Sendable {
+        public let person: ParticipantID
+        public let device: DeviceID?
+    }
+
     public let room: RoomID
 
     private var secrets: [EpochNumber: EpochSecret] = [:]
+    private var rivals: [EpochNumber: [EpochSecret]] = [:]
+    private var givenBy: [EpochNumber: [EpochSecret: Giver]] = [:]
     private var links: [EpochNumber: EpochLink] = [:]
+
+    public static let mostRivals = 16
+
+    public static let mostKeysFromOnePerson = 4
+
+    public static let mostNumbersSkipped: UInt64 = 8
+
+    public static let mostLinksInAGrant = 2_048
+
+    public static let mostNumbersTheLogHasNotShown = 4_096
 
     public init(room: RoomID) {
         self.room = room
@@ -79,13 +122,84 @@ public struct EpochChain: Sendable {
 
     public var highestKnownEpoch: EpochNumber? { secrets.keys.max() }
 
+    public var heldNumbers: [EpochNumber] {
+        var numbers = Set(secrets.keys).union(rivals.keys)
+        for epoch in links.keys {
+            numbers.insert(epoch)
+            if let below = epoch.previous { numbers.insert(below) }
+        }
+        return numbers.sorted(by: >)
+    }
+
+    public var heldKeyCount: Int { secrets.count + rivals.values.reduce(0) { $0 + $1.count } }
+
+    public func heldSecrets(at epoch: EpochNumber) -> [EpochSecret] {
+        ((try? secret(for: epoch)).map { [$0] } ?? []) + (rivals[epoch] ?? [])
+    }
+
+    public func giver(of secret: EpochSecret, at epoch: EpochNumber) -> Giver? {
+        givenBy[epoch]?[secret]
+    }
+
     public mutating func adopt(_ secret: EpochSecret, at epoch: EpochNumber) {
+        if let held = secrets[epoch], held != secret, !(rivals[epoch] ?? []).contains(held) {
+            rivals[epoch, default: []].append(held)
+        }
+        rivals[epoch]?.removeAll { $0 == secret }
         secrets[epoch] = secret
+    }
+
+    public mutating func hold(
+        _ secret: EpochSecret, at epoch: EpochNumber, from giver: ParticipantID? = nil, on device: DeviceID? = nil,
+        recordedBy recorders: (EpochSecret) -> Set<ParticipantID> = { _ in [] }
+    ) {
+        let given = giver.map { Giver(person: $0, device: device) }
+        if secrets[epoch] == nil, let derived = try? self.secret(for: epoch) { secrets[epoch] = derived }
+        guard let primary = secrets[epoch] else {
+            secrets[epoch] = secret
+            if let given { givenBy[epoch, default: [:]][secret] = given }
+            return
+        }
+        let held = [primary] + (rivals[epoch] ?? [])
+        guard epoch != .initial, !held.contains(secret) else { return }
+        let madeByTheGiver = giver.map { recorders(secret).contains($0) } ?? false
+        if let giver {
+            let theirs = held.filter { givenBy[epoch]?[$0]?.person == giver || recorders($0).contains(giver) }
+            guard theirs.count < Self.mostKeysFromOnePerson, theirs.isEmpty || madeByTheGiver else { return }
+        }
+        if !madeByTheGiver {
+            guard (rivals[epoch] ?? []).count(where: { recorders($0).isEmpty }) < Self.mostRivals else { return }
+        }
+        if let given { givenBy[epoch, default: [:]][secret] = given }
+        rivals[epoch, default: []].append(secret)
+    }
+
+    public mutating func restore(_ keys: [EpochSecret], at epoch: EpochNumber) {
+        guard let first = keys.first else { return }
+        adopt(first, at: epoch)
+        for key in keys.dropFirst() where !heldSecrets(at: epoch).contains(key) {
+            rivals[epoch, default: []].append(key)
+        }
+    }
+
+    public func choosing(_ secret: EpochSecret, at epoch: EpochNumber) -> EpochChain {
+        var chosen = self
+        chosen.adopt(secret, at: epoch)
+        return chosen
     }
 
     public mutating func record(_ link: EpochLink) throws {
         guard link.room == room else { throw CryptoError.wrongRoom }
+        if let held = links[link.epoch], opens(held) != false { return }
+        guard opens(link) != false else { return }
         links[link.epoch] = link
+    }
+
+    private func opens(_ link: EpochLink) -> Bool? {
+        guard let secret = secrets[link.epoch] else { return nil }
+        guard let box = try? ChaChaPoly.SealedBox(combined: link.wrapped) else { return false }
+        let key = Self.wrappingKey(for: secret, room: room, epoch: link.epoch)
+        return (try? ChaChaPoly.open(box, using: key, authenticating: link.context)) != nil
     }
 
     public mutating func record(_ links: some Sequence<EpochLink>) throws {
@@ -95,6 +209,7 @@ public struct EpochChain: Sendable {
     public static func advance(
         from previous: EpochSecret, at previousEpoch: EpochNumber, room: RoomID
     ) throws -> (secret: EpochSecret, link: EpochLink) {
+        guard previousEpoch.rawValue < .max else { throw CryptoError.unknownEpoch }
         let epoch = previousEpoch.next
         let secret = EpochSecret.random()
         let link = EpochLink(room: room, epoch: epoch, wrapped: Data())
@@ -141,19 +256,39 @@ public struct EpochChain: Sendable {
             from: try secret(for: epoch), room: room, epoch: epoch, domain: Domain.epochSealing)
     }
 
+    public func sealingKeys(for epoch: EpochNumber) -> [SymmetricKey] {
+        heldSecrets(at: epoch).map { Self.derivedKey(from: $0, room: room, epoch: epoch, domain: Domain.epochSealing) }
+    }
+
+    public func unwrapping(_ epoch: EpochNumber, under secret: EpochSecret) -> EpochSecret? {
+        guard let link = links[epoch], let box = try? ChaChaPoly.SealedBox(combined: link.wrapped),
+            let opened = try? ChaChaPoly.open(
+                box, using: Self.wrappingKey(for: secret, room: room, epoch: epoch), authenticating: link.context)
+        else { return nil }
+        return EpochSecret(material: opened)
+    }
+
     public mutating func warm(downTo epoch: EpochNumber) throws {
         guard let highest = highestKnownEpoch, epoch <= highest else { return }
         var cursor = highest
-        while cursor >= epoch {
-            secrets[cursor] = try secret(for: cursor)
+        while cursor > epoch {
+            guard links[cursor] != nil else { throw CryptoError.unknownEpoch }
+            let opened = heldSecrets(at: cursor).compactMap { unwrapping(cursor, under: $0) }
+            guard let linked = opened.first else { throw CryptoError.openFailed }
             guard let step = cursor.previous else { break }
             cursor = step
+            if secrets[cursor] == nil { secrets[cursor] = linked }
+            for secret in opened { hold(secret, at: cursor) }
         }
     }
 
     private func requireSecret(at epoch: EpochNumber) throws -> EpochSecret {
         guard let secret = secrets[epoch] else { throw CryptoError.unknownEpoch }
         return secret
+    }
+
+    fileprivate static func changeKey(for secret: EpochSecret, room: RoomID, epoch: EpochNumber) -> SymmetricKey {
+        derivedKey(from: secret, room: room, epoch: epoch, domain: Domain.epochChange)
     }
 
     private static func wrappingKey(

@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterUI
 
-@Suite struct DirectConversationTests {
+@Suite(.tags(.ui)) struct DirectConversationTests {
     private func room(_ members: Int, isDirect: Bool = false) -> RoomSummary {
         RoomSummary(
             name: "R", memberCount: members, lastAuthor: nil, lastMessage: "",
@@ -49,7 +49,7 @@ import Testing
 }
 
 @MainActor
-@Suite struct DemoDirectConversationTests {
+@Suite(.tags(.ui)) struct DemoDirectConversationTests {
     @Test("The demo direct room is a two-person conversation and reads as one")
     func demoDirectIsDirect() {
         let room = DemoConversation.directRoom()

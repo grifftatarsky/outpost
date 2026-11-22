@@ -3,7 +3,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("A deleted conversation leaves its positions spent, not empty")
+@Suite("A deleted conversation leaves its positions spent, not empty", .tags(.crypto))
 struct SpentPositionsTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -73,7 +73,7 @@ struct SpentPositionsTests {
         let next = try Entry.append(
             after: top, author: author.identity.id, device: author.device,
             clock: replica.frontier, wallTime: start.addingTimeInterval(10), room: RoomID(),
-            payload: try Payload.post("after"), at: .initial, sealedWith: author.chain)
+            payload: try Payload.post("after"), at: .initial, sealedWith: author.chain, roomLink: RoomLink(previous: nil))
         #expect(next.seq == 7)
         #expect(try replica.integrate(next) == .accepted)
         #expect(replica.forks.isEmpty)
@@ -115,11 +115,11 @@ struct SpentPositionsTests {
     }
 }
 
-@Suite("Taking a room's entries out of the log on disk", .serialized)
+@Suite("Taking a room's entries out of the log on disk", .serialized, .tags(.crypto))
 struct LogRemovalTests {
     @Test("Removing entries keeps every other entry, in order, across a reload")
     func removalKeepsTheRest() async throws {
-        let url = URL.temporaryDirectory.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
+        let url = TestScratch.root.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
         let store = FileLogStore(url: url)
         var author = Author()
         let kept = RoomID()
@@ -148,7 +148,7 @@ struct LogRemovalTests {
 
     @Test("Removing nothing leaves the file alone")
     func removingNothingWritesNothing() async throws {
-        let url = URL.temporaryDirectory.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
+        let url = TestScratch.root.appending(path: "carpenter-\(UUID().uuidString)/log.carpenter")
         let store = FileLogStore(url: url)
         var author = Author()
         try await store.append([try author.post("kept", at: Date(timeIntervalSince1970: 0))])

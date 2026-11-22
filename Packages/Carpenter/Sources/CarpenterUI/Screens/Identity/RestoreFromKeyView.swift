@@ -5,22 +5,20 @@ public struct RestoreFromKeyView: View {
     @Environment(\.palette) private var palette
     @Environment(\.dismiss) private var dismiss
 
-    private let restore: (String, Bool, Bool) async -> String?
+    private let restore: (String, Bool) async -> String?
 
     @State private var key = ""
     @State private var asksPeers = true
-    @State private var lostOrStolen: Bool?
     @State private var working = false
     @State private var problem: String?
     @FocusState private var typing: Bool
 
-    public init(restore: @escaping (String, Bool, Bool) async -> String?) {
+    public init(restore: @escaping (String, Bool) async -> String?) {
         self.restore = restore
     }
 
     private var ready: Bool {
         !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !working
-            && lostOrStolen != nil
     }
 
     private func begin() {
@@ -28,7 +26,7 @@ public struct RestoreFromKeyView: View {
         working = true
         problem = nil
         Task {
-            let failure = await restore(key, asksPeers, lostOrStolen == true)
+            let failure = await restore(key, asksPeers)
             working = false
             if let failure {
                 problem = failure
@@ -46,7 +44,7 @@ public struct RestoreFromKeyView: View {
                         icon: "key.horizontal.fill",
                         title: Text("Use your recovery key", bundle: .module),
                         paragraph: Text(
-                            "Paste the whole file, header line and all. It makes this device you again.",
+                            "Paste the whole file, header line and all, or type just the key. Restoring here removes every other device you have; approve the ones you still use again afterwards.",
                             bundle: .module))
                 }
                 .groupedRowSurface()
@@ -56,7 +54,7 @@ public struct RestoreFromKeyView: View {
                     // COPY BEGIN 8ac43771 [NEEDS HUMAN REVIEW]
                     TextField(
                         text: $key,
-                        prompt: Text("OUTPOST RECOVERY KEY…", bundle: .module),
+                        prompt: Text(verbatim: "\(RecoveryKey.header)…"),
                         axis: .vertical
                     ) {
                         Text("Recovery key", bundle: .module)
@@ -74,92 +72,37 @@ public struct RestoreFromKeyView: View {
                         Text(problem).foregroundStyle(palette.destructive)
                     } else {
                         Text(
-                            "Nothing is sent anywhere. The key is read on this device and put back in your keychain.",
+                            "The key is read on this device and isn't kept. Your identity is kept on this device only.",
                             bundle: .module)
                     }
                     // COPY END 8ac43771
                 }
                 .groupedRowSurface()
 
-                // COPY BEGIN 48aa82d0 [NEEDS HUMAN REVIEW]
-                Section {
-                    ChoiceRow(
-                        title: Text("No — I still have it, or I am adding a device", bundle: .module),
-                        isSelected: lostOrStolen == false,
-                        action: { lostOrStolen = false })
-                    ChoiceRow(
-                        title: Text("Yes — a device was lost or stolen", bundle: .module),
-                        isSelected: lostOrStolen == true,
-                        action: { lostOrStolen = true })
-                } header: {
-                    Text("What happened", bundle: .module).sectionHeading()
-                } footer: {
-                    switch lostOrStolen {
-                    case true:
-                        Text(
-                            "Every room turns its key, so the device that is gone stops reading what is said from now on. It cannot be undone, and any other device you still own goes quiet until you restore it too.",
-                            bundle: .module)
-                    case false:
-                        Text(
-                            "No keys turn. A device you no longer have would keep reading — you can still cut one off later under Devices.",
-                            bundle: .module)
-                    default:
-                        Text(
-                            "This app cannot tell a new phone from a stolen one, and the answer decides whether every room turns its key. Nothing is restored until you say which it was.",
-                            bundle: .module)
-                    }
-                }
-                .groupedRowSurface()
-                // COPY END 48aa82d0
-
-                // COPY BEGIN 7b506c4b [NEEDS HUMAN REVIEW]
+                // COPY BEGIN 7b506c4b [HUMAN REVIEWED, UNVERIFIED]
                 Section {
                     SettingsToggle(
                         icon: "hand.wave.fill",
-                        title: Text("Ask the people I talk to for what was said", bundle: .module),
+                        title: Text("Request history backfill", bundle: .module),
                         isOn: $asksPeers)
-                } header: {
-                    Text("Getting your history back", bundle: .module).sectionHeading()
                 } footer: {
                     if asksPeers {
                         Text(
-                            "Each of them is asked once for their copy of what was said. Some will be told you set up a new device — that is their setting, not yours. Anything nobody kept is gone.",
+                            "History providers (people you message) will be asked, and configured devices will see you're using a new device.",
                             bundle: .module)
                     } else {
                         Text(
-                            "Nobody is asked and nobody is told. Your rooms come back as people reach you again, but they come back empty — and there is no way to ask for the old messages later except by turning this back on.",
+                            "No one will see you have set up a new device, but you cannot obtain any history until you enable this.",
                             bundle: .module)
                     }
                 }
                 .groupedRowSurface()
                 // COPY END 7b506c4b
 
-                Section {
-                    // COPY BEGIN 38d1c645 [NEEDS HUMAN REVIEW]
-                    Label {
-                        Text("Your rooms come back as people reach you again", bundle: .module)
-                    } icon: {
-                        Image(systemName: "checkmark").foregroundStyle(palette.accentColor)
-                    }
-                    Label {
-                        Text("What was said comes back only from the people who still hold it", bundle: .module)
-                    } icon: {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .foregroundStyle(palette.secondaryText)
-                    }
-                } header: {
-                    Text("What to expect", bundle: .module).sectionHeading()
-                } footer: {
-                    Text(
-                        "Anybody you talked to who is still on this app can hand your history back. Anything nobody kept is gone.",
-                        bundle: .module)
-                    // COPY END 38d1c645
-                }
-                .groupedRowSurface()
             }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        // COPY BEGIN ad65cb88 [NEEDS HUMAN REVIEW]
+        // COPY BEGIN ad65cb88 [HUMAN REVIEWED, UNVERIFIED]
         .safeAreaInset(edge: .bottom) {
             Button(action: begin) {
                 Text("Restore this device", bundle: .module).primaryAction()
@@ -170,7 +113,7 @@ public struct RestoreFromKeyView: View {
             .padding(.bottom, 20)
         }
         .background(palette.background)
-        .navigationTitle(Text("Recovery key", bundle: .module))
+        .navigationTitle(Text("Recovery Key", bundle: .module))
         // COPY END ad65cb88
         .toolbarTitleDisplayMode(.inline)
     }
@@ -179,7 +122,7 @@ public struct RestoreFromKeyView: View {
 #if DEBUG
     #Preview("Restore from a key") {
         NavigationStack {
-            RestoreFromKeyView(restore: { _, _, _ in "That does not look like a recovery key." })
+            RestoreFromKeyView(restore: { _, _ in "That does not look like a recovery key." })
         }
         .themed(.default)
     }

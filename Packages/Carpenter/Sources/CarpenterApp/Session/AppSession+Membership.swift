@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: Who is in a room, and how they got there
 
@@ -14,10 +15,7 @@ extension AppSession {
     }
 
     public func roster(of room: RoomID) -> RoomRoster {
-        if let known = cachedRosters[room] { return known }
-        let built = projection.roster(of: room, opening: payloadOpener())
-        cachedRosters[room] = built
-        return built
+        cached(\.cachedRosters, room) { projection.roster(of: room, opening: payloadOpener()) }
     }
 
     func payloadOpener() -> (RenderedEntry) -> Payload? {
@@ -33,20 +31,37 @@ extension AppSession {
         let chains = chains
         let identity = enrolment?.identity
         let replica = replica
-        return { entry in
-            if let room = entry.room, let chain = chains[room],
-                let opened = entry.opened(using: chain)
-            {
-                return opened
-            }
-            if let opened = chains.values.lazy.compactMap(entry.opened(using:)).first {
-                return opened
-            }
+        let memo = openedPayloads
+        var secrets: [ParticipantID: PairwiseSecret] = [:]
+
+        func open(_ entry: Entry) -> Payload? {
+            if let own = chains[entry.sealingRoom], let opened = entry.opened(using: own) { return opened }
             guard entry.hasSecondReader, let identity,
                 let keys = replica.registry(for: entry.author)?.identity,
-                let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)
+                let secret = secrets[entry.author]
+                    ?? (try? PairwiseSecret.derive(mine: identity, theirs: keys))
             else { return nil }
-            return entry.opened(pairwise: secret, wall: RoomID.outpost(of: entry.author))
+            secrets[entry.author] = secret
+            return entry.openedByTheWallsOwner(pairwise: secret)
+        }
+
+        return { entry in
+            if let known = memo[entry.hash] { return known }
+            let opened = open(entry)
+            if let opened { memo[entry.hash] = opened }
+            return opened
+        }
+    }
+
+    func renderStepReader() -> (Entry) -> RenderStep {
+        let open = entryOpener()
+        let memo = openedPayloads
+        return { entry in
+            if let known = memo[step: entry.hash] { return known }
+            guard let payload = open(entry) else { return LogRenderer.step(for: entry, payload: nil) }
+            let step = LogRenderer.step(for: entry, payload: payload)
+            memo[step: entry.hash] = step
+            return step
         }
     }
 
@@ -54,7 +69,9 @@ extension AppSession {
         if let known = cachedPairwise[person] { return known }
         guard let identity = enrolment?.identity,
             let keys = replica.registry(for: person)?.identity,
-            let secret = try? PairwiseSecret.derive(mine: identity, theirs: keys)
+            let secret = try? PairwiseSecret.derive(
+                mine: identity, theirs: keys, mySalt: addressBook.ownCurrent,
+                theirSalt: addressBook.current(of: person))
         else { return nil }
         cachedPairwise[person] = secret
         return secret
@@ -119,15 +136,16 @@ extension AppSession {
         try await append(try Payload.invitationRescinded(of: attestation), to: attestation.room)
     }
 
-    /// A fresh code for somebody to invite this member with.
-    /// **Not a property, because it mints.** Each code carries a one-time commitment whose nonce
-    /// this device keeps — the commitment is only worth anything while the nonce is unknown, so a
-    /// code shown to two people would let the first grind the second's phrase. Outstanding nonces
-    /// are kept until they lapse, so a code already handed out keeps working.
     func prepareCodeForSharing(replacingSpent spent: Bool = false) {
-        guard enrolment != nil else { return }
+        guard enrolment != nil, persisted.codeLink != nil else { return }
         guard spent || codeForSharing.isEmpty else { return }
         codeForSharing = identityCode()
+    }
+
+    public func joinerCode(through mailbox: any Mailbox) async -> String {
+        await pairUp(through: mailbox)
+        prepareCodeForSharing()
+        return codeForSharing
     }
 
     public func identityCode() -> String {
@@ -138,11 +156,10 @@ extension AppSession {
         remember(nonce, opening: commitment)
 
         let code = JoinerCode(
-            keys: keys, commitment: commitment, requires: phraseLengthThisMemberRequires)
+            keys: keys, commitment: commitment, requires: phraseLengthThisMemberRequires, pair: persisted.codeLink)
         return (try? code.encoded()) ?? ""
     }
 
-    /// How many characters this member insists on reading. Ten unless they asked for twenty.
     public var phraseLengthThisMemberRequires: PhraseLength {
         persisted.preferences.requiresLongPhrase ? .strict : .standard
     }
@@ -150,31 +167,73 @@ extension AppSession {
     func remember(_ nonce: Data, opening commitment: Data) {
         guard !commitment.isEmpty else { return }
         persisted.phraseNonces[commitment.base64EncodedString()] = nonce
-        Task { try? await saveState() }
+        Task { await persistOrReport("a join nonce") { try await saveState() } }
     }
 
     func nonce(opening commitment: Data) -> Data? {
         persisted.phraseNonces[commitment.base64EncodedString()]
     }
 
-    /// The characters to read aloud for this invitation, or `nil` while the joiner's nonce has not
-    /// arrived — which for the inviter is until the joiner has opened the invitation.
     public func phrase(for attestation: MembershipAttestation) -> String? {
         attestation.verificationPhrase(opening: nonce(opening: attestation.joinerCommitment))
     }
 
     public func invite(
-        joinerCode: String, joining room: RoomID, mailbox: URL?,
+        joinerCode: String, joining room: RoomID, through mailbox: (any Mailbox)?,
         lasting lifetime: InvitationLifetime = .aDay
     ) async throws -> Invite {
         let code = try JoinerCode.decoded(from: joinerCode)
 
-        guard code.participantID != enrolment?.identity.id else {
+        guard let enrolment, code.participantID != enrolment.identity.id else {
             throw AppSessionError.thatIsYou
         }
 
         let attestation = try await attest(code: code, joining: room, lasting: lifetime)
-        return Invite(attestation: attestation, mailbox: mailbox)
+        return Invite(attestation: attestation, pair: try await offerOurSpace(to: code, through: mailbox))
+    }
+
+    public func invite(
+        _ person: ParticipantID, joining room: RoomID, through mailbox: (any Mailbox)?,
+        lasting lifetime: InvitationLifetime = .aDay
+    ) async throws -> Invite {
+        guard let enrolment, let keys = publicKeys(of: person) else { throw AppSessionError.noIdentity }
+        guard person != enrolment.identity.id else { throw AppSessionError.thatIsYou }
+
+        let opening = JoinCommitment.nonce()
+        let code = JoinerCode(keys: keys, commitment: JoinCommitment.of(opening))
+        remember(opening, opening: code.commitment)
+        let attestation = try await attest(code: code, joining: room, lasting: lifetime)
+        let pair: SignedPairLink? = if let mailbox { await standingOffer(to: person, through: mailbox) } else { nil }
+        return Invite(attestation: attestation, pair: pair, opening: opening)
+    }
+
+    func offerOurSpace(to code: JoinerCode, through mailbox: (any Mailbox)?) async throws -> SignedPairLink? {
+        guard let enrolment, let mailbox, let theirs = code.verifiedPair else { return nil }
+        replica.introduce(code.keys)
+        if !persisted.knownKeys.contains(code.keys) { persisted.knownKeys.append(code.keys) }
+        take(theirs, from: code.participantID)
+        let pairs = try currentPairs()
+        let url = try await mailbox.space(for: code.participantID, naming: link(for: code.participantID)?.account, in: pairs)
+        let mine = PairLink(account: try await mailbox.account(in: pairs), url: url)
+        try await saveState()
+        return try SignedPairLink.sign(mine, by: enrolment.identity)
+    }
+
+    public func standingOffer(to joiner: ParticipantID, through mailbox: any Mailbox) async -> SignedPairLink? {
+        guard let enrolment, let pairs = pairs(), pairs.hints[joiner] != nil else { return nil }
+        do {
+            let url = try await mailbox.space(for: joiner, naming: link(for: joiner)?.account, in: pairs)
+            return try SignedPairLink.sign(PairLink(account: try await mailbox.account(in: pairs), url: url), by: enrolment.identity)
+        } catch {
+            Diagnostics.sync.error(
+                "pairs: could not show the link for a standing invitation: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    func takeOffer(_ link: PairLink?, from inviter: ParticipantID, answering commitment: Data) {
+        if let link { take(link, from: inviter) }
+        if nonce(opening: commitment) != nil { codeWasUsed(by: inviter) }
     }
 
     public func inspect(inviteCode: String) -> Invite? {
@@ -196,6 +255,13 @@ extension AppSession {
         }
 
         try await accept(invite.attestation, from: invite.attestation.inviterKeys)
+        takeOffer(
+            invite.verifiedPair, from: invite.attestation.inviterKeys.participantID,
+            answering: invite.attestation.joinerCommitment)
+        if let opening = invite.verifiedOpening, nonce(opening: invite.attestation.joinerCommitment) == nil {
+            remember(opening, opening: invite.attestation.joinerCommitment)
+        }
+        try await saveState()
         return invite
     }
 
@@ -220,6 +286,7 @@ extension AppSession {
         }) {
             persisted.acceptedInvitations.append(
                 AcceptedInvitation(attestation: attestation, confirmedAt: clock.now))
+            projectionInputsChanged()
         }
         let request = RepairRequest(
             authors: [inviterKeys.participantID, enrolment.identity.id],
@@ -262,6 +329,7 @@ extension AppSession {
         let now = clock.now
         return persisted.acceptedInvitations.filter {
             !roomsThisMemberIsIn.contains($0.attestation.room) && $0.attestation.expiresAt > now
+                && roster(of: $0.attestation.room).isOpen($0.attestation)
         }
     }
 
@@ -303,8 +371,6 @@ extension AppSession {
 
     public var requiresLongPhrase: Bool { persisted.preferences.requiresLongPhrase }
 
-    /// Applies to invitations from here on. Codes already handed out carry the length they were
-    /// minted with, which is why this says "from now on" rather than pretending to be retroactive.
     public func setRequiresLongPhrase(_ required: Bool) async {
         persisted.preferences.setRequiresLongPhrase(required, stamp: stamp())
         await savePreferences()
@@ -381,8 +447,8 @@ extension AppSession {
         let collectedAt = clock.now
 
         var owed: [(room: RoomID, body: JoinConfirmedBody)] = []
-        for summary in projected.summaries() {
-            let roster = projected.roster(of: summary.id, opening: opener)
+        for room in projected.namedRoomIDs() {
+            let roster = projected.roster(of: room, opening: opener)
             var claimed: Set<ParticipantID> = []
             for body in confirmations {
                 guard let attestation = roster.requests[body.joiner],
@@ -395,7 +461,7 @@ extension AppSession {
                     (try? body.verify(confirming: attestation)) != nil
                 else { continue }
                 remember(body.nonce, opening: attestation.joinerCommitment)
-                owed.append((summary.id, body))
+                owed.append((room, body))
             }
         }
 
@@ -452,9 +518,10 @@ extension AppSession {
         guard person != enrolment.identity.id else { throw MembershipError.cannotRemoveYourself }
         guard roster.members.contains(person) else { throw MembershipError.notAMember }
 
-        try await oweEpochTurn(in: room)
-        try await append(try Payload.removal(of: person), to: room)
-        try await turnOwedEpoch(in: room)
+        try await oweKeyRotation(in: room)
+        try await append(try Payload.removal(of: person, heads: lastEntries(of: person, in: room)), to: room)
+        timeOwnClaim()
+        try await rotateOwedKey(in: room)
     }
 
     public func leave(_ room: RoomID) async throws {
@@ -464,7 +531,16 @@ extension AppSession {
             throw MembershipError.notAMember
         }
 
-        try await append(try Payload.departure(), to: room)
+        try await append(try Payload.departure(heads: lastEntries(of: enrolment.identity.id, in: room)), to: room)
+        timeOwnClaim()
+    }
+
+    func lastEntries(of person: ParticipantID? = nil, in room: RoomID) -> [EntryHash] {
+        var last: [FeedKey: EntryLink] = [:]
+        for entry in replica.allEntries where entry.room == room && (person == nil || entry.author == person) {
+            if (last[entry.feedKey]?.seq ?? 0) < entry.seq { last[entry.feedKey] = entry.link }
+        }
+        return last.values.map(\.hash).sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }
     }
 
     public func standing(in room: RoomID) -> RoomStanding {
@@ -477,12 +553,12 @@ extension AppSession {
         return .present
     }
 
-    func turnKeysOwedToDepartures() async {
+    func rotateKeysOwedToDepartures() async {
         guard let me = enrolment?.identity.id else { return }
 
         for room in persisted.knownRooms where chains[room] != nil {
             let roster = roster(of: room)
-            guard roster.keyTurner == me else { continue }
+            guard roster.keyRotator == me else { continue }
 
             for departure in roster.departures.values
             where !persisted.answeredDepartures.contains(departure.entry) {
@@ -493,10 +569,10 @@ extension AppSession {
                         try await saveState()
                     }
                     Diagnostics.sync.notice(
-                        "mailbox sync: turned a room's key because somebody left it")
+                        "mailbox sync: rotated a room's key because somebody left it")
                 } catch {
                     Diagnostics.sync.error(
-                        "could not turn a room's key after somebody left — they can still read what is said in it (\(String(describing: error), privacy: .public))")
+                        "could not rotate a room's key after somebody left — they can still read what is said in it (\(String(describing: error), privacy: .public))")
                 }
             }
         }
@@ -507,7 +583,7 @@ extension AppSession {
         let roster = roster(of: room)
         guard roster.members.contains(enrolment.identity.id) else { return nil }
         guard roster.founder != enrolment.identity.id else { return nil }
-        guard let stored = projection.name(of: room) else { return nil }
+        guard let stored = roster.name else { return nil }
 
         let named = projection.naming()
         let invitedBy = roster.requests[enrolment.identity.id].map { named($0.inviter) }
@@ -573,13 +649,17 @@ extension AppSession {
     }
 
     public func advanceEpoch(of room: RoomID) async throws {
+        try await rekeyBeforeWriting(room)
         guard let chain = chains[room] else { throw AppSessionError.unknownRoom }
 
-        let epoch = chain.highestKnownEpoch ?? .initial
-        let advanced = try EpochChain.advance(
-            from: try chain.secret(for: epoch), at: epoch, room: room)
+        let writing = writingKey(of: room)
+        let epoch = writing?.epoch ?? chain.highestKnownEpoch ?? .initial
+        let replaced = try writing?.secret ?? chain.secret(for: epoch)
+        let advanced = try EpochChain.advance(from: replaced, at: epoch, room: room)
 
-        try await append(try Payload.epochChange(advanced.link), to: room)
+        try await append(
+            try Payload.epochChange(advanced.link, heads: lastEntries(in: room), under: advanced.secret), to: room,
+            sealedUnder: (replaced, epoch))
 
         try adopt(secret: advanced.secret, link: advanced.link, at: epoch.next, in: room)
 
@@ -597,15 +677,20 @@ extension AppSession {
 
     func unwindEpochs(in room: RoomID, bounded: Bool = false) async throws {
         guard var chain = chains[room] else { return }
+        let kept = chain.knownEpochs.intersection((persisted.epochs[room] ?? []).map(EpochNumber.init(rawValue:)))
 
+        let inRoom = replica.allEntries.filter { $0.room == room }
+        var opened: Set<EntryHash> = []
         var progressed = true
         while progressed {
             progressed = false
             let before = chain.knownLinks
 
-            for entry in replica.entries(in: room) {
-                guard let payload = entry.opened(using: chain),
-                    payload.type == .epochChange,
+            for entry in inRoom where !opened.contains(entry.hash) {
+                guard let payload = openedPayloads[entry.hash] ?? entry.opened(using: chain) else { continue }
+                opened.insert(entry.hash)
+                openedPayloads[entry.hash] = payload
+                guard payload.type == .epochChange,
                     let body = try? payload.decode(EpochChangeBody.self)
                 else { continue }
                 try? chain.record(body.link)
@@ -636,7 +721,7 @@ extension AppSession {
         }
         chains[room] = chain
 
-        for epoch in chain.knownEpochs {
+        for epoch in chain.knownEpochs.subtracting(kept) {
             guard let secret = try? chain.secret(for: epoch) else { continue }
             try await persistEpoch(secret, at: epoch, for: room)
         }

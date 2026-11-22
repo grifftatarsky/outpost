@@ -7,7 +7,9 @@ public struct ConversationView: View {
     @Environment(\.palette) var palette
     @Environment(\.clock) var clock
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @Environment(\.iCloudHold) var iCloudHold
     @Environment(\.notGoneHelp) var notGoneHelp
+    @Environment(\.photoRequests) var photoRequestsHelp
 
     @State var draft = ""
     @State var sent = 0
@@ -21,8 +23,10 @@ public struct ConversationView: View {
     @AppStorage("explained.photos") var photosExplained = false
     @State var explainingPhotos = false
     @State var sending: [MediaKind] = []
+    @State var fittingNow = 0
     @State var staged: [StagedAttachment] = []
-    @State var trimming: StagedAttachment?
+    @State var reviewingPhotoRequests = false
+    @State var focusing: MessageID?
 
     let room: RoomSummary
     let entries: [TranscriptEntry]
@@ -144,46 +148,6 @@ public struct ConversationView: View {
         self.onActiveSync = onActiveSync
     }
 
-    public init(
-        room: RoomSummary,
-        messages: [Message],
-        pendingJoinCount: Int = 0,
-        uncheckedCount: Int = 0,
-        onSend: @escaping (String) async -> String? = { _ in nil },
-        onAttach: ((PickedMedia, String?) async -> String?)? = nil,
-        onHide: ((MessageID) async -> Void)? = nil,
-        hiddenCount: Int = 0,
-        onRevealHidden: (() async -> Void)? = nil,
-        onSeen: ((MessageID) async -> Void)? = nil,
-        messageDelay: @escaping (MessageID) -> TimeInterval? = { _ in nil },
-        onInvite: (() -> Void)? = nil,
-        onShowInvite: (() -> Void)? = nil,
-        onReviewJoins: (() -> Void)? = nil,
-        onWhoYouAreTalkingTo: (() -> Void)? = nil,
-        soloCheck: SoloCheckPresentation = .nothing,
-        onAskWhoYouAreTalkingTo: ((Bool) async -> Void)? = nil,
-        onAnswerWhoYouAreTalkingTo: ((Bool) async -> Void)? = nil,
-        onStopRequiringSoloCheck: (() async -> Void)? = nil,
-        soloPhrase: String? = nil,
-        onRoomAccess: (() -> Void)? = nil,
-        onRoomNotifications: (() -> Void)? = nil,
-        onRoomMembers: (() -> Void)? = nil,
-        onActiveSync: @escaping () async -> Void = {},
-        standing: RoomStanding = .present,
-        messageActions: MessageActions? = nil,
-        partnerFocus: FocusStatusBody? = nil
-    ) {
-        self.init(
-            room: room, transcript: messages.map(TranscriptEntry.message),
-            pendingJoinCount: pendingJoinCount, uncheckedCount: uncheckedCount, onSend: onSend,
-            onAttach: onAttach, onHide: onHide,
-            onSeen: onSeen,
-            messageDelay: messageDelay, onInvite: onInvite, onReviewJoins: onReviewJoins,
-            onRoomAccess: onRoomAccess, onRoomNotifications: onRoomNotifications,
-            onRoomMembers: onRoomMembers, onActiveSync: onActiveSync, standing: standing,
-            messageActions: messageActions, partnerFocus: partnerFocus)
-    }
-
     var items: [TranscriptItem] { ConversationLayout.items(from: entries) }
     var noticePositions: [EntryHash: NoticeRunPosition] {
         ConversationLayout.noticePositions(in: items)
@@ -273,6 +237,10 @@ public struct ConversationView: View {
             if hasRoomActions {
                 ToolbarItem(placement: .primaryAction) { roomMenu }
             }
+        }
+        .sheet(isPresented: $reviewingPhotoRequests) {
+            PhotoRequestsView(onShow: { focusing = $0 })
+                .environment(\.photoRequests, photoRequestsHelp)
         }
         .sheet(isPresented: $askingCheck) {
             AskWhoYouAreTalkingToSheet(

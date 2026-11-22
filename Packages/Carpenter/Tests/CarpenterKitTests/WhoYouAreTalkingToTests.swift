@@ -19,10 +19,9 @@ struct WhoYouAreTalkingToTests {
     }
 
     private func founded(by founder: Identity, access: RoomAccess = .open) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         if access != .open { roster.set(access: access, by: founder.id) }
         return roster
     }
@@ -34,7 +33,7 @@ struct WhoYouAreTalkingToTests {
         var roster = try founded(by: inviter)
 
         let invite = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: 2), body: try Payload.joinRequest(invite))
         roster.apply(
@@ -53,7 +52,7 @@ struct WhoYouAreTalkingToTests {
         var roster = try founded(by: inviter)
 
         let invite = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: 2), body: try Payload.joinRequest(invite))
         let confirmation = try Payload.joinConfirmed(
@@ -67,19 +66,20 @@ struct WhoYouAreTalkingToTests {
             "the later copy of the same confirmation moved the date")
     }
 
-    @Test("A confirmation that folds to nothing leaves no date")
+    @Test("A confirmation that counts for nothing leaves no date")
     func aForgeryLeavesNoDate() throws {
         let inviter = Identity.generate()
         let joiner = Identity.generate()
         var roster = try founded(by: inviter)
 
         let invite = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: 2), body: try Payload.joinRequest(invite))
         let forged = JoinConfirmedBody(
             invitation: invite.signature,
             joiner: invite.joiner,
+            nonce: TestInvite.nonce(for: invite),
             signature: try inviter.sign(
                 JoinConfirmedBody.signedBytes(
                     invitation: invite.signature, joiner: invite.joiner,
@@ -99,7 +99,7 @@ struct WhoYouAreTalkingToTests {
         var roster = try founded(by: inviter)
 
         let invite = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: 2), body: try Payload.joinRequest(invite))
         roster.apply(

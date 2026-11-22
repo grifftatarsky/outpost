@@ -2,7 +2,7 @@ import CarpenterKit
 import Foundation
 import Testing
 
-@Suite("Delivery marks")
+@Suite("Delivery marks", .tags(.sync))
 struct DeliveryStateTests {
     private let instant = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -24,6 +24,26 @@ struct DeliveryStateTests {
         #expect(DeliveryState.displayed(at: instant).displayedAt == instant)
     }
 
+    @Test("An exact time is the minute it happened, with the day once it is not today, and the year once it is not this year")
+    func exactFormatting() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+        let formatter = RelativeTimestampFormatter(calendar: calendar, locale: Locale(identifier: "en_US"))
+        let at = try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 15, minute: 4)))
+
+        let today = formatter.exact(at, now: at.addingTimeInterval(600))
+        #expect(today.contains("3:04"), "today read \(today)")
+        #expect(!today.contains("Nov"), "today carried a date it does not need: \(today)")
+        #expect(!today.contains("Yesterday"))
+
+        let lastWeek = formatter.exact(at, now: at.addingTimeInterval(6 * 86_400))
+        #expect(lastWeek.contains("Nov 4") && lastWeek.contains("3:04"), "a day this week read \(lastWeek)")
+        #expect(!lastWeek.contains("2026"))
+
+        let lastYear = formatter.exact(at, now: at.addingTimeInterval(70 * 86_400))
+        #expect(lastYear.contains("2026") && lastYear.contains("3:04"), "a time last year read \(lastYear)")
+    }
+
     @Test("A read receipt reads as a time, and grows a date once it is not today")
     func receiptFormatting() {
         let formatter = RelativeTimestampFormatter()
@@ -37,7 +57,7 @@ struct DeliveryStateTests {
     }
 }
 
-@Suite struct NoRecipientsStateTests {
+@Suite(.tags(.sync)) struct NoRecipientsStateTests {
     @Test("A message with nobody to reach is drawn, unlike one that is merely about to go")
     func nobodyToReachIsVisible() {
         #expect(DeliveryState.pending.isVisible == false)

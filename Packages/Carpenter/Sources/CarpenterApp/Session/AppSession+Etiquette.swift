@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: What this app will not do without being asked
 
@@ -71,11 +72,6 @@ extension AppSession {
         return persisted.preferences.isBlocked(author) || isDenyListed(author)
     }
 
-    /// Everybody this device will not hand anything to: blocked people and, when the switch is on,
-    /// the deny list. Applied at every `CarpenterApp` call site that addresses a person, and never
-    /// inside `RoomRoster` — the roster is derived from entries every member replays, so a local
-    /// choice inside it would make the fold device-specific and two devices would disagree about
-    /// who is in a room.
     func notShutOut(_ people: Set<ParticipantID>) -> Set<ParticipantID> {
         people.subtracting(shutOutAuthors())
     }
@@ -127,8 +123,8 @@ extension AppSession {
         refresh()
     }
 
-    func isHoldingBack(_ person: ParticipantID) -> Bool {
-        persisted.restoreAsks.last { $0.from == person }?.hold == .held
+    func restoreHold(on person: ParticipantID) -> RestoreHold? {
+        persisted.restoreAsks.last { $0.from == person }?.hold
     }
 
     public func heldRestores() -> [HeldRestore] {
@@ -185,9 +181,7 @@ extension AppSession {
         guard changed else { return }
 
         if hold == .refused {
-            persisted.repairDuties.removeAll {
-                $0.from == person && $0.request.reason == .recovery
-            }
+            persisted.repairDuties.removeAll { $0.from == person }
         }
         Diagnostics.sync.notice(
             """
@@ -197,7 +191,6 @@ extension AppSession {
         await persistOrReport("a held restore") { try await saveState() }
         refresh()
     }
-
 
     public func setHoldsHistoryForRestores(_ holds: Bool) async {
         guard persisted.preferences.hasAnswered(\.holdsHistoryForRestores) == false
@@ -227,7 +220,7 @@ extension AppSession {
 
     public func setAnonPersona(_ persona: AnonPersona) async {
         persisted.preferences.setAnonPersona(persona, stamp: stamp())
-        foldChanged()
+        logChanged()
         await savePreferences()
     }
 

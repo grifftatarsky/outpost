@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Canonical signing bytes")
+@Suite("Canonical signing bytes", .tags(.crypto))
 struct CanonicalBytesTests {
     @Test("The same fields in the same domain always produce the same bytes")
     func deterministic() {

@@ -134,7 +134,7 @@ public struct OutpostPersonView: View {
             }
         } message: {
             Text(
-                "\(access.person.displayName) stops being drawn anywhere on your devices. They are not told, and nothing about what they can read of yours changes — that is the setting above.",
+                "\(access.person.displayName) no longer appears anywhere on your devices. They aren't told, and what they can read of yours doesn't change. The setting above controls that.",
                 bundle: .module)
         }
         // COPY END 2cd8cf30

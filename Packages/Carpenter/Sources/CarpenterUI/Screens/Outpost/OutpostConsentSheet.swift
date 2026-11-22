@@ -37,7 +37,7 @@ public struct OutpostConsentSheet: View {
                         icon: "questionmark.circle.fill",
                         title: Text("They see one anonymous person", bundle: .module),
                         detail: Text(
-                            "Your name, your picture and everything else about you stay off a comment anybody unmet reads. Every unmet person is drawn as the same single figure, so there is nothing to follow from one thread to the next.",
+                            "Your name, photo and everything else about you stay off a comment read by anybody you haven't met. Everyone you haven't met appears as the same figure, so nobody can be followed from one thread to the next.",
                             bundle: .module))
                     point(
                         icon: "heart.fill",
@@ -103,7 +103,7 @@ public struct OutpostConsentSheet: View {
             .prominentActionButton()
 
             Button { declining = true } label: {
-                Text("Not for me", bundle: .module)
+                Text("Not for me", bundle: .module).primaryAction()
             }
             .quietActionButton()
             // COPY END bbd251d1

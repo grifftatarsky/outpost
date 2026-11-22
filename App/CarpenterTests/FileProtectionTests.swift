@@ -1,0 +1,63 @@
+import CarpenterKit
+import Foundation
+import Testing
+
+private let onASimulator: Bool = {
+    #if targetEnvironment(simulator)
+        return true
+    #else
+        return false
+    #endif
+}()
+
+@Suite(
+    "What this phone keeps is written with the protection the setting names",
+    .disabled(if: onASimulator, "A simulator does not keep a file's protection class, so only an iPhone can answer this"))
+struct FileProtectionTests {
+    private func scratch() -> URL {
+        FileManager.default.temporaryDirectory
+            .appending(path: "carpenter-protection-\(UUID().uuidString)", directoryHint: .isDirectory)
+    }
+
+    private func protection(of url: URL) throws -> FileProtectionType? {
+        try FileManager.default.attributesOfItem(atPath: url.path)[.protectionKey] as? FileProtectionType
+    }
+
+    @Test("With Advanced On Device Security on, the state is written so it opens only while the phone is unlocked")
+    func stateIsSealed() async throws {
+        let url = scratch().appending(path: "state.json")
+        try await FileDocumentStore(url: url, protection: ProtectionDial(.whileUnlocked)).save(["kept": 1])
+        #expect(try protection(of: url) == .complete)
+    }
+
+    @Test("Changing the setting reaches what is already kept, the folders included")
+    func reprotectingReachesWhatIsKept() throws {
+        let folder = scratch()
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appending(path: "log.carpenter")
+        try Data([1]).write(to: file, options: .completeFileProtectionUntilFirstUserAuthentication)
+
+        #expect(ProtectedFiles.reprotect([folder], as: .whileUnlocked).isEmpty)
+        #expect(try protection(of: file) == .complete)
+        #expect(try protection(of: folder) == .complete)
+
+        #expect(ProtectedFiles.reprotect([folder], as: .afterFirstUnlock).isEmpty)
+        #expect(try protection(of: file) == .completeUntilFirstUserAuthentication)
+    }
+
+    @Test("With Advanced On Device Security on, a file copied into the scratch space opens only while unlocked")
+    func scratchIsSealed() throws {
+        let space = ScratchSpace(directory: scratch(), protection: ProtectionDial(.whileUnlocked))
+        let source = scratch().appending(path: "picked.mov")
+        try FileManager.default.createDirectory(
+            at: source.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data([1, 2, 3]).write(to: source, options: .completeFileProtectionUntilFirstUserAuthentication)
+
+        let copy = try space.newFile("picked", extension: "mov")
+        try FileManager.default.copyItem(at: source, to: copy.url)
+        try copy.protect()
+
+        #expect(try protection(of: space.directory) == .complete)
+        #expect(try protection(of: copy.url) == .complete)
+    }
+}

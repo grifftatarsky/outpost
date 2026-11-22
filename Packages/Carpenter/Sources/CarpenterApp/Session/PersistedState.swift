@@ -1,7 +1,39 @@
 import CarpenterKit
 import Foundation
 
-struct PersistedState: Codable, Sendable {
+struct WrittenPacketRecord: Codable, Equatable, Sendable {
+    var recipients: Set<RecipientTag>
+    var digest: Data?
+}
+
+struct SentAttachmentRecord: Codable, Equatable, Sendable {
+    var people: Set<ParticipantID>
+    var collectedBy: Set<DeviceID> = []
+    var sentAt: Date
+}
+
+struct AskedPhoto: Codable, Equatable, Sendable {
+    var author: ParticipantID
+    var entry: EntryHash
+    var askedAt: Date
+    var sent = false
+}
+
+struct PhotoAskRecord: Codable, Equatable, Sendable {
+    var from: ParticipantID
+    var entry: EntryHash
+    var attachment: AttachmentID
+    var at: Date
+}
+
+struct KeySealed: Codable, Hashable, Sendable {
+    let room: RoomID
+    let key: Data
+    let person: ParticipantID
+    let device: DeviceID
+}
+
+struct PersistedState: Codable, Equatable, Sendable {
     var organisation = RoomsListOrganisation()
     var knownRooms: [RoomID] = []
     var greetedRooms: [RoomID] = []
@@ -12,28 +44,58 @@ struct PersistedState: Codable, Sendable {
     var publishedEntryCount = 0
     var knownSiblings: [DeviceID] = []
     var outstandingPackets: [PacketID: Set<EntryHash>] = [:]
+    var packetsWritten: [PacketID: WrittenPacketRecord] = [:]
     var repairs: [HistoryRepair] = []
     var repairDuties: [RepairDuty] = []
+    var repairSpend: [ParticipantID: RepairSpend] = [:]
+    var saidElsewhere: [ParticipantID: [FeedGap]] = [:]
+    var newcomersFrom: [ParticipantID: DailyCount] = [:]
     var restoreAsks: [RestoreAskRecord] = []
     var holesNoticed: [RoomID: Date] = [:]
     var askedAutomatically: [RoomID: Date] = [:]
     var outpostMediaOwed: [ParticipantID] = []
     var wantsOutpostBell: [ParticipantID] = []
+    var wishesHeardAsOf: [ParticipantID: Date] = [:]
     var outpostSeenThrough: [ParticipantID: Date] = [:]
     var reviewsPostponed: [RoomID: [ParticipantID]] = [:]
-    var epochTurnsOwed: [RoomID] = []
+    var keyRotationsOwed: [RoomID] = []
     var unverifiable: [FeedGap] = []
     var spentEntries: [SpentEntry] = []
     var uploadsLeftForOthers: [AttachmentID] = []
+    var attachmentsSent: [AttachmentID: SentAttachmentRecord] = [:]
+    var photosAsked: [AttachmentID: AskedPhoto] = [:]
+    var photoAsks: [PhotoAskRecord] = []
+    var addressAnnounced: [ParticipantID: AnnouncedAddress] = [:]
+    var pairBook: [ParticipantID: PairBookEntry] = [:]
+    var codeLink: SignedPairLink?
+    var codeClaims: [CodeClaim] = []
     var acceptedInvitations: [AcceptedInvitation] = []
     var phraseNonces: [String: Data] = [:]
     var wantsWhatWasSaid = false
-    var turnsEveryKeyAfterALoss = false
+    var siblingMail = SiblingMail()
 
-    private enum RetiredKeys: String, CodingKey { case awaitingJoin }
     var knownKeys: [IdentityPublicKeys] = []
     var certificates: [DeviceCertificate] = []
     var revocations: [DeviceRevocation] = []
+    var otherRevocations: [DeviceRevocation] = []
+    var supersededLines: [FeedKey: DeviceRegistry.Line] = [:]
+    var authorityStored: [Data: Date] = [:]
+    var authorityPublished: Set<Data> = []
+    var authorityAnnounced: Data?
+    var authorityOwed: Set<ParticipantID> = []
+    var restoredWithTheRecoveryKey = false
+    var rekeyBeforeWriting: Set<RoomID> = []
+    var keysSealed: Set<KeySealed> = []
+    var resend: Set<EntryHash> = []
+    var entriesOwed: [ParticipantID: Set<EntryHash>] = [:]
+    var notCollected: [ParticipantID: Set<EntryHash>] = [:]
+    var collectedAt: [ParticipantID: [EntryHash: Date]] = [:]
+    var claimTimes: [EntryHash: Date] = [:]
+    var keptIsSealed = false
+    var removalsTold: Set<EntryHash> = []
+    var grantsWaiting: [ForwardedGrant] = []
+    var photosOwed: Set<EntryHash> = []
+    var ownPhotosHeld: Set<AttachmentID> = []
 
     var preferences = MemberPreferences()
 
@@ -55,17 +117,8 @@ struct PersistedState: Codable, Sendable {
             try container.decodeIfPresent(VectorClock.self, forKey: .syncedFrontier) ?? VectorClock()
         knownKeys =
             try container.decodeIfPresent([IdentityPublicKeys].self, forKey: .knownKeys) ?? []
-        if let accepted = try container.decodeIfPresent(
-            [AcceptedInvitation].self, forKey: .acceptedInvitations)
-        {
-            acceptedInvitations = accepted
-        } else {
-            let retired = try decoder.container(keyedBy: RetiredKeys.self)
-            acceptedInvitations =
-                (try retired.decodeIfPresent([MembershipAttestation].self, forKey: .awaitingJoin)
-                    ?? [])
-                .map { AcceptedInvitation(attestation: $0, confirmedAt: .distantPast) }
-        }
+        acceptedInvitations =
+            try container.decodeIfPresent([AcceptedInvitation].self, forKey: .acceptedInvitations) ?? []
         phraseNonces =
             try container.decodeIfPresent([String: Data].self, forKey: .phraseNonces) ?? [:]
         certificates =
@@ -76,16 +129,29 @@ struct PersistedState: Codable, Sendable {
         knownSiblings = try container.decodeIfPresent([DeviceID].self, forKey: .knownSiblings) ?? []
         repairs = try container.decodeIfPresent([HistoryRepair].self, forKey: .repairs) ?? []
         repairDuties = try container.decodeIfPresent([RepairDuty].self, forKey: .repairDuties) ?? []
+        repairSpend = try container.decodeIfPresent([ParticipantID: RepairSpend].self, forKey: .repairSpend) ?? [:]
+        saidElsewhere = try container.decodeIfPresent([ParticipantID: [FeedGap]].self, forKey: .saidElsewhere) ?? [:]
+        newcomersFrom = try container.decodeIfPresent([ParticipantID: DailyCount].self, forKey: .newcomersFrom) ?? [:]
         restoreAsks =
             try container.decodeIfPresent([RestoreAskRecord].self, forKey: .restoreAsks) ?? []
         unverifiable = try container.decodeIfPresent([FeedGap].self, forKey: .unverifiable) ?? []
         spentEntries = try container.decodeIfPresent([SpentEntry].self, forKey: .spentEntries) ?? []
         uploadsLeftForOthers =
             try container.decodeIfPresent([AttachmentID].self, forKey: .uploadsLeftForOthers) ?? []
+        attachmentsSent =
+            try container.decodeIfPresent([AttachmentID: SentAttachmentRecord].self, forKey: .attachmentsSent) ?? [:]
+        photosAsked = try container.decodeIfPresent([AttachmentID: AskedPhoto].self, forKey: .photosAsked) ?? [:]
+        photoAsks = try container.decodeIfPresent([PhotoAskRecord].self, forKey: .photoAsks) ?? []
+        addressAnnounced =
+            try container.decodeIfPresent([ParticipantID: AnnouncedAddress].self, forKey: .addressAnnounced) ?? [:]
+        pairBook = try container.decodeIfPresent([ParticipantID: PairBookEntry].self, forKey: .pairBook) ?? [:]
+        codeLink = try container.decodeIfPresent(SignedPairLink.self, forKey: .codeLink)
+        codeClaims = try container.decodeIfPresent([CodeClaim].self, forKey: .codeClaims) ?? []
         holesNoticed = try container.decodeIfPresent([RoomID: Date].self, forKey: .holesNoticed) ?? [:]
         askedAutomatically =
             try container.decodeIfPresent([RoomID: Date].self, forKey: .askedAutomatically) ?? [:]
-        epochTurnsOwed = try container.decodeIfPresent([RoomID].self, forKey: .epochTurnsOwed) ?? []
+        keyRotationsOwed =
+            try container.decodeIfPresent([RoomID].self, forKey: .keyRotationsOwed) ?? []
         reviewsPostponed =
             try container.decodeIfPresent([RoomID: [ParticipantID]].self, forKey: .reviewsPostponed)
             ?? [:]
@@ -94,17 +160,45 @@ struct PersistedState: Codable, Sendable {
             ?? [:]
         wantsOutpostBell =
             try container.decodeIfPresent([ParticipantID].self, forKey: .wantsOutpostBell) ?? []
+        wishesHeardAsOf =
+            try container.decodeIfPresent([ParticipantID: Date].self, forKey: .wishesHeardAsOf) ?? [:]
         outpostMediaOwed =
             try container.decodeIfPresent([ParticipantID].self, forKey: .outpostMediaOwed) ?? []
         outstandingPackets =
             try container.decodeIfPresent([PacketID: Set<EntryHash>].self, forKey: .outstandingPackets)
             ?? [:]
+        packetsWritten =
+            try container.decodeIfPresent([PacketID: WrittenPacketRecord].self, forKey: .packetsWritten) ?? [:]
         preferences =
             try container.decodeIfPresent(MemberPreferences.self, forKey: .preferences)
             ?? MemberPreferences()
         wantsWhatWasSaid =
             try container.decodeIfPresent(Bool.self, forKey: .wantsWhatWasSaid) ?? false
-        turnsEveryKeyAfterALoss =
-            try container.decodeIfPresent(Bool.self, forKey: .turnsEveryKeyAfterALoss) ?? false
+        siblingMail = try container.decodeIfPresent(SiblingMail.self, forKey: .siblingMail) ?? SiblingMail()
+        otherRevocations =
+            try container.decodeIfPresent([DeviceRevocation].self, forKey: .otherRevocations) ?? []
+        supersededLines =
+            try container.decodeIfPresent([FeedKey: DeviceRegistry.Line].self, forKey: .supersededLines) ?? [:]
+        authorityStored = try container.decodeIfPresent([Data: Date].self, forKey: .authorityStored) ?? [:]
+        authorityPublished = try container.decodeIfPresent(Set<Data>.self, forKey: .authorityPublished) ?? []
+        authorityAnnounced = try container.decodeIfPresent(Data.self, forKey: .authorityAnnounced)
+        authorityOwed = try container.decodeIfPresent(Set<ParticipantID>.self, forKey: .authorityOwed) ?? []
+        restoredWithTheRecoveryKey =
+            try container.decodeIfPresent(Bool.self, forKey: .restoredWithTheRecoveryKey) ?? false
+        rekeyBeforeWriting = try container.decodeIfPresent(Set<RoomID>.self, forKey: .rekeyBeforeWriting) ?? []
+        keysSealed = try container.decodeIfPresent(Set<KeySealed>.self, forKey: .keysSealed) ?? []
+        resend = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .resend) ?? []
+        entriesOwed =
+            try container.decodeIfPresent([ParticipantID: Set<EntryHash>].self, forKey: .entriesOwed) ?? [:]
+        notCollected =
+            try container.decodeIfPresent([ParticipantID: Set<EntryHash>].self, forKey: .notCollected) ?? [:]
+        collectedAt =
+            try container.decodeIfPresent([ParticipantID: [EntryHash: Date]].self, forKey: .collectedAt) ?? [:]
+        claimTimes = try container.decodeIfPresent([EntryHash: Date].self, forKey: .claimTimes) ?? [:]
+        keptIsSealed = try container.decodeIfPresent(Bool.self, forKey: .keptIsSealed) ?? false
+        removalsTold = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .removalsTold) ?? []
+        grantsWaiting = try container.decodeIfPresent([ForwardedGrant].self, forKey: .grantsWaiting) ?? []
+        photosOwed = try container.decodeIfPresent(Set<EntryHash>.self, forKey: .photosOwed) ?? []
+        ownPhotosHeld = try container.decodeIfPresent(Set<AttachmentID>.self, forKey: .ownPhotosHeld) ?? []
     }
 }

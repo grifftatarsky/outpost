@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("Who sees an Outpost", .serialized)
+@Suite("Who sees an Outpost", .serialized, .tags(.membership))
 struct OutpostAudienceTests {
     private func acquainted() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -19,7 +19,7 @@ struct OutpostAudienceTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -146,8 +146,7 @@ struct OutpostAudienceTests {
 
         let room = try await alice.createRoom(named: "Lanterns")
         for joiner in [bob, carol] {
-            let invite = try await alice.invite(
-                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            let invite = try await alice.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await joiner.redeem(inviteCode: try invite.encoded())
             try await alice.sync(through: mailbox, media: mailbox)
             try await joiner.accept(
@@ -181,10 +180,10 @@ struct OutpostAudienceTests {
             "he was promised everything and given the words with a tile that never loads")
     }
 
-    @Test("The list is folded from the log and survives a relaunch")
+    @Test("The list is built from the log and survives a relaunch")
     func theListIsInTheLog() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-audience-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-audience-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let alice = TestSession.make(keychain: keychain, at: directory)
@@ -241,8 +240,8 @@ actor RefusingLogStore: LogStore {
 }
 
 @MainActor
-@Suite("A key turn that is owed", .serialized)
-struct OutpostKeyTurnTests {
+@Suite("A key rotation that is owed", .serialized, .tags(.membership))
+struct OutpostKeyRotationTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 5
     ) async throws {
@@ -251,10 +250,10 @@ struct OutpostKeyTurnTests {
         }
     }
 
-    @Test("A revocation whose key turn fails is finished by the next round")
-    func anOwedTurnIsRetried() async throws {
+    @Test("A revocation whose key rotation fails is finished by the next round")
+    func anOwedRotationIsRetried() async throws {
         let mailbox = InMemoryMailbox()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-turn-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-rotation-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let log = RefusingLogStore(url: directory.appending(path: "log.carpenter"))
 
@@ -270,7 +269,7 @@ struct OutpostKeyTurnTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -282,15 +281,15 @@ struct OutpostKeyTurnTests {
         try await settle([alice, bob], through: mailbox)
         #expect(bob.feed().map(\.body).contains("while Bob could read"))
 
-        await log.refuseTheNextAppend()
+        await log.refuseAppend(afterLetting: 1)
         await #expect(throws: (any Error).self) { try await alice.revokeOutpost(bobID) }
         #expect(alice.outpostReaders().isEmpty, "the list moved him out, as it always did")
         #expect(
-            alice.outpostKeyTurnPending,
-            "nothing recorded that the key still has to turn, so nothing will ever turn it")
+            alice.outpostKeyRotationPending,
+            "nothing recorded that the key still has to be rotated, so nothing will ever rotate it")
 
         try await settle([alice, bob], through: mailbox)
-        #expect(!alice.outpostKeyTurnPending, "the turn was never retried")
+        #expect(!alice.outpostKeyRotationPending, "the rotation was never retried")
 
         try await alice.send("after the door shut", to: nil)
         try await settle([alice, bob], through: mailbox)
@@ -299,10 +298,54 @@ struct OutpostKeyTurnTests {
         #expect(read.contains("while Bob could read"), "revocation reached backwards")
         #expect(!read.contains("after the door shut"), "a revoked reader went on reading")
     }
+
+    @Test("A revocation the disk refused is reported, leaves the reader as they were, and can be repeated")
+    @MainActor
+    func aRefusedRevocationChangesNothing() async throws {
+        let mailbox = InMemoryMailbox()
+        let directory = TestScratch.root.appending(path: "carpenter-rotation-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let log = RefusingLogStore(url: directory.appending(path: "log.carpenter"))
+
+        let alice = AppSession(
+            storage: SessionStorage(
+                keychain: InMemoryKeychainStore(), log: log,
+                documents: FileDocumentStore(url: directory.appending(path: "state.json")),
+                media: MemoryMediaStore()),
+            clock: TestClock(now: TestSession.now))
+        let bob = TestSession.make()
+        for one in [alice, bob] { await one.load() }
+        try await alice.createIdentity(displayName: "Alice")
+        try await bob.createIdentity(displayName: "Bob")
+
+        let room = try await alice.createRoom(named: "Lanterns")
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
+        try await bob.redeem(inviteCode: try invite.encoded())
+        try await alice.sync(through: mailbox)
+        try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
+        try await settle([alice, bob], through: mailbox)
+
+        let bobID = try #require(bob.enrolment?.identity.id)
+        try await alice.allowOutpost(bobID, everything: true)
+        try await settle([alice, bob], through: mailbox)
+
+        await log.refuseTheNextAppend()
+        await #expect(throws: (any Error).self) { try await alice.revokeOutpost(bobID) }
+        #expect(
+            alice.outpostReaders() == [bobID],
+            "the list showed a change the disk never took, and a relaunch would have put him back")
+
+        try await alice.revokeOutpost(bobID)
+        #expect(alice.outpostReaders().isEmpty)
+
+        try await alice.send("after the door shut", to: nil)
+        try await settle([alice, bob], through: mailbox)
+        #expect(!bob.feed().map(\.body).contains("after the door shut"), "a revoked reader went on reading")
+    }
 }
 
 @MainActor
-@Suite("Being let in later", .serialized)
+@Suite("Being let in later", .serialized, .tags(.membership))
 struct OutpostBackfillTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6
@@ -324,7 +367,7 @@ struct OutpostBackfillTests {
         try await carol.createIdentity(displayName: "Carol")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let toBob = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let toBob = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try toBob.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(toBob.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -333,7 +376,7 @@ struct OutpostBackfillTests {
         try await alice.send("posted long before Carol", to: nil)
         try await settle([alice, bob], through: mailbox)
 
-        let toCarol = try await bob.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let toCarol = try await bob.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try toCarol.encoded())
         try await bob.sync(through: mailbox)
         try await carol.accept(toCarol.attestation, from: try #require(bob.enrolment?.identity.publicKeys))
@@ -362,7 +405,7 @@ struct OutpostBackfillTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))

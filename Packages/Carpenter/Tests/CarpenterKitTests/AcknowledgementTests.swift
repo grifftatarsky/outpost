@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Acknowledging a round", .serialized)
+@Suite("Acknowledging a round", .serialized, .tags(.sync))
 struct RoundAcknowledgementTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -18,7 +18,7 @@ struct RoundAcknowledgementTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -27,8 +27,8 @@ struct RoundAcknowledgementTests {
         return (alice, bob, room, mailbox)
     }
 
-    @Test("One packet that vanished does not leave the rest of the round outstanding")
-    func vanishedPacketDoesNotStopTheOthers() async throws {
+    @Test("A packet somebody else deleted before it was signed for is sent again, and the rest are taken back")
+    func vanishedPacketIsSentAgain() async throws {
         let (alice, bob, room, mailbox) = try await joined()
 
         for word in ["first", "second", "third"] {
@@ -38,17 +38,22 @@ struct RoundAcknowledgementTests {
         let written = await mailbox.writtenPackets.suffix(3)
         #expect(written.count == 3, "precondition: three packets were written")
 
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await mailbox.delete(packet: written[written.startIndex + 1])
 
         try await bob.sync(through: mailbox)
-
-        let bobs = bob.messages(in: room).map(\.body)
+        var bobs = bob.messages(in: room).map(\.body)
         #expect(bobs.contains("first") && bobs.contains("third"), "the surviving packets were read")
-        let outstanding = try await mailbox.pendingDeliveries()
-        let alicesLeft = written.filter { outstanding.keys.contains($0) }
+        #expect(!bobs.contains("second"), "precondition: the deleted packet never reached Bob")
+
+        try await alice.sync(through: mailbox)
+        let left = await mailbox.everySentPacket
         #expect(
-            alicesLeft.isEmpty,
-            "a packet after the one that vanished was left outstanding: \(alicesLeft)")
+            written.filter { left.keys.contains($0) }.isEmpty,
+            "a packet Bob signed for was left in Alice's outbox")
+
+        try await bob.sync(through: mailbox)
+        bobs = bob.messages(in: room).map(\.body)
+        #expect(bobs.contains("second"), "a message whose packet was deleted before Bob signed for it never came back")
     }
 
     @Test("A packet whose entries could not be written down is not acknowledged")
@@ -60,7 +65,7 @@ struct RoundAcknowledgementTests {
             storage: SessionStorage(
                 keychain: InMemoryKeychainStore(), log: log,
                 documents: FileDocumentStore(
-                    url: URL.temporaryDirectory.appending(path: "carpenter-test-\(UUID().uuidString)")),
+                    url: TestScratch.root.appending(path: "carpenter-test-\(UUID().uuidString)")),
                 media: MemoryMediaStore()),
             clock: TestClock(now: TestSession.now))
         await alice.load()
@@ -68,7 +73,7 @@ struct RoundAcknowledgementTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -82,10 +87,10 @@ struct RoundAcknowledgementTests {
         await log.refuse(true)
         await #expect(throws: (any Error).self) { try await bob.sync(through: mailbox) }
 
-        let outstanding = try await mailbox.pendingDeliveries()
+        let outstanding = await mailbox.everySentPacket
         #expect(
-            outstanding.keys.contains(packet),
-            "a packet was acknowledged whose entries never reached the disk")
+            outstanding[packet]?.receipts.isEmpty == true,
+            "a packet was signed for whose entries never reached the disk")
 
         await log.refuse(false)
         try await bob.sync(through: mailbox)

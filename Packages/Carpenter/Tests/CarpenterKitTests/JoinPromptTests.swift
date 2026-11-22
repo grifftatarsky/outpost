@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Being introduced to a room", .serialized)
+@Suite("Being introduced to a room", .serialized, .tags(.membership))
 struct JoinPromptTests {
     private func joined() async throws -> (alice: AppSession, bob: AppSession, room: RoomID) {
         let mailbox = InMemoryMailbox()
@@ -19,8 +19,7 @@ struct JoinPromptTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -73,8 +72,7 @@ struct JoinPromptTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7", access: .anyMember)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.decide(on: invite.attestation, admit: true)
         for _ in 0..<4 {
@@ -99,8 +97,7 @@ struct JoinPromptTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)

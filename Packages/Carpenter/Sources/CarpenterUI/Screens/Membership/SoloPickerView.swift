@@ -90,3 +90,12 @@ struct SoloPickerView: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Start a solo") {
+        NavigationStack {
+            SoloPickerView(connections: Fixtures.connections, onPick: { _ in })
+        }
+        .themed(.default)
+    }
+#endif

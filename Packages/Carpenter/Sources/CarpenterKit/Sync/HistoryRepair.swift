@@ -10,9 +10,73 @@ public struct SequenceSpan: Hashable, Sendable, Codable {
         self.upper = upper
     }
 
-    public var count: UInt64 { upper - lower + 1 }
-    public var sequences: ClosedRange<UInt64> { lower...upper }
-    public func contains(_ seq: UInt64) -> Bool { sequences.contains(seq) }
+    public var count: UInt64 {
+        guard lower <= upper else { return 0 }
+        let (count, overflowed) = (upper - lower).addingReportingOverflow(1)
+        return overflowed ? .max : count
+    }
+
+    public func contains(_ seq: UInt64) -> Bool { lower <= seq && seq <= upper }
+}
+
+extension [SequenceSpan] {
+    public var sequenceCount: UInt64 { reduce(0) { $0.addingSaturated($1.count) } }
+
+    public var normalized: [SequenceSpan] {
+        var merged: [SequenceSpan] = []
+        for span in filter({ $0.lower <= $0.upper }).sorted(by: { $0.lower < $1.lower }) {
+            if let last = merged.last, last.upper == .max || span.lower <= last.upper + 1 {
+                merged[merged.count - 1] = SequenceSpan(last.lower, Swift.max(last.upper, span.upper))
+            } else {
+                merged.append(span)
+            }
+        }
+        return merged
+    }
+
+    public func intersecting(_ other: [SequenceSpan]) -> [SequenceSpan] {
+        let (left, right) = (normalized, other.normalized)
+        var result: [SequenceSpan] = []
+        var (i, j) = (0, 0)
+        while i < left.count, j < right.count {
+            let lower = Swift.max(left[i].lower, right[j].lower)
+            let upper = Swift.min(left[i].upper, right[j].upper)
+            if lower <= upper { result.append(SequenceSpan(lower, upper)) }
+            if left[i].upper < right[j].upper { i += 1 } else { j += 1 }
+        }
+        return result
+    }
+
+    public func subtracting(_ other: [SequenceSpan]) -> [SequenceSpan] {
+        let removing = other.normalized
+        var result: [SequenceSpan] = []
+        var first = 0
+        for span in normalized {
+            while first < removing.count, removing[first].upper < span.lower { first += 1 }
+            var lower = span.lower
+            var covered = false
+            var index = first
+            while index < removing.count, removing[index].lower <= span.upper {
+                let cut = removing[index]
+                if cut.lower > lower { result.append(SequenceSpan(lower, cut.lower - 1)) }
+                if cut.upper >= span.upper {
+                    covered = true
+                    break
+                }
+                lower = Swift.max(lower, cut.upper + 1)
+                index += 1
+            }
+            if !covered { result.append(SequenceSpan(lower, span.upper)) }
+        }
+        return result
+    }
+}
+
+extension UInt64 {
+    public func addingSaturated(_ other: UInt64) -> UInt64 {
+        let (sum, overflowed) = addingReportingOverflow(other)
+        return overflowed ? .max : sum
+    }
 }
 
 public struct FeedGap: Hashable, Sendable, Codable {
@@ -24,7 +88,7 @@ public struct FeedGap: Hashable, Sendable, Codable {
         self.spans = spans
     }
 
-    public var count: UInt64 { spans.reduce(0) { $0 + $1.count } }
+    public var count: UInt64 { spans.sequenceCount }
     public func contains(_ seq: UInt64) -> Bool { spans.contains { $0.contains(seq) } }
 
     static func spans(of sequences: [UInt64]) -> [SequenceSpan] {
@@ -44,36 +108,35 @@ public struct FeedGap: Hashable, Sendable, Codable {
 }
 
 extension [FeedGap] {
-    public var total: Int { reduce(0) { $0 + Int($1.count) } }
+    public var total: Int { Int(clamping: reduce(UInt64(0)) { $0.addingSaturated($1.count) }) }
 
     public func contains(_ feed: FeedKey, _ seq: UInt64) -> Bool {
         contains { $0.feed == feed && $0.contains(seq) }
     }
 
+    public func spans(of feed: FeedKey) -> [SequenceSpan] {
+        filter { $0.feed == feed }.flatMap(\.spans)
+    }
+
     public func stillMissing(of original: [FeedGap]) -> Int { intersecting(original).total }
 
     public func intersecting(_ original: [FeedGap]) -> [FeedGap] {
-        var result: [FeedGap] = []
-        for gap in original {
-            var still: [UInt64] = []
-            for span in gap.spans {
-                for seq in span.sequences where contains(gap.feed, seq) { still.append(seq) }
-            }
-            if !still.isEmpty {
-                result.append(FeedGap(feed: gap.feed, spans: FeedGap.spans(of: still)))
-            }
+        original.compactMap { gap in
+            let still = gap.spans.intersecting(spans(of: gap.feed))
+            return still.isEmpty ? nil : FeedGap(feed: gap.feed, spans: still)
         }
-        return result
+    }
+
+    public func merging(_ other: [FeedGap]) -> [FeedGap] {
+        Dictionary(grouping: self + other, by: \.feed).values.map { gaps in
+            FeedGap(feed: gaps[0].feed, spans: gaps.flatMap(\.spans).normalized)
+        }.sorted { $0.feed.canonicalBytes.lexicographicallyPrecedes($1.feed.canonicalBytes) }
     }
 
     public mutating func insert(_ feed: FeedKey, _ seq: UInt64) {
         if let index = firstIndex(where: { $0.feed == feed }) {
-            var sequences: [UInt64] = []
-            for span in self[index].spans { sequences.append(contentsOf: span.sequences) }
-            guard !sequences.contains(seq) else { return }
-            sequences.append(seq)
-            sequences.sort()
-            self[index] = FeedGap(feed: feed, spans: FeedGap.spans(of: sequences))
+            guard !self[index].contains(seq) else { return }
+            self[index] = FeedGap(feed: feed, spans: (self[index].spans + [SequenceSpan(seq, seq)]).normalized)
         } else {
             append(FeedGap(feed: feed, spans: [SequenceSpan(seq, seq)]))
         }
@@ -81,16 +144,10 @@ extension [FeedGap] {
 
     public func subtracting(_ other: [FeedGap]) -> [FeedGap] {
         guard !other.isEmpty else { return self }
-        var result: [FeedGap] = []
-        for gap in self {
-            var held: [UInt64] = []
-            for span in gap.spans { held.append(contentsOf: span.sequences) }
-            let remaining = held.filter { !other.contains(gap.feed, $0) }
-            if !remaining.isEmpty {
-                result.append(FeedGap(feed: gap.feed, spans: FeedGap.spans(of: remaining)))
-            }
+        return compactMap { gap in
+            let remaining = gap.spans.subtracting(other.spans(of: gap.feed))
+            return remaining.isEmpty ? nil : FeedGap(feed: gap.feed, spans: remaining)
         }
-        return result
     }
 }
 
@@ -145,31 +202,79 @@ public struct RepairRequest: Hashable, Sendable, Codable {
     }
 
     public var namedCount: Int { gaps.total }
+
+    public var scope: RoomID? { room ?? wallOf.map(RoomID.outpost(of:)) }
+
+    public static let mostAuthors = 1_024
+    public static let mostGaps = 1_024
+    public static let mostSpans = 4_096
+
+    public var bounded: RepairRequest {
+        var spansLeft = Self.mostSpans
+        var kept: [FeedGap] = []
+        for gap in gaps.prefix(Self.mostGaps) where spansLeft > 0 {
+            let spans = Array(gap.spans.prefix(spansLeft))
+            spansLeft -= spans.count
+            kept.append(FeedGap(feed: gap.feed, spans: spans))
+        }
+        let named = Array(authors.prefix(Self.mostAuthors))
+        let people = Set(named)
+        var seen = VectorClock()
+        for (feed, seq) in heads.positions where people.contains(feed.author) { seen.observe(feed, seq: seq) }
+        return RepairRequest(
+            id: id, authors: named, heads: seen, gaps: kept, room: room, wallOf: wallOf, reason: reason)
+    }
+
+    public func resumed(past sent: [Entry]) -> RepairRequest {
+        var seen = heads
+        var answered: [FeedGap] = []
+        for (feed, entries) in Dictionary(grouping: sent, by: \.feedKey) {
+            let positions = Set(entries.map(\.seq)).sorted()
+            if let last = positions.last { seen.observe(feed, seq: last) }
+            answered.append(FeedGap(feed: feed, spans: FeedGap.spans(of: positions)))
+        }
+        return RepairRequest(
+            id: id, authors: authors, heads: seen, gaps: gaps.subtracting(answered), room: room, wallOf: wallOf,
+            reason: reason)
+    }
 }
 
 public struct RepairAnswer: Hashable, Sendable, Codable {
     public let request: RepairID
     public let unheld: [FeedGap]
     public let heads: VectorClock
+    public let elsewhere: [FeedGap]
 
-    public init(request: RepairID, unheld: [FeedGap], heads: VectorClock) {
+    public init(request: RepairID, unheld: [FeedGap], heads: VectorClock, elsewhere: [FeedGap] = []) {
         self.request = request
         self.unheld = unheld
         self.heads = heads
+        self.elsewhere = elsewhere
     }
 
-    private enum CodingKeys: String, CodingKey { case request, unheld, heads }
+    private enum CodingKeys: String, CodingKey { case request, unheld, heads, elsewhere }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         request = try container.decode(RepairID.self, forKey: .request)
         unheld = try container.decodeIfPresent([FeedGap].self, forKey: .unheld) ?? []
         heads = try container.decodeIfPresent(VectorClock.self, forKey: .heads) ?? VectorClock()
+        elsewhere = try container.decodeIfPresent([FeedGap].self, forKey: .elsewhere) ?? []
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(request, forKey: .request)
+        try container.encode(unheld, forKey: .unheld)
+        try container.encode(heads, forKey: .heads)
+        if !elsewhere.isEmpty { try container.encode(elsewhere, forKey: .elsewhere) }
     }
 }
 
 extension Replica {
-    public func fill(_ request: RepairRequest) -> (entries: [Entry], unheld: [FeedGap]) {
+    public func fill(
+        _ request: RepairRequest, allowing allowed: (Entry) -> Bool = { _ in true }
+    ) -> (entries: [Entry], unheld: [FeedGap], elsewhere: [FeedGap]) {
         var found: [Entry] = []
         var seen: Set<EntryHash> = []
         func take(_ entries: [Entry]) {
@@ -177,37 +282,36 @@ extension Replica {
         }
 
         var unheld: [FeedGap] = []
-        for gap in request.gaps {
-            var lacking: [UInt64] = []
-            for span in gap.spans {
-                for seq in span.sequences {
-                    let held = entries(in: gap.feed, at: seq)
-                    if held.isEmpty { lacking.append(seq) } else { take(held) }
-                }
+        var elsewhere: [FeedGap] = []
+        for gap in [FeedGap]().merging(request.gaps) {
+            var holding: [UInt64] = []
+            var kept: [UInt64] = []
+            for position in occupied(in: gap.feed, within: gap.spans) {
+                let held = entries(in: gap.feed, at: position)
+                guard !held.isEmpty else { continue }
+                holding.append(position)
+                let theirs = held.filter(allowed)
+                if theirs.isEmpty { kept.append(position) } else { take(theirs) }
             }
-            if !lacking.isEmpty {
-                unheld.append(FeedGap(feed: gap.feed, spans: FeedGap.spans(of: lacking)))
-            }
+            let lacking = gap.spans.subtracting(FeedGap.spans(of: holding))
+            if !lacking.isEmpty { unheld.append(FeedGap(feed: gap.feed, spans: lacking)) }
+            if !kept.isEmpty { elsewhere.append(FeedGap(feed: gap.feed, spans: FeedGap.spans(of: kept))) }
         }
 
         let authors = Set(request.authors)
         let wantsWall = request.wallOf
         for feed in heldFeeds
         where authors.contains(feed.author) || request.room != nil || wantsWall != nil {
-            guard let top = highestSequence(in: feed) else { continue }
-            let from = request.heads[feed] + 1
-            guard from <= top else { continue }
             let whole = authors.contains(feed.author)
-            for seq in from...top {
-                take(
-                    entries(in: feed, at: seq).filter { entry in
-                        if whole { return true }
-                        if let room = request.room, entry.room == room { return true }
-                        guard let wantsWall else { return false }
-                        if entry.room == nil { return entry.author == wantsWall }
-                        return entry.room == RoomID.outpost(of: wantsWall)
-                    })
-            }
+            take(
+                entries(in: feed, after: request.heads[feed]).filter { entry in
+                    guard allowed(entry) else { return false }
+                    if whole { return true }
+                    if let room = request.room, entry.room == room { return true }
+                    guard let wantsWall else { return false }
+                    if entry.room == nil { return entry.author == wantsWall }
+                    return entry.room == RoomID.outpost(of: wantsWall)
+                })
         }
 
         found.sort {
@@ -216,7 +320,7 @@ extension Replica {
             }
             return $0.seq < $1.seq
         }
-        return (found, unheld)
+        return (found, unheld, elsewhere)
     }
 }
 

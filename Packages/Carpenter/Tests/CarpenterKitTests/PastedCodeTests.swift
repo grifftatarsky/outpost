@@ -3,15 +3,13 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Pasting a code somebody sent you")
+@Suite("Pasting a code somebody sent you", .tags(.membership))
 struct PastedCodeTests {
     private let scheme = "outpost"
 
     private func identity() -> Identity { Identity.generate() }
     private func keys() -> IdentityPublicKeys { identity().publicKeys }
 
-    /// A code is a `JoinerCode` now: the keys, plus the commitment that stops the inviter grinding
-    /// the verification phrase, plus how many characters this person insists on reading.
     private func code(_ keys: IdentityPublicKeys? = nil) -> JoinerCode {
         let mine = keys ?? self.keys()
         return JoinerCode(
@@ -61,7 +59,7 @@ struct PastedCodeTests {
         let joiner = keys()
         let attestation = try TestInvite.issue(
             joining: RoomID(), joinerKeys: joiner, by: inviter, at: Date(timeIntervalSince1970: 0))
-        let invite = Invite(attestation: attestation, mailbox: nil)
+        let invite = Invite(attestation: attestation)
 
         let shared = try InviteLink.url(inviting: invite, scheme: scheme).absoluteString
         let read = try Invite.decoded(from: shared)

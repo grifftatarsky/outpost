@@ -1,6 +1,11 @@
 import CarpenterKit
 import SwiftUI
 
+public enum InviteAttempt: Sendable {
+    case issued(Invite)
+    case refused(String)
+}
+
 public struct AddSomeoneView: View {
     @Environment(\.palette) private var palette
     @Environment(\.dismiss) private var dismiss
@@ -8,7 +13,7 @@ public struct AddSomeoneView: View {
 
     private let rooms: () -> [RoomSummary]
     private let code: String
-    private let onAdd: (RoomID, String) async -> Invite?
+    private let onAdd: (RoomID, String) async -> InviteAttempt
     private let onCreateRoom: (String, RoomAccess, Set<ParticipantID>) async -> Void
     private let preferences: RoomsListPreferences
     private let connections: [Connection]
@@ -21,7 +26,7 @@ public struct AddSomeoneView: View {
     public init(
         rooms: @escaping () -> [RoomSummary],
         code: String,
-        onAdd: @escaping (RoomID, String) async -> Invite?,
+        onAdd: @escaping (RoomID, String) async -> InviteAttempt,
         preferences: RoomsListPreferences,
         connections: [Connection] = [],
         onCreateRoom: @escaping (String, RoomAccess, Set<ParticipantID>) async -> Void = { _, _, _ in }
@@ -123,21 +128,19 @@ public struct AddSomeoneView: View {
         .contentShape(.rect)
     }
 
-    // COPY BEGIN 87a8718f [NEEDS HUMAN REVIEW]
     private func add(to room: RoomSummary) {
         working = room.id
         problem = nil
         Task {
             defer { working = nil }
-            guard let invite = await onAdd(room.id, code) else {
-                problem = String(
-                    localized: "That code could not be turned into an invite.", bundle: .module)
-                return
+            switch await onAdd(room.id, code) {
+            case .issued(let invite):
+                issued = PresentedInvite(roomName: room.name, invite: invite)
+            case .refused(let reason):
+                problem = reason
             }
-            issued = PresentedInvite(roomName: room.name, invite: invite)
         }
     }
-    // COPY END 87a8718f
 }
 
 #if DEBUG
@@ -145,7 +148,7 @@ public struct AddSomeoneView: View {
         AddSomeoneView(
             rooms: { [Fixtures.zeppelinEnthusiasts] },
             code: "",
-            onAdd: { _, _ in nil },
+            onAdd: { _, _ in .refused("") },
             preferences: RoomsListPreferences()
         )
         .themed(.default)

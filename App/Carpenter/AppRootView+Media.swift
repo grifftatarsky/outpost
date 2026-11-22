@@ -19,14 +19,16 @@ extension AppRootView {
     func attach(_ picked: PickedMedia, caption: String?, to room: RoomID) async -> String? {
         // COPY BEGIN c7bf5484 [NEEDS HUMAN REVIEW]
         do {
-            try await session.send(try await prepare(picked, caption: caption), to: room, through: media)
-            discardSources([picked])
+            try await session.send(
+                try await prepare(picked, caption: caption), to: room, through: media, after: mailbox)
             return nil
-        } catch VideoPreparer.Failure.tooLong(let seconds) {
-            let length = Duration.seconds(seconds.rounded()).formatted(.time(pattern: .minuteSecond))
+        } catch VideoPreparer.Failure.tooLarge(let bytes) {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
             return String(
-                localized: "Videos up to a minute long can be sent. This one runs \(length).",
-                comment: "A clip longer than the limit was picked")
+                localized: "Videos up to 287 MB can be sent. This one is \(size).",
+                comment: "A clip larger than the limit once prepared")
+        } catch VideoPreparer.Failure.cannotFit {
+            return Self.cannotFit
         } catch {
             Diagnostics.sync.error("attach failed: \(String(describing: error), privacy: .public)")
             return SessionProblem.sentence(for: error)
@@ -41,15 +43,16 @@ extension AppRootView {
                 prepared.append(try await prepare(one, caption: index == 0 ? caption : nil))
             }
             try await session.post(prepared, through: media)
-            discardSources(picked)
             return nil
-        } catch VideoPreparer.Failure.tooLong(let seconds) {
-            let length = Duration.seconds(seconds.rounded()).formatted(.time(pattern: .minuteSecond))
+        } catch VideoPreparer.Failure.tooLarge(let bytes) {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
             // COPY BEGIN 6f398e13 [NEEDS HUMAN REVIEW]
             return String(
-                localized: "Clips up to a minute long can be posted. One of these runs \(length).",
-                comment: "A clip longer than the limit was picked for a post")
+                localized: "Clips up to 287 MB can be posted. One of these is \(size).",
+                comment: "A clip larger than the limit once prepared, picked for a post")
             // COPY END 6f398e13
+        } catch VideoPreparer.Failure.cannotFit {
+            return Self.cannotFit
         } catch {
             Diagnostics.sync.error("post attach failed: \(String(describing: error), privacy: .public)")
             return SessionProblem.sentence(for: error)
@@ -62,25 +65,33 @@ extension AppRootView {
             return try await Task.detached(priority: .userInitiated) {
                 try ImagePreparer.prepare(data, caption: caption)
             }.value
-        case .video(let url):
-            return try await VideoPreparer.prepare(url, caption: caption)
+        case .video(let clip):
+            return try await VideoPreparer.prepare(clip.url, caption: caption)
+        case .videoToFit(let clip):
+            return try await VideoPreparer.prepareToFit(clip.url, caption: caption)
         }
     }
 
-    private func discardSources(_ picked: [PickedMedia]) {
-        for one in picked {
-            guard case .video(let url) = one else { continue }
-            try? FileManager.default.removeItem(at: url)
-        }
-    }
+    // COPY BEGIN d4b9aefa [NEEDS HUMAN REVIEW]
+    private static let cannotFit = String(
+        localized: "This video is too long to make small enough to send.",
+        comment: "Even at the smallest size the app will draw, a clip is over the limit")
+    // COPY END d4b9aefa
 
     func makeMediaLoader() -> MediaLoader {
         let loader = MediaLoader(
             source: { [self] attachment, author in
                 try await session.attachmentData(for: attachment, sentBy: author, through: media)
             },
+            clipSource: { [self] attachment, author, file in
+                try await session.writeClip(for: attachment, sentBy: author, through: media, to: file)
+            },
             screen: SystemMediaScreen())
         loader.treatsEveryPhotoAsSensitive = safety.blursEveryPhoto
+        loader.asking = MediaAsking(
+            canAsk: { [self] id, author in session.canAskAgain(for: id, sentBy: author) },
+            isAsked: { [self] id in session.isAskedFor(id) },
+            ask: { [self] id, author in await session.askAgain(for: id, sentBy: author) })
         return loader
     }
 }

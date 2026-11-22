@@ -3,7 +3,7 @@ import Foundation
 import Testing
 import CarpenterKitTesting
 
-@Suite("How long an invitation lasts")
+@Suite("How long an invitation lasts", .tags(.membership))
 struct InvitationLifetimeTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -79,7 +79,7 @@ struct InvitationLifetimeTests {
         let lifetime = InvitationLifetime.endOfDay(noon, in: calendar)
         let expiry = lifetime.expiry(from: start)
 
-        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: expiry)
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: expiry)
         #expect(components.day == 14, "a picked day ended on a different day")
         #expect(components.hour == 23 && components.minute == 59)
 
@@ -108,7 +108,7 @@ struct InvitationLifetimeTests {
     }
 }
 
-@Suite("Invitations a room is still waiting on")
+@Suite("Invitations a room is still waiting on", .tags(.membership))
 struct PendingInvitationTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -125,11 +125,10 @@ struct PendingInvitationTests {
     private func roomWith(
         founder: Identity, inviting joiners: [(Identity, InvitationLifetime)]
     ) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
         var hash: UInt8 = 1
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: hash),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: hash), body: profile)
         roster.set(access: .founder, by: founder.id)
         for (joiner, lifetime) in joiners {
             hash += 1
@@ -187,7 +186,7 @@ struct PendingInvitationTests {
                 try JoinConfirmedBody.signed(confirming: invitation, by: bob)))
         joined.apply(
             rendered(alice.id, .admission, hash: 61),
-            body: try Payload.admission(of: bob.id, admitted: true))
+            body: try Payload.admission(of: bob.id, admitted: true, invitation: invitation.signature))
         #expect(joined.lapsedInvitations(at: afterwards).isEmpty, "somebody in the room was listed as a dead offer")
 
         var withdrawn = try roomWith(founder: alice, inviting: [(bob, .aDay)])
@@ -215,7 +214,7 @@ struct PendingInvitationTests {
                 try JoinConfirmedBody.signed(confirming: invitation, by: bob)))
         roster.apply(
             rendered(alice.id, .admission, hash: 50),
-            body: try Payload.admission(of: bob.id, admitted: true))
+            body: try Payload.admission(of: bob.id, admitted: true, invitation: invitation.signature))
 
         #expect(roster.members.contains(bob.id))
         #expect(

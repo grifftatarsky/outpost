@@ -1,15 +1,6 @@
 import CarpenterKit
 import SwiftUI
 
-/// The Outpost-access step of leaving a room.
-///
-/// Leaving a room used to end the room and nothing else, so anybody this member let into their
-/// Outpost *because of* that room kept the access after the reason for it was gone. This is the
-/// stop-at-today question, asked once, on the way out.
-///
-/// It is a sheet rather than more buttons on the confirmation dialog because it is a scoped task
-/// closely related to the current context, which is what Apple names a sheet for, and because an
-/// action sheet holds no more than four buttons including Cancel.
 public struct LeavingRoomView: View {
     @Environment(\.palette) private var palette
     @Environment(\.dismiss) private var dismiss
@@ -27,8 +18,6 @@ public struct LeavingRoomView: View {
         self.roomName = roomName
         self.people = people
         self.onLeave = onLeave
-        // Stopping is the answer somebody reached this screen to give, so it starts chosen for
-        // everybody. Nothing happens until they confirm, and each row can be turned back off.
         _stopping = State(initialValue: Set(people.map(\.id)))
     }
 

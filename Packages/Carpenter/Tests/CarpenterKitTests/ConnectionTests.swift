@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Everybody you could invite")
+@Suite("Everybody you could invite", .tags(.membership))
 struct ConnectionTests {
     private func person(_ byte: UInt8, _ name: String) -> Member {
         Member(id: ParticipantID(rawValue: Data([byte])), displayName: name)
@@ -137,7 +137,7 @@ struct ConnectionTests {
     }
 
     @Test("A name starting with an accent is filed under its letter")
-    func diacriticsFold() {
+    func diacriticsAreIgnored() {
         let me = person(1, "Me")
         let sections = connections(rosters: [[me, person(2, "Émile")]], viewer: me)
             .sectionedByInitial()
@@ -154,7 +154,7 @@ struct ConnectionTests {
 }
 
 @MainActor
-@Suite("Everybody you could invite, asked of the session", .serialized)
+@Suite("Everybody you could invite, asked of the session", .serialized, .tags(.membership))
 struct SessionConnectionsTests {
     private func session() throws -> AppSession {
         TestSession.make()

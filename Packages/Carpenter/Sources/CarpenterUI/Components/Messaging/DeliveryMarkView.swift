@@ -1,6 +1,47 @@
 import CarpenterKit
 import SwiftUI
 
+struct DeliveryGlyph: View {
+    enum Kind {
+        case plane(filled: Bool)
+        case eye(filled: Bool)
+        case eyeThatWillNeverOpen
+        case nobodyToSendItTo
+    }
+
+    @Environment(\.palette) private var palette
+
+    private let kind: Kind
+    private let size: CGFloat
+
+    init(_ kind: Kind, size: CGFloat) {
+        self.kind = kind
+        self.size = size
+    }
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size, weight: .semibold))
+            .foregroundStyle(color)
+    }
+
+    private var symbol: String {
+        switch kind {
+        case .plane(let filled): filled ? "paperplane.fill" : "paperplane"
+        case .eye(let filled): filled ? "eye.fill" : "eye"
+        case .eyeThatWillNeverOpen: "eye.slash"
+        case .nobodyToSendItTo: "person.slash"
+        }
+    }
+
+    private var color: Color {
+        switch kind {
+        case .plane(let lit), .eye(let lit): lit ? palette.accentColor : palette.unlitMark
+        case .eyeThatWillNeverOpen, .nobodyToSendItTo: palette.quaternaryText
+        }
+    }
+}
+
 struct DeliveryMarkView: View {
     @Environment(\.palette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -30,13 +71,12 @@ struct DeliveryMarkView: View {
 
                 HStack(spacing: 4) {
                     if delivery.hasNobodyToReach {
-                        mark(.nobodyToSendItTo)
+                        DeliveryGlyph(.nobodyToSendItTo, size: box)
                     } else {
-                    mark(.plane(filled: delivery.isCollected))
-                    mark(
-                        delivery.reportingIsOff
-                            ? .eyeThatWillNeverOpen
-                            : .eye(filled: delivery.wasDisplayed))
+                        DeliveryGlyph(.plane(filled: delivery.isCollected), size: box)
+                        DeliveryGlyph(
+                            delivery.reportingIsOff ? .eyeThatWillNeverOpen : .eye(filled: delivery.wasDisplayed),
+                            size: box)
                     }
                 }
             }
@@ -46,37 +86,6 @@ struct DeliveryMarkView: View {
             .accessibilityLabel(spoken)
             .accessibilityRespondsToUserInteraction(false)
         }
-    }
-
-    private enum Mark {
-        case plane(filled: Bool)
-        case eye(filled: Bool)
-        case eyeThatWillNeverOpen
-        case nobodyToSendItTo
-    }
-
-    @ViewBuilder
-    private func mark(_ kind: Mark) -> some View {
-        switch kind {
-        case .plane(let filled):
-            glyph(filled ? "paperplane.fill" : "paperplane", lit: filled)
-        case .eye(let filled):
-            glyph(filled ? "eye.fill" : "eye", lit: filled)
-        case .eyeThatWillNeverOpen:
-            Image(systemName: "eye.slash")
-                .font(.system(size: box, weight: .semibold))
-                .foregroundStyle(palette.quaternaryText)
-        case .nobodyToSendItTo:
-            Image(systemName: "person.slash")
-                .font(.system(size: box, weight: .semibold))
-                .foregroundStyle(palette.quaternaryText)
-        }
-    }
-
-    private func glyph(_ name: String, lit: Bool) -> some View {
-        Image(systemName: name)
-            .font(.system(size: box, weight: .semibold))
-            .foregroundStyle(lit ? palette.accentColor : palette.unlitMark)
     }
 
     // COPY BEGIN 31325a06 [NEEDS HUMAN REVIEW]
@@ -94,22 +103,32 @@ struct DeliveryMarkView: View {
         case .pending:
             return Text(verbatim: "")
         case .sent:
-            return Text("Sent. Not collected yet.", bundle: .module)
+            return Text("Sent. Not received yet.", bundle: .module)
         case .noRecipients:
             return Text(
                 "Saved. There is nobody in this room to send it to yet — it will go when somebody joins.",
                 bundle: .module)
+        case .notCollected:
+            return notCollectedLabel
         case .delivered:
-            return Text("Collected. Not yet shown.", bundle: .module)
+            return Text("Received. Not yet shown.", bundle: .module)
         case .notReported:
             return Text(
-                "Collected. This person does not report when a message is shown.", bundle: .module)
+                "Received. This person does not report when a message is shown.", bundle: .module)
         case .displayed(let at):
             return Text(
-                "Collected. Shown \(RelativeTimestampFormatter().readReceipt(at)).", bundle: .module)
+                "Received. Shown \(RelativeTimestampFormatter().readReceipt(at)).", bundle: .module)
         }
         // COPY END c562b6b2
     }
+
+    // COPY BEGIN 2c05bd49 [NEEDS HUMAN REVIEW]
+    private var notCollectedLabel: Text {
+        Text(
+            "Not received by everybody within ^[\(NotGone.takenBackAfterDays) day](inflect: true). The waiting copy was removed from your iCloud.",
+            bundle: .module)
+    }
+    // COPY END 2c05bd49
 }
 
 #if DEBUG

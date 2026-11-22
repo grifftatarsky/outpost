@@ -3,13 +3,6 @@ import CoreTransferable
 import SwiftUI
 import UniformTypeIdentifiers
 
-/*
- * The report as a file somebody can hand to something else.
- *
- * The form reads a report to decide whether it is one, and reading needs bytes.
- * Plain text, deliberately: it is the only thing the app will ever hand over
- * about a message, and a reader can check every word of it first.
- */
 private struct ReportFile: Transferable {
     let text: String
     let name: String

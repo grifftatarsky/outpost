@@ -67,7 +67,7 @@
 
         private var conversation: some View {
             NavigationStack {
-                ConversationView(room: Fixtures.zeppelinEnthusiasts, messages: Fixtures.conversation)
+                ConversationView(room: Fixtures.zeppelinEnthusiasts, transcript: Fixtures.conversation.map(TranscriptEntry.message))
             }
         }
 

@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterApp
 
-@Suite("Checking for an existing registration", .serialized)
+@Suite("Checking for an existing registration", .serialized, .tags(.storage))
 @MainActor
 struct ExistingRegistrationTests {
     private func session(
@@ -42,22 +42,24 @@ struct ExistingRegistrationTests {
 
         #expect(app.state != .needsIdentity, "offered a new member to an occupied account")
         #expect(
-            app.state == .registrationStalled(.accountHasAMember),
-            "the wait ended by holding, so the spinner kept claiming to be checking")
+            app.state == .awaitingApproval,
+            "an occupied account did not ask one of its devices to approve this one")
+        #expect(app.enrolment == nil)
     }
 
-    @Test("The key arriving while waiting moves the device on by itself")
-    func theKeyArrivingEndsTheWait() async throws {
+    @Test("An identity appearing in the keychain does not skip approval")
+    func theKeyArrivingDoesNotSkipApproval() async throws {
         let keychain = InMemoryKeychainStore()
         let app = session(keychain, registry: StubAccountRegistry(hasMember: true))
         await app.load()
         await app.settleRegistration(attempts: 2)
-        #expect(app.state == .registrationStalled(.accountHasAMember))
+        #expect(app.state == .awaitingApproval)
 
-        _ = try await IdentityStore(keychain: keychain).enrol()
+        try await IdentityStore(keychain: keychain).save(Identity.generate())
 
         #expect(await app.recheckForSyncedIdentity())
-        #expect(app.state == .needsProfile || app.state == .ready)
+        #expect(app.state == .awaitingApproval, "the key arriving let the device in without an approval")
+        #expect(app.enrolment == nil)
     }
 
     @Test("A device that already has an identity does not wait on the network")
@@ -90,6 +92,16 @@ struct ExistingRegistrationTests {
         #expect(app.state == .needsIdentity, "once iCloud answered, the fresh start never came")
     }
 
+    @Test("A signed-out or restricted account stops with its own reason, and offers nobody a member")
+    func signedOutAndRestrictedSayWhy() async {
+        for (answer, stall) in [(AccountOccupancy.signedOut, RegistrationStall.signedOut), (.restricted, .restricted)] {
+            let app = session(registry: StubAccountRegistry(answer))
+            await app.load()
+            await app.settleRegistration(attempts: 2)
+            #expect(app.state == .registrationStalled(stall), "\(answer) stalled as \(app.state)")
+        }
+    }
+
     @Test("A session that was never given a way to ask the account does not offer a member")
     func noRegistryWaits() async {
         let app = AppSession(storage: TestSession.storage(), clock: TestClock(now: TestSession.now))
@@ -120,13 +132,13 @@ struct ExistingRegistrationTests {
         #expect(registry.asked > 1, "never asked again after an answer that said to ask again")
     }
 
-    @Test("An account that turns out to be occupied stops offering")
+    @Test("An account that turns out to be occupied stops offering, and asks for approval")
     func undeterminedThenOccupiedWaits() async {
         let app = session(registry: StubAccountRegistry(.undetermined, .occupied))
         await app.load()
         await app.settleRegistration(attempts: 4)
 
-        #expect(app.state == .registrationStalled(.accountHasAMember))
+        #expect(app.state == .awaitingApproval)
     }
 
     @Test("The wait ends by saying what it ended on, never by spinning")
@@ -136,20 +148,16 @@ struct ExistingRegistrationTests {
         await app.settleRegistration(attempts: 2)
 
         #expect(app.state != .checkingForRegistration, "still claiming to be checking")
-        guard case .registrationStalled(let why) = app.state else {
-            Issue.record("the wait ended somewhere that says nothing: \(app.state)")
-            return
-        }
-        #expect(why == .accountHasAMember)
+        #expect(app.state == .awaitingApproval, "the wait ended somewhere that says nothing: \(app.state)")
     }
 
     @Test("Asking again from a stalled screen re-runs the whole check")
     func retryFromAStallAsksAgain() async throws {
-        let registry = StubAccountRegistry(.occupied, .empty)
+        let registry = StubAccountRegistry(.offline, .empty)
         let app = session(registry: registry)
         await app.load()
         await app.settleRegistration(attempts: 2)
-        try #require(app.state == .registrationStalled(.accountHasAMember))
+        try #require(app.state == .registrationStalled(.accountOffline))
 
         await app.retryRegistration()
 
@@ -157,19 +165,20 @@ struct ExistingRegistrationTests {
         #expect(registry.asked > 1, "the retry reused the answer it was stuck on")
     }
 
-    @Test("A key arriving after the wait has ended still moves the device on")
-    func aLateKeyStillRescuesAStalledDevice() async throws {
+    @Test("A device waiting for approval still notices the key arriving, and keeps waiting")
+    func aLateKeyIsNoticedWhileWaiting() async throws {
         let keychain = InMemoryKeychainStore()
         let app = session(keychain, registry: StubAccountRegistry(hasMember: true))
         await app.load()
         await app.settleRegistration(attempts: 2)
-        try #require(app.state == .registrationStalled(.accountHasAMember))
+        try #require(app.state == .awaitingApproval)
         #expect(app.isWaitingForAnIdentity, "the ladder would have stopped looking")
 
-        _ = try await IdentityStore(keychain: keychain).enrol()
+        try await IdentityStore(keychain: keychain).save(Identity.generate())
 
         #expect(await app.recheckForSyncedIdentity())
-        #expect(app.state == .needsProfile || app.state == .ready)
+        #expect(app.state == .awaitingApproval)
+        #expect(!app.isWaitingForAnIdentity, "it kept looking for a key it already has")
     }
 
     @Test("A definite answer is asked for once, not once per attempt")
@@ -202,12 +211,12 @@ final class StubAccountRegistry: AccountRegistry, @unchecked Sendable {
 }
 
 @MainActor
-@Suite("Handing over a room after a relaunch", .serialized)
+@Suite("Handing over a room after a relaunch", .serialized, .tags(.storage))
 struct EpochLinkRestoreTests {
     @Test("A joiner can read a room whose host has relaunched since making it")
     func aRelaunchedHostStillHandsOverHistory() async throws {
         let mailbox = InMemoryMailbox()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-links-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-links-\(UUID().uuidString)")
         let keychain = InMemoryKeychainStore()
 
         let host = TestSession.make(keychain: keychain, at: directory)
@@ -219,8 +228,7 @@ struct EpochLinkRestoreTests {
         await joiner.load()
         try await joiner.createIdentity(displayName: "Bob")
 
-        let invite = try await host.invite(
-            joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+        let invite = try await host.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await joiner.redeem(inviteCode: try invite.encoded())
 
         let relaunched = TestSession.make(keychain: keychain, at: directory)

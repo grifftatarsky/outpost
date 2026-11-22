@@ -1,3 +1,4 @@
+import CarpenterKit
 import SwiftUI
 
 public struct DeviceSyncedView: View {
@@ -25,7 +26,7 @@ public struct DeviceSyncedView: View {
             Spacer()
 
             Image(systemName: "checkmark.seal")
-                .font(.system(size: 46, weight: .light))
+                .scaledSystemFont(46, weight: .light)
                 .foregroundStyle(palette.accentColor)
 
             headline
@@ -42,7 +43,7 @@ public struct DeviceSyncedView: View {
 
             Spacer()
 
-            // COPY BEGIN e538fe8a [NEEDS HUMAN REVIEW]
+            // COPY BEGIN e538fe8a [HUMAN REVIEWED, UNVERIFIED]
             Button(action: onContinue) {
                 Text("Continue", bundle: .module)
                     .font(CarpenterFont.button)
@@ -57,27 +58,27 @@ public struct DeviceSyncedView: View {
         .background(palette.background)
     }
 
-    // COPY BEGIN d55c9d07 [NEEDS HUMAN REVIEW]
+    // COPY BEGIN d55c9d07 [HUMAN REVIEWED, UNVERIFIED]
     private var headline: Text {
         switch arrival {
         case .keychain:
-            Text("This device is now yours too", bundle: .module)
+            Text("Device keyed", bundle: .module)
         case .recoveryKey:
-            Text("This device is you again", bundle: .module)
+            Text("Device restored", bundle: .module)
         }
     }
     // COPY END d55c9d07
 
-    // COPY BEGIN 269e7fcd [NEEDS HUMAN REVIEW]
+    // COPY BEGIN 269e7fcd [HUMAN REVIEWED, UNVERIFIED]
     private var detail: Text {
         switch arrival {
         case .keychain:
             Text(
-                "It recognized your keys from iCloud and joined your account as \(memberName). Nothing to set up — your rooms are already here.",
+                "Device has been keyed.",
                 bundle: .module)
         case .recoveryKey:
             Text(
-                "Your key put you back as \(memberName). Your rooms return as the people in them reach you again, and what was said comes from whoever still holds it.",
+                "Device key has been restored.",
                 bundle: .module)
         }
     }

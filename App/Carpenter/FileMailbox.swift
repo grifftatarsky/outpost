@@ -1,190 +1,124 @@
 #if DEBUG
 
     import CarpenterKit
+    import CryptoKit
     import Foundation
     import os
 
     actor FileMailbox: Mailbox, MediaMailbox {
-        private let root: URL
-        private let owner: String
-
-        private let packets: URL
-        private let acknowledgements: URL
-        private let media: URL
-        private let bells: URL
+        private let file: URL
+        private let lock: URL
         private let refusal: MailboxFailure?
 
-        init(root: URL, owner: String, refusal: MailboxFailure? = nil) throws {
-            self.root = root
-            self.owner = owner
+        init(root: URL, refusal: MailboxFailure? = nil) throws {
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            file = root.appending(path: "pairs.json")
+            lock = root.appending(path: "pairs.lock")
             self.refusal = refusal
-            packets = root.appending(path: "packets")
-            acknowledgements = root.appending(path: "acks")
-            media = root.appending(path: "media")
-            bells = root.appending(path: "bells")
-            for directory in [packets, acknowledgements, media, bells] {
-                try FileManager.default.createDirectory(
-                    at: directory, withIntermediateDirectories: true)
+        }
+
+        private func change<T>(writing: Bool = false, _ body: (inout LocalPairStore) throws -> T) throws -> T {
+            if writing, let refusal { throw refusal }
+            let descriptor = open(lock.path, O_CREAT | O_RDWR, 0o644)
+            guard descriptor >= 0 else { throw MailboxError.unavailable }
+            flock(descriptor, LOCK_EX)
+            defer {
+                flock(descriptor, LOCK_UN)
+                Darwin.close(descriptor)
+            }
+            var store =
+                (try? JSONDecoder().decode(LocalPairStore.self, from: Data(contentsOf: file))) ?? LocalPairStore()
+            let result = try body(&store)
+            try JSONEncoder().encode(store).write(to: file, options: .atomic)
+            return result
+        }
+
+        func account(in pairs: Pairs) -> String { LocalPairStore.account(of: pairs.me) }
+
+        func space(for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+            try change { try $0.space(for: peer, naming: account, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func spaceForACode(in pairs: Pairs) throws -> URL { try change { $0.spaceForACode(in: pairs, as: self.account(in: pairs)) } }
+
+        func claim(_ url: URL, for peer: ParticipantID, naming account: String?, in pairs: Pairs) throws -> URL {
+            try change { try $0.claim(url, for: peer, naming: account, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func join(_ link: PairLink, of peer: ParticipantID, in pairs: Pairs) throws -> JoinOutcome {
+            try change { $0.join(link, of: peer, in: pairs, as: self.account(in: pairs)) }
+        }
+
+
+        func reads(_ peer: ParticipantID, in pairs: Pairs) throws -> Bool {
+            try change { $0.reads(peer, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func close(_ peer: ParticipantID, in pairs: Pairs) throws {
+            try change { $0.close(peer, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func stopSharing(with peer: ParticipantID, in pairs: Pairs) throws {
+            try change { $0.stopSharing(with: peer, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func leave(_ peer: ParticipantID, in pairs: Pairs) throws {
+            try change { $0.leave(peer, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func put(_ packet: SyncPacket, to peer: ParticipantID, in pairs: Pairs) throws {
+            try change(writing: true) { try $0.put(packet, to: peer, in: pairs, as: self.account(in: pairs), at: Date()) }
+        }
+
+        func ring(_ peer: ParticipantID, in pairs: Pairs) throws {
+            _ = try change { try $0.ring(peer, in: pairs, as: self.account(in: pairs), at: Date()) }
+        }
+
+        func fetch(from peer: ParticipantID, for tags: Set<RecipientTag>, in pairs: Pairs) throws -> [SyncPacket] {
+            try change { $0.fetch(from: peer, for: tags, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func acknowledge(_ id: PacketID, from peer: ParticipantID, with receipt: SealedReceipt, in pairs: Pairs) throws {
+            try change { try $0.acknowledge(id, from: peer, with: receipt, in: pairs, as: self.account(in: pairs), at: Date()) }
+        }
+
+        func sentPackets(in pairs: Pairs) throws -> [PacketID: SentPacket] { try change { $0.sentPackets(in: pairs, as: self.account(in: pairs)) } }
+
+        func withdraw(_ id: PacketID, in pairs: Pairs) throws { try change { $0.withdraw(id, as: self.account(in: pairs)) } }
+
+        func lookAgain() {}
+
+        func upload(_ copies: PhotoCopies, in pairs: Pairs) throws {
+            try change(writing: true) { try $0.upload(copies, in: pairs, as: self.account(in: pairs), at: Date()) }
+        }
+
+        func download(_ copy: PhotoCopyName, of photo: AttachmentID, from sender: ParticipantID, in pairs: Pairs) throws
+            -> Data?
+        {
+            try change { $0.download(copy, from: sender, in: pairs, as: self.account(in: pairs)) }
+        }
+
+        func acknowledge(
+            copy: PhotoCopyName, from sender: ParticipantID, with receipt: SealedReceipt, by device: DeviceID,
+            in pairs: Pairs
+        ) throws {
+            try change {
+                try $0.acknowledge(
+                    copy: copy, from: sender, with: receipt, by: device, in: pairs, as: self.account(in: pairs),
+                    at: Date())
             }
         }
 
-        // MARK: What is on disk
-
-        private struct StoredPacket: Codable {
-            let owner: String
-            let sequence: UInt64
-            let fields: [String: WireValue]
+        func ownCopy(_ copy: PhotoCopyName, in pairs: Pairs) throws -> Data? {
+            try change { $0.ownCopy(copy, in: pairs, as: self.account(in: pairs)) }
         }
 
-        private enum WireValue: Codable {
-            case string(String)
-            case data(Data)
-            case dataList([Data])
-
-            init(_ field: PacketField) {
-                switch field {
-                case .string(let value): self = .string(value)
-                case .data(let value): self = .data(value)
-                case .dataList(let value): self = .dataList(value)
-                }
-            }
-
-            var field: PacketField {
-                switch self {
-                case .string(let value): return .string(value)
-                case .data(let value): return .data(value)
-                case .dataList(let value): return .dataList(value)
-                }
-            }
+        func storedCopies(in pairs: Pairs) throws -> [StoredPhotoCopy] {
+            try change { $0.storedCopies(in: pairs, as: self.account(in: pairs)) }
         }
 
-        private struct StoredAttachment: Codable {
-            let owner: String
-            let fields: [String: WireValue]
-        }
-
-        // MARK: Packets
-
-        func put(_ packet: SyncPacket) throws {
-            if let refusal { throw refusal }
-            let stored = StoredPacket(
-                owner: owner,
-                sequence: Self.nextSequence(),
-                fields: PacketWire.fields(of: packet).mapValues(WireValue.init))
-            try write(
-                stored,
-                to: packets.appending(path: "\(stored.sequence)-\(packet.id.rawValue.uuidString).json"))
-        }
-
-        func fetch(for tags: Set<RecipientTag>) throws -> [SyncPacket] {
-            try readPackets()
-                .filter { $0.stored.owner != owner }
-                .filter { !outstanding(of: $0).isDisjoint(with: tags) }
-                .sorted { $0.stored.sequence < $1.stored.sequence }
-                .compactMap { PacketWire.packet(from: $0.stored.fields.mapValues(\.field)) }
-        }
-
-        func acknowledge(_ id: PacketID, by tags: Set<RecipientTag>) throws {
-            guard try readPackets().contains(where: { $0.id == id }) else {
-                throw MailboxError.unknownPacket
-            }
-            for tag in tags {
-                let name = "\(id.rawValue.uuidString)-\(tag.rawValue.base64EncodedString().replacingOccurrences(of: "/", with: "_"))"
-                let file = acknowledgements.appending(path: name)
-                if !FileManager.default.fileExists(atPath: file.path) {
-                    try Data().write(to: file, options: .atomic)
-                }
-            }
-        }
-
-        func pendingDeliveries() throws -> [PacketID: Set<RecipientTag>] {
-            try readPackets()
-                .filter { $0.stored.owner == owner }
-                .reduce(into: [:]) { found, entry in
-                    let waiting = outstanding(of: entry)
-                    if !waiting.isEmpty { found[entry.id] = waiting }
-                }
-        }
-
-        func ring(_ bell: MessageBell) throws {
-            try? Data(String(describing: bell).utf8).write(
-                to: bells.appending(path: "\(bell.name).txt"), options: .atomic)
-        }
-
-        // MARK: Attachments
-
-        func upload(_ attachment: OutgoingAttachment) throws {
-            let stored = StoredAttachment(
-                owner: owner,
-                fields: AttachmentWire.fields(of: attachment).mapValues(WireValue.init))
-            try write(stored, to: media.appending(path: "\(attachment.id.rawValue.uuidString).json"))
-        }
-
-        func download(_ id: AttachmentID, hint tags: Set<RecipientTag>) throws -> Data? {
-            let file = media.appending(path: "\(id.rawValue.uuidString).json")
-            guard let bytes = try? Data(contentsOf: file),
-                let stored = try? JSONDecoder().decode(StoredAttachment.self, from: bytes)
-            else { return nil }
-            return AttachmentWire.attachment(from: stored.fields.mapValues(\.field))?.ciphertext
-        }
-
-        func acknowledge(attachment id: AttachmentID, by tags: Set<RecipientTag>) throws {
-            for tag in tags {
-                let name = "media-\(id.rawValue.uuidString)-\(tag.rawValue.base64EncodedString().replacingOccurrences(of: "/", with: "_"))"
-                let file = acknowledgements.appending(path: name)
-                if !FileManager.default.fileExists(atPath: file.path) {
-                    try Data().write(to: file, options: .atomic)
-                }
-            }
-        }
-
-        func pendingAttachments() throws -> [AttachmentID: Set<RecipientTag>] { [:] }
-
-        func sweepableAttachments() throws -> [AttachmentID: Set<RecipientTag>] { [:] }
-
-        func delete(attachment id: AttachmentID) throws {
-            try? FileManager.default.removeItem(
-                at: media.appending(path: "\(id.rawValue.uuidString).json"))
-        }
-
-        // MARK: Reading the directory
-
-        private struct Entry {
-            let id: PacketID
-            let stored: StoredPacket
-        }
-
-        private func readPackets() throws -> [Entry] {
-            let files = (try? FileManager.default.contentsOfDirectory(
-                at: packets, includingPropertiesForKeys: nil)) ?? []
-            return files.compactMap { file in
-                guard let bytes = try? Data(contentsOf: file),
-                    let stored = try? JSONDecoder().decode(StoredPacket.self, from: bytes),
-                    case .string(let text)? = stored.fields[PacketWire.packetID]?.field,
-                    let uuid = UUID(uuidString: text)
-                else { return nil }
-                return Entry(id: PacketID(rawValue: uuid), stored: stored)
-            }
-        }
-
-        private func outstanding(of entry: Entry) -> Set<RecipientTag> {
-            guard case .dataList(let tags)? = entry.stored.fields[PacketWire.outstanding]?.field
-            else { return [] }
-            let collected = Set(
-                (try? FileManager.default.contentsOfDirectory(atPath: acknowledgements.path))?
-                    .filter { $0.hasPrefix(entry.id.rawValue.uuidString) } ?? [])
-            return Set(tags.map(RecipientTag.init(rawValue:))).filter { tag in
-                let name = "\(entry.id.rawValue.uuidString)-\(tag.rawValue.base64EncodedString().replacingOccurrences(of: "/", with: "_"))"
-                return !collected.contains(name)
-            }
-        }
-
-        private func write(_ value: some Encodable, to file: URL) throws {
-            try JSONEncoder().encode(value).write(to: file, options: .atomic)
-        }
-
-        private static func nextSequence() -> UInt64 {
-            UInt64(Date().timeIntervalSince1970 * 1_000_000)
+        func delete(copies: Set<PhotoCopyName>, in pairs: Pairs) throws {
+            try change { $0.delete(copies: copies, as: self.account(in: pairs)) }
         }
     }
 
@@ -214,14 +148,6 @@
             guard let index = arguments.firstIndex(of: "--mailbox"), index + 1 < arguments.count
             else { return nil }
 
-            let owner: String
-            if let kept = UserDefaults.standard.string(forKey: "rig.mailboxOwner") {
-                owner = kept
-            } else {
-                owner = UUID().uuidString
-                UserDefaults.standard.set(owner, forKey: "rig.mailboxOwner")
-            }
-
             do {
                 let refusal: MailboxFailure? =
                     switch arguments.firstIndex(of: "--mailbox-refuses").flatMap({
@@ -231,8 +157,7 @@
                     case "signed-out": .notSignedIn
                     default: nil
                     }
-                let mailbox = try FileMailbox(
-                    root: URL(fileURLWithPath: arguments[index + 1]), owner: owner, refusal: refusal)
+                let mailbox = try FileMailbox(root: URL(fileURLWithPath: arguments[index + 1]), refusal: refusal)
                 Diagnostics.sync.notice(
                     "rig mailbox: a directory, not CloudKit — proves nothing below the seam")
                 return mailbox

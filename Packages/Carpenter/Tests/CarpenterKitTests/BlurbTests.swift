@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("A line under your own name", .serialized)
+@Suite("A line under your own name", .serialized, .tags(.ui))
 struct BlurbTests {
     private func acquainted() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -19,7 +19,7 @@ struct BlurbTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -111,7 +111,7 @@ struct BlurbTests {
 
         let blankName = try JSONDecoder().decode(
             MemberProfileBody.self, from: Data(#"{"displayName":"","blurb":"On the roof"}"#.utf8))
-        #expect(blankName.name == nil, "an empty name folded as a name")
+        #expect(blankName.name == nil, "an empty name counted as a name")
     }
 
     @Test("A blurb is cut at the limit rather than refused")

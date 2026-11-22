@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Honest copy")
+@Suite("Honest copy", .tags(.ui))
 struct HonestCopyTests {
     private let calendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)

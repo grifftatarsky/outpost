@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: The wall, its readers and what is new on it
 
@@ -19,12 +20,11 @@ extension AppSession {
         let previous = projection.outpostPhotoReference(of: enrolment.identity.id)
 
         let (reference, ciphertext) = try SealedAttachment.seal(jpeg, kind: .image)
-        let window = SyncSession.window(at: clock.now)
-        let recipients = Set(peers().map { $0.outgoingTag(window: window) })
+        let recipients = addressed(to: peers())
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
-        try await mailbox.upload(
-            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients))
+        try await uploadCopies(
+            of: OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
         Diagnostics.sync.notice(
             "outpost avatar: uploaded \(ciphertext.count, privacy: .public) bytes for \(recipients.count, privacy: .public) peer(s)")
 
@@ -51,7 +51,7 @@ extension AppSession {
         guard previous.id != projection.outpostPhotoReference(of: me)?.id,
             previous.id != projection.photoReference(of: me)?.id
         else { return }
-        do { try await mailbox.delete(attachment: previous.id) } catch {
+        do { try await deleteEveryCopy(of: [previous.id], through: mailbox) } catch {
             Diagnostics.sync.error(
                 "outpost avatar: could not delete the previous picture (\(String(describing: error), privacy: .public))")
         }
@@ -98,13 +98,16 @@ extension AppSession {
         _ reference: AttachmentReference, from person: ParticipantID, through mailbox: any MediaMailbox
     ) async throws -> Data? {
         let name = Diagnostics.fingerprint(reference.id.rawValue.uuidString)
-        guard let bytes = try await mailbox.download(reference.id, hint: collectionTags(for: person)) else {
+        guard let downloaded = try await downloadCopy(of: reference.id, from: person, through: mailbox) else {
             Diagnostics.sync.notice("avatar: no outbox holds \(name, privacy: .public)")
             return nil
         }
-        guard SealedAttachment.matches(bytes, reference) else {
+        let bytes: Data
+        do {
+            bytes = try openCopy(downloaded, of: reference.id, matching: reference.digest, from: person)
+        } catch {
             Diagnostics.sync.error("avatar: \(name, privacy: .public) does not match its pointer; not kept")
-            throw AttachmentError.digestMismatch
+            throw error
         }
         return try SealedAttachment.open(bytes, with: reference)
     }
@@ -113,6 +116,7 @@ extension AppSession {
 
     public var outpostAccess: OutpostAccess {
         guard let me = enrolment?.identity.id else { return OutpostAccess() }
+        _ = projectionGeneration
         if let known = cachedOutpostAccess { return known }
         let built = projection.outpostAccess(of: me, opening: payloadOpener())
         cachedOutpostAccess = built
@@ -123,9 +127,6 @@ extension AppSession {
         notShutOut(outpostAccess.audience(at: clock.now))
     }
 
-    /// Everybody whose Outpost access this member chose *because of* a particular room, and who
-    /// still has it. Leaving that room is the moment to ask about them: the room ends, and the
-    /// access it led to would otherwise stand for ever.
     public func outpostAccessChosen(in room: RoomID) -> [Member] {
         outpostAccess.granted
             .filter { $0.value.value.chosenIn == room && $0.value.value.isAllowed }
@@ -383,31 +384,26 @@ extension AppSession {
         guard let enrolment, !persisted.outpostMediaOwed.isEmpty else { return }
         let owed = persisted.outpostMediaOwed
         let wall = outpostRoom(for: enrolment.identity.id)
-        let window = SyncSession.window(at: clock.now)
-        let tags = Set(
-            peers().filter { owed.contains($0.them) }.map { $0.outgoingTag(window: window) })
+        let tags = addressed(to: peers().filter { owed.contains($0.them) })
         guard !tags.isEmpty else { return }
 
-        let waiting = (try? await mailbox.pendingAttachments()) ?? [:]
-
+        let open = entryOpener()
         var offered = 0
         var gone = 0
         for entry in replica.allEntries
         where entry.author == enrolment.identity.id && (entry.room == nil || entry.room == wall) {
-            guard let chain = chain(sealing: entry), let payload = entry.opened(using: chain),
+            guard let payload = open(entry),
                 payload.type == .media, let body = try? payload.decode(MediaBody.self)
             else { continue }
-            for picture in body.all {
-                let id = picture.attachment.id
+            for id in body.all.flatMap(\.attachment.transferIDs) {
                 guard let ciphertext = try? await storage.media.sealed(for: id) else {
                     gone += 1
                     continue
                 }
                 do {
-                    try await mailbox.upload(
-                        OutgoingAttachment(
-                            id: id, ciphertext: ciphertext,
-                            recipients: (waiting[id] ?? []).union(tags)))
+                    try await uploadCopies(
+                        of: OutgoingAttachment(id: id, ciphertext: ciphertext, recipients: tags), through: mailbox)
+                    noteAttachmentsSent([id], to: Set(owed))
                     offered += 1
                 } catch {
                     Diagnostics.sync.error(
@@ -438,12 +434,12 @@ extension AppSession {
 
         let held = outpostReaders().contains(person)
 
-        if held { try await oweEpochTurn(in: wall) }
+        if held { try await oweKeyRotation(in: wall) }
         try await append(
             try Payload.outpostAccess(
                 OutpostAccessBody(person: person, isAllowed: false, chosenIn: chosenIn)),
             to: wall)
-        if held { try await turnOwedEpoch(in: wall) }
+        if held { try await rotateOwedKey(in: wall) }
         Diagnostics.sync.notice(
             """
             outpost: \(held ? "revoked" : "said no to", privacy: .public) \
@@ -451,34 +447,59 @@ extension AppSession {
             """)
     }
 
-    public var outpostKeyTurnPending: Bool {
+    public var outpostKeyRotationPending: Bool {
         guard let me = enrolment?.identity.id else { return false }
-        return persisted.epochTurnsOwed.contains(outpostRoom(for: me))
+        return persisted.keyRotationsOwed.contains(outpostRoom(for: me))
     }
 
-    func oweEpochTurn(in room: RoomID) async throws {
-        guard !persisted.epochTurnsOwed.contains(room) else { return }
-        persisted.epochTurnsOwed.append(room)
+    func oweKeyRotation(in room: RoomID) async throws {
+        guard !persisted.keyRotationsOwed.contains(room) else { return }
+        persisted.keyRotationsOwed.append(room)
         try await saveState()
     }
 
-    func turnOwedEpoch(in room: RoomID) async throws {
-        guard persisted.epochTurnsOwed.contains(room) else { return }
-        try await advanceEpoch(of: room)
-        persisted.epochTurnsOwed.removeAll { $0 == room }
+    func rotateOwedKey(in room: RoomID) async throws {
+        guard persisted.keyRotationsOwed.contains(room) else { return }
+        persisted.keyRotationsOwed.removeAll { $0 == room }
+        do {
+            try await advanceEpoch(of: room)
+        } catch {
+            persisted.keyRotationsOwed.append(room)
+            throw error
+        }
         try await saveState()
     }
 
-    func settleOwedEpochTurns() async {
-        for room in persisted.epochTurnsOwed {
+    func rekeyBeforeWriting(_ room: RoomID) async throws {
+        guard persisted.rekeyBeforeWriting.remove(room) != nil else { return }
+        do {
+            try await advanceEpoch(of: room)
+        } catch {
+            persisted.rekeyBeforeWriting.insert(room)
+            throw error
+        }
+        try await saveState()
+        Diagnostics.identity.notice("rekey: gave a room a key no removed device holds before writing in it")
+    }
+
+    func settleOwedKeyRotations() async {
+        for room in persisted.rekeyBeforeWriting where chains[room] != nil {
             do {
-                try await turnOwedEpoch(in: room)
-                Diagnostics.sync.notice("mailbox sync: turned a key that was owed from an earlier change")
+                try await rekeyBeforeWriting(room)
+            } catch {
+                Diagnostics.sync.error(
+                    "mailbox sync: could not give a room a key no removed device holds (\(String(describing: error), privacy: .public))")
+            }
+        }
+        for room in persisted.keyRotationsOwed {
+            do {
+                try await rotateOwedKey(in: room)
+                Diagnostics.sync.notice("mailbox sync: rotated a key that was owed from an earlier change")
             } catch {
                 Diagnostics.sync.error(
                     """
-                    mailbox sync: still cannot turn a key this device owes — somebody removed \
-                    can read what is said until it turns \
+                    mailbox sync: still cannot rotate a key this device owes — somebody removed \
+                    can read what is said until it is rotated \
                     (\(String(describing: error), privacy: .public))
                     """)
             }
@@ -500,6 +521,9 @@ extension AppSession {
     func upload(
         _ media: PreparedMedia, to targets: Set<ParticipantID>, through mailbox: any MediaMailbox
     ) async throws -> MediaBody {
+        if let file = media.file {
+            return try await uploadInParts(media, from: file, to: targets, through: mailbox)
+        }
         let (reference, ciphertext) = try SealedAttachment.seal(media.bytes, kind: media.kind)
         let body = MediaBody(
             attachment: reference, kind: media.kind, width: media.width, height: media.height,
@@ -508,15 +532,14 @@ extension AppSession {
 
         try await storage.media.store(ciphertext, for: reference.id)
 
-        let window = SyncSession.window(at: clock.now)
-        let recipients = Set(
-            peers().filter { targets.contains($0.them) }.map { $0.outgoingTag(window: window) })
+        let recipients = addressed(to: peers().filter { targets.contains($0.them) })
 
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
         do {
-            try await mailbox.upload(
-                OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients))
+            try await uploadCopies(
+                of: OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients),
+                through: mailbox)
         } catch {
             do { try await storage.media.remove(reference.id) } catch {
                 Diagnostics.sync.error(
@@ -532,6 +555,43 @@ extension AppSession {
             bytes=\(ciphertext.count, privacy: .public) recipients=\(recipients.count, privacy: .public)
             """)
         return body
+    }
+
+    private func uploadInParts(
+        _ media: PreparedMedia, from file: URL, to targets: Set<ParticipantID>, through mailbox: any MediaMailbox
+    ) async throws -> MediaBody {
+        let recipients = addressed(to: peers().filter { targets.contains($0.them) })
+        let sent = PartsSent()
+        defer { for id in sent.ids { uploading.remove(id) } }
+        let reference: AttachmentReference
+        do {
+            reference = try await SealedAttachment.sealParts(of: file) { [self] part, ciphertext in
+                try await sendPart(part, ciphertext, to: recipients, through: mailbox, noting: sent)
+            }
+        } catch {
+            for id in sent.ids { await discard(id, through: mailbox) }
+            Diagnostics.sync.error(
+                "media: a clip in pieces did not all upload; took back what did (\(String(describing: error), privacy: .public))")
+            throw error
+        }
+        let body = MediaBody(
+            attachment: reference, kind: media.kind, width: media.width, height: media.height,
+            preview: media.preview, caption: media.caption, duration: media.duration)
+        _ = try Payload.media(body)
+        Diagnostics.sync.notice(
+            "media: uploaded a clip in \(sent.ids.count, privacy: .public) piece(s), bytes=\(reference.byteCount, privacy: .public) recipients=\(recipients.count, privacy: .public)")
+        return body
+    }
+
+    private func sendPart(
+        _ part: AttachmentPart, _ ciphertext: Data, to recipients: [ParticipantID: RecipientTag],
+        through mailbox: any MediaMailbox, noting sent: PartsSent
+    ) async throws {
+        try await storage.media.store(ciphertext, for: part.id)
+        uploading.insert(part.id)
+        sent.ids.append(part.id)
+        try await uploadCopies(
+            of: OutgoingAttachment(id: part.id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
     }
 
     public func outpost() -> [OutpostPost] {
@@ -596,4 +656,9 @@ extension AppSession {
     public func comments(on post: OutpostPost) -> [OutpostComment] {
         projection.comments(on: post.id.entry).filter { !refusesToDraw(from: $0.author.id) }
     }
+}
+
+@MainActor
+final class PartsSent {
+    var ids: [AttachmentID] = []
 }

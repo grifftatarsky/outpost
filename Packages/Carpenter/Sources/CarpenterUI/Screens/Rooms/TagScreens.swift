@@ -61,7 +61,7 @@ public struct RoomTagsSheet: View {
                 Section {
                 } footer: {
                     Text(
-                        "Tags live on your devices only. They are never sent in a packet, so no one else in the room can see how you have filed it.",
+                        "Tags live on your own devices only, so no one else in the room can see how you have filed it.",
                         bundle: .module
                     )
                 }

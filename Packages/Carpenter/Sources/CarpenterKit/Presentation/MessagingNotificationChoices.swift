@@ -32,7 +32,3 @@ public enum RoomUpdateLevel: String, CaseIterable, Sendable, Codable {
     public var namesWhatHappened: Bool { self != .nothing }
 }
 
-public enum RoomUpdate: String, CaseIterable, Sendable {
-    case somebodyJoined, somebodyLeft, somebodyRemoved, roomRenamed, invitationAnswered
-    case accessChanged
-}

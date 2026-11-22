@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("Checking who you are talking to")
+@Suite("Checking who you are talking to", .tags(.membership))
 struct SoloCheckTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -140,7 +140,7 @@ struct SoloCheckTests {
         #expect(check.state == .confirmed(at: start.addingTimeInterval(40)))
     }
 
-    @Test("An answer to an ask nobody made folds to nothing")
+    @Test("An answer to an ask nobody made counts for nothing")
     func anAnswerToNothing() throws {
         let them = ParticipantID(rawValue: WideID.of([2]))
         var check = SoloCheck()

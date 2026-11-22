@@ -1,15 +1,15 @@
-import CarpenterApp
+@testable import CarpenterApp
 import Foundation
 import Testing
 
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Sync from the app", .serialized)
+@Suite("Sync from the app", .serialized, .tags(.sync))
 @MainActor
 struct SyncFromTheAppTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-sync-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-sync-\(UUID().uuidString)")
     }
 
     private func session(_ clock: TestClock) throws -> AppSession {
@@ -43,13 +43,18 @@ struct SyncFromTheAppTests {
         try await alice.send("door code changed again", to: room)
 
         let bobKeys = try #require(bob.enrolment?.identity.publicKeys)
-        let attestation = try await alice.attest(code: try JoinerCode.decoded(from: bob.identityCode()), joining: room)
+        let code = try JoinerCode.decoded(from: await bob.joinerCode(through: mailbox))
+        let attestation = try await alice.attest(code: code, joining: room)
+        let offer = try await alice.offerOurSpace(to: code, through: mailbox)
         #expect(alice.roster(of: room).members.count == 1, "an invitation put somebody in the room")
         #expect(alice.roster(of: room).invited.contains(bobKeys.participantID))
 
         try await alice.sync(through: mailbox)
 
         try await bob.accept(attestation, from: try #require(alice.enrolment?.identity.publicKeys))
+        bob.takeOffer(
+            offer?.verified(by: try #require(alice.enrolment?.identity.publicKeys)),
+            from: try #require(alice.enrolment?.identity.id), answering: attestation.joinerCommitment)
 
         var received = SyncReport()
         for _ in 0..<3 {
@@ -85,8 +90,7 @@ struct SyncFromTheAppTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.send("before you arrived", to: room)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
 
         var received = SyncReport()
@@ -123,11 +127,10 @@ struct SyncFromTheAppTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.send("before you arrived", to: room)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
 
-        #expect(alice.epoch(of: room) == .initial, "an invitation turned the key on its own")
+        #expect(alice.epoch(of: room) == .initial, "an invitation rotated the key on its own")
         #expect(alice.roster(of: room).members.count == 1, "the invitation alone admitted somebody")
 
         var received = SyncReport()
@@ -139,7 +142,7 @@ struct SyncFromTheAppTests {
 
         #expect(
             alice.epoch(of: room) == EpochNumber.initial.next,
-            "a membership change did not turn the key")
+            "a membership change did not rotate the key")
         #expect(alice.roster(of: room).members.count == 2, "confirming did not admit")
 
         #expect(received.grantsReceived.count == 1)
@@ -168,12 +171,12 @@ struct SyncFromTheAppTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.send("before you arrived", to: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
 
         try await alice.sync(through: mailbox)
         try await bob.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
         try await bob.send("I am here", to: room)
         try await bob.sync(through: mailbox)
 
@@ -205,8 +208,7 @@ struct SyncFromTheAppTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.send("before you arrived", to: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await bob.sync(through: mailbox)
         try await alice.sync(through: mailbox)
@@ -256,8 +258,7 @@ struct SyncFromTheAppTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.send("before you arrived", to: room)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await bob.sync(through: mailbox)
         try await alice.sync(through: mailbox)
@@ -306,8 +307,7 @@ struct SyncFromTheAppTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.send("before you arrived", to: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -342,8 +342,7 @@ struct SyncFromTheAppTests {
         let aliceID = try #require(alice.enrolment?.identity.id)
         let room = try await alice.createRoom(named: "Hangar 7")
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -422,7 +421,7 @@ struct SyncFromTheAppTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let bobKeys = try #require(bob.enrolment?.identity.publicKeys)
+        _ = try #require(bob.enrolment?.identity.publicKeys)
         let attestation = try await alice.attest(code: try JoinerCode.decoded(from: bob.identityCode()), joining: room)
         try await alice.decide(on: attestation, admit: true)
 
@@ -451,7 +450,7 @@ struct SyncFromTheAppTests {
         #expect(!report.didAnything)
     }
 
-    @Test("Joining an open room turns the key, with nothing called by hand")
+    @Test("Joining an open room rotates the key, with nothing called by hand")
     func openInvitationAdvancesTheEpoch() async throws {
         let clock = TestClock(now: Date(timeIntervalSince1970: 1_786_635_000))
         let mailbox = InMemoryMailbox()
@@ -475,7 +474,7 @@ struct SyncFromTheAppTests {
             "a membership change left the key where it was")
     }
 
-    @Test("One join turns the key once, even if the inviter also decides")
+    @Test("One join rotates the key once, even if the inviter also decides")
     func oneJoinAdvancesOnce() async throws {
         let clock = TestClock(now: Date(timeIntervalSince1970: 1_786_635_000))
         let mailbox = InMemoryMailbox()
@@ -496,10 +495,10 @@ struct SyncFromTheAppTests {
         try await alice.decide(on: attestation, admit: true)
         #expect(
             alice.epoch(of: room) == EpochNumber.initial.next,
-            "one membership change turned the key twice")
+            "one membership change rotated the key twice")
     }
 
-    @Test("An approval before a confirmation still turns the key once")
+    @Test("An approval before a confirmation still rotates the key once")
     func approvalFirstAdvancesOnce() async throws {
         let clock = TestClock(now: Date(timeIntervalSince1970: 1_786_635_000))
         let mailbox = InMemoryMailbox()
@@ -512,7 +511,9 @@ struct SyncFromTheAppTests {
 
         let room = try await alice.createRoom(named: "Hangar 7", access: .founder)
         let bobKeys = try #require(bob.enrolment?.identity.publicKeys)
-        let attestation = try await alice.attest(code: try JoinerCode.decoded(from: bob.identityCode()), joining: room)
+        let code = try JoinerCode.decoded(from: await bob.joinerCode(through: mailbox))
+        let attestation = try await alice.attest(code: code, joining: room)
+        let offer = try await alice.offerOurSpace(to: code, through: mailbox)
 
         try await alice.decide(on: attestation, admit: true)
         let afterAdmission = try #require(alice.epoch(of: room))
@@ -520,6 +521,9 @@ struct SyncFromTheAppTests {
         #expect(!alice.roster(of: room).members.contains(bobKeys.participantID), "approval admitted")
 
         try await bob.accept(attestation, from: try #require(alice.enrolment?.identity.publicKeys))
+        bob.takeOffer(
+            offer?.verified(by: try #require(alice.enrolment?.identity.publicKeys)),
+            from: try #require(alice.enrolment?.identity.id), answering: attestation.joinerCommitment)
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
             try await bob.sync(through: mailbox)
@@ -528,7 +532,7 @@ struct SyncFromTheAppTests {
         #expect(alice.roster(of: room).members.contains(bobKeys.participantID))
         #expect(
             alice.epoch(of: room) == afterAdmission,
-            "one join turned the key twice because the approval arrived first")
+            "one join rotated the key twice because the approval arrived first")
     }
 
     @Test("Admitting somebody advances the room's epoch")
@@ -546,7 +550,7 @@ struct SyncFromTheAppTests {
         let room = try await alice.createRoom(named: "Hangar 7", access: .founder)
         #expect(alice.epoch(of: room) == EpochNumber.initial)
 
-        let bobKeys = try #require(bob.enrolment?.identity.publicKeys)
+        _ = try #require(bob.enrolment?.identity.publicKeys)
         let attestation = try await alice.attest(code: try JoinerCode.decoded(from: bob.identityCode()), joining: room)
         try await alice.decide(on: attestation, admit: true)
 

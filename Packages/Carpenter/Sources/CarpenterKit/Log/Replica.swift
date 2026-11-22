@@ -16,6 +16,7 @@ public enum IntegrationResult: Hashable, Sendable {
     case accepted
     case alreadyPresent
     case forked(Fork)
+    case tooLarge
 }
 
 public enum LogError: Error, Hashable, Sendable {
@@ -66,31 +67,100 @@ public struct Replica: Sendable {
         feeds.values.reduce(0) { $0 + $1.values.reduce(0) { $0 + $1.count } }
     }
 
-    public var allEntries: [Entry] {
-        feeds.values.flatMap { $0.values.flatMap(\.values) }
-    }
+    public private(set) var allEntries: [Entry] = []
+    public private(set) var revision = UUID()
 
     public var hasDiverged: Bool { !forks.isEmpty }
 
     public mutating func introduce(_ identity: IdentityPublicKeys) {
-        registries[identity.participantID] = registries[identity.participantID]
-            ?? DeviceRegistry(identity: identity)
+        let participant = identity.participantID
+        guard registries[participant] == nil else { return }
+        registries[participant] = DeviceRegistry(identity: identity)
+        revision = UUID()
     }
 
-    public mutating func admit(_ certificate: DeviceCertificate) throws {
+    public mutating func admit(_ certificate: DeviceCertificate, storedAt: Date) throws {
         guard var registry = registries[certificate.participant] else {
             throw LogError.unknownParticipant
         }
-        try registry.admit(certificate)
+        try registry.admit(certificate, storedAt: storedAt)
+        guard registry != registries[certificate.participant] else { return }
         registries[certificate.participant] = registry
+        revision = UUID()
+        enforceStanding(of: certificate.participant)
     }
 
-    public mutating func revoke(_ revocation: DeviceRevocation) throws {
+    mutating func admit(_ certificate: DeviceCertificate) throws {
+        try admit(certificate, storedAt: certificate.issuedAt)
+    }
+
+    public mutating func revoke(_ revocation: DeviceRevocation, storedAt: Date) throws {
         guard var registry = registries[revocation.participant] else {
             throw LogError.unknownParticipant
         }
-        try registry.revoke(revocation)
+        try registry.revoke(revocation, storedAt: storedAt)
+        guard registry != registries[revocation.participant] else { return }
         registries[revocation.participant] = registry
+        revision = UUID()
+        enforceStanding(of: revocation.participant)
+    }
+
+    mutating func revoke(_ revocation: DeviceRevocation) throws {
+        try revoke(revocation, storedAt: revocation.revokedAt)
+    }
+
+    public mutating func settle(_ event: AuthorityEvent, storedAt: Date) {
+        guard var registry = registries[event.participant] else { return }
+        registry.settle(event.digest, storedAt: storedAt)
+        guard registry != registries[event.participant] else { return }
+        registries[event.participant] = registry
+        revision = UUID()
+        enforceStanding(of: event.participant)
+    }
+
+    public var supersededLines: [FeedKey: DeviceRegistry.Line] {
+        registries.reduce(into: [:]) { lines, pair in
+            for (device, line) in pair.value.supersededLines {
+                lines[FeedKey(author: pair.key, device: device)] = line
+            }
+        }
+    }
+
+    public mutating func fixSupersededLines(sparing member: ParticipantID?) {
+        for (participant, registry) in registries where participant != member {
+            let unfixed = registry.supersededWithoutALine
+            guard !unfixed.isEmpty else { continue }
+            fix(
+                Dictionary(uniqueKeysWithValues: unfixed.map { device in
+                    let top = link(atTopOf: FeedKey(author: participant, device: device))
+                    return (device, DeviceRegistry.Line(seq: top?.seq ?? 0, head: top?.hash))
+                }), of: participant)
+        }
+    }
+
+    public mutating func restore(supersededLines lines: [FeedKey: DeviceRegistry.Line]) {
+        for (participant, held) in Dictionary(grouping: lines, by: \.key.author) {
+            fix(Dictionary(uniqueKeysWithValues: held.map { ($0.key.device, $0.value) }), of: participant)
+        }
+    }
+
+    private mutating func fix(_ lines: [DeviceID: DeviceRegistry.Line], of participant: ParticipantID) {
+        guard var registry = registries[participant] else { return }
+        registry.fix(lines)
+        guard registry != registries[participant] else { return }
+        registries[participant] = registry
+        revision = UUID()
+        enforceStanding(of: participant)
+    }
+
+    public var storedTimes: [Data: Date] {
+        registries.values.reduce(into: [:]) { times, registry in
+            times.merge(registry.storedTimes) { min($0, $1) }
+        }
+    }
+
+    public var knownRevocations: [DeviceRevocation] {
+        registries.values.flatMap(\.knownRevocations)
     }
 
     public var knownParticipants: Set<ParticipantID> { Set(registries.keys) }
@@ -99,33 +169,71 @@ public struct Replica: Sendable {
         registries[participant]
     }
 
+    public func signatureChecks(
+        for entries: [Entry], alsoTrusting certificates: [DeviceCertificate] = []
+    ) async -> SignatureChecks {
+        var offered: [FeedKey: Data] = [:]
+        for certificate in certificates {
+            offered[FeedKey(author: certificate.participant, device: certificate.device)] =
+                certificate.devicePublicKey
+        }
+        let signed = entries.compactMap { entry -> (entry: Entry, key: Data)? in
+            guard feeds[entry.feedKey]?[entry.seq]?[entry.hash] == nil,
+                let key = registries[entry.author]?.signingKey(for: entry.device) ?? offered[entry.feedKey]
+            else { return nil }
+            return (entry, key)
+        }
+        return await SignatureChecks.verifying(signed)
+    }
+
     @discardableResult
-    public mutating func integrate(_ entry: Entry) throws -> IntegrationResult {
+    public mutating func integrate(
+        _ entry: Entry, checked: SignatureChecks = SignatureChecks()
+    ) throws -> IntegrationResult {
+        if feeds[entry.feedKey]?[entry.seq]?[entry.hash] != nil { return .alreadyPresent }
         guard let registry = registries[entry.author] else { throw LogError.unknownParticipant }
-        guard registry.isAuthorized(entry.device, at: entry.wallTime),
+        guard registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash),
             let deviceKey = registry.signingKey(for: entry.device)
         else {
             throw LogError.unauthorizedDevice
         }
-        guard try entry.hasValidSignature(from: deviceKey) else { throw LogError.badSignature }
+        guard try checked.vouches(for: entry, signedWith: deviceKey) || entry.hasValidSignature(from: deviceKey)
+        else { throw LogError.badSignature }
+        guard entry.room == nil || entry.roomLink != nil else { throw LogError.brokenLink }
 
         if spent[entry.feedKey]?[entry.seq] != nil { return .alreadyPresent }
 
         let existingAtSeq = feeds[entry.feedKey]?[entry.seq] ?? [:]
         if existingAtSeq[entry.hash] != nil { return .alreadyPresent }
 
-        try validateLink(of: entry)
+        let standing = registry.standing(of: entry.device)
+        let removed = standing?.revokedAt != nil
+        let anchored = removed && isAnchored(entry, to: standing)
+        if removed, !existingAtSeq.isEmpty, !anchored { throw LogError.unauthorizedDevice }
+        try validateLink(of: entry, anchored: anchored)
+
+        guard SyncSession.fitsAPacket(entry) else {
+            if existingAtSeq.isEmpty { spend(SpentEntry(entry)) }
+            return .tooLarge
+        }
 
         if let room = entry.room, closedRooms.contains(room) {
             if existingAtSeq.isEmpty { spend(SpentEntry(entry)) }
             return .alreadyPresent
         }
 
+        revision = UUID()
         feeds[entry.feedKey, default: [:]][entry.seq, default: [:]][entry.hash] = entry
-        claimed = claimed.merging(entry.clock)
+        allEntries.append(entry)
+        for (feed, seq) in entry.clock.positions { claimed.observe(feed, seq: seq) }
         if existingAtSeq.isEmpty { occupy(entry.seq, in: entry.feedKey) }
 
-        guard !existingAtSeq.isEmpty else { return .accepted }
+        if removed {
+            enforceStanding(of: entry.author)
+            guard feeds[entry.feedKey]?[entry.seq]?[entry.hash] != nil else { throw LogError.unauthorizedDevice }
+        }
+        registries[entry.author]?.noteWhatWasSeen(by: entry.device, in: entry.clock)
+        guard !removed, !existingAtSeq.isEmpty else { return .accepted }
 
         let fork = Fork(
             feed: entry.feedKey,
@@ -136,6 +244,31 @@ public struct Replica: Sendable {
         forks.append(fork)
         return .forked(fork)
     }
+
+    public mutating func integrate(
+        _ entries: [Entry], checked: SignatureChecks = SignatureChecks()
+    ) -> [(entry: Entry, outcome: Result<IntegrationResult, any Error>)] {
+        var outcomes: [Result<IntegrationResult, any Error>?] = Array(repeating: nil, count: entries.count)
+        var waiting = Array(entries.indices)
+        var passes = 0
+        while !waiting.isEmpty, passes < Self.mostPasses {
+            passes += 1
+            var refused: [Int] = []
+            for index in waiting {
+                do {
+                    outcomes[index] = .success(try integrate(entries[index], checked: checked))
+                } catch {
+                    outcomes[index] = .failure(error)
+                    refused.append(index)
+                }
+            }
+            guard refused.count < waiting.count else { break }
+            waiting = refused.sorted { entries[$0].seq > entries[$1].seq }
+        }
+        return entries.indices.map { (entries[$0], outcomes[$0] ?? .failure(LogError.unauthorizedDevice)) }
+    }
+
+    static let mostPasses = 4
 
     private mutating func occupy(_ seq: UInt64, in feed: FeedKey) {
         highest[feed] = Swift.max(highest[feed] ?? 0, seq)
@@ -165,18 +298,28 @@ public struct Replica: Sendable {
         }
     }
 
+    public func link(atTopOf feed: FeedKey) -> EntryLink? {
+        guard let top = highest[feed] else { return nil }
+        if let held = feeds[feed]?[top]?.keys.min(by: { $0.rawValue.lexicographicallyPrecedes($1.rawValue) }) {
+            return EntryLink(seq: top, hash: held)
+        }
+        return spent[feed]?[top]?.link
+    }
+
     public func spentLink(atTopOf feed: FeedKey) -> EntryLink? {
         guard let top = highest[feed] else { return nil }
         return spent[feed]?[top]?.link
     }
 
     public mutating func restore(spent entries: [SpentEntry], closing rooms: Set<RoomID>) {
+        revision = UUID()
         closedRooms.formUnion(rooms)
         for entry in entries where feeds[entry.feed]?[entry.seq] == nil { spend(entry) }
     }
 
     @discardableResult
     public mutating func close(_ room: RoomID) -> [Entry] {
+        revision = UUID()
         closedRooms.insert(room)
         var taken: [Entry] = []
         for (feed, bySeq) in feeds {
@@ -198,11 +341,16 @@ public struct Replica: Sendable {
             }
             feeds[feed] = kept.isEmpty ? nil : kept
         }
+        if !taken.isEmpty {
+            let gone = Set(taken.map(\.hash))
+            allEntries.removeAll { gone.contains($0.hash) }
+        }
         forks.removeAll { fork in (feeds[fork.feed]?[fork.seq]?.count ?? 0) < 2 }
         return taken
     }
 
     public mutating func reopen(_ room: RoomID) {
+        revision = UUID()
         closedRooms.remove(room)
         var touched: Set<FeedKey> = []
         for (feed, bySeq) in spent {
@@ -215,6 +363,7 @@ public struct Replica: Sendable {
     }
 
     private mutating func spend(_ entry: SpentEntry) {
+        revision = UUID()
         spent[entry.feed, default: [:]][entry.seq] = entry
         occupy(entry.seq, in: entry.feed)
     }
@@ -231,11 +380,75 @@ public struct Replica: Sendable {
 
     public func refusesForever(_ entry: Entry) -> Bool {
         guard let registry = registries[entry.author] else { return false }
-        guard registry.standing(of: entry.device) != nil else { return false }
-        return !registry.isAuthorized(entry.device, at: entry.wallTime)
+        guard registry.standing(of: entry.device) != nil,
+            !registry.isAuthorized(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash)
+        else { return false }
+        let numberTaken = feeds[entry.feedKey]?[entry.seq].map { $0[entry.hash] == nil && !$0.isEmpty } ?? false
+        return numberTaken
+            || !registry.mayYetBeVouchedFor(entry.device, at: entry.wallTime, seq: entry.seq, hash: entry.hash)
     }
 
-    private func validateLink(of entry: Entry) throws {
+    // MARK: What a removed device wrote
+
+    private func isAnchored(_ entry: Entry, to standing: DeviceRegistry.Standing?) -> Bool {
+        guard let cutoff = standing?.cutoff, let head = standing?.head, entry.seq <= cutoff else { return false }
+        var current = entry
+        while current.seq < cutoff {
+            guard let next = feeds[entry.feedKey]?[current.seq + 1]?.values.first(where: { $0.previous == current.hash })
+            else { return false }
+            current = next
+        }
+        return current.hash == head
+    }
+
+    private mutating func enforceStanding(of participant: ParticipantID) {
+        guard let registry = registries[participant] else { return }
+        for feed in Array(feeds.keys) where feed.author == participant {
+            guard let standing = registry.standing(of: feed.device), standing.revokedAt != nil,
+                let bySeq = feeds[feed]
+            else { continue }
+            var refused = bySeq.values.flatMap(\.values).filter {
+                !registry.isAuthorized($0.device, at: $0.wallTime, seq: $0.seq, hash: $0.hash)
+            }
+            if let cutoff = standing.cutoff, let head = standing.head {
+                refused += offTheChain(in: feed, from: cutoff, head: head)
+            }
+            evict(refused, from: feed)
+        }
+    }
+
+    private func offTheChain(in feed: FeedKey, from cutoff: UInt64, head: EntryHash) -> [Entry] {
+        var off: [Entry] = []
+        var expected = head
+        var seq = cutoff
+        while let atSeq = feeds[feed]?[seq], !atSeq.isEmpty {
+            guard let kept = atSeq[expected] else {
+                off += atSeq.values
+                break
+            }
+            off += atSeq.values.filter { $0.hash != expected }
+            guard seq > Entry.firstSequence, let previous = kept.previous else { break }
+            expected = previous
+            seq -= 1
+        }
+        return off
+    }
+
+    private mutating func evict(_ entries: [Entry], from feed: FeedKey) {
+        guard !entries.isEmpty else { return }
+        revision = UUID()
+        let gone = Set(entries.map(\.hash))
+        for entry in entries {
+            feeds[feed]?[entry.seq]?[entry.hash] = nil
+            if feeds[feed]?[entry.seq]?.isEmpty == true { feeds[feed]?[entry.seq] = nil }
+        }
+        if feeds[feed]?.isEmpty == true { feeds[feed] = nil }
+        allEntries.removeAll { gone.contains($0.hash) }
+        forks.removeAll { fork in (feeds[fork.feed]?[fork.seq]?.count ?? 0) < 2 }
+        reindex(feed)
+    }
+
+    private func validateLink(of entry: Entry, anchored: Bool = false) throws {
         guard entry.seq > Entry.firstSequence else {
             guard entry.seq == Entry.firstSequence else { throw LogError.brokenLink }
             guard entry.previous == nil else { throw LogError.brokenLink }
@@ -244,7 +457,7 @@ public struct Replica: Sendable {
         guard entry.previous != nil else { throw LogError.brokenLink }
 
         let predecessors = feeds[entry.feedKey]?[entry.seq - 1] ?? [:]
-        guard !predecessors.isEmpty else { return }
+        guard !predecessors.isEmpty, !anchored else { return }
         guard let claimed = entry.previous, predecessors[claimed] != nil else {
             throw LogError.brokenLink
         }
@@ -264,11 +477,6 @@ public struct Replica: Sendable {
         return clock
     }
 
-    public func head(of feed: FeedKey) -> Entry? {
-        guard let bySeq = feeds[feed], let highest = bySeq.keys.max() else { return nil }
-        return bySeq[highest]?.values.min { $0.hash.rawValue.lexicographicallyPrecedes($1.hash.rawValue) }
-    }
-
     // MARK: What is missing
 
     public var heldFeeds: Set<FeedKey> { Set(feeds.keys) }
@@ -277,6 +485,27 @@ public struct Replica: Sendable {
 
     public func entries(in feed: FeedKey, at seq: UInt64) -> [Entry] {
         feeds[feed]?[seq].map { Array($0.values) } ?? []
+    }
+
+    public func entries(in feed: FeedKey, after seq: UInt64) -> [Entry] {
+        guard let bySeq = feeds[feed] else { return [] }
+        var found: [Entry] = []
+        func take(_ position: UInt64) {
+            guard let atSeq = bySeq[position] else { return }
+            if atSeq.count == 1, let only = atSeq.first {
+                found.append(only.value)
+            } else {
+                found.append(
+                    contentsOf: atSeq.values.sorted { $0.hash.rawValue.lexicographicallyPrecedes($1.hash.rawValue) })
+            }
+        }
+
+        let run = contiguous[feed] ?? 0
+        if seq < run {
+            for position in (seq + 1)...run { take(position) }
+        }
+        for position in (scattered[feed] ?? []).filter({ $0 > seq }).sorted() { take(position) }
+        return found
     }
 
     public func heads(of authors: Set<ParticipantID>) -> VectorClock {
@@ -294,14 +523,33 @@ public struct Replica: Sendable {
         var found: [FeedGap] = []
         for key in keys.sorted(by: { $0.canonicalBytes.lexicographicallyPrecedes($1.canonicalBytes) }) {
             let run = contiguous[key] ?? 0
-            let top = Swift.max(highest[key] ?? 0, claimed[key])
+            var top = Swift.max(highest[key] ?? 0, claimed[key])
+            if let line = registries[key.author]?.line(of: key.device) { top = Swift.min(top, line) }
             guard top > run else { continue }
-            let held = scattered[key] ?? []
-            let missing = ((run + 1)...top).filter { !held.contains($0) }
+            let held = FeedGap.spans(of: (scattered[key] ?? []).sorted())
+            let missing = [SequenceSpan(run + 1, top)].subtracting(held)
             if !missing.isEmpty {
-                found.append(FeedGap(feed: key, spans: FeedGap.spans(of: missing)))
+                found.append(FeedGap(feed: key, spans: missing))
             }
         }
         return found
+    }
+
+    func occupied(in feed: FeedKey, within spans: [SequenceSpan]) -> [UInt64] {
+        let run = contiguous[feed] ?? 0
+        let beyond = (scattered[feed] ?? []).sorted()
+        var positions: [UInt64] = []
+        var next = 0
+        for span in spans.normalized {
+            let lower = Swift.max(span.lower, 1)
+            let upper = Swift.min(span.upper, run)
+            if lower <= upper { positions.append(contentsOf: lower...upper) }
+            while next < beyond.count, beyond[next] < span.lower { next += 1 }
+            while next < beyond.count, beyond[next] <= span.upper {
+                positions.append(beyond[next])
+                next += 1
+            }
+        }
+        return positions
     }
 }

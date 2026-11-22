@@ -35,8 +35,6 @@ extension ConversationView {
                     }
                 }
 
-                // A transcript that is quietly short reads as something having failed to load, so
-                // the omission is said rather than left to be noticed.
                 if hiddenCount > 0 {
                     hiddenNotice
                         .padding(.top, 10)
@@ -58,6 +56,17 @@ extension ConversationView {
         .scrollEdgeEffectStyle(.soft, for: .top)
         .onChange(of: sent) { _, _ in scrollToBottom(scroller) }
         .onChange(of: messages.last?.id) { _, _ in scrollToBottom(scroller) }
+        .onChange(of: focusing) { _, message in
+            guard let message else { return }
+            focusing = nil
+            guard let run = items.first(where: { item in
+                if case .run(let run) = item { return run.messages.contains { $0.id == message } }
+                return false
+            }) else { return }
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
+                scroller.scrollTo(run.id, anchor: .center)
+            }
+        }
         }
     }
 

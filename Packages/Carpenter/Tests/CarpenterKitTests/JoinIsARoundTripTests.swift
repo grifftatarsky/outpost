@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A join is a round trip", .serialized)
+@Suite("A join is a round trip", .serialized, .tags(.membership))
 struct JoinIsARoundTripTests {
     private func pair() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -34,7 +34,7 @@ struct JoinIsARoundTripTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         let bobID = try #require(bob.enrolment?.identity.id)
 
-        let first = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let first = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try first.encoded())
         try await settle([alice, bob], mailbox)
         #expect(alice.roster(of: room).members.contains(bobID), "precondition: Bob joined")
@@ -44,7 +44,7 @@ struct JoinIsARoundTripTests {
         #expect(!alice.roster(of: room).members.contains(bobID))
         #expect(bob.roster(of: room).removal(of: bobID) != nil, "his own copy did not say so")
 
-        let again = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let again = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         #expect(
             !alice.roster(of: room).members.contains(bobID),
             "making an invitation put a removed member back before it had been handed over")
@@ -70,8 +70,7 @@ struct JoinIsARoundTripTests {
         let room = try await alice.createRoom(named: "Hangar 7")
         let bobID = try #require(bob.enrolment?.identity.id)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         #expect(bob.inspect(inviteCode: try invite.encoded()) != nil, "the sheet had nothing to show")
 
         try await settle([alice, bob], mailbox)
@@ -118,20 +117,19 @@ struct JoinIsARoundTripTests {
     }
 
     @Test("Confirming twice is confirming once")
-    func confirmingTwiceTurnsTheKeyOnce() async throws {
+    func confirmingTwiceRotatesTheKeyOnce() async throws {
         let (alice, bob, mailbox) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7")
         let before = alice.epochsHeld(in: room)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await bob.accept(
             invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
         try await settle([alice, bob], mailbox)
 
         #expect(alice.roster(of: room).members.count == 2)
-        #expect(alice.epochsHeld(in: room) == before + 1, "one join turned the key more than once")
+        #expect(alice.epochsHeld(in: room) == before + 1, "one join rotated the key more than once")
     }
 
     @Test("Only the inviter relays a confirmation")

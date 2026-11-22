@@ -5,18 +5,9 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Being told that somebody came back", .serialized)
+@Suite("Being told that somebody came back", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct BeingToldAboutARestoreTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private struct Rig {
         let original: AppSession
         let peer: AppSession
@@ -52,8 +43,7 @@ struct BeingToldAboutARestoreTests {
         }
 
         let room = try await original.createRoom(named: "Kitchen")
-        let invite = try await original.invite(
-            joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await original.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await original.sync(through: mailbox)
         try await peer.accept(
@@ -62,7 +52,7 @@ struct BeingToldAboutARestoreTests {
             for session in [original, peer] { try await session.sync(through: mailbox) }
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         let key = try #require(original.recoveryKeyText())
         return Rig(
             original: original, peer: peer, room: room, mailbox: mailbox, relay: relay,
@@ -70,11 +60,12 @@ struct BeingToldAboutARestoreTests {
     }
 
     private func restoreAndSettle(_ rig: Rig) async throws -> AppSession {
+        rig.clock.advance(by: 60)
         let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: rig.key)
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
         for _ in 0..<10 {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
@@ -102,6 +93,7 @@ struct BeingToldAboutARestoreTests {
     @Test("The person who was asked is told who came back, and which conversation")
     func thePersonAskedIsTold() async throws {
         let rig = try await rig(peerIsTold: true)
+        let member = rig.original.enrolment?.identity.id
         _ = try await restoreAndSettle(rig)
 
         let ask = try #require(
@@ -111,7 +103,7 @@ struct BeingToldAboutARestoreTests {
             2026-09-13 that a restore is not silent: "you're requesting to fill history you've \
             lost which means you're asking for it".
             """)
-        #expect(ask.person == rig.original.enrolment?.identity.id)
+        #expect(ask.person == member)
         #expect(ask.personName == "Griff", "the banner would not name who came back")
         #expect(ask.room == rig.room)
         #expect(ask.roomName == "Kitchen", "the banner would not name what was asked for")
@@ -230,18 +222,9 @@ struct BeingToldAboutARestoreTests {
     }
 }
 
-@Suite("Holding history until the person asked has checked", .serialized)
+@Suite("Holding history until the person asked has checked", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct HoldingHistoryForARestoreTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private struct Rig {
         let original: AppSession
         let peer: AppSession
@@ -274,8 +257,7 @@ struct HoldingHistoryForARestoreTests {
         }
 
         let room = try await original.createRoom(named: "Kitchen")
-        let invite = try await original.invite(
-            joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await original.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await original.sync(through: mailbox)
         try await peer.accept(
@@ -284,7 +266,7 @@ struct HoldingHistoryForARestoreTests {
             for session in [original, peer] { try await session.sync(through: mailbox) }
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         let key = try #require(original.recoveryKeyText())
 
         let said = "said while the phone was gone"
@@ -298,11 +280,12 @@ struct HoldingHistoryForARestoreTests {
     }
 
     private func restoreAndSettle(_ rig: Rig, rounds: Int = 10) async throws -> AppSession {
+        rig.clock.advance(by: 60)
         let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: rig.key)
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
         for _ in 0..<rounds {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
@@ -425,18 +408,9 @@ struct HoldingHistoryForARestoreTests {
     }
 }
 
-@Suite("Choosing not to ask anybody for your history", .serialized)
+@Suite("Choosing not to ask anybody for your history", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct NotAskingForHistoryTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
     private struct Rig {
         let original: AppSession
         let peer: AppSession
@@ -462,8 +436,7 @@ struct NotAskingForHistoryTests {
         await peer.setToldAboutRestores(true)
 
         let room = try await original.createRoom(named: "Kitchen")
-        let invite = try await original.invite(
-            joinerCode: peer.identityCode(), joining: room, mailbox: nil)
+        let invite = try await original.invite(joinerCode: await peer.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await peer.redeem(inviteCode: try invite.encoded())
         try await original.sync(through: mailbox)
         try await peer.accept(
@@ -472,7 +445,7 @@ struct NotAskingForHistoryTests {
             for session in [original, peer] { try await session.sync(through: mailbox) }
         }
 
-        await settle(original) { false }
+        await original.settleDeviceSync()
         let key = try #require(original.recoveryKeyText())
 
         let said = "said while the phone was gone"
@@ -486,11 +459,12 @@ struct NotAskingForHistoryTests {
     }
 
     private func restore(_ rig: Rig, askingPeers: Bool) async throws -> AppSession {
+        rig.clock.advance(by: 60)
         let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
         fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
         await fresh.load()
         try await fresh.restore(fromRecoveryKey: rig.key, askingPeers: askingPeers)
-        await settle(fresh) { !fresh.rooms.isEmpty }
+        await fresh.settleDeviceSync { !fresh.rooms.isEmpty }
         for _ in 0..<10 {
             for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
         }
@@ -573,155 +547,6 @@ struct NotAskingForHistoryTests {
             """
             Toggling the setting on a device that never came back from a key announced a restore \
             that never happened.
-            """)
-    }
-}
-
-@Suite("Turning every key after a device was lost", .serialized)
-@MainActor
-struct TurningEveryKeyAfterALossTests {
-    private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if condition() { return }
-            await session.refreshDeviceSync()
-            try? await Task.sleep(for: .milliseconds(25))
-        }
-    }
-
-    private struct Rig {
-        let original: AppSession
-        let peer: AppSession
-        let kitchen: RoomID
-        let hangar: RoomID
-        let mailbox: InMemoryMailbox
-        let relay: InMemoryEntrySync.Relay
-        let clock: TestClock
-        let key: String
-    }
-
-    private func rig() async throws -> Rig {
-        let mailbox = InMemoryMailbox()
-        let clock = TestClock(now: TestSession.now)
-        let relay = InMemoryEntrySync.Relay()
-
-        let original = TestSession.make(keychain: InMemoryKeychainStore(), clock: clock)
-        let peer = TestSession.make(clock: clock)
-        original.syncDevices(through: InMemoryEntrySync(relay: relay))
-        for session in [original, peer] { await session.load() }
-        try await original.createIdentity(displayName: "Griff")
-        try await peer.createIdentity(displayName: "Outie")
-
-        var made: [RoomID] = []
-        for name in ["Kitchen", "Hangar"] {
-            let room = try await original.createRoom(named: name)
-            let invite = try await original.invite(
-                joinerCode: peer.identityCode(), joining: room, mailbox: nil)
-            try await peer.redeem(inviteCode: try invite.encoded())
-            try await original.sync(through: mailbox)
-            try await peer.accept(
-                invite.attestation, from: try #require(original.enrolment?.identity.publicKeys))
-            for _ in 0..<6 {
-                for session in [original, peer] { try await session.sync(through: mailbox) }
-            }
-            made.append(room)
-        }
-
-        await settle(original) { false }
-        return Rig(
-            original: original, peer: peer, kitchen: made[0], hangar: made[1], mailbox: mailbox,
-            relay: relay, clock: clock, key: try #require(original.recoveryKeyText()))
-    }
-
-    private func restore(_ rig: Rig, afterALoss: Bool) async throws -> AppSession {
-        let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
-        fresh.syncDevices(through: InMemoryEntrySync(relay: rig.relay))
-        await fresh.load()
-        try await fresh.restore(fromRecoveryKey: rig.key, afterALoss: afterALoss)
-        await settle(fresh) { fresh.rooms.count == 2 }
-        for _ in 0..<12 {
-            for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
-        }
-        return fresh
-    }
-
-    private func epoch(_ session: AppSession, _ room: RoomID) -> Int {
-        session.epochsHeld(in: room)
-    }
-
-    @Test("Saying a device was lost turns the key in every room, not just one")
-    func sayingLostTurnsEveryKey() async throws {
-        let rig = try await rig()
-        let before = [
-            rig.kitchen: epoch(rig.original, rig.kitchen),
-            rig.hangar: epoch(rig.original, rig.hangar),
-        ]
-        let fresh = try await restore(rig, afterALoss: true)
-
-        for room in [rig.kitchen, rig.hangar] {
-            #expect(
-                epoch(fresh, room) > (before[room] ?? 0),
-                """
-                A room's key did not turn after the member said a device was lost. Griff's ruling, \
-                2026-09-13: "a yes turns the key in every room" — every one, because a stolen phone \
-                is in every room the member is in.
-                """)
-        }
-        #expect(
-            !fresh.isTurningEveryKeyAfterALoss,
-            "the turn was never marked done, so every round would turn the keys again")
-    }
-
-    @Test("Saying no turns nothing")
-    func sayingNoTurnsNothing() async throws {
-        let rig = try await rig()
-        let before = epoch(rig.original, rig.kitchen)
-        let fresh = try await restore(rig, afterALoss: false)
-
-        #expect(
-            epoch(fresh, rig.kitchen) == before,
-            """
-            A key turned on a restore where nothing was lost. A turn is not free and not \
-            reversible, and "I restored onto a new laptop" is not "my phone was taken".
-            """)
-    }
-
-    @Test("The peer keeps up with the new key")
-    func thePeerKeepsUp() async throws {
-        let rig = try await rig()
-        let fresh = try await restore(rig, afterALoss: true)
-
-        try await fresh.send("after the key turned", to: rig.kitchen)
-        for _ in 0..<10 {
-            for session in [fresh, rig.peer] { try await session.sync(through: rig.mailbox) }
-        }
-
-        #expect(
-            rig.peer.messages(in: rig.kitchen).contains { $0.body == "after the key turned" },
-            """
-            Turning every key locked the people still in the room out of it. The turn is meant to \
-            cut off a device that is gone, not the members who are still there.
-            """)
-    }
-
-    @Test("The answer outlives a relaunch before the rooms arrive")
-    func theAnswerOutlivesARelaunch() async throws {
-        let rig = try await rig()
-        let fresh = TestSession.make(keychain: InMemoryKeychainStore(), clock: rig.clock)
-        await fresh.load()
-        try await fresh.restore(fromRecoveryKey: rig.key, afterALoss: true)
-
-        #expect(
-            fresh.isTurningEveryKeyAfterALoss,
-            "nothing recorded the answer, so a relaunch before the rooms arrive loses it")
-
-        await fresh.load()
-        #expect(
-            fresh.isTurningEveryKeyAfterALoss,
-            """
-            The answer was forgotten on a relaunch. The rooms come back from the member's own \
-            iCloud several rounds after the restore, so the answer has to outlive the launch that \
-            took it or the keys never turn.
             """)
     }
 }

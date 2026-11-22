@@ -1,0 +1,43 @@
+minimum_pre_commit_version: "3.0.0"
+fail_fast: false
+repos:
+  - repo: local
+    hooks:
+      - id: branding-lint
+        name: house-style lint (fast mode)
+        entry: env SKIP_SYMBOL_CHECK=1 Scripts/lint-branding.sh
+        language: system
+        pass_filenames: false
+        files: \.(swift|xcconfig|plist|entitlements|pbxproj|xcstrings)$
+
+      - id: copy-markers
+        name: copy review markers
+        entry: python3 Scripts/copy-review.py check
+        language: system
+        pass_filenames: false
+        types: [text]
+
+      - id: swift-format
+        name: swift-format rules
+        entry: python3 Scripts/hooks/swift-format-rules.py
+        language: system
+        types: [swift]
+
+      - id: whitespace
+        name: trailing whitespace and merge markers
+        entry: python3 Scripts/hooks/staged.py whitespace
+        language: system
+        pass_filenames: false
+        types: [text]
+
+      - id: large-files
+        name: large files
+        entry: python3 Scripts/hooks/staged.py large
+        language: system
+        pass_filenames: false
+
+      - id: secrets
+        name: secrets
+        entry: python3 Scripts/hooks/staged.py secrets
+        language: system
+        pass_filenames: false

@@ -4,7 +4,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterUI
 
-@Suite("Accent palette")
+@Suite("Accent palette", .tags(.ui))
 struct AccentTests {
     @Test("The palette is the seven designed accents, in board order")
     func paletteOrder() {
@@ -53,7 +53,7 @@ struct AccentTests {
     }
 }
 
-@Suite("Increased contrast")
+@Suite("Increased contrast", .tags(.ui))
 struct PaletteContrastTests {
     @Test("Standard contrast leaves the board's values exactly as drawn")
     func standardIsUntouched() {

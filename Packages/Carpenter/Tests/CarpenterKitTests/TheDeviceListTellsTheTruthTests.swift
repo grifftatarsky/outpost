@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("The device list tells the truth", .serialized)
+@Suite("The device list tells the truth", .serialized, .timeLimit(.minutes(10)), .tags(.membership))
 struct TheDeviceListTellsTheTruthTests {
     @Test("The founding device says when it was made, not that it was always here")
     func theFoundingDeviceSaysWhenItWasMade() async throws {
@@ -28,16 +28,19 @@ struct TheDeviceListTellsTheTruthTests {
     @Test("A second device on the same account says when it arrived")
     func aSecondDeviceSaysWhenItArrived() async throws {
         let keychain = InMemoryKeychainStore()
+        let relay = InMemoryEntrySync.Relay()
         let clock = TestClock(now: TestSession.now)
         let first = TestSession.make(keychain: keychain, clock: clock)
+        first.syncDevices(through: InMemoryEntrySync(relay: relay))
         await first.load()
         try await first.createIdentity(displayName: "Griff")
         let founding = try #require(first.enrolment?.device.id)
 
         clock.advance(by: 86_400 * 5)
-        try await keychain.remove(IdentityStore.deviceKey)
-        let second = TestSession.make(keychain: keychain, clock: clock)
+        let second = TestSession.make(keychain: await keychain.sibling(), clock: clock)
+        second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        try await first.approveNewDevice(second)
 
         let sibling = try #require(second.enrolment?.device.id)
         #expect(sibling != founding, "the fixture did not make a second device")
@@ -51,7 +54,7 @@ struct TheDeviceListTellsTheTruthTests {
     @Test("A relaunch does not rewrite when a device arrived")
     func aRelaunchDoesNotRewriteWhenADeviceArrived() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "devices-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "devices-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let clock = TestClock(now: TestSession.now)
@@ -101,13 +104,13 @@ struct TheDeviceListTellsTheTruthTests {
         try await first.createIdentity(displayName: "Griff")
         _ = try await first.createRoom(named: "Kitchen")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let second = TestSession.make(keychain: keychain, clock: clock)
+        let second = TestSession.make(keychain: await keychain.sibling(), clock: clock)
         second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        try await first.approveNewDevice(second)
         let sibling = try #require(second.enrolment?.device.id)
 
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while first.devices.count < 2 || second.devices.count < 2, Date() < deadline {
             await first.refreshDeviceSync()
             await second.refreshDeviceSync()

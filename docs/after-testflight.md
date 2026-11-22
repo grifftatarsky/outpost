@@ -156,6 +156,10 @@ on the phone can read. That tension is the reason this is a question rather than
 
 ### An in-app lock
 
+**Reopened 2026-09-27 by Griff and built.** See
+[the decision](decisions.md#the-app-lock-is-a-code-the-phone-counts-not-a-key-that-encrypts). What
+follows is the 2026-09-14 cancellation, kept as the record.
+
 `RULED` — Griff, 2026-09-14: **canceled.** iOS already locks an app behind Face ID — Settings ›
 Face ID & Passcode › Require Face ID for individual apps — so the app would be reimplementing a
 thing the system does, and doing it worse: the system's version is enforced before the process is

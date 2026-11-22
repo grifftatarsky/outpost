@@ -1,11 +1,11 @@
-import CarpenterApp
+@testable import CarpenterApp
 import CarpenterKitTesting
 import Foundation
 import Testing
 
 @testable import CarpenterKit
 
-@Suite("What a replica can tell it is missing")
+@Suite("What a replica can tell it is missing", .timeLimit(.minutes(10)), .tags(.sync))
 struct FeedGapTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -26,7 +26,7 @@ struct FeedGapTests {
         let request = RepairRequest(
             authors: [alice.identity.id], heads: replica.heads(of: [alice.identity.id]),
             gaps: replica.gaps())
-        let (served, unheld) = full.fill(request)
+        let (served, unheld, _) = full.fill(request)
         #expect(served.map(\.seq) == [3])
         #expect(unheld.isEmpty)
 
@@ -67,7 +67,7 @@ struct FeedGapTests {
         try held.integrate(post)
         try held.integrate(comment)
 
-        let (served, _) = held.fill(
+        let (served, _, _) = held.fill(
             RepairRequest(
                 authors: [], heads: VectorClock(), gaps: [], room: nil,
                 wallOf: bob.identity.id))
@@ -94,7 +94,7 @@ struct FeedGapTests {
         let request = RepairRequest(
             authors: [alice.identity.id], heads: asker.heads(of: [alice.identity.id]),
             gaps: asker.gaps())
-        let (served, unheld) = partial.fill(request)
+        let (served, unheld, _) = partial.fill(request)
         #expect(served.map(\.seq) == [4, 5, 6])
         #expect(unheld == [FeedGap(feed: alice.feedKey, spans: [SequenceSpan(2, 2)])])
     }
@@ -111,7 +111,7 @@ struct FeedGapTests {
     }
 }
 
-@Suite("A repair on the wire")
+@Suite("A repair on the wire", .timeLimit(.minutes(10)), .tags(.sync))
 struct RepairWireTests {
     @Test("Requests and answers ride the sealed body, and a body without them still opens")
     func rideTheBody() throws {
@@ -141,7 +141,7 @@ struct RepairWireTests {
 }
 
 @MainActor
-@Suite("Repairing a history with holes in it", .serialized)
+@Suite("Repairing a history with holes in it", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 struct HistoryRepairTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -160,7 +160,7 @@ struct HistoryRepairTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -181,7 +181,7 @@ struct HistoryRepairTests {
         }
         let written = await mailbox.writtenPackets.suffix(3)
         #expect(written.count == 3, "precondition: three packets were written")
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         return (alice, bob, room, mailbox)
     }
@@ -225,9 +225,9 @@ struct HistoryRepairTests {
         #expect(started.stillMissing == 1)
         #expect(started.asked.map(\.id) == [aliceID])
 
-        try await bob.sync(through: mailbox)  // the question goes out
-        try await alice.sync(through: mailbox)  // read, and answered in the same round
-        try await bob.sync(through: mailbox)  // the answer and the entry arrive
+        try await bob.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await bob.sync(through: mailbox)
 
         let status = try #require(bob.repairStatus(of: room))
         #expect(status.isComplete)
@@ -244,13 +244,35 @@ struct HistoryRepairTests {
         #expect(bob.repairStatus(of: room) == nil)
     }
 
+    @Test("Packets that ask for history and answer it are taken back once they are signed for, like any other")
+    func repairPacketsAreTakenBack() async throws {
+        let (alice, bob, room, mailbox) = try await withAHole()
+        let before = Set(await mailbox.writtenPackets)
+        _ = try #require(await bob.startRepair(in: room))
+        try await bob.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await bob.sync(through: mailbox)
+        #expect(bob.messages(in: room).map(\.body).contains("second"), "precondition: the repair recovered it")
+        let repairs = Set(await mailbox.writtenPackets).subtracting(before)
+        try #require(!repairs.isEmpty, "precondition: the repair wrote packets")
+
+        for _ in 0..<2 {
+            try await alice.sync(through: mailbox)
+            try await bob.sync(through: mailbox)
+        }
+        let left = await mailbox.everySentPacket
+        #expect(
+            repairs.filter { left.keys.contains($0) }.isEmpty,
+            "a repair packet its reader signed for was left in the outbox for good")
+    }
+
     @Test("A tail nobody re-sent cannot be named, and a repair still recovers it")
     func tailIsRecoveredThroughHeads() async throws {
         let (alice, bob, room, mailbox) = try await joined()
         try await alice.send("last", to: room)
         try await alice.sync(through: mailbox)
         let last = try #require(await mailbox.writtenPackets.last)
-        await mailbox.forget(packet: last)
+        await lose(last, from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).isEmpty, "no clock has mentioned it, so nothing can name it")
         #expect(!bob.messages(in: room).contains { $0.body == "last" })
@@ -275,7 +297,7 @@ struct HistoryRepairTests {
         let (_, _, room, _) = try await join(alice: alice, bob: bob, through: mailbox)
         await carol.load()
         try await carol.createIdentity(displayName: "Carol")
-        let invite = try await alice.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -288,12 +310,14 @@ struct HistoryRepairTests {
         #expect(carol.roster(of: room).members.count == 3, "the late joiner was not handed the room")
         let carolID = try #require(carol.enrolment?.identity.id)
 
+        var rounds: [[PacketID]] = []
         for word in ["first", "second", "third"] {
+            let before = Set(await mailbox.writtenPackets)
             try await alice.send(word, to: room)
             try await alice.sync(through: mailbox)
+            rounds.append(await mailbox.writtenPackets.filter { !before.contains($0) })
         }
-        let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        for packet in rounds[1] { await lose(packet, from: mailbox, sentBy: [alice, bob, carol]) }
         try await bob.sync(through: mailbox)
         try await carol.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 1)
@@ -332,16 +356,16 @@ struct HistoryRepairTests {
         try await bob.send("before Carol", to: room)
         try await bob.sync(through: mailbox)
         try await alice.sync(through: mailbox)
-        try await alice.sync(through: mailbox)  // and forwards Bob's words, once, to Bob
+        try await alice.sync(through: mailbox)
 
         await carol.load()
         try await carol.createIdentity(displayName: "Carol")
-        let invite = try await alice.invite(joinerCode: carol.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await carol.redeem(inviteCode: try invite.encoded())
-        try await carol.sync(through: mailbox)  // confirms, and asks Alice for the room
-        try await alice.sync(through: mailbox)  // collects the confirmation and relays it in
-        try await alice.sync(through: mailbox)  // sends the room, the relay and the key
-        try await carol.sync(through: mailbox)  // folds it, walks the keys back, and meets Bob
+        try await carol.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await carol.sync(through: mailbox)
         try await carol.sync(through: mailbox)
         try await carol.sync(through: mailbox)
 
@@ -353,7 +377,7 @@ struct HistoryRepairTests {
     @Test("A repair outlives a relaunch")
     func repairSurvivesRelaunch() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-repair-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-repair-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let mailbox = InMemoryMailbox()
         let (_, bob, room, _) = try await join(
@@ -369,7 +393,7 @@ struct HistoryRepairTests {
     }
 }
 
-@Suite("The gap index agrees with a scan")
+@Suite("The gap index agrees with a scan", .timeLimit(.minutes(10)), .tags(.sync))
 struct GapIndexTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -438,7 +462,7 @@ struct GapIndexTests {
     }
 }
 
-@Suite("A refusal that no credential can lift")
+@Suite("A refusal that no credential can lift", .timeLimit(.minutes(10)), .tags(.sync))
 struct FinalRefusalTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -453,7 +477,9 @@ struct FinalRefusalTests {
 
         let revokedAt = start.addingTimeInterval(60)
         try replica.revoke(
-            DeviceRevocation.issue(for: alice.device.id, by: alice.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device,
+                cutoff: 0, head: nil, remaining: [alice.device.id]))
 
         let after = try alice.post("after the revocation", at: revokedAt.addingTimeInterval(1))
         #expect(throws: LogError.unauthorizedDevice) { try replica.integrate(after) }
@@ -489,14 +515,18 @@ struct FinalRefusalTests {
         try replica.meet(alice)
         let revokedAt = start.addingTimeInterval(60)
         try replica.revoke(
-            DeviceRevocation.issue(for: alice.device.id, by: alice.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device,
+                cutoff: 0, head: nil, remaining: [alice.device.id]))
         let rogue = try alice.post("after the revocation", at: revokedAt.addingTimeInterval(1))
 
         let packet = try SyncEngine.pack([rogue], for: [mine], window: 7)
         let collected = SyncSession.CollectedPackets(
             tags: [theirs.incomingTag(window: 7)],
             packets: [
-                .init(id: packet.id, delivery: try SyncEngine.unpack(packet, as: theirs, window: 7))
+                .init(
+                    id: packet.id, delivery: try SyncEngine.unpack(packet, as: theirs, window: 7),
+                    storedAt: revokedAt.addingTimeInterval(2), from: theirs.them)
             ])
         let (report, settled) = SyncSession.integrate(collected, into: &replica)
 
@@ -529,7 +559,7 @@ struct FinalRefusalTests {
 }
 
 @MainActor
-@Suite("Repairing without being asked", .serialized)
+@Suite("Repairing without being asked", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 struct AutomaticRepairTests {
     private func joined(_ clock: TestClock) async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -542,7 +572,7 @@ struct AutomaticRepairTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -562,7 +592,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         return (alice, bob, room, mailbox)
     }
@@ -580,9 +610,9 @@ struct AutomaticRepairTests {
         #expect(!bob.messages(in: room).map(\.body).contains("second"), "it was chased too early")
 
         clock.advance(by: AppSession.holeSettlingDelay + 1)
-        try await bob.sync(through: mailbox)   // notices, asks
-        try await alice.sync(through: mailbox) // answers
-        try await bob.sync(through: mailbox)   // folds the answer
+        try await bob.sync(through: mailbox)
+        try await alice.sync(through: mailbox)
+        try await bob.sync(through: mailbox)
 
         #expect(bob.messages(in: room).map(\.body).contains("second"))
         #expect(bob.missingHistory(in: room).isEmpty)
@@ -605,7 +635,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 1, "precondition: a second hole")
@@ -662,7 +692,7 @@ struct AutomaticRepairTests {
         let beforeAnswer = Set(await mailbox.writtenPackets)
         try await alice.sync(through: mailbox)
         for packet in await mailbox.writtenPackets where !beforeAnswer.contains(packet) {
-            await mailbox.forget(packet: packet)
+            await lose(packet, from: mailbox, sentBy: [alice, bob])
         }
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 1, "precondition: the first hole is still open")
@@ -672,7 +702,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: room).total == 2, "precondition: two holes, one never asked about")
@@ -694,7 +724,7 @@ struct AutomaticRepairTests {
         let (alice, bob, room, mailbox) = try await withAHole(clock)
 
         let other = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: other, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: other, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -707,7 +737,7 @@ struct AutomaticRepairTests {
             try await alice.sync(through: mailbox)
         }
         let written = await mailbox.writtenPackets.suffix(3)
-        await mailbox.forget(packet: written[written.startIndex + 1])
+        await lose(written[written.startIndex + 1], from: mailbox, sentBy: [alice, bob])
         try await bob.sync(through: mailbox)
         #expect(bob.missingHistory(in: other).total == 1, "precondition: the other room has a hole")
 
@@ -729,10 +759,10 @@ struct AutomaticRepairTests {
 }
 
 @MainActor
-@Suite("A refusal a member is told about", .serialized)
+@Suite("A refusal a member is told about", .serialized, .timeLimit(.minutes(10)), .tags(.sync))
 struct FinalRefusalThroughTheSessionTests {
     private func settle(_ session: AppSession, until condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while Date() < deadline {
             if condition() { return }
             await session.refreshDeviceSync()
@@ -740,12 +770,12 @@ struct FinalRefusalThroughTheSessionTests {
         }
     }
 
-    @Test("An entry a revoked device signed is counted apart, and never asked for again")
-    func aFinalRefusalIsRecordedAndSaidApart() async throws {
+    @Test("An entry a revoked device signed past its cutoff is taken back everywhere, and never counted missing")
+    func anEntryPastTheCutoffIsTakenBack() async throws {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox()
         let keychain = InMemoryKeychainStore()
-        let relay = InMemoryEntrySync.Relay()
+        let relay = InMemoryEntrySync.Relay(announces: false)
 
         func session(sharing keychain: any KeychainStore = InMemoryKeychainStore()) -> AppSession {
             AppSession(storage: TestSession.storage(keychain: keychain), clock: clock)
@@ -757,11 +787,16 @@ struct FinalRefusalThroughTheSessionTests {
         try await phone.createIdentity(displayName: "Alice")
         let room = try await phone.createRoom(named: "Lanterns")
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let pad = session(sharing: keychain)
+        let pad = session(sharing: await keychain.sibling())
         pad.syncDevices(through: InMemoryEntrySync(relay: relay))
         await pad.load()
-        await settle(pad) { pad.rooms.contains { $0.id == room } }
+        try await phone.approveNewDevice(pad)
+        let deadline = TestDeadline.fromNow
+        while !pad.rooms.contains(where: { $0.id == room }), Date() < deadline {
+            await phone.refreshDeviceSync()
+            await pad.refreshDeviceSync()
+            try? await Task.sleep(for: .milliseconds(25))
+        }
         #expect(pad.rooms.contains { $0.id == room }, "precondition: the pad has the room")
 
         let bob = session()
@@ -771,14 +806,20 @@ struct FinalRefusalThroughTheSessionTests {
         try await carol.createIdentity(displayName: "Carol")
 
         for joiner in [bob, carol] {
-            let invite = try await phone.invite(
-                joinerCode: joiner.identityCode(), joining: room, mailbox: nil)
+            let invite = try await phone.invite(joinerCode: await joiner.joinerCode(through: mailbox), joining: room, through: mailbox)
             try await joiner.redeem(inviteCode: try invite.encoded())
             try await phone.sync(through: mailbox)
             try await joiner.accept(
                 invite.attestation, from: try #require(phone.enrolment?.identity.publicKeys))
         }
 
+        for _ in 0..<4 {
+            for one in [phone, pad, bob, carol] { try await one.sync(through: mailbox) }
+            for one in [phone, pad] {
+                await one.refreshDeviceSync()
+                await one.settleDeviceSync()
+            }
+        }
         try await pad.send("from the pad, while allowed", to: room)
         for _ in 0..<8 {
             for one in [phone, pad, bob, carol] { try await one.sync(through: mailbox) }
@@ -802,7 +843,7 @@ struct FinalRefusalThroughTheSessionTests {
             "precondition: Carol accepted it")
 
         for packet in await mailbox.writtenPackets where !beforePad.contains(packet) {
-            await mailbox.forget(packet: packet)
+            await lose(packet, from: mailbox, sentBy: [bob, carol, phone, pad])
         }
 
         try await phone.sync(through: mailbox)
@@ -818,24 +859,26 @@ struct FinalRefusalThroughTheSessionTests {
         #expect(
             !bob.messages(in: room).map(\.body).contains("after the pad was revoked"),
             "precondition: the refused entry did not reach Bob by an ordinary route")
-        #expect(bob.missingHistory(in: room).total == 1, "precondition: Bob can tell one is missing")
-
-        try await bob.startRepair(in: room)
-        try await bob.sync(through: mailbox)
-        try await carol.sync(through: mailbox)
-        try await bob.sync(through: mailbox)
-
-        let status = try #require(bob.repairStatus(of: room))
-        #expect(status.unverifiable == 1, "the refusal was not recorded, or not counted apart")
-        #expect(
-            status.sentButNotArrived == 0,
-            "an entry that will never be accepted was drawn as one still on its way")
         #expect(
             bob.missingHistory(in: room).isEmpty,
-            "the room still reports missing something no credential will ever make readable")
+            "the room reports missing something the removal ruled out, which no credential will ever make readable")
 
-        await bob.dismissRepair(in: room)
-        let again = await bob.startRepair(in: room)
-        #expect(again?.stillMissing == 0, "a fresh repair asked for it all over again")
+        for _ in 0..<3 {
+            try await phone.sync(through: mailbox)
+            try await carol.sync(through: mailbox)
+        }
+        #expect(
+            !carol.messages(in: room).map(\.body).contains("after the pad was revoked"),
+            "Carol kept an entry the removal ruled out because it reached her before the removal did")
+
+        let repair = await bob.startRepair(in: room)
+        #expect((repair?.stillMissing ?? 0) == 0, "a repair asked for an entry the removal ruled out")
     }
+}
+
+
+@MainActor
+func lose(_ packet: PacketID, from mailbox: InMemoryMailbox, sentBy senders: [AppSession]) async {
+    await mailbox.forget(packet: packet)
+    for sender in senders { sender.persisted.outstandingPackets[packet] = nil }
 }

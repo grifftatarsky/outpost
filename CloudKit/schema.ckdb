@@ -7,36 +7,62 @@ DEFINE SCHEMA
         "___modTime"    TIMESTAMP,
         "___modifiedBy" REFERENCE,
         "___recordID"   REFERENCE,
-        attachmentID    STRING,
         blob            ASSET,
+        label           BYTES,
         outstanding     LIST<BYTES>,
         GRANT WRITE TO "_creator",
         GRANT CREATE TO "_icloud",
         GRANT READ TO "_world"
     );
 
-    RECORD TYPE MessageBell (
+    RECORD TYPE Deathmark (
         "___createTime" TIMESTAMP,
         "___createdBy"  REFERENCE,
         "___etag"       STRING,
         "___modTime"    TIMESTAMP,
         "___modifiedBy" REFERENCE,
         "___recordID"   REFERENCE,
-        ring            INT64,
+        sealed          BYTES,
         GRANT WRITE TO "_creator",
         GRANT CREATE TO "_icloud",
         GRANT READ TO "_world"
     );
 
-    RECORD TYPE OutboxShareOffer (
+    RECORD TYPE PairInfo (
         "___createTime" TIMESTAMP,
         "___createdBy"  REFERENCE,
         "___etag"       STRING,
         "___modTime"    TIMESTAMP,
         "___modifiedBy" REFERENCE,
         "___recordID"   REFERENCE,
-        digest          STRING,
+        hint            BYTES,
+        GRANT WRITE TO "_creator",
+        GRANT CREATE TO "_icloud",
+        GRANT READ TO "_world"
+    );
+
+    RECORD TYPE PairReceipt (
+        "___createTime" TIMESTAMP,
+        "___createdBy"  REFERENCE,
+        "___etag"       STRING,
+        "___modTime"    TIMESTAMP,
+        "___modifiedBy" REFERENCE,
+        "___recordID"   REFERENCE,
         sealed          BYTES,
+        tag             BYTES,
+        GRANT WRITE TO "_creator",
+        GRANT CREATE TO "_icloud",
+        GRANT READ TO "_world"
+    );
+
+    RECORD TYPE PairRing (
+        "___createTime" TIMESTAMP,
+        "___createdBy"  REFERENCE,
+        "___etag"       STRING,
+        "___modTime"    TIMESTAMP,
+        "___modifiedBy" REFERENCE,
+        "___recordID"   REFERENCE,
+        ring            STRING,
         GRANT WRITE TO "_creator",
         GRANT CREATE TO "_icloud",
         GRANT READ TO "_world"

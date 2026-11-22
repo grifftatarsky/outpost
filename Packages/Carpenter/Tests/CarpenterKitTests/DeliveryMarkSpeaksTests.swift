@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterUI
 
 @MainActor
-@Suite("The delivery marks say what they show")
+@Suite("The delivery marks say what they show", .tags(.ui))
 struct DeliveryMarkSpeaksTests {
 
     private let silence = Text(verbatim: "")

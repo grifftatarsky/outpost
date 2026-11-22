@@ -1,0 +1,301 @@
+#if DEBUG
+
+    import CarpenterKit
+    import SwiftUI
+
+    public enum CopyShot: String, CaseIterable, Sendable {
+        case youSupporter = "you-supporter"
+        case supporterClaimed = "supporter-claimed"
+        case supporterWaiting = "supporter-waiting"
+        case supporterEnded = "supporter-ended"
+        case roomsHelp = "rooms-help"
+        case roomsAwaiting = "rooms-awaiting"
+        case photoRequests = "photo-requests"
+        case outpostConsent = "outpost-consent"
+        case outpostNotificationsAsk = "outpost-notifications-ask"
+        case postReactions = "post-reactions"
+        case conversationRepair = "conversation-repair"
+        case conversationHeldRestore = "conversation-held-restore"
+        case lockLocked = "lock-locked"
+        case lockWrong = "lock-wrong"
+        case lockErasing = "lock-erasing"
+        case lockRecovery = "lock-recovery"
+        case lockSetup = "lock-setup"
+        case conversationStates = "conversation-states"
+        case lockSetupTyping = "lock-setup-typing"
+        case roomsPrivacyTip = "rooms-privacy-tip"
+        case roomsCompact = "rooms-compact"
+        case solosList = "solos-list"
+        case outpostReview = "outpost-review"
+        case outpostReviewSettled = "outpost-review-settled"
+        case recoveryKey = "recovery-key"
+        case recoveryKeySaved = "recovery-key-saved"
+        case recoveryKeyConfirm = "recovery-key-confirm"
+        case welcome1 = "welcome-1"
+        case welcome2 = "welcome-2"
+        case welcome3 = "welcome-3"
+        case welcome4 = "welcome-4"
+        case welcome5 = "welcome-5"
+        case welcome6 = "welcome-6"
+        case members = "members"
+        case joinCheck = "join-check"
+        case eraseEverything = "erase-everything"
+        case awaitingApproval = "awaiting-approval"
+        case stalledOffline = "stalled-offline"
+        case roomsCannotSend = "rooms-cannot-send"
+        case messageDetail = "message-detail"
+        case tapTrouble = "tap-trouble"
+        case devices = "devices"
+        case postThread = "post-thread"
+        case postComposer = "post-composer"
+        case onboarding = "onboarding"
+        case redeem = "redeem"
+        case invite = "invite"
+        case addSomeone = "add-someone"
+        case removeMember = "remove-member"
+        case checkingRegistration = "checking-registration"
+        case approveDevice = "approve-device"
+        case dataProblem = "data-problem"
+        case membersCheck = "members-check"
+        case personActions = "person-actions"
+        case stalledSignedOut = "stalled-signed-out"
+
+        public static let argument = "--copy-shot"
+
+        public static func requested(in arguments: [String] = ProcessInfo.processInfo.arguments) -> CopyShot? {
+            guard let index = arguments.firstIndex(of: argument), index + 1 < arguments.count else { return nil }
+            return CopyShot(rawValue: arguments[index + 1])
+        }
+    }
+
+    public struct CopyShotView: View {
+        private let shot: CopyShot
+        @State private var theme = ThemeStore()
+
+        public init(_ shot: CopyShot) {
+            self.shot = shot
+        }
+
+        public var body: some View {
+            content
+                .environment(\.clock, Fixtures.PreviewClock())
+                .themed(theme.accent)
+        }
+
+        @ViewBuilder
+        private var content: some View {
+            switch shot {
+            case .youSupporter:
+                RootView.demo(tab: .you, supporter: Self.supporter(.testFlightYear(endsAt: Self.yearFromNow)))
+            case .supporterClaimed:
+                NavigationStack { SupporterView(settings: Self.supporter(.testFlightYear(endsAt: Self.yearFromNow))) }
+            case .supporterWaiting:
+                NavigationStack { SupporterView(settings: Self.supporter(.testFlightYear(endsAt: nil))) }
+            case .supporterEnded:
+                NavigationStack { SupporterView(settings: Self.supporter(.none)) }
+            case .roomsHelp:
+                RootView.demo(tab: .rooms).environment(\.showsHelp, true)
+            case .roomsAwaiting:
+                RootView.demo(
+                    tab: .rooms,
+                    awaiting: [
+                        AwaitingAdmission(
+                            room: RoomID(), invitedBy: Fixtures.hastur, phrase: "K9F4V9TR2M",
+                            confirmedAt: Fixtures.ago(minutes: 20), expiresAt: Fixtures.now.addingTimeInterval(3_600)),
+                        AwaitingAdmission(
+                            room: RoomID(), invitedBy: Fixtures.camilla, phrase: nil,
+                            confirmedAt: Fixtures.ago(days: 3), expiresAt: Fixtures.ago(days: 1), hasLapsed: true),
+                    ])
+            case .photoRequests:
+                NavigationStack { Color.clear }
+                    .sheet(isPresented: .constant(true)) {
+                        PhotoRequestsView(onShow: { _ in })
+                            .environment(\.photoRequests, Self.requests)
+                    }
+            case .outpostConsent:
+                OutpostConsentSheet(onAnswer: { _ in })
+            case .outpostNotificationsAsk:
+                OutpostNotificationsAskView(onAnswer: { _ in })
+            case .postReactions:
+                PostReactionsSheet(reactions: [("🎈", 4), ("🔥", 2), ("😂", 1)], mine: "🎈")
+            case .conversationRepair:
+                NavigationStack {
+                    ConversationView(
+                        room: Fixtures.zeppelinEnthusiasts, transcript: Fixtures.conversation.map(TranscriptEntry.message),
+                        repair: Self.repair, onDismissRepair: {})
+                }
+            case .conversationHeldRestore:
+                NavigationStack {
+                    ConversationView(
+                        room: Fixtures.zeppelinEnthusiasts, transcript: Fixtures.conversation.map(TranscriptEntry.message),
+                        heldRestore: HeldRestore(
+                            request: RepairID(), person: Fixtures.hastur.id, personName: "Hastur",
+                            room: Fixtures.zeppelinEnthusiasts.id, roomName: Fixtures.zeppelinEnthusiasts.name,
+                            phrase: "K9F4V9TR2M", askedAt: Fixtures.ago(minutes: 5)),
+                        onLetHistoryThrough: { _ in }, onRefuseHistory: { _ in })
+                }
+            case .lockLocked:
+                LockShot(wrongTries: 0, eraseAfter: nil)
+            case .lockWrong:
+                LockShot(wrongTries: 2, eraseAfter: nil)
+            case .lockErasing:
+                LockShot(wrongTries: 2, eraseAfter: 5)
+            case .lockRecovery:
+                LockShot(wrongTries: 0, eraseAfter: nil, recovering: true)
+            case .conversationStates:
+                NavigationStack {
+                    ConversationView(
+                        room: Fixtures.zeppelinEnthusiasts, transcript: Self.states, hiddenCount: 2,
+                        onRevealHidden: {})
+                }
+                .environment(\.mediaLoader, Self.loader)
+            case .welcome1, .welcome2, .welcome3, .welcome4, .welcome5, .welcome6:
+                WelcomeTourView(onContinue: {}, page: Int(String(shot.rawValue.last!))! - 1)
+            case .lockSetup:
+                NavigationStack {
+                    AppLockSetupView(
+                        biometricName: "Face ID", choosesBiometrics: true, passcodeIsSet: { true },
+                        onLock: { _, _ in nil }, onNotNow: {})
+                }
+            case .solosList:
+                RootView.demo(tab: .messages)
+            case .roomsCompact:
+                RootView.demo(tab: .rooms, density: .compact)
+            case .roomsPrivacyTip:
+                RootView.demo(tab: .rooms, privacyNote: true)
+            case .outpostReview:
+                OutpostReviewSheet(review: Self.review(settled: false))
+            case .outpostReviewSettled:
+                OutpostReviewSheet(review: Self.review(settled: true))
+            case .recoveryKey:
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429") {} }
+            case .recoveryKeySaved:
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", at: .shared) {} }
+            case .recoveryKeyConfirm:
+                NavigationStack { RecoveryKeyView(text: "demo", fingerprint: "FAA429", at: .confirming) {} }
+            case .lockSetupTyping:
+                NavigationStack {
+                    AppLockSetupView(
+                        biometricName: "Face ID", choosesBiometrics: true, passcodeIsSet: { true },
+                        onLock: { _, _ in nil })
+                }
+            default:
+                ScreenShots.view(of: shot)
+            }
+        }
+
+        private static var yearFromNow: Date { Fixtures.now.addingTimeInterval(365 * 86_400) }
+
+        private static func review(settled: Bool) -> OutpostReview {
+            OutpostReview(
+                room: RoomID(), roomName: Fixtures.zeppelinEnthusiasts.name,
+                people: [
+                    OutpostReview.Person(member: Fixtures.hastur, grant: settled ? OutpostAccess.Grant() : nil),
+                    OutpostReview.Person(member: Fixtures.camilla, grant: OutpostAccess.Grant(isAllowed: false)),
+                    OutpostReview.Person(member: Fixtures.cassilda, grant: settled ? OutpostAccess.Grant() : nil),
+                ])
+        }
+
+        private static func supporter(_ standing: SupporterStanding) -> SupporterSettings {
+            SupporterSettings(
+                standing: standing, canClaim: false, showsBadge: standing.isSupporter, onClaim: {},
+                onShowBadge: { _ in })
+        }
+
+        private static var requests: PhotoRequestsHelp {
+            PhotoRequestsHelp(
+                requests: [Fixtures.hastur, Fixtures.camilla].enumerated().map { index, person in
+                    PhotoRequest(
+                        person: person, sender: Fixtures.cassilda.id,
+                        media: MediaAttachment(
+                            reference: AttachmentReference(
+                                id: AttachmentID(), key: Data(count: 32), digest: Data(count: 32), byteCount: 1),
+                            kind: .image, width: 4, height: 3, preview: nil),
+                        message: Fixtures.fixtureMessageID(index), room: Fixtures.zeppelinEnthusiasts.id,
+                        askedAt: Fixtures.ago(hours: index + 1))
+                },
+                onSend: { _ in nil }, onDismiss: { _ in })
+        }
+
+        private static let gonePhoto = AttachmentID()
+        private static let askedPhoto = AttachmentID()
+
+        private static func photo(_ id: AttachmentID) -> MediaAttachment {
+            MediaAttachment(
+                reference: AttachmentReference(id: id, key: Data(count: 32), digest: Data(count: 32), byteCount: 1),
+                kind: .image, width: 4, height: 3, preview: nil)
+        }
+
+        private static var states: [TranscriptEntry] {
+            [
+                .notice(RoomNotice(id: Fixtures.hash(40), kind: .removed(Fixtures.camilla, by: Fixtures.hastur), at: Fixtures.ago(hours: 3))),
+                .notice(RoomNotice(id: Fixtures.hash(41), kind: .left(Fixtures.yhtill), at: Fixtures.ago(hours: 2))),
+                .message(Message(
+                    id: Fixtures.fixtureMessageID(42), author: Fixtures.hastur, body: "", sentAt: Fixtures.ago(hours: 1),
+                    isMine: false, isWithdrawn: true)),
+                .message(Message(
+                    id: Fixtures.fixtureMessageID(43), author: Fixtures.hastur, body: "", sentAt: Fixtures.ago(minutes: 40),
+                    isMine: false, media: photo(gonePhoto))),
+                .message(Message(
+                    id: Fixtures.fixtureMessageID(44), author: Fixtures.thale, body: "", sentAt: Fixtures.ago(minutes: 20),
+                    isMine: false, media: photo(askedPhoto))),
+            ]
+        }
+
+        @MainActor private static var loader: MediaLoader {
+            let loader = MediaLoader(source: { _, _ in nil }, screen: nil)
+            loader.asking = MediaAsking(
+                canAsk: { _, _ in true }, isAsked: { $0 == askedPhoto }, ask: { _, _ in true })
+            return loader
+        }
+
+        private static var repair: HistoryRepairStatus {
+            HistoryRepairStatus(
+                id: RepairID(), room: Fixtures.zeppelinEnthusiasts.id, startedAt: Fixtures.ago(minutes: 3),
+                asked: [Fixtures.hastur, Fixtures.yhtill], answered: [Fixtures.hastur], waiting: [Fixtures.yhtill],
+                recovered: 12, stillMissing: 4, heldByNobodyAsked: 0, sentButNotArrived: 4, unverifiable: 0)
+        }
+    }
+
+    private struct LockShot: View {
+        let wrongTries: Int
+        let eraseAfter: Int?
+        var recovering = false
+        @State private var controller = AppLockController(store: AppLockStore(keychain: ShotKeychain()), biometrics: ShotBiometrics())
+
+        var body: some View {
+            Group {
+                if recovering {
+                    NavigationStack { RecoveryKeyUnlockView(controller: controller) }
+                } else {
+                    AppLockScreen(controller: controller)
+                }
+            }
+            .task {
+                await controller.load()
+                if let eraseAfter { _ = await controller.setEraseAfter(eraseAfter) }
+                for _ in 0..<wrongTries { await controller.unlock(with: "000000") }
+            }
+        }
+    }
+
+    private struct ShotBiometrics: Biometrics {
+        var name: String? { "Face ID" }
+        func state() -> Data? { Data([1]) }
+        func passcodeIsSet() -> Bool { true }
+        func evaluate(reason: String) async -> Bool { false }
+    }
+
+    private actor ShotKeychain: KeychainStore {
+        private var stored: Data?
+        func data(for key: KeychainKey) throws -> Data? {
+            if let stored { return stored }
+            return try JSONEncoder().encode(try AppLock.make("123456", as: .digits, usesBiometrics: false, rounds: 1))
+        }
+        func set(_ data: Data, for key: KeychainKey, scope: KeychainScope) throws { stored = data }
+        func remove(_ key: KeychainKey) throws { stored = nil }
+        func removeAll(_ scope: KeychainScope) throws { stored = nil }
+        func protect(as protection: StorageProtection) throws {}
+    }
+
+#endif

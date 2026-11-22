@@ -78,7 +78,7 @@ struct OutpostEditingTests {
         #expect(after.body == "This post was withdrawn.")
     }
 
-    @Test("A photo post is not offered an edit, because the fold would refuse one")
+    @Test("A photo post is not offered an edit, because the edit would be ignored")
     func aPhotoPostCannotBeEdited() async throws {
         let mailbox = InMemoryMailbox()
         let (alice, _) = try await member()
@@ -120,7 +120,7 @@ struct OutpostEditingTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))

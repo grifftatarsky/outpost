@@ -33,7 +33,14 @@ public struct Stamped<Value: Hashable & Sendable & Codable>: Hashable, Sendable,
     }
 
     public func merged(with other: Stamped) -> Stamped {
-        other.stamp > stamp ? other : self
+        guard other.stamp == stamp, other.value != value else { return other.stamp > stamp ? other : self }
+        return Self.canonical(other.value).lexicographicallyPrecedes(Self.canonical(value)) ? self : other
+    }
+
+    private static func canonical(_ value: Value) -> [UInt8] {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return Array((try? encoder.encode([value])) ?? Data())
     }
 }
 

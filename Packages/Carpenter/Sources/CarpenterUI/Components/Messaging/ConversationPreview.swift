@@ -21,7 +21,7 @@ struct ConversationPreview: View {
 
             // COPY BEGIN e4786798 [NEEDS HUMAN REVIEW]
             if recent.isEmpty {
-                Text("No messages yet.", bundle: .module)
+                Text("No messages yet", bundle: .module)
                     .font(CarpenterFont.footnote)
                     .foregroundStyle(palette.tertiaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)

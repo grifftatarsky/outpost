@@ -1,10 +1,6 @@
 import CarpenterKit
 import SwiftUI
 
-// Compiled only into a debug build. Gating the *call site* is not enough: the view is still
-// compiled, so its words reach the shipped binary and the string catalogue a translator
-// works from. Measured 2026-09-15 — `strings` on a Release build returned "Blur every
-// photo", "Rotate mailbox share" and "Show message delay".
 #if DEBUG
 
 struct StyleTestView: View {
@@ -93,7 +89,7 @@ private struct ReactionOverflowStyleTest: View {
                     ForEach([0, 1, 2, 3], id: \.self) { extra in
                         HStack(spacing: 10) {
                             Text("\(extra)", bundle: .module)
-                                .font(.system(size: 13, design: .monospaced))
+                                .font(.system(.footnote, design: .monospaced))
                                 .foregroundStyle(palette.tertiaryText)
                                 .frame(width: 18, alignment: .trailing)
                             if extra == 0 {

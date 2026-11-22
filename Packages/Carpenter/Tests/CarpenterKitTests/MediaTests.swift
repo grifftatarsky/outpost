@@ -7,7 +7,7 @@ import CoreGraphics
 import Foundation
 import Testing
 
-@Suite("Sealing an attachment")
+@Suite("Sealing an attachment", .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct SealedAttachmentTests {
     private let bytes = Data((0..<5_000).map { UInt8($0 % 251) })
 
@@ -66,25 +66,20 @@ struct SealedAttachmentTests {
         #expect(throws: AttachmentError.tooLarge) { try SealedAttachment.seal(hugeClip, kind: .video) }
     }
 
-    @Test("The wire mapping carries everything an attachment record needs")
-    func wireRoundTrip() {
-        let outgoing = OutgoingAttachment(
-            id: AttachmentID(), ciphertext: bytes,
-            recipients: [RecipientTag(rawValue: Data([1])), RecipientTag(rawValue: Data([2]))])
-        let fields = AttachmentWire.fields(of: outgoing)
-        let back = AttachmentWire.attachment(from: fields)
-        #expect(back?.id == outgoing.id)
-        #expect(back?.ciphertext == bytes)
-        if case .dataList(let tags)? = fields[AttachmentWire.outstanding] {
-            #expect(Set(tags) == Set(outgoing.recipients.map(\.rawValue)))
-        } else {
-            Issue.record("the routing list was not written")
-        }
+    @Test("The wire mapping carries everything a copy's record needs")
+    func wireRoundTrip() throws {
+        let tag = RecipientTag(rawValue: Data([1]))
+        let pair = try PairwiseSecret.derive(mine: Identity.generate(), theirs: Identity.generate().publicKeys)
+        let copy = try PhotoCopy.seal(bytes, of: AttachmentID(), for: tag, between: pair)
+        let fields = AttachmentWire.fields(of: copy)
+        #expect(AttachmentWire.sealedCopy(from: fields) == copy.sealed)
+        #expect(AttachmentWire.sealedLabel(from: fields) == copy.label)
+        #expect(AttachmentWire.recipients(in: fields) == [tag], "a copy named somebody other than the one it is for")
     }
 }
 
 @MainActor
-@Suite("Sending a photo", .serialized)
+@Suite("Sending a photo", .serialized, .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct SendingPhotoTests {
     static func photo(caption: String? = nil, preview: Data? = Data(repeating: 0xAB, count: 900)) -> PreparedMedia {
         PreparedMedia(
@@ -104,8 +99,7 @@ struct SendingPhotoTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -121,7 +115,7 @@ struct SendingPhotoTests {
         try await alice.send(Self.photo(), to: room, through: mailbox)
 
         let message = try #require(alice.messages(in: room).last)
-        let media = try #require(message.media, "the picture was dropped between the fold and the screen")
+        let media = try #require(message.media, "the picture was dropped between the log and the screen")
         #expect(media.width == 1600 && media.height == 1200)
         #expect(media.preview?.count == 900)
         #expect(message.body.isEmpty, "a photo sent alone has no words")
@@ -200,7 +194,13 @@ struct SendingPhotoTests {
         #expect(!theirs.isMine)
         #expect(await bob.holdsAttachment(media.id), "the round did not fetch the photo the entry named")
         #expect(await mailbox.downloadCount == 1)
-        #expect(await mailbox.storedAttachmentCount == 0, "the attachment was not acknowledged")
+        #expect(
+            await mailbox.storedAttachmentCount == 1,
+            "collecting a photo deleted it; only the sender clears what it sent")
+        try await alice.sync(through: mailbox, media: mailbox)
+        #expect(
+            await mailbox.storedAttachmentCount == 0,
+            "the sender did not clear a photo everybody it was for has signed for")
         let opened = try await bob.attachmentData(for: media, sentBy: theirs.author.id, through: mailbox)
         #expect(opened == photo.bytes)
         #expect(await mailbox.downloadCount == 1, "opening a held photo fetched it again")
@@ -268,15 +268,15 @@ struct SendingPhotoTests {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox(clock: clock)
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-sweep-\(UUID().uuidString)")
-        let alice = TestSession.make(keychain: keychain, at: directory)
-        let bob = TestSession.make()
+        let directory = TestScratch.root.appending(path: "carpenter-sweep-\(UUID().uuidString)")
+        let alice = TestSession.make(keychain: keychain, at: directory, clock: clock)
+        let bob = TestSession.make(clock: clock)
         await alice.load()
         await bob.load()
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -286,10 +286,15 @@ struct SendingPhotoTests {
         try await alice.send(Self.photo(), to: room, through: mailbox)
         let named = try #require(alice.messages(in: room).last?.media?.id)
         let orphan = AttachmentID()
-        try await mailbox.upload(OutgoingAttachment(id: orphan, ciphertext: Data([1, 2, 3]), recipients: []))
+        try await mailbox.upload(
+            try OutgoingAttachment(
+                id: orphan, ciphertext: Data([1, 2, 3]),
+                recipients: [try #require(bob.enrolment?.identity.id): RecipientTag(rawValue: Data([9]))]
+            ).copies(between: { alice.baseSecret(with: $0) }),
+            in: try alice.currentPairs())
         #expect(await mailbox.storedAttachmentCount == 2)
 
-        let relaunched = TestSession.make(keychain: keychain, at: directory)
+        let relaunched = TestSession.make(keychain: keychain, at: directory, clock: clock)
         await relaunched.load()
         try await relaunched.sync(through: mailbox, media: mailbox)
         #expect(
@@ -301,11 +306,11 @@ struct SendingPhotoTests {
             """)
 
         clock.advance(by: MailboxRules.sweepAge + 60)
-        let sweeping = TestSession.make(keychain: keychain, at: directory)
+        let sweeping = TestSession.make(keychain: keychain, at: directory, clock: clock)
         await sweeping.load()
         try await sweeping.sync(through: mailbox, media: mailbox)
 
-        let waiting = try await mailbox.pendingAttachments()
+        let waiting = await mailbox.everyPendingAttachment
         #expect(waiting[orphan] == nil, "the orphan survived the sweep")
         #expect(waiting[named] != nil, "the sweep deleted a photo an entry names")
         #expect(await mailbox.attachmentDeleteCount == 1)
@@ -316,7 +321,7 @@ struct SendingPhotoTests {
 }
 
 @MainActor
-@Suite("Blocking", .serialized)
+@Suite("Blocking", .serialized, .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct BlockingTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, mailbox: InMemoryMailbox
@@ -329,7 +334,7 @@ struct BlockingTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -369,7 +374,7 @@ struct BlockingTests {
         #expect(try await bob.attachmentData(for: theirs, sentBy: aliceID, through: mailbox) == nil)
     }
 
-    @Test("Nothing said while blocked is lost; unblocking and a round bring it back")
+    @Test("Nothing said while blocked is lost; unblocking and a round on each side bring it back")
     func unblockingShowsWhatWasHeld() async throws {
         let (alice, bob, room, mailbox) = try await joined()
         let aliceID = try #require(alice.enrolment?.identity.id)
@@ -382,16 +387,14 @@ struct BlockingTests {
         await bob.unblock(aliceID)
         #expect(bob.blockedPeople.isEmpty)
 
-        // Since 2026-09-14 a block is not answering rather than not drawing, so the entry was never
-        // collected and cannot appear without a round. What matters is that it was not *lost*: the
-        // sender never had an acknowledgement, so the packet is still on offer and comes back.
+        try await alice.sync(through: mailbox, media: mailbox)
         try await bob.sync(through: mailbox, media: mailbox)
 
         #expect(
             bob.messages(in: room).contains { $0.body == "while blocked" },
             """
             Something said while this member had the sender blocked did not come back after they \
-            unblocked them and synced. Blocking must cost the sender delivery, never cost this \
+            unblocked them and both synced. Blocking must cost the sender delivery, never cost this \
             member the words when they change their mind.
             """)
     }
@@ -408,7 +411,7 @@ struct BlockingTests {
         try await alice.sync(through: mailbox, media: mailbox)
         for _ in 0..<4 { try await bob.sync(through: mailbox, media: mailbox) }
 
-        let waiting = try await mailbox.pendingDeliveries()
+        let waiting = await mailbox.everySentPacket.filter { $0.value.receipts.isEmpty }
         #expect(
             !waiting.isEmpty,
             """
@@ -515,7 +518,7 @@ struct BlockingTests {
         await bob.load()
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
@@ -532,8 +535,6 @@ struct BlockingTests {
         bob.enforcesDenyList = false
         #expect(!bob.isDenyListed(aliceID))
 
-        // As with a block, a listed sender is not answered, so their words were never collected and
-        // the switch alone cannot show them. A round after the switch must.
         for _ in 0..<4 {
             try await alice.sync(through: mailbox, media: mailbox)
             try await bob.sync(through: mailbox, media: mailbox)
@@ -543,7 +544,7 @@ struct BlockingTests {
 }
 
 @MainActor
-@Suite("Loading a photo for the screen", .serialized)
+@Suite("Loading a photo for the screen", .serialized, .timeLimit(.minutes(10)), .tags(.crypto, .sync))
 struct MediaLoaderTests {
     static let onePixelJPEG = Data(base64Encoded:
         "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AKwAB//Z")!
@@ -628,16 +629,24 @@ struct MediaLoaderTests {
         let original = try await TestVideo.make(seconds: 1, size: CGSize(width: 64, height: 64), fps: 1, tagged: false)
         defer { try? FileManager.default.removeItem(at: original) }
         let prepared = try await VideoPreparer.prepare(original)
+        let file = try #require(prepared.file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let bytes = try Data(contentsOf: file)
         let attachment = MediaAttachment(
             reference: AttachmentReference(
                 id: AttachmentID(), key: Data(repeating: 1, count: 32),
-                digest: Data(repeating: 2, count: 32), byteCount: prepared.bytes.count),
+                digest: Data(repeating: 2, count: 32), byteCount: bytes.count),
             kind: .video, width: prepared.width, height: prepared.height, preview: prepared.preview,
             duration: prepared.duration)
         let screen = FakeMediaScreen()
         await screen.flagVideo(named: "\(attachment.id.rawValue.uuidString).mp4")
         let loader = MediaLoader(
-            source: { _, _ in prepared.bytes }, screen: screen,
+            source: { _, _ in nil },
+            clipSource: { _, _, url in
+                try bytes.write(to: url)
+                return true
+            },
+            screen: screen,
             defaults: UserDefaults(suiteName: "media-tests-\(UUID())")!)
 
         var state = loader.state(of: attachment, sentBy: Self.author)

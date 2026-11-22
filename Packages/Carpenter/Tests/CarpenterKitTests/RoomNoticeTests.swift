@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Room notices", .serialized)
+@Suite("Room notices", .serialized, .tags(.ui))
 @MainActor
 struct RoomNoticeTests {
     private func pair(_ mailbox: any Mailbox) async throws
@@ -22,7 +22,7 @@ struct RoomNoticeTests {
         await bob.optIntoNames()
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<5 {
             try await alice.sync(through: mailbox)
@@ -154,8 +154,7 @@ struct RoomNoticeTests {
 
     @Test("The room says who took the invitation back, not who offered it")
     func aWithdrawalNamesWhoeverDidIt() throws {
-        let room = RoomID()
-        var alice = Author()
+        var (alice, room, profile) = try Author.founding()
         var bob = Author(chain: alice.chain)
         let joiner = Identity.generate()
 
@@ -164,7 +163,7 @@ struct RoomNoticeTests {
             lasting: .aWeek)
 
         let entries = [
-            try alice.append(try Payload.roomProfile(name: "Hangar 7"), at: TestSession.now, room: room),
+            try alice.append(profile, at: TestSession.now, room: room),
             try alice.append(
                 try Payload.joinRequest(invitation), at: TestSession.now.addingTimeInterval(60),
                 room: room),
@@ -174,7 +173,7 @@ struct RoomNoticeTests {
         ]
 
         let projection = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: alice.chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: alice.chain))
         let kinds = projection.transcript(
             in: room,
             opening: { rendered in

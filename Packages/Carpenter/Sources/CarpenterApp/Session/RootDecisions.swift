@@ -8,6 +8,8 @@ public enum RootScreen: Equatable, Sendable {
     case onboarding(Onboarding)
     case ready
     case failed(String)
+    case awaitingApproval
+    case removed
 
     public enum Onboarding: Equatable, Sendable {
         case newIdentity
@@ -30,6 +32,10 @@ public enum RootScreen: Equatable, Sendable {
             return .ready
         case .failed(let reason):
             return .failed(reason)
+        case .awaitingApproval:
+            return .awaitingApproval
+        case .removed:
+            return .removed
         }
     }
 }
@@ -50,16 +56,23 @@ public enum SyncRound {
         public let syncedAt: Date?
         public let deviceSyncFailed: Bool
         public let mailboxFailed: Bool
+        public var erased = false
 
         public var messageForMember: String? { nil }
     }
 
     @MainActor
     public static func run(
+        deathmark: () async -> Bool = { false },
         deviceSync: () async throws -> Void,
         mailbox: () async throws -> Void,
         now: () -> Date = { Date() }
     ) async -> Outcome {
+        if await deathmark() {
+            var outcome = Outcome(syncedAt: nil, deviceSyncFailed: false, mailboxFailed: false)
+            outcome.erased = true
+            return outcome
+        }
         var deviceSyncFailed = false
         do {
             try await deviceSync()

@@ -1,5 +1,7 @@
+import Foundation
 import CarpenterApp
 import CarpenterKit
+import Foundation
 import Testing
 
 @Suite("What a refusal says")
@@ -7,7 +9,7 @@ struct SessionProblemTests {
     private static let everyRefusal: [AppSessionError] = [
         .noIdentity, .unknownRoom, .cannotRevokeThisDevice, .notAJoiningDevice, .thatIsYou,
         .nothingToSay, .unknownMessage, .notYourMessage, .tooLateToEdit, .tooLateToWithdraw,
-        .tooManyPictures, .keyNotTurned(rooms: 2),
+        .tooManyPictures, .tooBigToSend, .keyNotRotated(rooms: 2), .protectionUnfinished,
     ]
 
     @Test("Every refusal is a sentence, and never the one Foundation makes up")
@@ -67,5 +69,17 @@ struct SessionProblemTests {
     func othersKeepTheirOwn() {
         struct Elsewhere: Error {}
         #expect(SessionProblem.sentence(for: Elsewhere()) == Elsewhere().localizedDescription)
+    }
+
+    @Test("A full disk says the phone is out of space and what to do, however the system put it")
+    func aFullDiskSaysWhatToDo() {
+        for full: any Error in [
+            CocoaError(.fileWriteOutOfSpace), POSIXError(.ENOSPC),
+            NSError(domain: NSPOSIXErrorDomain, code: Int(ENOSPC)),
+        ] {
+            let sentence = SessionProblem.sentence(for: full)
+            #expect(sentence.localizedStandardContains("out of space"), "\(full) read: \(sentence)")
+            #expect(sentence.localizedStandardContains("Settings"), "\(full) said nothing about what to do")
+        }
     }
 }

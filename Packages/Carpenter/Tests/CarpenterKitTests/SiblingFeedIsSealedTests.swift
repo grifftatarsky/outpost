@@ -4,18 +4,25 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("A sibling feed is sealed before it leaves the device")
+@Suite("A sibling feed is sealed before it leaves the device", .tags(.crypto, .sync))
 struct SiblingFeedIsSealedTests {
     private static let identity = Identity.generate()
     private static let device = DeviceID(rawValue: Data(repeating: 0xA1, count: 32))
     private static let other = DeviceID(rawValue: Data(repeating: 0xB2, count: 32))
 
     private static let epochMaterial = Data(repeating: 0x5E, count: 32)
+    private static let addressSalt = Data(repeating: 0x5B, count: 32)
     private static let nickname = "Cassilda"
     private static let displayName = "Camilla"
     private static let blocked = ParticipantID(rawValue: Data(repeating: 0x77, count: 32))
     private static let room = RoomID()
     private static let keys = DeviceKeys.generate()
+
+    private static let friend = Identity.generate().publicKeys
+
+    private static let forwardedGrant = try! EpochGrant.issue(
+        EpochSecret(material: epochMaterial), at: .initial, in: room, link: nil,
+        to: PairwiseSecret.derive(mine: Identity.generate(), theirs: Identity.generate().publicKeys))
 
     private static func populated() -> SiblingFeed {
         let stamp = OrganisationStamp(at: Date(timeIntervalSince1970: 1_000), device: device)
@@ -42,7 +49,41 @@ struct SiblingFeedIsSealedTests {
             epochs: [HeldEpoch(room: room, epoch: .initial, material: epochMaterial)],
             member: identity.id,
             writtenAt: Date(timeIntervalSince1970: 4_000),
-            preferences: prefs)
+            preferences: prefs,
+            collected: [SiblingCursor(device: keys.id, mail: 41)],
+            through: 37,
+            revocations: [
+                DeviceRevocation(
+                    participant: identity.id, device: keys.id,
+                    revokedAt: Date(timeIntervalSince1970: 5_000), signature: Data(repeating: 0x0F, count: 64),
+                    revokedBy: keys.id, revokerSignature: Data(repeating: 0x0E, count: 64), cutoff: 0, head: nil,
+                    remaining: [keys.id])
+            ],
+            forwarded: [ForwardedGrant(from: identity.id, grant: forwardedGrant)],
+            people: [friend],
+            addresses: [
+                HeldAddress(
+                    owner: friend.participantID, salt: AddressSalt(number: 2, bytes: addressSalt),
+                    since: Date(timeIntervalSince1970: 6_000), storedAt: Date(timeIntervalSince1970: 6_000))
+            ],
+            claimTimes: [EntryHash(rawValue: Data(repeating: 0xC1, count: 32)): Date(timeIntervalSince1970: 7_000)],
+            photosHeld: [AttachmentID(rawValue: UUID(uuidString: "5C0E2C7A-71C4-4A10-9C2B-2E7B0F5B1D4E")!)],
+            asks: [
+                ForwardedAsk(
+                    from: ParticipantID(rawValue: Data(repeating: 0xD2, count: 32)),
+                    ask: PhotoAsk(
+                        entry: EntryHash(rawValue: Data(repeating: 0xD3, count: 32)),
+                        attachment: AttachmentID(rawValue: UUID(uuidString: "1B7E4D2F-90A6-4C31-8E5D-6F2A3C4B5D6E")!)))
+            ],
+            removalsHeard: [
+                RemovalHeard(
+                    revocation: DeviceRevocation(
+                        participant: friend.participantID, device: keys.id,
+                        revokedAt: Date(timeIntervalSince1970: 8_000), signature: Data(repeating: 0x1F, count: 64),
+                        revokedBy: keys.id, revokerSignature: Data(repeating: 0x1E, count: 64), cutoff: 0, head: nil,
+                        remaining: [keys.id]),
+                    storedAt: Date(timeIntervalSince1970: 8_500))
+            ])
     }
 
     private static func sealed() throws -> SealedSiblingFeed {
@@ -79,6 +120,7 @@ struct SiblingFeedIsSealedTests {
 
         for (name, marker) in [
             ("an epoch secret", Self.epochMaterial),
+            ("an address salt", Self.addressSalt),
             ("a nickname", Data(Self.nickname.utf8)),
             ("the display name", Data(Self.displayName.utf8)),
             ("a blocked person", Self.blocked.rawValue),
@@ -146,5 +188,59 @@ struct SiblingFeedIsSealedTests {
     @Test("Two seals of the same feed differ")
     func twoSealsOfTheSameFeedDiffer() throws {
         #expect(try Self.sealed().ciphertext != Self.sealed().ciphertext)
+    }
+}
+
+@Suite("Sealing the feed between your devices", .tags(.crypto, .sync))
+@MainActor
+struct SiblingFeedOffTheMainActorTests {
+    private final class Ticks {
+        var count = 0
+    }
+
+    private func longFeed(_ count: Int) throws -> (feed: SiblingFeed, identity: Identity, device: DeviceID) {
+        var alice = Author()
+        var entries: [Entry] = []
+        for step in 0..<count {
+            entries.append(try alice.post("\(step)", at: Date(timeIntervalSince1970: Double(step))))
+        }
+        let feed = SiblingFeed(
+            entries: entries, certificates: [alice.certificate], epochs: [], member: alice.identity.id,
+            writtenAt: Date(timeIntervalSince1970: 0), preferences: MemberPreferences())
+        return (feed, alice.identity, alice.device.id)
+    }
+
+    @Test("Sealed and opened in the background, a feed comes back whole, and only for the device it names")
+    func theBackgroundRoundTrip() async throws {
+        let (feed, identity, device) = try longFeed(20)
+
+        let sealed = try await SealedSiblingFeed.sealInBackground(feed, for: identity, on: device)
+
+        #expect(try await sealed.openInBackground(with: identity, from: device) == feed)
+        await #expect(throws: CryptoError.openFailed) {
+            try await sealed.openInBackground(with: identity, from: DeviceID(rawValue: Data(repeating: 1, count: 32)))
+        }
+    }
+
+    @Test("Sealing a long feed leaves the main actor free to draw")
+    func sealingLeavesTheMainActorFree() async throws {
+        let (feed, identity, device) = try longFeed(300)
+        let ticks = Ticks()
+        let ticker = Task { @MainActor in
+            while !Task.isCancelled {
+                ticks.count += 1
+                await Task.yield()
+            }
+        }
+
+        _ = try await SealedSiblingFeed.sealInBackground(feed, for: identity, on: device)
+        ticker.cancel()
+
+        #expect(
+            ticks.count > 0,
+            """
+            Nothing else ran on the main actor while the feed was sealed. Every send seals the \
+            whole feed, and on the main actor that is a frozen screen.
+            """)
     }
 }

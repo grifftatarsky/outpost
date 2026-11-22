@@ -37,16 +37,7 @@ without deploying it.
 
 ## The design set
 
-`design/boards/` holds the design pass's boards, a closed record from 2026-08-18: the design tool is
-retired and nothing will be re-exported, so the files are ordinary HTML and can be edited. They record
-content, copy and accessibility intent; presentation questions are answered by Apple's guidance.
-
-- `design/board-index.md` is the 84 boards as searchable text, generated.
-- `design/boards.css` is the responsive layer each board links.
-- `_plugins/design_boards.rb` copies the export's underscore-named assets through Jekyll.
-
-Board links come from `design_board`, `design_decisions` and `design_blockers` in `_config.yml`, used
-as `{{ site.baseurl }}{{ site.design_board }}`.
+The design boards were removed on 2026-09-26. They are in the git history before that date.
 
 <!-- COPY END 60cf752b -->
 

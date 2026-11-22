@@ -8,8 +8,8 @@ struct EntryTests {
     private let identity = Identity.generate()
     private let device = DeviceKeys.generate()
     private let wallTime = Date(timeIntervalSince1970: 1_786_635_000)
-    private let room = RoomID()
     private let chain = EpochChain.create(room: RoomID()).chain
+    private var room: RoomID { chain.room }
 
     private func seal(_ text: String) throws -> SealedPayload {
         try Payload.post(text).sealed(at: .initial, using: chain)

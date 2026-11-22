@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Print the UDID of the newest available iPhone simulator on this machine.
+"""Print the UDID of the newest available iPhone simulator on this machine, or of the one named.
 
 Reads `xcrun simctl list devices available --json` on stdin and writes one UDID on stdout, or
-nothing at all if the machine has no iPhone. The caller decides what an empty answer means.
+nothing at all if the machine has no such device. The caller decides what an empty answer means.
+
+**Why a name is looked up here rather than handed to xcodebuild.** `-destination
+'platform=iOS Simulator,name=outpost-alpha'` means the newest OS by default, so on Xcode 27 it found
+nothing: the rig's simulators run iOS 26.5. A UDID names exactly one device, whatever it runs.
 
 **Its own file rather than a `python3 -c` in the workflow.** It was a `-c`, and the second line of
 the script carried the YAML block's indentation into Python, so every run of the App suite job died
@@ -17,19 +21,21 @@ import json
 import sys
 
 
-def newest_iphone(devices: dict[str, list[dict]]) -> str | None:
+def newest_iphone(devices: dict[str, list[dict]], named: str | None = None) -> str | None:
     # Runtime identifiers sort as strings in version order — `iOS-18-0` before `iOS-26-0` — so
     # reversed gives the newest first. A device the image lists but cannot boot is not available.
     for runtime in sorted(devices, reverse=True):
         if "iOS" not in runtime:
             continue
         for device in devices[runtime]:
-            if device.get("isAvailable") and "iPhone" in device.get("name", ""):
+            name = device.get("name", "")
+            wanted = name == named if named else "iPhone" in name
+            if device.get("isAvailable") and wanted:
                 return device["udid"]
     return None
 
 
 if __name__ == "__main__":
-    udid = newest_iphone(json.load(sys.stdin)["devices"])
+    udid = newest_iphone(json.load(sys.stdin)["devices"], sys.argv[1] if len(sys.argv) > 1 else None)
     if udid:
         print(udid)

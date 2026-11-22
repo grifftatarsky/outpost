@@ -1,5 +1,6 @@
 import CarpenterApp
 import CarpenterKit
+import CarpenterUI
 import CloudKit
 import OSLog
 import SwiftUI
@@ -69,7 +70,7 @@ class PushDesk: NSObject, UNUserNotificationCenterDelegate {
     ) async {
         let thread = response.notification.request.content.threadIdentifier
         Diagnostics.sync.notice(
-            "push: opened from a notification (thread \(thread.isEmpty ? "none" : thread, privacy: .public))")
+            "push: opened from a notification (\(thread.isEmpty ? "naming no thread" : "naming a thread", privacy: .public))")
         PushArrivals.shared.open(thread: thread)
         await PushArrivals.shared.arrived()
     }
@@ -101,6 +102,13 @@ class PushDesk: NSObject, UNUserNotificationCenterDelegate {
         ) -> Bool {
             adopt()
             return true
+        }
+
+        func application(
+            _ application: UIApplication,
+            shouldAllowExtensionPointIdentifier extensionPointIdentifier: UIApplication.ExtensionPointIdentifier
+        ) -> Bool {
+            OtherKeyboards.allows(extensionPoint: extensionPointIdentifier.rawValue)
         }
 
         func application(

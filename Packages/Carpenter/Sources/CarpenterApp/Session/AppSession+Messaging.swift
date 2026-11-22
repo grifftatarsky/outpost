@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: What is said in a room, and how it is read
 
@@ -9,12 +10,13 @@ extension AppSession {
 
     @discardableResult
     public func createRoom(named name: String, kind: RoomKind = .room) async throws -> RoomID {
-        let room = RoomID()
+        guard let founder = enrolment?.identity.id else { throw AppSessionError.noIdentity }
+        let (room, founding) = RoomID.founding(by: founder, as: kind)
         let (chain, secret) = EpochChain.create(room: room)
         chains[room] = chain
         try await persistEpoch(secret, at: .initial, for: room)
 
-        try await append(try Payload.roomProfile(name: name, kind: kind), to: room)
+        try await append(try Payload.roomProfile(name: name, kind: kind, founding: founding), to: room)
         try await announceProfile(in: room)
         return room
     }
@@ -29,6 +31,32 @@ extension AppSession {
         let room = try await createRoom(named: name)
         if access != .open { try await setAccess(access, in: room) }
         return room
+    }
+
+    public func send(_ text: String, to room: RoomID?, after mailbox: any Mailbox) async throws {
+        if let room { await collectBeforeWriting(to: room, through: mailbox) }
+        try await send(text, to: room)
+    }
+
+    public func send(
+        _ media: PreparedMedia, to room: RoomID, through uploads: any MediaMailbox, after mailbox: any Mailbox
+    ) async throws {
+        await collectBeforeWriting(to: room, through: mailbox)
+        try await send(media, to: room, through: uploads)
+    }
+
+    func collectBeforeWriting(to room: RoomID, through mailbox: any Mailbox) async {
+        await mailbox.lookAgain()
+        do {
+            try await sync(through: mailbox, mode: .readOnly, from: roster(of: room).members)
+        } catch {
+            Diagnostics.sync.notice(
+                """
+                send: iCloud did not answer before this was written, so it is sealed under the keys this \
+                phone holds (\(String(describing: error), privacy: .public))
+                """)
+        }
+        await refreshDeviceSync()
     }
 
     public func send(_ text: String, to room: RoomID?) async throws {
@@ -57,16 +85,18 @@ extension AppSession {
     public func send(
         _ media: PreparedMedia, to room: RoomID, through mailbox: any MediaMailbox
     ) async throws {
+        defer { media.discardFile() }
         guard let enrolment else { throw AppSessionError.noIdentity }
         let me = enrolment.identity.id
         let roster = roster(of: room)
         if roster.departure(of: me) != nil { throw MembershipError.leftThisRoom }
         if !roster.mayWrite(me) { throw MembershipError.removedFromThisRoom }
 
-        let body = try await upload(
-            media, to: notShutOut(roster.rewrapTargets(of: me)), through: mailbox)
+        let targets = notShutOut(roster.rewrapTargets(of: me))
+        let body = try await upload(media, to: targets, through: mailbox)
         try await append(try Payload.media(body), to: room)
         roomsWithUnsentMessages.insert(room)
+        await recordAttachmentsSent(body.attachment.transferIDs, to: targets)
     }
 
     public func post(_ media: PreparedMedia, through mailbox: any MediaMailbox) async throws {
@@ -74,6 +104,7 @@ extension AppSession {
     }
 
     public func post(_ media: [PreparedMedia], through mailbox: any MediaMailbox) async throws {
+        defer { for one in media { one.discardFile() } }
         guard !media.isEmpty else { return }
         guard media.count <= MediaBody.galleryLimit else { throw AppSessionError.tooManyPictures }
 
@@ -84,7 +115,9 @@ extension AppSession {
                 bodies.append(try await upload(one, to: readers, through: mailbox))
             }
         } catch {
-            for body in bodies { await discard(body.attachment.id, through: mailbox) }
+            for body in bodies {
+                for id in body.attachment.transferIDs { await discard(id, through: mailbox) }
+            }
             throw error
         }
 
@@ -97,10 +130,11 @@ extension AppSession {
                     duration: first.duration, extras: Array(bodies.dropFirst()))),
             to: nil)
         if let head { unsentWallPosts.insert(head.hash) }
+        await recordAttachmentsSent(bodies.flatMap(\.attachment.transferIDs), to: readers)
     }
 
-    private func discard(_ id: AttachmentID, through mailbox: any MediaMailbox) async {
-        do { try await mailbox.delete(attachment: id) } catch {
+    func discard(_ id: AttachmentID, through mailbox: any MediaMailbox) async {
+        do { try await deleteEveryCopy(of: [id], through: mailbox) } catch {
             Diagnostics.sync.error(
                 "media: could not take back an upload nothing names (\(String(describing: error), privacy: .public))")
         }
@@ -180,6 +214,7 @@ extension AppSession {
         guard needle.count >= 2 else { return SearchResults() }
 
         var found = SearchResults()
+        let projected = projection
         for summary in rooms {
             let named = summary.name.localizedStandardContains(needle)
             if named {
@@ -187,7 +222,9 @@ extension AppSession {
                     .init(room: summary.id, name: summary.name, isDirect: summary.isDirect))
             }
 
-            for message in messages(in: summary.id) where !message.isWithdrawn {
+            let drawn = projected.messages(in: summary.id, outOfRoom: outOfRoom(in: summary.id, of: projected))
+                .filter(isDrawn)
+            for message in drawn where !message.isWithdrawn {
                 let saidIt = message.body.localizedStandardContains(needle)
                 let byThem = message.author.displayName.localizedStandardContains(needle)
 
@@ -251,20 +288,26 @@ extension AppSession {
             .filter { $0 != me }
             .map { person in
                 let holding: WaitingOnPerson.Holding
-                if let pending = pendingRecipients, let secret = pairwiseSecret(with: person) {
+                var missing = unsent.union((persisted.entriesOwed[person] ?? []).intersection(mine))
+                if let pending = pendingRecipients, pairwiseSecret(with: person) != nil {
                     let theirs = Set(
-                        (oldest...current).map { secret.recipientTag(window: $0, for: person) })
-                    var missing = unsent
+                        secrets(with: person).flatMap { secret in
+                            (oldest...current).map { secret.recipientTag(window: $0, for: person) }
+                        })
                     for (packet, tags) in pending where !tags.isDisjoint(with: theirs) {
                         missing.formUnion(
                             (persisted.outstandingPackets[packet] ?? []).intersection(mine))
                     }
+                }
+                let takenBack = (persisted.notCollected[person] ?? []).intersection(mine).subtracting(missing)
+                missing.formUnion(takenBack)
+                if pendingRecipients != nil, pairwiseSecret(with: person) != nil {
                     holding = missing.isEmpty ? .everything : .missing(missing.count)
                 } else {
-                    holding = unsent.isEmpty ? .notCheckedYet : .missing(unsent.count)
+                    holding = missing.isEmpty ? .notCheckedYet : .missing(missing.count)
                 }
                 return WaitingOnPerson(
-                    member: projected.member(person), holding: holding,
+                    member: projected.member(person), holding: holding, takenBack: takenBack.count,
                     lastHeard: lastHeard[person])
             }
             .sorted { left, right in
@@ -300,7 +343,7 @@ extension AppSession {
     public func readBy(_ message: MessageID, in room: RoomID) -> [ReadBy] {
         let projected = projection
         let opening = payloadOpener()
-        guard let position = projected.positions(in: room)[message] else { return [] }
+        guard let position = positions(in: room, of: projected)[message] else { return [] }
 
         let me = enrolment?.identity.id
         let roster = projected.roster(of: room, opening: opening)
@@ -310,15 +353,16 @@ extension AppSession {
         return roster.members
             .filter { $0 != me }
             .map { who in
+                let collection = collection(of: message.entry, by: who)
                 let report: ReadReport
                 if !reporting.contains(who) {
                     report = .doesNotReport
-                } else if let at = evidence[who]?.firstCovering(position) {
+                } else if collection != .notCollected, let at = evidence[who]?.firstCovering(position) {
                     report = .displayed(at: at)
                 } else {
                     report = .nothingYet
                 }
-                return ReadBy(member: projected.member(who), report: report)
+                return ReadBy(member: projected.member(who), collection: collection, report: report)
             }
             .sorted { left, right in
                 switch (left.report, right.report) {
@@ -334,25 +378,26 @@ extension AppSession {
             }
     }
 
-    private func outOfRoom(in room: RoomID, of projected: Projection) -> Set<EntryHash> {
-        if let known = cachedOutOfRoom[room] { return known }
-        let built = projected.outOfRoom(in: room, opening: payloadOpener())
-        cachedOutOfRoom[room] = built
-        return built
+    private func collection(of entry: EntryHash, by person: ParticipantID) -> CollectionReport {
+        if persisted.notCollected[person]?.contains(entry) == true { return .notCollected }
+        if let at = persisted.collectedAt[person]?[entry] { return .collected(at: at) }
+        return .noReceipt
+    }
+
+    func outOfRoom(in room: RoomID, of projected: Projection) -> Set<EntryHash> {
+        cached(\.cachedOutOfRoom, room) { projected.outOfRoom(in: room, opening: payloadOpener()) }
+    }
+
+    func positions(in room: RoomID, of projected: Projection) -> [MessageID: Int] {
+        cached(\.cachedPositions, room) { projected.positions(in: room) }
     }
 
     func readEvidence(in room: RoomID, of projected: Projection) -> ReadEvidence {
-        if let known = cachedReadEvidence[room] { return known }
-        let built = projected.readEvidence(in: room, opening: payloadOpener())
-        cachedReadEvidence[room] = built
-        return built
+        cached(\.cachedReadEvidence, room) { projected.readEvidence(in: room, opening: payloadOpener()) }
     }
 
     func reportingMembers(in room: RoomID, of projected: Projection) -> Set<ParticipantID> {
-        if let known = cachedReporting[room] { return known }
-        let built = projected.reportingMembers(in: room, opening: payloadOpener())
-        cachedReporting[room] = built
-        return built
+        cached(\.cachedReporting, room) { projected.reportingMembers(in: room, opening: payloadOpener()) }
     }
 
     public func transcript(in room: RoomID) -> [TranscriptEntry] {
@@ -360,7 +405,7 @@ extension AppSession {
         let mark = deliveryMarks(in: room, of: projected)
 
         let marked: [TranscriptEntry] = projected.transcript(
-            in: room, opening: payloadOpener(), outOfRoom: outOfRoom(in: room, of: projected)
+            in: room, opening: payloadOpener(), outOfRoom: outOfRoom(in: room, of: projected), roster: roster(of: room)
         ).compactMap { item in
             guard let message = item.message else { return item }
             guard isDrawn(message) else { return nil }
@@ -385,26 +430,24 @@ extension AppSession {
     }
 
     func devicesAdded(in room: RoomID) -> [AddedDevice] {
-        if let known = cachedDevicesAdded[room] { return known }
         guard let me = enrolment?.identity.id else { return [] }
-
-        var firstHeard: [ParticipantID: Date] = [:]
-        for entry in replica.entries(in: room) where entry.author != me {
-            firstHeard[entry.author] = min(firstHeard[entry.author] ?? .distantFuture, entry.wallTime)
-        }
-
-        var added: [AddedDevice] = []
-        for person in roster(of: room).members where person != me {
-            guard let since = firstHeard[person], let registry = replica.registry(for: person)
-            else { continue }
-            for certificate in registry.certificates where certificate.issuedAt > since {
-                added.append(
-                    AddedDevice(person: person, device: certificate.device, at: certificate.issuedAt))
+        return cached(\.cachedDevicesAdded, room) {
+            var firstHeard: [ParticipantID: Date] = [:]
+            for entry in replica.allEntries where entry.room == room && entry.author != me {
+                firstHeard[entry.author] = min(firstHeard[entry.author] ?? .distantFuture, entry.wallTime)
             }
+
+            var added: [AddedDevice] = []
+            for person in roster(of: room).members where person != me {
+                guard let since = firstHeard[person], let registry = replica.registry(for: person)
+                else { continue }
+                for certificate in registry.certificates where certificate.issuedAt > since {
+                    added.append(
+                        AddedDevice(person: person, device: certificate.device, at: certificate.issuedAt))
+                }
+            }
+            return added.sorted { $0.at < $1.at }
         }
-        added.sort { $0.at < $1.at }
-        cachedDevicesAdded[room] = added
-        return added
     }
 
     public func devicesAdded(by person: ParticipantID, after instant: Date) -> [Date] {
@@ -417,15 +460,17 @@ extension AppSession {
     }
 
     private func deliveryMarks(in room: RoomID, of projected: Projection) -> (Message) -> Message {
-        let unsent = Set(unsentEntries().map(\.hash))
-
-        let hasSomebodyToReach = !peers().isEmpty
-
+        let hasSomebodyToReach = self.hasSomebodyToReach
         let undelivered = undeliveredEntries()
+        let notYetWritten = enrolment.map {
+            projected.unsent(in: room, by: $0.identity.id, past: persisted.syncedFrontier)
+        } ?? []
+        let unsent = notYetWritten.union(owed(toMembersOf: room, in: persisted.entriesOwed).subtracting(undelivered))
+        let takenBack = owed(toMembersOf: room, in: persisted.notCollected)
         let evidence = readEvidence(in: room, of: projected)
         let reporting = reportingMembers(in: room, of: projected)
             .subtracting([enrolment?.identity.id].compactMap(\.self))
-        let positions = projected.positions(in: room)
+        let positions = positions(in: room, of: projected)
         return { [self] message in
             guard message.isMine else { return message }
             return Message(
@@ -435,7 +480,7 @@ extension AppSession {
                 sentAt: message.sentAt,
                 isMine: true,
                 delivery: deliveryState(
-                    of: message.id, unsent: unsent, undelivered: undelivered,
+                    of: message.id, unsent: unsent, undelivered: undelivered, takenBack: takenBack,
                     position: positions[message.id], evidence: evidence,
                     anyoneReports: !reporting.isEmpty,
                     hasSomebodyToReach: hasSomebodyToReach),
@@ -448,10 +493,20 @@ extension AppSession {
         }
     }
 
+    private func owed(
+        toMembersOf room: RoomID, in perPerson: [ParticipantID: Set<EntryHash>]
+    ) -> Set<EntryHash> {
+        guard !perPerson.isEmpty else { return [] }
+        return roster(of: room).members.reduce(into: Set<EntryHash>()) { owed, member in
+            owed.formUnion(perPerson[member] ?? [])
+        }
+    }
+
     public func latestIncomingMessage() -> IncomingMessage? {
         var newest: IncomingMessage?
+        let projected = projection
         for room in rooms {
-            for message in projection.messages(in: room.id)
+            for message in projected.messages(in: room.id, outOfRoom: outOfRoom(in: room.id, of: projected))
             where !message.isMine && isDrawn(message) {
                 guard newest == nil || message.sentAt > newest!.sentAt else { continue }
                 newest = IncomingMessage(
@@ -480,7 +535,7 @@ extension AppSession {
 
     public func markSeen(_ message: MessageID, in room: RoomID) async {
         guard enrolment != nil else { return }
-        let positions = projection.positions(in: room)
+        let positions = positions(in: room, of: projection)
         guard let seen = positions[message] else { return }
 
         await advanceReadMark(to: message, at: seen, in: room, among: positions)
@@ -517,7 +572,7 @@ extension AppSession {
 
     public func markRoomRead(_ room: RoomID) async {
         guard enrolment != nil else { return }
-        let positions = projection.positions(in: room)
+        let positions = positions(in: room, of: projection)
         guard let last = positions.max(by: { $0.value < $1.value }) else { return }
         await advanceReadMark(to: last.key, at: last.value, in: room, among: positions)
     }
@@ -554,8 +609,6 @@ extension AppSession {
 
     public var hiddenMessageCount: Int { persisted.preferences.hiddenEntries.count }
 
-    /// How many of this room's messages this member has hidden. A transcript that is quietly short
-    /// reads as something having failed to load, so the room says the number instead.
     public func hiddenMessageCount(in room: RoomID) -> Int {
         let inRoom = Set(projection.messages(in: room).map(\.id.entry))
         return persisted.preferences.hiddenEntries.intersection(inRoom).count
@@ -570,7 +623,7 @@ extension AppSession {
     }
 
     private func deliveryState(
-        of message: MessageID, unsent: Set<EntryHash>, undelivered: Set<EntryHash>,
+        of message: MessageID, unsent: Set<EntryHash>, undelivered: Set<EntryHash>, takenBack: Set<EntryHash>,
         position: Int?, evidence: ReadEvidence, anyoneReports: Bool,
         hasSomebodyToReach: Bool
     ) -> DeliveryState {
@@ -578,6 +631,7 @@ extension AppSession {
             return hasSomebodyToReach ? .pending : .noRecipients
         }
         if undelivered.contains(message.entry) { return .sent }
+        if takenBack.contains(message.entry) { return .notCollected }
         if let position, let seenAt = evidence.firstCovering(position) {
             return .displayed(at: seenAt)
         }

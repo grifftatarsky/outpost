@@ -3,7 +3,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("What a room draws after a removal")
+@Suite("What a room draws after a removal", .tags(.membership, .ui))
 struct RemovedMemberRenderingTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -14,14 +14,12 @@ struct RemovedMemberRenderingTests {
     }
 
     private func room() throws -> (alice: Author, sam: Author, room: RoomID, entries: [Entry]) {
-        let chain = EpochChain.create(room: RoomID())
-        var alice = Author(chain: chain.chain)
-        var sam = Author(chain: chain.chain)
-        let room = chain.chain.room
+        var (alice, room, profile) = try Author.founding()
+        let sam = Author(chain: alice.chain)
 
         var entries: [Entry] = []
         entries.append(
-            try alice.append(try Payload.roomProfile(name: "Hangar 7"), at: start, room: room))
+            try alice.append(profile, at: start, room: room))
         let invite = try TestInvite.issue(
             joining: room, joinerKeys: sam.identity.publicKeys, by: alice.identity, at: start)
         entries.append(
@@ -44,7 +42,7 @@ struct RemovedMemberRenderingTests {
         entries.append(before)
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: [before.hash]),
             clock: seeing(sam.feedKey, seq: before.seq),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
@@ -56,7 +54,8 @@ struct RemovedMemberRenderingTests {
         entries.append(after)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain),
+            chains: RoomChains(entries))
         let opener: (RenderedEntry) -> Payload? = { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         }
@@ -85,13 +84,14 @@ struct RemovedMemberRenderingTests {
             entries.append(e)
         }
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: [theirs.last!.hash]),
             clock: seeing(sam.feedKey, seq: theirs.last!.seq),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain),
+            chains: RoomChains(entries))
         let out = projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -109,7 +109,7 @@ struct RemovedMemberRenderingTests {
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(100), room: room)
         entries.append(removal)
 
@@ -120,7 +120,7 @@ struct RemovedMemberRenderingTests {
         entries.append(backdated)
 
         let projected = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let out = projected.outOfRoom(in: room, opening: { rendered in
             entries.first { $0.hash == rendered.id }?.opened(using: chain)
         })
@@ -136,7 +136,7 @@ struct RemovedMemberRenderingTests {
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
         let after = try sam.append(
@@ -150,25 +150,25 @@ struct RemovedMemberRenderingTests {
         }
 
         let onAlice = Projection(
-            viewer: alice.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: alice.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let outOnAlice = onAlice.outOfRoom(in: room, opening: opener)
         #expect(!onAlice.messages(in: room, outOfRoom: outOnAlice).map(\.body).contains("still mine"))
 
         let onSam = Projection(
-            viewer: sam.identity.id, rendered: Fold.render(entries, using: chain))
+            viewer: sam.identity.id, rendered: LogRenderer.render(entries, using: chain))
         let outOnSam = onSam.outOfRoom(in: room, opening: opener)
         #expect(
             onSam.messages(in: room, outOfRoom: outOnSam).map(\.body).contains("still mine"),
             "the app took away something the removed member wrote and still holds")
     }
 
-    @Test("A message the room does not draw is still held and still folded")
-    func stillHeldStillFolded() throws {
+    @Test("A message the room does not draw is still held and still rendered")
+    func stillHeldStillRendered() throws {
         var (alice, sam, room, entries) = try room()
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
         let after = try sam.append(
@@ -177,10 +177,10 @@ struct RemovedMemberRenderingTests {
             at: start.addingTimeInterval(30), room: room)
         entries.append(after)
 
-        let rendered = Fold.render(entries, using: chain)
+        let rendered = LogRenderer.render(entries, using: chain)
         #expect(
             rendered.contains { $0.id == after.hash },
-            "the fold dropped an entry rather than declining to draw it")
+            "rendering dropped an entry rather than declining to draw it")
 
         var replica = Replica()
         replica.introduce(alice.identity.publicKeys)
@@ -199,7 +199,7 @@ struct RemovedMemberRenderingTests {
         let chain = alice.chain
 
         let removal = try alice.append(
-            try Payload.removal(of: sam.identity.id),
+            try Payload.removal(of: sam.identity.id, heads: []),
             at: start.addingTimeInterval(20), room: room)
         entries.append(removal)
         entries.append(
@@ -213,7 +213,7 @@ struct RemovedMemberRenderingTests {
 
         func verdict(_ order: [Entry]) -> Set<EntryHash> {
             let projected = Projection(
-                viewer: alice.identity.id, rendered: Fold.render(order, using: chain))
+                viewer: alice.identity.id, rendered: LogRenderer.render(order, using: chain))
             return projected.outOfRoom(in: room, opening: { rendered in
                 order.first { $0.hash == rendered.id }?.opened(using: chain)
             })

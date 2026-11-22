@@ -1,4 +1,4 @@
-import CarpenterApp
+@testable import CarpenterApp
 import CarpenterKitTesting
 import Foundation
 import Testing
@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("A photo on an Outpost", .serialized)
+@Suite("A photo on an Outpost", .serialized, .tags(.sync))
 struct OutpostPhotoTests {
     @Test("A photo becomes a post with a picture, and its caption is the words")
     func aPhotoIsAPost() async throws {
@@ -18,7 +18,7 @@ struct OutpostPhotoTests {
         try await alice.post(SendingPhotoTests.photo(caption: "Look at this"), through: mailbox)
         try await alice.post(SendingPhotoTests.photo(), through: mailbox)
 
-        let feed = alice.feed()  // newest first
+        let feed = alice.feed()
         #expect(feed.count == 2)
         let captioned = try #require(feed.last)
         #expect(!captioned.media.isEmpty)
@@ -28,23 +28,28 @@ struct OutpostPhotoTests {
         #expect(bare.body.isEmpty, "a photo alone has no words, not a placeholder line")
         #expect(await alice.holdsAttachment(media.id), "the sender's own copy was not kept")
         #expect(await mailbox.uploadCount == 2)
-        #expect(await mailbox.storedAttachmentCount == 2, "the bytes are in the outbox for an audience")
+        #expect(
+            await mailbox.storedAttachmentCount == 0,
+            "a post nobody can read yet left a copy in iCloud; a copy goes into a reader's own space once there is one")
     }
 
     @Test("The sweep leaves a wall photo alone, and a relaunch still draws it")
     func sweepLeavesItAndARelaunchKeepsIt() async throws {
         let keychain = InMemoryKeychainStore()
         let media = MemoryMediaStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-wall-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-wall-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let mailbox = InMemoryMailbox()
         let alice = TestSession.make(keychain: keychain, at: directory, media: media)
         await alice.load()
         try await alice.createIdentity(displayName: "Alice")
         try await alice.post(SendingPhotoTests.photo(caption: "Kept"), through: mailbox)
+        alice.persisted.attachmentsSent = [:]
 
         try await alice.sync(through: mailbox, media: mailbox)
-        #expect(await mailbox.storedAttachmentCount == 1, "the sweep took a photo an entry names")
+        #expect(
+            await mailbox.attachmentDeleteCount == 0,
+            "the sweep took a photo an entry names, on a device that was not the one looking after it")
 
         let again = TestSession.make(keychain: keychain, at: directory, media: media)
         await again.load()
@@ -73,7 +78,7 @@ struct OutpostPhotoTests {
 }
 
 @MainActor
-@Suite("A gallery on a post", .serialized)
+@Suite("A gallery on a post", .serialized, .tags(.sync))
 struct OutpostGalleryTests {
     private static func clip(caption: String? = nil) -> PreparedMedia {
         PreparedMedia(
@@ -221,7 +226,7 @@ struct OutpostGalleryTests {
 }
 
 @MainActor
-@Suite("A gallery's pictures are all named", .serialized)
+@Suite("A gallery's pictures are all named", .serialized, .tags(.sync))
 struct GalleryAttachmentTests {
     private func joined() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -234,7 +239,7 @@ struct GalleryAttachmentTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Darkroom")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox, media: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -250,7 +255,7 @@ struct GalleryAttachmentTests {
         let mailbox = InMemoryMailbox()
         let keychain = InMemoryKeychainStore()
         let media = MemoryMediaStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-sweep-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-sweep-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let alice = TestSession.make(keychain: keychain, at: directory, media: media)
@@ -263,15 +268,16 @@ struct GalleryAttachmentTests {
                 SendingPhotoTests.photo(),
                 SendingPhotoTests.photo(),
             ], through: mailbox)
-        #expect(await mailbox.storedAttachmentCount == 4, "precondition: four pictures went up")
+        #expect(await mailbox.uploadCount == 4, "precondition: four pictures went up")
 
         let again = TestSession.make(keychain: keychain, at: directory, media: media)
         await again.load()
+        again.persisted.attachmentsSent = [:]
         try await again.sync(through: mailbox, media: mailbox)
 
         #expect(
-            await mailbox.storedAttachmentCount == 4,
-            "the sweep deleted pictures an entry names")
+            await mailbox.attachmentDeleteCount == 0,
+            "the sweep deleted pictures an entry names, on a device that was not the one looking after them")
         let post = try #require(again.feed().first)
         #expect(post.media.count == 4)
         for picture in post.media {

@@ -7,12 +7,12 @@ import Testing
 @testable import CarpenterKitTesting
 
 @MainActor
-@Suite("App session", .serialized)
+@Suite("App session", .serialized, .timeLimit(.minutes(10)))
 struct AppSessionTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func storage() -> (SessionStorage, URL) {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-session-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-session-\(UUID().uuidString)")
         return (
             SessionStorage(
                 keychain: InMemoryKeychainStore(),
@@ -62,7 +62,16 @@ struct AppSessionTests {
         let (storage, directory) = storage()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        _ = try await IdentityStore(keychain: storage.keychain).enrol()
+        let recovery = RecoverySecret.generate()
+        let store = IdentityStore(keychain: storage.keychain)
+        try await store.save(recovery.identity)
+        let enrolled = try await store.enrol()
+        var state = PersistedState()
+        let founding = try DeviceCertificate.recovered(
+            for: enrolled.device, by: recovery.identity, at: TestSession.now)
+        state.certificates = [founding]
+        state.authorityStored = [founding.digest: TestSession.now]
+        try await storage.documents.save(state)
 
         let app = session(storage)
         await app.load()
@@ -87,7 +96,7 @@ struct AppSessionTests {
         #expect(app.rooms.map(\.name) == ["Zeppelin Enthusiasts"])
     }
 
-    @Test("A sent message is readable back through the fold")
+    @Test("A sent message is readable back from the log")
     func sendAndRead() async throws {
         let (storage, directory) = storage()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -406,7 +415,7 @@ struct AppSessionTests {
     }
 }
 
-@Suite("Persisted state tolerates fields it has never seen")
+@Suite("Persisted state tolerates fields it has never seen", .timeLimit(.minutes(10)))
 struct PersistedStateCompatibilityTests {
     @Test("A state file written before a field existed still decodes")
     func missingFieldsFallBackToDefaults() throws {
@@ -443,11 +452,11 @@ struct PersistedStateCompatibilityTests {
     }
 }
 
-@Suite("Integrity is reported, never repaired", .serialized)
+@Suite("Integrity is reported, never repaired", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct IntegrityReportingTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-integrity-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-integrity-\(UUID().uuidString)")
     }
 
     private func session(at directory: URL, keychain: InMemoryKeychainStore) -> AppSession {
@@ -553,11 +562,11 @@ struct IntegrityReportingTests {
     }
 }
 
-@Suite("Devices and pairing", .serialized)
+@Suite("Devices and pairing", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct DeviceListTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory.appending(path: "carpenter-devices-\(UUID().uuidString)")
+        TestScratch.root.appending(path: "carpenter-devices-\(UUID().uuidString)")
     }
 
     private func session() throws -> AppSession {
@@ -618,11 +627,11 @@ extension DeviceListTests {
 
 }
 
-@Suite("A second device on one account", .serialized)
+@Suite("A second device on one account", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct SecondDeviceTests {
     private func storage(_ keychain: InMemoryKeychainStore) -> SessionStorage {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-2nd-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-2nd-\(UUID().uuidString)")
         return SessionStorage(
             keychain: keychain,
             log: FileLogStore(url: directory.appending(path: "log.carpenter")),
@@ -638,8 +647,7 @@ struct SecondDeviceTests {
         let room = try await session.createRoom(named: "Kitchen")
 
         await #expect(throws: AppSessionError.thatIsYou) {
-            _ = try await session.invite(
-                joinerCode: session.identityCode(), joining: room, mailbox: nil)
+            _ = try await session.invite(joinerCode: session.identityCode(), joining: room, through: nil)
         }
     }
 
@@ -654,7 +662,7 @@ struct SecondDeviceTests {
     }
 }
 
-@Suite("A device that has never spoken says so", .serialized)
+@Suite("A device that has never spoken says so", .serialized, .timeLimit(.minutes(10)))
 @MainActor
 struct UnusedDeviceTests {
     private func session() -> AppSession { TestSession.make() }

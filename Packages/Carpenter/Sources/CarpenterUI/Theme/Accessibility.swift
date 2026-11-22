@@ -1,3 +1,4 @@
+import CarpenterKit
 import SwiftUI
 
 #if canImport(UIKit)
@@ -64,10 +65,23 @@ public struct QuietActionButton: ViewModifier {
 
     public func body(content: Content) -> some View {
         content
-            .buttonStyle(.bordered)
+            .buttonStyle(.glass)
             .controlSize(.large)
-            .tint(palette.accentColor)
-            .foregroundStyle(palette.secondaryActionLabel)
+            .tint(palette.secondaryActionLabel)
+    }
+}
+
+public struct EnabledLabelColor: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
+
+    let color: Color
+
+    @ViewBuilder public func body(content: Content) -> some View {
+        if isEnabled {
+            content.foregroundStyle(color)
+        } else {
+            content
+        }
     }
 }
 
@@ -88,60 +102,28 @@ extension View {
         modifier(QuietActionButton())
     }
 
+    public func enabledLabelColor(_ color: Color) -> some View {
+        modifier(EnabledLabelColor(color: color))
+    }
+
     public func fieldChrome(isFocused: Bool = false) -> some View {
         modifier(FieldChromeStyle(isFocused: isFocused))
     }
 }
 
 public struct PasteCodeButton: View {
-    @Environment(\.palette) private var palette
-
     private let onPaste: (String) -> Void
 
     public init(onPaste: @escaping (String) -> Void) {
         self.onPaste = onPaste
     }
 
-    @State private var nothingToPaste = false
-
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-        Button {
-            var pasted: String?
-            #if canImport(UIKit) && !os(macOS)
-                pasted = UIPasteboard.general.string
-            #elseif canImport(AppKit)
-                pasted = NSPasteboard.general.string(forType: .string)
-            #endif
-            if let pasted, !pasted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                nothingToPaste = false
-                onPaste(pasted)
-            } else {
-                nothingToPaste = true
-            }
-        } label: {
-            // COPY BEGIN a3a2767a [NEEDS HUMAN REVIEW]
-            Label {
-                Text("Paste", bundle: .module)
-            } icon: {
-                Image(systemName: "doc.on.clipboard")
-            }
-            .codeEntryButtonChrome()
-            // COPY END a3a2767a
+        PasteButton(payloadType: String.self) { strings in
+            let filled = strings.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            if let filled { onPaste(filled) }
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(palette.primaryText)
-        .haptic(.refusal, trigger: nothingToPaste ? 1 : 0)
-
-        // COPY BEGIN 2b5a343a [NEEDS HUMAN REVIEW]
-        if nothingToPaste {
-            Text("There is nothing to paste. Copy the code again, or type it in.", bundle: .module)
-                .font(CarpenterFont.footnote)
-                .foregroundStyle(palette.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        // COPY END 2b5a343a
-        }
+        .buttonBorderShape(.capsule)
     }
 }
 

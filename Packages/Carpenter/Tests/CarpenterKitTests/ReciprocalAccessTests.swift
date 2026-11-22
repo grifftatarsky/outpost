@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("What each of us can read of the other", .serialized)
+@Suite("What each of us can read of the other", .serialized, .tags(.membership))
 struct ReciprocalAccessTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6
@@ -27,7 +27,7 @@ struct ReciprocalAccessTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: name)
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -54,7 +54,7 @@ struct ReciprocalAccessTests {
         let bobID = try #require(bob.enrolment?.identity.id)
 
         let solo = try await alice.createRoom(named: "Bob", kind: .solo)
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: solo, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: solo, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -162,7 +162,7 @@ struct ReciprocalAccessTests {
     }
 }
 
-@Suite("What one direction amounts to")
+@Suite("What one direction amounts to", .tags(.membership))
 struct ReciprocalReachTests {
     private let when = Date(timeIntervalSince1970: 1_775_260_800)
     private var person: Member {

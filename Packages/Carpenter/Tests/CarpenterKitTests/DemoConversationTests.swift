@@ -1,10 +1,11 @@
+import CarpenterKit
 import Foundation
 import Testing
 
 @testable import CarpenterUI
 
 @MainActor
-@Suite struct DemoConversationTests {
+@Suite(.tags(.ui)) struct DemoConversationTests {
     @Test("The participant cap holds from both directions")
     func capHolds() {
         #expect(DemoConversation.clamped(1) == 2)

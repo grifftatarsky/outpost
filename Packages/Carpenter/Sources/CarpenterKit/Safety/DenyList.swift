@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import os
 
 public struct DenyList: Hashable, Sendable {
     public let version: Int
@@ -39,10 +40,10 @@ public struct DenyList: Hashable, Sendable {
     }
 
     public static func fingerprint(of participant: ParticipantID) -> String {
-        SHA256.hash(data: participant.rawValue).map { String(format: "%02x", $0) }.joined()
+        Data(SHA256.hash(data: participant.rawValue)).lowercaseHex
     }
 
     public func contains(_ participant: ParticipantID) -> Bool {
-        fingerprints.contains(Self.fingerprint(of: participant))
+        !fingerprints.isEmpty && fingerprints.contains(Self.fingerprint(of: participant))
     }
 }

@@ -107,3 +107,19 @@ public struct NotificationSettings {
         self.onOpenSystemSettings = onOpenSystemSettings
     }
 }
+
+#if DEBUG
+    #Preview("Notifications") {
+        NavigationStack {
+            NotificationsView(
+                settings: NotificationSettings(
+                    messaging: .default,
+                    outposts: OutpostNotificationChoices(
+                        newPosts: .each, repliesOnPostsICommentedOn: true, repliesOnPostsIReactedTo: false,
+                        commentsOnMyPosts: true, likesOnMyPosts: false),
+                    badges: BadgeChoices(messages: true, outposts: true), systemAllows: true,
+                    onMessaging: { _ in }, onOutposts: { _ in }, onBadges: { _ in }))
+        }
+        .themed(.default)
+    }
+#endif

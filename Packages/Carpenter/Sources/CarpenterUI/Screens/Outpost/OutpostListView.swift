@@ -49,7 +49,7 @@ public struct OutpostListView: View {
         return found.map { (letter: $0.0, people: $0.1) }
     }
 
-    static func index(of name: String) -> String {
+    nonisolated static func index(of name: String) -> String {
         guard let first = name.trimmingCharacters(in: .whitespaces).first else { return "#" }
         let upper = String(first).uppercased()
         return first.isLetter ? upper : "#"

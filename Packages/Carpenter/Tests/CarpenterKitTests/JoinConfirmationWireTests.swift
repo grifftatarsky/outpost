@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("The joiner's confirmation, on the wire")
+@Suite("The joiner's confirmation, on the wire", .tags(.membership))
 struct JoinConfirmationWireTests {
     private let now = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -90,7 +90,7 @@ struct JoinConfirmationWireTests {
         let signed = try JoinConfirmedBody.signed(confirming: attestation, by: joiner)
         let somebodyElse = Identity.generate()
         let swapped = JoinConfirmedBody(
-            invitation: signed.invitation, joiner: somebodyElse.id, signature: signed.signature)
+            invitation: signed.invitation, joiner: somebodyElse.id, nonce: signed.nonce, signature: signed.signature)
 
         #expect(throws: MembershipError.self) { try swapped.verify(confirming: attestation) }
     }
@@ -115,19 +115,19 @@ struct JoinConfirmationWireTests {
         #expect(!fallback.isEmpty)
     }
 
-    @Test("The fold renders it as itself, not as somebody's words")
-    func foldsAsPlumbing() throws {
+    @Test("It renders as itself, not as somebody's words")
+    func rendersAsPlumbing() throws {
         let (attestation, _, joiner) = try invitation()
         let payload = try Payload.joinConfirmed(
             try JoinConfirmedBody.signed(confirming: attestation, by: joiner))
 
         var relay = Author()
         let entry = try relay.append(payload, at: now)
-        let rendered = try #require(Fold.render([entry], using: relay.chain).first)
+        let rendered = try #require(LogRenderer.render([entry], using: relay.chain).first)
 
         #expect(rendered.type == PayloadType.joinConfirmed)
         guard case .unrenderable(let type, let fallback) = rendered.content else {
-            Issue.record("a confirmation folded as something a member said")
+            Issue.record("a confirmation rendered as something a member said")
             return
         }
         #expect(type == PayloadType.joinConfirmed)

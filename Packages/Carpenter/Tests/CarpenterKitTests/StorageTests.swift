@@ -3,12 +3,12 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Log storage", .serialized)
+@Suite("Log storage", .serialized, .tags(.storage))
 struct LogStoreTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
     private func scratch() -> URL {
-        URL.temporaryDirectory
+        TestScratch.root
             .appending(path: "carpenter-tests-\(UUID().uuidString)")
             .appending(path: "log.carpenter")
     }
@@ -26,7 +26,7 @@ struct LogStoreTests {
         let loaded = try await FileLogStore(url: url).loadAll()
 
         #expect(loaded.entries == entries)
-        #expect(!loaded.wasTruncated)
+        #expect(!loaded.isDamaged)
         try await FileLogStore(url: url).removeAll()
     }
 
@@ -35,7 +35,7 @@ struct LogStoreTests {
         let loaded = try await FileLogStore(url: scratch()).loadAll()
 
         #expect(loaded.entries.isEmpty)
-        #expect(!loaded.wasTruncated)
+        #expect(!loaded.isDamaged)
     }
 
     @Test("Appending adds to what is there rather than replacing it")
@@ -128,7 +128,7 @@ struct LogStoreTests {
 
         #expect(loaded.entries.count == 1)
         #expect(loaded.termination == .recordTooLarge)
-        #expect(loaded.discardedTrailingBytes == 2_004)
+        #expect(loaded.discardedBytes == 2_004)
         try await store.removeAll()
     }
 
@@ -170,16 +170,16 @@ struct LogStoreTests {
         for entry in try await store.loadAll().entries { try restored.integrate(entry) }
 
         #expect(
-            Fold.render(restored.ordered(), using: alice.chain)
-                == Fold.render(live.ordered(), using: alice.chain))
+            LogRenderer.render(restored.ordered(), using: alice.chain)
+                == LogRenderer.render(live.ordered(), using: alice.chain))
         try await store.removeAll()
     }
 }
 
-@Suite("Document storage", .serialized)
+@Suite("Document storage", .serialized, .tags(.storage))
 struct DocumentStoreTests {
     private func scratch() -> URL {
-        URL.temporaryDirectory
+        TestScratch.root
             .appending(path: "carpenter-tests-\(UUID().uuidString)")
             .appending(path: "organisation.json")
     }
@@ -265,5 +265,93 @@ struct DocumentStoreTests {
             "a save left its scratch file behind")
         #expect(Set(contents) == [url.lastPathComponent, ".carpenter.lock"])
         try await store.clear()
+    }
+}
+
+@Suite("A long log on disk", .serialized, .tags(.storage))
+struct LongLogStoreTests {
+    private let start = Date(timeIntervalSince1970: 1_786_635_000)
+
+    private func written(_ count: Int) async throws -> (store: FileLogStore, url: URL, entries: [Entry]) {
+        let url = TestScratch.root
+            .appending(path: "carpenter-tests-\(UUID().uuidString)")
+            .appending(path: "log.carpenter")
+        var alice = Author()
+        var entries: [Entry] = []
+        for step in 0..<count {
+            entries.append(try alice.post("\(step)", at: start.addingTimeInterval(Double(step))))
+        }
+        let store = FileLogStore(url: url)
+        try await store.append(entries)
+        return (store, url, entries)
+    }
+
+    private func recordOffsets(in data: Data) -> [Int] {
+        var offsets: [Int] = []
+        var cursor = 0
+        while cursor + 4 <= data.count {
+            offsets.append(cursor)
+            let length = data[cursor..<(cursor + 4)].reduce(0) { $0 << 8 | Int($1) }
+            cursor += 4 + length
+        }
+        return offsets
+    }
+
+    @Test("Six hundred entries come back in the order they were written")
+    func orderSurvives() async throws {
+        let (store, _, entries) = try await written(600)
+
+        let loaded = try await store.loadAll()
+
+        #expect(loaded.entries == entries)
+        #expect(loaded.termination == .complete)
+        #expect(loaded.discardedBytes == 0)
+        try await store.removeAll()
+    }
+
+    @Test("A garbled record costs that record alone, and it is counted as discarded")
+    func aGarbledRecordCostsOnlyItself() async throws {
+        let (store, url, entries) = try await written(600)
+        var data = try Data(contentsOf: url)
+        let offsets = recordOffsets(in: data)
+        let garbled = offsets[400]
+        data.replaceSubrange((garbled + 4)..<offsets[401], with: Data(repeating: 0x41, count: offsets[401] - garbled - 4))
+        try data.write(to: url)
+
+        let loaded = try await store.loadAll()
+
+        #expect(loaded.entries == Array(entries.prefix(400) + entries.suffix(199)))
+        #expect(loaded.termination == .undecodableRecord)
+        #expect(loaded.discardedBytes == offsets[401] - garbled)
+        try await store.removeAll()
+    }
+
+    @Test("A long log with a torn last record keeps every whole one")
+    func aTornTailAtLength() async throws {
+        let (store, url, entries) = try await written(600)
+        let data = try Data(contentsOf: url)
+        try data.prefix(data.count - 40).write(to: url)
+
+        let loaded = try await store.loadAll()
+
+        #expect(loaded.entries == Array(entries.prefix(599)))
+        #expect(loaded.termination == .tornTail)
+        #expect(loaded.discardedBytes == data.count - 40 - recordOffsets(in: data)[599])
+        try await store.removeAll()
+    }
+
+    @Test("A few stray bytes after the last record are a torn tail, and every record stands")
+    func strayBytesAfterTheLastRecord() async throws {
+        let (store, url, entries) = try await written(600)
+        var data = try Data(contentsOf: url)
+        data.append(contentsOf: [0, 0])
+        try data.write(to: url)
+
+        let loaded = try await store.loadAll()
+
+        #expect(loaded.entries == entries)
+        #expect(loaded.termination == .tornTail)
+        #expect(loaded.discardedBytes == 2)
+        try await store.removeAll()
     }
 }

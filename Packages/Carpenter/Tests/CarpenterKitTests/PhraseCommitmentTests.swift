@@ -5,15 +5,8 @@ import CryptoKit
 import Foundation
 import Testing
 
-/// The commitment, end to end through two sessions.
-///
-/// The attack it closes: the party who signs **last** can grind. They see the other side's keys,
-/// then choose the room, the timestamps, their own keypair and — because RFC 8032 does not require a
-/// deterministic nonce — the signature itself, testing candidates offline until the phrase matches
-/// one they already learned from the other side of a man-in-the-middle. Ten characters prices that
-/// attack out of the time an invitation is open; the commitment removes it.
 @MainActor
-@Suite("The verification phrase is committed before it is signed")
+@Suite("The verification phrase is committed before it is signed", .tags(.crypto))
 struct PhraseCommitmentTests {
 
     private func pair() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox) {
@@ -34,8 +27,7 @@ struct PhraseCommitmentTests {
         let (alice, bob, _) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7")
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil)
 
         #expect(
             alice.phrase(for: invite.attestation) == nil,
@@ -58,8 +50,7 @@ struct PhraseCommitmentTests {
         let (alice, bob, _) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7")
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil)
         try await bob.redeem(inviteCode: try invite.encoded())
 
         let theirs = try #require(bob.phrase(for: invite.attestation))
@@ -88,8 +79,7 @@ struct PhraseCommitmentTests {
     func aSubstitutedNonceIsRefused() async throws {
         let (alice, bob, _) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil)
 
         let identity = try #require(bob.enrolment?.identity)
         let honest = try JoinConfirmedBody.signed(
@@ -98,7 +88,6 @@ struct PhraseCommitmentTests {
             by: identity)
         #expect(throws: Never.self) { try honest.verify(confirming: invite.attestation) }
 
-        // Signed properly by the real joiner, but opening with a nonce they never committed to.
         let swapped = try JoinConfirmedBody.signed(
             confirming: invite.attestation, opening: JoinCommitment.nonce(), by: identity)
         #expect(throws: MembershipError.commitmentNotOpened) {
@@ -110,8 +99,7 @@ struct PhraseCommitmentTests {
     func theNonceIsSigned() async throws {
         let (alice, bob, _) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil)
 
         let identity = try #require(bob.enrolment?.identity)
         let honest = try JoinConfirmedBody.signed(
@@ -145,8 +133,7 @@ struct PhraseCommitmentTests {
         let room = try await alice.createRoom(named: "Hangar 7")
 
         await bob.setRequiresLongPhrase(true)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil)
         try await bob.redeem(inviteCode: try invite.encoded())
 
         #expect(invite.attestation.phraseLength == .strict)
@@ -165,8 +152,7 @@ struct PhraseCommitmentTests {
         let room = try await alice.createRoom(named: "Hangar 7")
 
         await alice.setRequiresLongPhrase(true)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil)
         try await bob.redeem(inviteCode: try invite.encoded())
 
         #expect(invite.attestation.joinerRequires == .standard)
@@ -183,8 +169,7 @@ struct PhraseCommitmentTests {
         #expect(!alice.requiresLongPhrase)
         #expect(!bob.requiresLongPhrase)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil)
         try await bob.redeem(inviteCode: try invite.encoded())
         #expect(bob.phrase(for: invite.attestation)?.count == 10)
     }
@@ -212,7 +197,7 @@ struct PhraseCommitmentTests {
     @Test("The setting survives a relaunch")
     func theSettingPersists() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "phrase-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "phrase-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let session = TestSession.make(keychain: keychain, at: directory)
@@ -227,7 +212,7 @@ struct PhraseCommitmentTests {
 }
 
 @MainActor
-@Suite("Showing your code does not mint a new one")
+@Suite("Showing your code does not mint a new one", .tags(.crypto))
 struct CodeForSharingTests {
 
     @Test("Reading the code to show it is free, however often a screen draws")
@@ -235,9 +220,11 @@ struct CodeForSharingTests {
         let session = TestSession.make()
         await session.load()
         try await session.createIdentity(displayName: "Alice")
+        #expect(session.codeForSharing.isEmpty, "a code was offered before it held a way to reach this member")
+        try await session.sync(through: InMemoryMailbox())
 
         let shown = session.codeForSharing
-        #expect(!shown.isEmpty, "there is no code to share once the account is ready")
+        #expect(!shown.isEmpty, "there is no code to share once the account has a space to put in it")
 
         let nonces = session.persisted.phraseNonces.count
         for _ in 0..<200 { _ = session.codeForSharing }
@@ -253,6 +240,7 @@ struct CodeForSharingTests {
         let session = TestSession.make()
         await session.load()
         try await session.createIdentity(displayName: "Alice")
+        try await session.sync(through: InMemoryMailbox())
 
         let shown = session.codeForSharing
         for _ in 0..<20 { session.refresh() }
@@ -270,14 +258,18 @@ struct CodeForSharingTests {
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Hangar 7")
 
-        let before = bob.codeForSharing
-        let invite = try await alice.invite(joinerCode: before, joining: room, mailbox: nil)
+        let before = await bob.joinerCode(through: mailbox)
+        let invite = try await alice.invite(joinerCode: before, joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
-        _ = mailbox
-
         #expect(
             bob.codeForSharing != before,
             "a code whose commitment has been used is still being offered, so the next person to get it could be ground against")
+
+        try await bob.sync(through: mailbox)
         #expect(!bob.codeForSharing.isEmpty)
+        #expect(
+            try JoinerCode.decoded(from: bob.codeForSharing).verifiedPair?.url
+                != (try JoinerCode.decoded(from: before).verifiedPair?.url),
+            "the next code offered a space already handed to somebody else")
     }
 }

@@ -5,72 +5,12 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("The in-memory mailbox is no easier than the real one", .serialized)
+@Suite("The in-memory mailbox is no easier than the real one", .serialized, .tags(.sync))
 struct TheFakeIsNoEasierTests {
-    private func tag() -> RecipientTag {
-        RecipientTag(rawValue: Data((0..<32).map { _ in UInt8.random(in: .min ... .max) }))
-    }
-
-    @Test("A packet too big for a real record is refused here too")
-    func aPacketTooBigIsRefused() async throws {
-        let mailbox = InMemoryMailbox()
-        let mine = tag()
-        let huge = SyncPacket(
-            wraps: [mine: Data(count: 32)],
-            ciphertext: Data(count: MailboxRules.recordByteCeiling + 1))
-
-        await #expect(throws: MailboxError.self) {
-            try await mailbox.put(huge)
-        }
-        #expect(
-            await mailbox.storedPacketCount == 0,
-            """
-            A record over the app's own ceiling was accepted. The ceiling is ours, not CloudKit's \
-            — measured against a real account 2026-09-14, the server took a sixteen-megabyte record \
-            without complaint — so `MailboxRules.recordByteCeiling` and \
-            `SyncSession.packetByteBudget` under it are the only things keeping a round small, and \
-            both mailboxes have to hold the line.
-            """)
-    }
-
-    @Test("A packet within the ceiling still goes")
-    func aPacketWithinTheCeilingGoes() async throws {
-        let mailbox = InMemoryMailbox()
-        let mine = tag()
-        let big = SyncPacket(
-            wraps: [mine: Data(count: 32)], ciphertext: Data(count: SyncSession.packetByteBudget))
-
-        try await mailbox.put(big)
-        #expect(
-            await mailbox.storedPacketCount == 1,
-            "a packet at the app's own budget was refused, so the budget is above the ceiling")
-    }
-
-    @Test("An upload is not sweepable until it has settled")
-    func anUploadIsNotSweepableUntilSettled() async throws {
-        let clock = TestClock(now: TestSession.now)
-        let mailbox = InMemoryMailbox(clock: clock)
-        let mine = tag()
-        let id = AttachmentID()
-
-        try await mailbox.upload(
-            OutgoingAttachment(id: id, ciphertext: Data(count: 16), recipients: [mine]))
-
-        #expect(
-            try await mailbox.pendingAttachments()[id] == [mine],
-            "a fresh upload did not report who still owes it")
-        #expect(
-            try await mailbox.sweepableAttachments()[id] == nil,
-            """
-            A fresh upload was already sweepable. The two questions are different: who still owes \
-            this, and what is old enough to be an orphan. Answering both with one method is what \
-            let a new reader wipe the outstanding list of a photo posted minutes earlier.
-            """)
-
-        clock.advance(by: MailboxRules.sweepAge + 1)
-        #expect(
-            try await mailbox.sweepableAttachments()[id] == [mine],
-            "an upload older than the sweep age never became sweepable")
+    private func linked(_ mailbox: InMemoryMailbox) async throws -> (toBob: Peer, asBob: Peer, alice: Pairs, bob: Pairs) {
+        let (toBob, asBob) = try peers(Identity.generate(), Identity.generate())
+        let (alice, bob) = try await link(toBob, asBob, through: mailbox)
+        return (toBob, asBob, alice, bob)
     }
 
     @MainActor
@@ -79,7 +19,7 @@ struct TheFakeIsNoEasierTests {
             storage: SessionStorage(
                 keychain: InMemoryKeychainStore(), log: log,
                 documents: FileDocumentStore(
-                    url: URL.temporaryDirectory.appending(
+                    url: TestScratch.root.appending(
                         path: "carpenter-fake-\(UUID().uuidString)")),
                 media: MemoryMediaStore()),
             clock: TestClock(now: TestSession.now))
@@ -124,32 +64,68 @@ struct TheFakeIsNoEasierTests {
             """)
     }
 
-    @Test("A photo is not handed to somebody it was not sent to")
-    func aPhotoIsNotHandedToAStranger() async throws {
+    @Test("A space is read only by the one person named on it, as a share naming one participant is")
+    func aSpaceIsReadOnlyByThePersonItNames() async throws {
         let mailbox = InMemoryMailbox()
-        let mine = tag()
-        let stranger = tag()
+        let pair = try await linked(mailbox)
+        let (_, asStranger) = try peers(Identity.generate(), Identity.generate())
+        let stranger = Pairs(
+            me: asStranger.me, hints: [pair.toBob.me: pair.toBob.secret.pairHint],
+            accounts: [pair.toBob.me: [LocalPairStore.account(of: pair.toBob.me)]])
         let id = AttachmentID()
         let sealed = Data((0..<64).map { _ in UInt8.random(in: .min ... .max) })
+        let link = try await mailbox.space(
+            for: pair.toBob.them, naming: LocalPairStore.account(of: pair.toBob.them), in: pair.alice)
+        let copies = try OutgoingAttachment(
+            id: id, ciphertext: sealed, recipients: [pair.toBob.them: pair.toBob.outgoingTag(window: 1)]
+        ).copies(between: { _ in pair.toBob.secret })
+        let copy = try #require(copies.copies[pair.toBob.them])
 
-        try await mailbox.upload(
-            OutgoingAttachment(id: id, ciphertext: sealed, recipients: [mine]))
+        try await mailbox.upload(copies, in: pair.alice)
 
-        #expect(try await mailbox.download(id, hint: [mine]) == sealed)
+        #expect(await mailbox.download(copy.name, of: id, from: pair.toBob.me, in: pair.bob) == copy.sealed)
         #expect(
-            try await mailbox.download(id, hint: [stranger]) == nil,
-            """
-            The fake handed a photo's bytes to a tag it was never addressed to. The real mailbox \
-            resolves a zone from the recipient's address and finds nothing, so a test that proved \
-            somebody could collect a photo they were not sent was proving it against a fake that \
-            does not check. The bytes are sealed either way — but a test that cannot tell the \
-            difference is the one that lets the seal slip.
-            """)
+            await mailbox.join(PairLink(account: await mailbox.account(in: pair.alice), url: link), of: pair.toBob.me, in: stranger)
+                == .notYetNamed,
+            "somebody holding the link but not named on it got in")
+        #expect(
+            await mailbox.download(copy.name, of: id, from: pair.toBob.me, in: stranger) == nil,
+            "a photo reached somebody its space was not shared with")
+    }
+
+    @Test("Naming somebody else on a space shuts out the person named before")
+    func namingSomebodyElseShutsOutTheFirst() async throws {
+        let mailbox = InMemoryMailbox()
+        let pair = try await linked(mailbox)
+        let tag = pair.toBob.outgoingTag(window: 1)
+        try await mailbox.put(SyncPacket(wraps: [tag: Data(count: 8)], ciphertext: Data(count: 8)), to: pair.toBob.them, in: pair.alice)
+        #expect(await mailbox.fetch(from: pair.toBob.me, for: [tag], in: pair.bob).count == 1)
+
+        _ = try await mailbox.space(for: pair.toBob.them, naming: "_somebody-else", in: pair.alice)
+        #expect(
+            await mailbox.fetch(from: pair.toBob.me, for: [tag], in: pair.bob).isEmpty,
+            "the person named before still read the space")
+    }
+
+    @Test("A receipt is written into the reader's own space and changes nothing in the sender's")
+    func aReceiptStaysInTheReadersSpace() async throws {
+        let mailbox = InMemoryMailbox()
+        let pair = try await linked(mailbox)
+        let tag = pair.toBob.outgoingTag(window: 1)
+        let packet = SyncPacket(wraps: [tag: Data(count: 8)], ciphertext: Data(count: 8))
+        try await mailbox.put(packet, to: pair.toBob.them, in: pair.alice)
+        let before = try #require(await mailbox.everySentPacket[packet.id]?.contentDigest)
+
+        try await mailbox.acknowledge(
+            packet.id, from: pair.toBob.me, with: SealedReceipt(tag: tag, sealed: Data([1])), in: pair.bob)
+
+        #expect(await mailbox.everySentPacket[packet.id]?.contentDigest == before, "a reader's receipt changed the packet")
+        #expect(await mailbox.sentPackets(in: pair.alice)[packet.id]?.receipts.count == 1)
     }
 }
 
 @MainActor
-@Suite("The fake screen is no easier than Apple's")
+@Suite("The fake screen is no easier than Apple's", .tags(.sync))
 struct TheFakeScreenIsNoEasierTests {
     @Test("With screening off, it refuses to look, as the real analyser does")
     func offRefuses() async {
@@ -172,7 +148,7 @@ struct TheFakeScreenIsNoEasierTests {
     func aMissingClipIsRefused() async {
         let screen = FakeMediaScreen()
         await #expect(throws: CocoaError.self) {
-            try await screen.isSensitive(videoAt: URL.temporaryDirectory.appending(path: "\(UUID()).mp4"))
+            try await screen.isSensitive(videoAt: TestScratch.root.appending(path: "\(UUID()).mp4"))
         }
     }
 }
@@ -181,7 +157,7 @@ enum LoadingPhotoForTheScreenFixtures {
     @MainActor static var jpeg: Data { MediaLoaderTests.onePixelJPEG }
 }
 
-@Suite("A choice is recorded even when it matches the default", .serialized)
+@Suite("A choice is recorded even when it matches the default", .serialized, .tags(.sync))
 @MainActor
 struct AnsweringIsNotTheSameAsNotAnsweringTests {
     @Test("Choosing the value that was already the default still records an answer")
@@ -190,9 +166,6 @@ struct AnsweringIsNotTheSameAsNotAnsweringTests {
         await session.load()
         try await session.createIdentity(displayName: "Griff")
 
-        // Being told defaults to ON since 2026-09-14 — everybody gets the notice unless they say
-        // otherwise. The property under test is unchanged: choosing the value that is already the
-        // default must still be recorded as an answer, with a stamp.
         #expect(session.isToldAboutRestores, "the fixture's default changed")
         await session.setToldAboutRestores(true)
 

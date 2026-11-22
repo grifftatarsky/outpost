@@ -22,13 +22,13 @@ extension AppRootView {
 
     var avatarStore: FileAvatarStore {
         FileAvatarStore(
-            directory: StorageLocation.directory(container: Bundle.main.bundleIdentifier ?? "app"))
+            directory: StorageLocation.directory(container: worldContainer), protection: session.protection)
     }
 
     var outpostAvatarStore: FileAvatarStore {
         FileAvatarStore(
-            directory: StorageLocation.directory(container: Bundle.main.bundleIdentifier ?? "app"),
-            name: StorageLocation.outpostAvatarName)
+            directory: StorageLocation.directory(container: worldContainer),
+            name: StorageLocation.outpostAvatarName, protection: session.protection)
     }
 
     func resolveOwnOutpostAvatar() {
@@ -68,7 +68,7 @@ extension AppRootView {
 
     var personAvatarStore: PersonAvatarStore {
         PersonAvatarStore(
-            directory: StorageLocation.directory(container: Bundle.main.bundleIdentifier ?? "app"))
+            directory: StorageLocation.directory(container: worldContainer), protection: session.protection)
     }
 
     func changePersonAvatar(_ person: ParticipantID, _ picked: PickedAvatar?) async {

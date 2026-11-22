@@ -4,6 +4,8 @@ import SwiftUI
 
 public struct YouView: View {
     @Environment(\.palette) var palette
+    @Environment(\.appLock) var appLock
+    @Environment(\.deviceSecurity) var deviceSecurity
     @Environment(\.dynamicTypeSize) var typeSize
 
     @Binding var accent: Accent
@@ -13,6 +15,7 @@ public struct YouView: View {
     @Binding var reportsDisplaying: Bool
     @Binding var notificationLevel: NotificationLevel
     let debugActions: DebugActions?
+    let testProfiles: TestProfilesControl?
     @Binding var demoConversation: Bool
     @Binding var demoParticipants: Int
     @Binding var demoOutpost: Bool
@@ -24,6 +27,7 @@ public struct YouView: View {
     let notifications: NotificationSettings?
     let supporter: SupporterSettings?
     @State var welcomingSupporter = false
+    @State var markBubbles = MarkBubbles()
     let onRevealHidden: () async -> Void
     @Binding var blursSensitiveMedia: Bool
     let screening: ScreeningAvailability
@@ -85,6 +89,7 @@ public struct YouView: View {
         reportsDisplaying: Binding<Bool> = .constant(false),
         notificationLevel: Binding<NotificationLevel> = .constant(.default),
         debugActions: DebugActions? = nil,
+        testProfiles: TestProfilesControl? = nil,
         demoConversation: Binding<Bool> = .constant(false),
         demoParticipants: Binding<Int> = .constant(8),
         demoOutpost: Binding<Bool> = .constant(false),
@@ -146,6 +151,7 @@ public struct YouView: View {
         _reportsDisplaying = reportsDisplaying
         _notificationLevel = notificationLevel
         self.debugActions = debugActions
+        self.testProfiles = testProfiles
         _demoConversation = demoConversation
         _demoParticipants = demoParticipants
         _demoOutpost = demoOutpost

@@ -1,5 +1,6 @@
 import CarpenterKit
 import Foundation
+import os
 
 extension AppSession {
     public var supporterStanding: SupporterStanding {
@@ -14,10 +15,6 @@ extension AppSession {
 
     public var canClaimSupporterYear: Bool {
         distribution.offersTheTestFlightYear && persisted.preferences.supporterYearClaimed == nil
-    }
-
-    public var hasAnsweredSupporterBadge: Bool {
-        persisted.preferences.showsSupporterBadge != nil
     }
 
     public var showsSupporterBadge: Bool {

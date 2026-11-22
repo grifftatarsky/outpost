@@ -5,7 +5,7 @@ import Testing
 @testable import CarpenterCloudKit
 @testable import CarpenterKit
 
-@Suite("CloudKit packet serialisation")
+@Suite("CloudKit packet serialisation", .tags(.sync))
 struct CloudKitPacketRecordTests {
     @Test("A packet round-trips through a CKRecord with its grant intact")
     func grantSurvivesRecordRoundTrip() throws {
@@ -16,7 +16,10 @@ struct CloudKitPacketRecordTests {
 
         let room = RoomID()
         let (_, secret) = EpochChain.create(room: room)
-        let grant = try EpochGrant.issue(secret, at: .initial, in: room, link: nil, to: toBob)
+        let bobsDevice = DeviceKeys.generate()
+        let grant = try EpochGrant.issue(
+            secret, at: .initial, in: room, link: nil, to: toBob,
+            devices: [DeviceRecipient(device: bobsDevice.id, sealingKey: bobsDevice.sealingPublicKey)])
 
         let packet = try SyncEngine.pack(
             [], for: [peerToBob], granting: [(to: peerToBob, grant: grant)], window: 0)
@@ -26,7 +29,7 @@ struct CloudKitPacketRecordTests {
             recordType: PacketRecord.type,
             recordID: CKRecord.ID(
                 recordName: packet.id.recordName, zoneID: CKRecordZone.ID(zoneName: "Outbox")))
-        try PacketRecord.write(packet, into: record)
+        PacketRecord.write(PacketWire.fields(of: packet), into: record)
         let restored = try #require(PacketRecord.read(record))
 
         #expect(restored.grants == packet.grants, "the CloudKit mapping dropped the grant")
@@ -34,6 +37,6 @@ struct CloudKitPacketRecordTests {
         let bobPeer = Peer(secret: toBob, them: alice.id, me: bob.id)
         let delivery = try SyncEngine.unpack(restored, as: bobPeer, window: 0)
         #expect(delivery.grants.count == 1)
-        #expect(try delivery.grants.first?.open(with: toBob) == secret)
+        #expect(try delivery.grants.first?.open(with: toBob, as: bobsDevice) == secret)
     }
 }

@@ -5,7 +5,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("When a seen mark says it was seen")
+@Suite("When a seen mark says it was seen", .tags(.sync))
 struct ReadEvidenceTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private func at(_ minutes: Double) -> Date { start.addingTimeInterval(minutes * 60) }
@@ -67,7 +67,7 @@ struct ReadEvidenceTests {
         #expect(evidence.firstCovering(2) == at(5))
     }
 
-    @Test("The folded answer agrees with the plain one, whatever order the receipts arrive in")
+    @Test("The indexed answer agrees with the plain one, whatever order the receipts arrive in")
     func agreesWithBruteForce() {
         let raw: [ReadEvidence.Mark] = (0..<40).map { index in
             .init(position: (index * 17) % 23, at: at(Double((index * 29) % 37)))
@@ -87,7 +87,7 @@ struct ReadEvidenceTests {
 }
 
 @MainActor
-@Suite("A seen mark through the fold", .serialized)
+@Suite("A seen mark from the log", .serialized, .tags(.sync))
 struct SeenMarkTimeTests {
     @Test("Each message carries the instant its own first receipt was written")
     func eachMessageKeepsItsOwnInstant() async throws {
@@ -101,7 +101,7 @@ struct SeenMarkTimeTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))

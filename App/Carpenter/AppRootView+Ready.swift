@@ -28,7 +28,7 @@ extension AppRootView {
             outpostAudience: OutpostAudience(
                 people: session.audienceCandidates(),
                 access: session.outpostAccess,
-                keyTurnPending: session.outpostKeyTurnPending,
+                keyRotationPending: session.outpostKeyRotationPending,
                 allow: { person, everything in
                     await reporting("let somebody see the Outpost") {
                         try await session.allowOutpost(person, everything: everything)
@@ -41,7 +41,13 @@ extension AppRootView {
                 }),
             conversation: [],
             openRoom: $openRoom,
-            organisation: session.organisation,
+            organisation: Binding(
+                get: { session.organisation },
+                set: { arranged in
+                    guard arranged != session.organisation else { return }
+                    session.updateOrganisation { $0 = arranged }
+                }),
+            preferences: roomsListPreferences,
             feed: session.feed(),
             outpostAuthors: session.outpostAuthors(),
             onReact: { post, emoji in
@@ -53,11 +59,7 @@ extension AppRootView {
             },
             comments: { session.comments(on: $0) },
             onComment: { post, text in
-                // COPY BEGIN de96aee0 [NEEDS HUMAN REVIEW]
-                await attempting(
-                    String(localized: "That comment did not go through"), "comment"
-                ) { try await session.comment(on: post, text: text) }
-                // COPY END de96aee0
+                await reporting("comment") { try await session.comment(on: post, text: text) }
             },
             onAttachPost: { picked, caption in await post(picked, caption: caption) },
             postActions: PostActions(
@@ -113,13 +115,10 @@ extension AppRootView {
             onSilence: { room, silenced in await session.setMuted(silenced, for: room) },
             messageDelay: { session.arrivalDelay(of: $0) },
             debugActions: debugActions,
+            testProfiles: testProfilesControl,
             hiddenMessageCount: session.hiddenMessageCount,
             recoveryKey: session.recoveryKeyFingerprint.map { print in
-                RecoveryKeyRow(
-                    text: { session.recoveryKeyText() ?? "" },
-                    fingerprint: print,
-                    savedAt: session.recoveryKeySavedAt,
-                    onSaved: { Task { await session.noteRecoveryKeyOffered() } })
+                RecoveryKeyRow(fingerprint: print, savedAt: session.recoveryKeySavedAt)
             },
             onRevealHidden: { await session.revealAllHidden() },
             reportsDisplaying: session.reportsDisplaying,
@@ -133,7 +132,7 @@ extension AppRootView {
             },
             onSend: { text, room in
                 do {
-                    try await session.send(text, to: room)
+                    try await session.send(text, to: room, after: mailbox)
                     return nil
                 } catch {
                     Diagnostics.sync.error(
@@ -158,7 +157,6 @@ extension AppRootView {
             sharedName: { session.sharedName(of: $0) },
             onNicknameChange: { person, name in await session.setNickname(name, for: person) },
             onPersonAvatarChange: changePersonAvatar,
-            onOrganisationChange: { session.updateOrganisation($0) },
             pendingJoins: { room in
                 let waiting = session.pendingJoins(in: room).map { attestation in
                     PendingJoin(
@@ -183,12 +181,33 @@ extension AppRootView {
                 }
                 return waiting + unchecked
             },
+            photoRequests: { room in
+                PhotoRequestsHelp(
+                    requests: session.photoRequests(in: room),
+                    onSend: { [self] request in
+                        do {
+                            try await session.sendAgain(request.id, through: media)
+                            return nil
+                        } catch PhotoAskError.notHeldHere {
+                            // COPY BEGIN 730ff642 [NEEDS HUMAN REVIEW]
+                            return String(
+                                localized: "This photo is no longer on this device.",
+                                comment: "Somebody asked for a photo again and this device no longer holds it")
+                            // COPY END 730ff642
+                        } catch {
+                            return error.localizedDescription
+                        }
+                    },
+                    onDismiss: { [self] request in await session.dismissPhotoRequest(request.id) })
+            },
             onInvite: { room, joinerCode, lifetime in
-                let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
                 do {
                     let issued = try await session.invite(
-                        joinerCode: joinerCode, joining: room, mailbox: url,
+                        joinerCode: joinerCode, joining: room, through: mailbox,
                         lasting: lifetime)
+                    #if os(iOS)
+                        handBack(issued, to: joinerCode)
+                    #endif
                     #if DEBUG
                         if rig != nil, let code = try? issued.encoded() {
                             RigCodes.leave(code, as: "\(session.viewer.displayName).invite")
@@ -212,17 +231,22 @@ extension AppRootView {
                     Diagnostics.identity.error("show invite: nothing outstanding to show")
                     return nil
                 }
-                let url = try? await (mailbox as? CloudKitMailbox)?.shareURL()
+                let pair = await session.standingOffer(to: pending.joiner, through: mailbox)
                 Diagnostics.identity.notice(
-                    "show invite: showing the invitation already standing, mailbox=\(url != nil, privacy: .public)")
-                return Invite(attestation: attestation, mailbox: url)
+                    "show invite: showing the invitation already standing, link=\(pair != nil, privacy: .public)")
+                return Invite(attestation: attestation, pair: pair)
             },
             onDecideJoin: { room, join, admit in
                 let candidates =
                     session.pendingJoins(in: room) + session.awaitingConfirmation(in: room)
-                guard let attestation = candidates.first(where: { $0.joiner == join.id })
-                else { return }
                 // COPY BEGIN 364edb99 [NEEDS HUMAN REVIEW]
+                guard let attestation = candidates.first(where: { $0.joiner == join.id }) else {
+                    problem = ActionProblem(
+                        title: String(localized: "That answer did not go through"),
+                        detail: String(
+                            localized: "That invitation is no longer waiting for an answer: it was answered, taken back or ran out."))
+                    return
+                }
                 await attempting(
                     String(localized: "That answer did not go through"), "answer a join"
                 ) {
@@ -238,38 +262,7 @@ extension AppRootView {
             onAppIconChange: { await applyAppIcon($0) },
             appIconIsSupported: AppIconSwitching.isSupported,
             devices: session.devices,
-            onRevokeDevice: { going in
-                do {
-                    try await session.revoke(going.map(\.id))
-                } catch let error as AppSessionError {
-                    // COPY BEGIN 5d951e6c [NEEDS HUMAN REVIEW]
-                    if case .keyNotTurned(let rooms) = error {
-                        Diagnostics.identity.error(
-                            "revoke: \(rooms, privacy: .public) room(s) did not turn their key")
-                        problem = ActionProblem(
-                            title: String(localized: "The device is out, but its key is still good"),
-                            detail: String(
-                                localized:
-                                    "\(rooms) room(s) could not change their key, so that device can still read what is said in them until the next membership change. Try syncing, then remove it again."
-                            ))
-                    } else {
-                        Diagnostics.identity.error(
-                            "revoke failed: \(String(describing: error), privacy: .public)")
-                        problem = ActionProblem(
-                            title: String(localized: "Those devices were not removed"),
-                            detail: SessionProblem.sentence(for: error))
-                    }
-                    // COPY END 5d951e6c
-                } catch {
-                    Diagnostics.identity.error(
-                        "revoke failed: \(String(describing: error), privacy: .public)")
-                    // COPY BEGIN 0350cd68 [NEEDS HUMAN REVIEW]
-                    problem = ActionProblem(
-                        title: String(localized: "That device was not removed"),
-                        detail: SessionProblem.sentence(for: error))
-                    // COPY END 0350cd68
-                }
-            },
+            onRevokeDevice: { await revokeDevices($0) },
             onRenameDevice: { device, name in
                 await session.setDeviceName(name, for: device.id)
             },
@@ -485,6 +478,7 @@ extension AppRootView {
             },
             onPostponeReview: { await session.postponeOutpostReview(in: $0) }
         )
+        .environment(\.iCloudHold, session.isHeldByICloud)
         .task {
             guard !UITestMode.isOn else { return }
             await ActiveSyncLoop.run(
@@ -524,5 +518,38 @@ extension AppRootView {
                 },
             checkedAt: checkedAt,
             devicesAddedSince: checkedAt.map { session.devicesAdded(by: person, after: $0) } ?? [])
+    }
+
+    func revokeDevices(_ going: [DeviceSummary]) async {
+        do {
+            try await session.revoke(going.map(\.id))
+        } catch let error as AppSessionError {
+            // COPY BEGIN 5d951e6c [NEEDS HUMAN REVIEW]
+            if case .keyNotRotated(let rooms) = error {
+                Diagnostics.identity.error(
+                    "revoke: \(rooms, privacy: .public) room(s) did not rotate their key")
+                problem = ActionProblem(
+                    title: String(localized: "The device is out, but its key is still good"),
+                    detail: String(
+                        localized:
+                            "\(rooms) room(s) could not change their key, so that device can still read what is said in them until the next membership change. Try syncing, then remove it again."
+                    ))
+            } else {
+                Diagnostics.identity.error(
+                    "revoke failed: \(String(describing: error), privacy: .public)")
+                problem = ActionProblem(
+                    title: String(localized: "Those devices were not removed"),
+                    detail: SessionProblem.sentence(for: error))
+            }
+            // COPY END 5d951e6c
+        } catch {
+            Diagnostics.identity.error(
+                "revoke failed: \(String(describing: error), privacy: .public)")
+            // COPY BEGIN 0350cd68 [NEEDS HUMAN REVIEW]
+            problem = ActionProblem(
+                title: String(localized: "That device was not removed"),
+                detail: SessionProblem.sentence(for: error))
+            // COPY END 0350cd68
+        }
     }
 }

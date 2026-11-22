@@ -4,7 +4,7 @@ import CarpenterKitTesting
 
 @testable import CarpenterKit
 
-@Suite("Room access control")
+@Suite("Room access control", .tags(.membership))
 struct RoomAccessTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -29,14 +29,13 @@ struct RoomAccessTests {
     private func founded(by founder: Identity, alongside others: [Identity] = []) throws
         -> RoomRoster
     {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
 
         for (offset, member) in others.enumerated() {
             let attestation = try TestInvite.issue(
-                joining: room, joinerKeys: member.publicKeys, by: founder, at: start)
+                joining: roster.room, joinerKeys: member.publicKeys, by: founder, at: start)
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: UInt8(20 + offset)),
                 body: try Payload.joinRequest(attestation))
@@ -46,7 +45,7 @@ struct RoomAccessTests {
                     try JoinConfirmedBody.signed(confirming: attestation, by: member)))
             roster.apply(
                 rendered(founder.id, .admission, hash: UInt8(40 + offset)),
-                body: try Payload.admission(of: member.id, admitted: true))
+                body: try Payload.admission(of: member.id, admitted: true, invitation: attestation.signature))
         }
         return roster
     }
@@ -55,7 +54,7 @@ struct RoomAccessTests {
         _ joiner: Identity, from inviter: Identity, into roster: inout RoomRoster, hash: UInt8
     ) throws {
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: inviter, at: start)
         roster.apply(
             rendered(inviter.id, .joinRequest, hash: hash),
             body: try Payload.joinRequest(attestation))
@@ -71,7 +70,7 @@ struct RoomAccessTests {
     ) throws {
         roster.apply(
             rendered(member.id, .admission, hash: hash),
-            body: try Payload.admission(of: joiner.id, admitted: admitted))
+            body: try Payload.admission(of: joiner.id, admitted: admitted, invitation: try #require(roster.requests[joiner.id]).signature))
     }
 
     // MARK: The default
@@ -241,8 +240,8 @@ struct RoomAccessTests {
         #expect(roster.access == .open)
     }
 
-    @Test("The setting travels in the log and folds like anything else")
-    func accessFoldsFromTheLog() throws {
+    @Test("The setting travels in the log and is read like anything else")
+    func accessIsReadFromTheLog() throws {
         let alice = Identity.generate()
         let bob = Identity.generate()
 

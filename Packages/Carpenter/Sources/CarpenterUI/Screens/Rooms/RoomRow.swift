@@ -29,7 +29,7 @@ struct RoomRow: View {
                 .opacity(room.hasUnread ? 1 : 0)
                 .accessibilityLabel(Text("Unread", bundle: .module))
                 .accessibilityHidden(!room.hasUnread)
-                .padding(.trailing, 8)
+                .frame(width: CarpenterMetrics.screenMargin)
             // COPY END 7f0b8e62
 
             if showsAvatar {
@@ -38,11 +38,17 @@ struct RoomRow: View {
                     diameter: avatarDiameter,
                     isAccented: false,
                     isPinned: organisation.isPinned(room.id),
-                    isGroup: marksGroups && !room.isDirect,
+                    isGroup: !room.isDirect,
                     isSilenced: isSilenced,
-                    image: room.partner.flatMap { personAvatars[$0] ?? sharedAvatars[$0] }
+                    image: room.partner.flatMap { personAvatars[$0] ?? sharedAvatars[$0] },
+                    speakers: room.recentSpeakers,
+                    isCompact: density == .compact
                 )
-                .padding(.trailing, 13)
+                .frame(
+                    width: RoomAvatar.width(diameter: avatarDiameter, isCompact: density == .compact),
+                    alignment: .trailing
+                )
+                .padding(.trailing, 12)
             }
 
             VStack(alignment: .leading, spacing: 2) {

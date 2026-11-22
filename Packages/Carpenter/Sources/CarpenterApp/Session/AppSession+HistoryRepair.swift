@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: Filling a hole in what was said, and the way back to a peer's outbox
 
@@ -8,7 +9,21 @@ extension AppSession {
     // MARK: History repair
 
     public func missingHistory(in room: RoomID) -> [FeedGap] {
-        replica.gaps(from: membersToCheck(in: room)).subtracting(persisted.unverifiable)
+        holes(from: membersToCheck(in: room), in: room)
+    }
+
+    private func holes(from authors: Set<ParticipantID>, in room: RoomID) -> [FeedGap] {
+        replica.gaps(from: authors).subtracting(persisted.unverifiable)
+            .subtracting(saidElsewhereByEverybody(in: room))
+    }
+
+    private func saidElsewhereByEverybody(in room: RoomID) -> [FeedGap] {
+        let others = roster(of: room).members.subtracting([enrolment?.identity.id].compactMap(\.self))
+        guard !others.isEmpty else { return [] }
+        return others.reduce(nil) { (agreed: [FeedGap]?, person) in
+            let said = persisted.saidElsewhere[person] ?? []
+            return agreed.map { said.intersecting($0) } ?? said
+        } ?? []
     }
 
     private func membersToCheck(in room: RoomID) -> Set<ParticipantID> {
@@ -36,7 +51,7 @@ extension AppSession {
         let request = RepairRequest(
             authors: authors.sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
             heads: replica.heads(of: authors),
-            gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable),
+            gaps: holes(from: authors, in: room),
             room: room, reason: reason)
         persisted.repairs.removeAll { $0.room == room }
         persisted.repairs.append(
@@ -58,27 +73,6 @@ extension AppSession {
             """)
         return true
     }
-
-    func turnEveryKeyAfterALoss() async {
-        guard persisted.turnsEveryKeyAfterALoss, enrolment != nil else { return }
-        let turning = rooms.map(\.id).filter { chains[$0] != nil }
-        guard !turning.isEmpty else { return }
-
-        for room in turning {
-            do { try await oweEpochTurn(in: room) } catch {
-                Diagnostics.sync.error(
-                    """
-                    recovery: could not note a key turn this room needs \
-                    (\(String(describing: error), privacy: .public))
-                    """)
-            }
-        }
-        persisted.turnsEveryKeyAfterALoss = false
-        Diagnostics.sync.notice(
-            "recovery: turning the key in \(turning.count, privacy: .public) room(s) after a loss")
-    }
-
-    public var isTurningEveryKeyAfterALoss: Bool { persisted.turnsEveryKeyAfterALoss }
 
     func askEverybodyForWhatWasSaid() async {
         guard persisted.wantsWhatWasSaid, enrolment != nil else { return }
@@ -109,7 +103,10 @@ extension AppSession {
 
         for room in rooms.map(\.id) {
             guard missingHistory(in: room).isEmpty == false else {
-                if persisted.holesNoticed.removeValue(forKey: room) != nil { changed = true }
+                if persisted.holesNoticed[room] != nil {
+                    persisted.holesNoticed[room] = nil
+                    changed = true
+                }
                 continue
             }
             let noticed = persisted.holesNoticed[room] ?? clock.now
@@ -183,44 +180,33 @@ extension AppSession {
         guard let repair = persisted.repairs.first(where: { $0.room == room && !$0.quiet })
         else { return nil }
         let authors = Set(repair.request.authors)
-        let open = replica.gaps(from: authors).subtracting(persisted.unverifiable)
-        let named = open.intersecting(repair.request.gaps)
+        let named = holes(from: authors, in: room).intersecting(repair.request.gaps)
         let refused = persisted.unverifiable.stillMissing(of: repair.request.gaps)
+        let notForThisMember = saidElsewhereByEverybody(in: room).stillMissing(of: repair.request.gaps)
         let answered = repair.asked.filter { repair.answers[$0] != nil }
         let waiting = repair.asked.filter { repair.answers[$0] == nil }
         let answers = answered.compactMap { repair.answers[$0] }
 
-        let recovered = repair.request.namedCount - named.total - refused
+        let recovered = repair.request.namedCount - named.total - refused - notForThisMember
 
-        var shortfall = 0
+        var shortfall: UInt64 = 0
         var furthest = VectorClock()
         for answer in answers { furthest = furthest.merging(answer.heads) }
         for feed in furthest.keys where authors.contains(feed.author) {
             let held = replica.highestSequence(in: feed) ?? 0
             guard furthest[feed] > held else { continue }
-            var count = Int(furthest[feed] - held)
-            for gap in persisted.unverifiable where gap.feed == feed {
-                for span in gap.spans {
-                    let lower = Swift.max(span.lower, held + 1)
-                    let upper = Swift.min(span.upper, furthest[feed])
-                    if lower <= upper { count -= Int(upper - lower + 1) }
-                }
-            }
-            shortfall += Swift.max(0, count)
+            let beyond = [SequenceSpan(held + 1, furthest[feed])]
+            shortfall = shortfall.addingSaturated(
+                beyond.subtracting(persisted.unverifiable.spans(of: feed)).sequenceCount)
         }
 
         var nobody = 0
         if !answers.isEmpty {
-            for gap in named {
-                for span in gap.spans {
-                    for seq in span.sequences
-                    where answers.allSatisfy({ $0.unheld.contains(gap.feed, seq) }) {
-                        nobody += 1
-                    }
-                }
-            }
+            var unheldByAll = named
+            for answer in answers { unheldByAll = answer.unheld.intersecting(unheldByAll) }
+            nobody = unheldByAll.total
         }
-        let stillMissing = named.total + shortfall
+        let stillMissing = Int(clamping: UInt64(named.total).addingSaturated(shortfall))
         return HistoryRepairStatus(
             id: repair.id, room: room, startedAt: repair.startedAt,
             asked: repair.asked.map(member), answered: answered.map(member),
@@ -241,7 +227,7 @@ extension AppSession {
             let request = RepairRequest(
                 id: repair.request.id, authors: repair.request.authors,
                 heads: replica.heads(of: authors),
-                gaps: replica.gaps(from: authors).subtracting(persisted.unverifiable),
+                gaps: holes(from: authors, in: repair.room),
                 room: repair.request.room, wallOf: repair.request.wallOf,
                 reason: repair.request.reason)
             do {
@@ -249,6 +235,7 @@ extension AppSession {
                     [], to: unsent, at: clock.now,
                     ringing: repair.request.reason == .recovery ? unsent : [],
                     requests: [request])
+                noteWritten(sent)
                 if sent.packetsWritten > 0,
                     let index = persisted.repairs.firstIndex(where: { $0.id == repair.id })
                 {
@@ -263,27 +250,40 @@ extension AppSession {
         }
 
         var answered: Set<RepairDuty> = []
+        let withheld = heldBack()
         for duty in persisted.repairDuties {
-            if duty.request.reason == .recovery, isHoldingBack(duty.from) { continue }
-            guard let peer = byID[duty.from] else {
+            let hold = restoreHold(on: duty.from)
+            if hold == .held { continue }
+            guard hold != .refused, let peer = byID[duty.from] else {
                 answered.insert(duty)
                 Diagnostics.sync.notice("repair: dropped a request from a peer this device cannot address")
                 continue
             }
-            let (held, unheld) = replica.fill(duty.request)
-            let entries = held.filter {
+            let allowance = repairBytesLeft(for: duty.from)
+            guard allowance > 0 else { continue }
+            let fill = replica.fill(duty.request, allowing: mayBeHanded(to: duty.from))
+            let entries = fill.entries.filter {
                 $0.seq <= persisted.syncedFrontier[$0.feedKey] && !justSent.contains($0.hash)
             }
+            let fitting = Self.prefix(of: entries, within: allowance)
             let answer = RepairAnswer(
-                request: duty.request.id, unheld: unheld,
-                heads: replica.heads(of: Set(duty.request.authors)))
+                request: duty.request.id, unheld: fill.unheld,
+                heads: replica.heads(of: Set(duty.request.authors)), elsewhere: fill.elsewhere)
             do {
                 let sent = try await session.send(
-                    entries, to: [peer], certificates: knownCertificates(),
-                    revocations: persisted.revocations, at: clock.now, answers: [answer],
-                    identities: knownIdentities())
+                    fitting, to: [peer], certificates: knownCertificates(),
+                    revocations: removalsToTellFriends(), at: clock.now, answers: [answer],
+                    identities: knownIdentities(), withholding: withheld)
+                noteWritten(sent)
                 report = report.adding(sent)
-                if sent.sendFailure == nil { answered.insert(duty) }
+                spendRepairBytes(sent.bytesWritten, on: duty.from)
+                guard sent.sendFailure == nil else { continue }
+                if fitting.count < entries.count {
+                    carryOn(duty, past: fitting)
+                } else {
+                    answered.insert(duty)
+                    repairsAnswered.insert(duty.request.id)
+                }
             } catch {
                 Diagnostics.sync.error(
                     "repair: could not answer a peer: \(String(describing: error), privacy: .public)")
@@ -292,8 +292,12 @@ extension AppSession {
         if !answered.isEmpty {
             persisted.repairDuties.removeAll { answered.contains($0) }
         }
-        persisted.repairs.removeAll {
-            $0.quiet && ($0.isAnswered || $0.isStale(at: clock.now, patience: Self.repairPatience))
+        let now = clock.now
+        let isFinished = { (repair: HistoryRepair) in
+            repair.quiet && (repair.isAnswered || repair.isStale(at: now, patience: Self.repairPatience))
+        }
+        if persisted.repairs.contains(where: isFinished) {
+            persisted.repairs.removeAll(where: isFinished)
         }
         if report.packetsWritten > 0 {
             Diagnostics.sync.notice(
@@ -303,6 +307,94 @@ extension AppSession {
                 \(answered.count, privacy: .public) request(s) answered
                 """)
         }
+    }
+
+    func takeRepairRequests(_ requests: [RepairRequest], from person: ParticipantID) {
+        for asked in requests where !repairsAnswered.contains(asked.id) {
+            let request = asked.bounded
+            guard mayAsk(request, from: person) else {
+                Diagnostics.sync.notice("repair: ignored a request for a room its asker is not in")
+                continue
+            }
+            noteRestore(asking: request, from: person)
+            persisted.repairDuties.removeAll { $0.from == person && $0.request.scope == request.scope }
+            persisted.repairDuties.append(RepairDuty(request: request, from: person))
+        }
+    }
+
+    private func mayAsk(_ request: RepairRequest, from person: ParticipantID) -> Bool {
+        if let owner = request.wallOf {
+            return owner == enrolment?.identity.id && outpostReaders().contains(person)
+        }
+        return request.room.map { membersToCheck(in: $0).contains(person) } ?? false
+    }
+
+    private func noteRestore(asking request: RepairRequest, from person: ParticipantID) {
+        let restored = replica.registry(for: person)?.lastRestoredDevice
+        let unseen = restored.map { device in
+            !persisted.restoreAsks.contains { $0.from == person && $0.device == device }
+        } ?? false
+        guard request.reason == .recovery || unseen else { return }
+        let holding = persisted.preferences.isHoldingHistoryForRestores && !refusesToDraw(from: person)
+        persisted.restoreAsks.removeAll { $0.from == person && $0.room == request.room }
+        persisted.restoreAsks.append(
+            RestoreAskRecord(
+                request: request.id, from: person, room: request.room, at: clock.now,
+                hold: holding ? .held : .allowed, device: restored))
+        while persisted.restoreAsks.count > RestoreAskRecord.kept {
+            let oldest = persisted.restoreAsks.firstIndex { $0.hold == .allowed } ?? 0
+            persisted.restoreAsks.remove(at: oldest)
+        }
+        Diagnostics.sync.notice(
+            """
+            recovery: \(Diagnostics.fingerprint(person.rawValue), privacy: .public) \
+            came back and asked for history\
+            \(holding ? "; held until this device's member checks" : "", privacy: .public)
+            """)
+    }
+
+    private func mayBeHanded(to person: ParticipantID) -> (Entry) -> Bool {
+        let me = enrolment?.identity.id
+        let rooms = projection.namedRoomIDs().filter { membersToCheck(in: $0).contains(person) }
+        let readsMyOutpost = outpostReaders().contains(person)
+        let myOutpost = me.map(outpostRoom(for:))
+        return { entry in
+            guard let room = entry.room else { return readsMyOutpost && entry.author == me }
+            return rooms.contains(room) || (readsMyOutpost && room == myOutpost)
+        }
+    }
+
+    public static let repairBytesPerPersonPerDay = 16 * 1024 * 1024
+
+    public static let leastAnAnswerCosts = 4 * 1024
+
+    private func repairBytesLeft(for person: ParticipantID) -> Int {
+        guard let spent = persisted.repairSpend[person], spent.day == SyncSession.window(at: clock.now) else {
+            return Self.repairBytesPerPersonPerDay
+        }
+        return Self.repairBytesPerPersonPerDay - spent.bytes
+    }
+
+    private func spendRepairBytes(_ bytes: Int, on person: ParticipantID) {
+        let day = SyncSession.window(at: clock.now)
+        let before = persisted.repairSpend[person].flatMap { $0.day == day ? $0.bytes : nil } ?? 0
+        persisted.repairSpend[person] = RepairSpend(day: day, bytes: before + max(bytes, Self.leastAnAnswerCosts))
+    }
+
+    private static func prefix(of entries: [Entry], within allowance: Int) -> [Entry] {
+        var total = 0
+        var count = 0
+        for bytes in SyncSession.bytes(of: entries) {
+            guard total + bytes <= allowance else { break }
+            total += bytes
+            count += 1
+        }
+        return Array(entries.prefix(count))
+    }
+
+    private func carryOn(_ duty: RepairDuty, past sent: [Entry]) {
+        guard let index = persisted.repairDuties.firstIndex(of: duty) else { return }
+        persisted.repairDuties[index].request = duty.request.resumed(past: sent)
     }
 
     func undeliveredEntries() -> Set<EntryHash> {
@@ -324,48 +416,9 @@ extension AppSession {
         do {
             try await write()
         } catch {
-            integrity.writesFailed += 1
+            if !storageIsSealed { integrity.writesFailed += 1 }
             Diagnostics.sync.error(
                 "storage: could not write \(what, privacy: .public) — it is in memory and will be gone on the next launch (\(String(describing: error), privacy: .public))")
         }
-    }
-
-    private func openPayload(_ rendered: RenderedEntry) -> Payload? {
-        payloadOpener()(rendered)
-    }
-
-    // MARK: The reverse channel
-
-    public func shareOffers(of url: URL) -> [ShareOffer] {
-        guard enrolment != nil else { return [] }
-        let window = SyncSession.window(at: clock.now)
-
-        return peers().compactMap { peer in
-            guard let sealed = try? peer.secret.wrap(
-                Data(url.absoluteString.utf8), context: PairwiseSecret.shareOfferContext)
-            else { return nil }
-            return ShareOffer(
-                fetchTag: peer.incomingTag(window: window),
-                name: peer.secret.shareOfferName(for: peer.them),
-                sealed: sealed,
-                digest: peer.secret.shareOfferDigest(of: url))
-        }
-    }
-
-    public func openShareOffers(_ found: [String: Data]) -> [String: URL] {
-        guard let me = enrolment?.identity.id, !found.isEmpty else { return [:] }
-
-        var opened: [String: URL] = [:]
-        for peer in peers() {
-            let name = peer.secret.shareOfferName(for: me)
-            guard let sealed = found[name],
-                let body = try? peer.secret.unwrap(
-                    sealed, context: PairwiseSecret.shareOfferContext),
-                let text = String(data: body, encoding: .utf8),
-                let url = URL(string: text)
-            else { continue }
-            opened[name] = url
-        }
-        return opened
     }
 }

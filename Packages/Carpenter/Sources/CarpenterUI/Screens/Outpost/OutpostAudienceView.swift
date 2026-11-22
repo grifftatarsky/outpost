@@ -4,20 +4,20 @@ import SwiftUI
 public struct OutpostAudience: Sendable {
     public var people: [Member]
     public var access: OutpostAccess
-    public var keyTurnPending: Bool
+    public var keyRotationPending: Bool
     public var allow: @Sendable (ParticipantID, Bool) async -> String?
     public var revoke: @Sendable (ParticipantID) async -> String?
 
     public init(
         people: [Member] = [],
         access: OutpostAccess = OutpostAccess(),
-        keyTurnPending: Bool = false,
+        keyRotationPending: Bool = false,
         allow: @escaping @Sendable (ParticipantID, Bool) async -> String? = { _, _ in nil },
         revoke: @escaping @Sendable (ParticipantID) async -> String? = { _ in nil }
     ) {
         self.people = people
         self.access = access
-        self.keyTurnPending = keyTurnPending
+        self.keyRotationPending = keyRotationPending
         self.allow = allow
         self.revoke = revoke
     }
@@ -30,7 +30,7 @@ public struct OutpostAudienceView: View {
 
     private let people: [Member]
     private let access: OutpostAccess
-    private let keyTurnPending: Bool
+    private let keyRotationPending: Bool
     private let onAllow: (ParticipantID, Bool) async -> String?
     private let onRevoke: (ParticipantID) async -> String?
 
@@ -40,13 +40,13 @@ public struct OutpostAudienceView: View {
     public init(
         people: [Member],
         access: OutpostAccess,
-        keyTurnPending: Bool = false,
+        keyRotationPending: Bool = false,
         onAllow: @escaping (ParticipantID, Bool) async -> String? = { _, _ in nil },
         onRevoke: @escaping (ParticipantID) async -> String? = { _ in nil }
     ) {
         self.people = people
         self.access = access
-        self.keyTurnPending = keyTurnPending
+        self.keyRotationPending = keyRotationPending
         self.onAllow = onAllow
         self.onRevoke = onRevoke
     }
@@ -68,16 +68,16 @@ public struct OutpostAudienceView: View {
                 icon: "person.2.badge.key.fill",
                 title: Text("Who sees your Outpost", bundle: .module),
                 paragraph: Text(
-                    "Nobody, until you say so. Being in a room together is not an answer to this. Somebody you let in collects your posts onto their own device, and what they have collected stays theirs if you change your mind.",
+                    "Nobody, until you say so. Sharing a room doesn't let anybody in. Somebody you let in downloads your posts to their device, and keeps what they downloaded if you change your mind.",
                     bundle: .module))
             // COPY END 1c5b22d8
 
             // COPY BEGIN 9d99cca4 [NEEDS HUMAN REVIEW]
-            if keyTurnPending {
+            if keyRotationPending {
                 Section {
                     Label {
                         Text(
-                            "One change has not taken hold yet. Somebody you removed can still read what you post until this device turns the key, which it tries again every time it syncs.",
+                            "One change has not taken hold yet. Somebody you removed can still read what you post until this device rotates the key, which it tries again every time it syncs.",
                             bundle: .module)
                             .font(CarpenterFont.rowDetail)
                     } icon: {
@@ -132,7 +132,7 @@ public struct OutpostAudienceView: View {
                     Text("Can see it", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
-                        "Removing somebody stops them collecting anything new. It cannot take back what they already have — no app can reach into somebody else's device, and this one does not pretend to.",
+                        "Removing somebody stops them receiving anything new. It can't take back what they already have. No app can reach into somebody else's device.",
                         bundle: .module)
                 // COPY END 661a8d61
                 }

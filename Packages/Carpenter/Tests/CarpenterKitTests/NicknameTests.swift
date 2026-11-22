@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("A name of your own for somebody", .serialized)
+@Suite("A name of your own for somebody", .serialized, .tags(.ui))
 struct NicknameTests {
     private func joined() async throws -> (alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
         let mailbox = InMemoryMailbox()
@@ -16,7 +16,7 @@ struct NicknameTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(invite.attestation, from: try #require(alice.enrolment?.identity.publicKeys))
@@ -61,7 +61,7 @@ struct NicknameTests {
         await bob.setNickname("Al", for: aliceID)
         try await settle(alice, bob, mailbox)
         #expect(alice.viewer.displayName == "Alice")
-        #expect(alice.sharedName(of: bobID) == nil, "a nickname must never fold as a name Bob gave")
+        #expect(alice.sharedName(of: bobID) == nil, "a nickname must never count as a name Bob gave")
         #expect(alice.member(bobID).isPlaceholder)
     }
 
@@ -70,7 +70,7 @@ struct NicknameTests {
         let (alice, bob, mailbox, _) = try await joined()
         let bobID = try #require(bob.enrolment?.identity.id)
         let solo = try await alice.startSolo(with: bobID)
-        _ = try await alice.invite(joinerCode: bob.identityCode(), joining: solo, mailbox: nil)
+        _ = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: solo, through: mailbox)
         try await alice.sync(through: mailbox)
 
         await alice.setNickname("Bobby", for: bobID)
@@ -81,7 +81,7 @@ struct NicknameTests {
     @Test("A nickname survives a relaunch")
     func survivesRelaunch() async throws {
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "nickname-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "nickname-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let other = ParticipantID(rawValue: WideID.of([1, 2, 3, 4, 5, 6]))
 
@@ -97,11 +97,11 @@ struct NicknameTests {
     }
 }
 
-@Suite("Photos kept for other people")
+@Suite("Photos kept for other people", .tags(.ui))
 struct PersonAvatarStoreTests {
     @Test("A photo is filed by the whole identifier and comes back for it alone")
     func roundTrip() throws {
-        let directory = URL.temporaryDirectory.appending(path: "people-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "people-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = PersonAvatarStore(directory: directory)
@@ -125,7 +125,7 @@ struct PersonAvatarStoreTests {
 
     @Test("The photo this member chose and the one somebody shared are two files, and neither touches the other")
     func chosenAndSharedAreApart() throws {
-        let directory = URL.temporaryDirectory.appending(path: "people-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "people-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = PersonAvatarStore(directory: directory)
@@ -133,22 +133,22 @@ struct PersonAvatarStoreTests {
         let first = AttachmentID()
 
         try store.save(Data([1]), for: robin)
-        try store.saveShared(Data([2]), for: robin, attachment: first)
+        try store.savePublished(Data([2]), for: robin, .rooms, attachment: first)
         #expect(store.load(for: robin) == Data([1]))
         #expect(store.loadShared(for: robin) == Data([2]))
-        #expect(store.sharedAttachment(for: robin) == first)
+        #expect(store.publishedAttachment(for: robin, .rooms) == first)
 
-        try store.removeShared(for: robin)
+        try store.removePublished(for: robin, .rooms)
         #expect(store.loadShared(for: robin) == nil)
         #expect(store.load(for: robin) == Data([1]), "a takedown must never cost the member their own choice")
 
         let second = AttachmentID()
-        try store.saveShared(Data([3]), for: robin, attachment: second)
+        try store.savePublished(Data([3]), for: robin, .rooms, attachment: second)
         try store.remove(for: robin)
         #expect(store.load(for: robin) == nil)
         #expect(store.loadShared(for: robin) == Data([3]))
-        #expect(store.sharedAttachment(for: robin) == second)
+        #expect(store.publishedAttachment(for: robin, .rooms) == second)
         #expect(store.loadAll().isEmpty, "the chosen list does not list shared photos")
-        #expect(store.loadAllShared() == [robin: Data([3])])
+        #expect(store.loadAllPublished(.rooms) == [robin: Data([3])])
     }
 }

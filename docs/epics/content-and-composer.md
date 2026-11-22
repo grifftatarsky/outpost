@@ -69,11 +69,13 @@ to send each other.
 - **Done.** Scaled to 2048 on the long edge, JPEG, redrawn into a fresh context so no location, camera or
   time survives.
 - **Done.** Sealed like everything else: a fresh content key inside the entry's sealed payload; the bytes
-  as a `CKAsset` on their own record in the sender's outbox, deleted once the last recipient has
-  collected, the packet's own rule.
+  as a `CKAsset` on their own record in the sender's outbox, cleared by the sender once one device
+  of everybody it was for has signed for it or after nine days, and put back if it leaves early.
 - **Done.** The bubble is the right shape before a byte arrives, from the pixel size and a forty-pixel
   preview drawn blurred; a fetch that fails says so and retries on a thirty-second backoff; a photo
   the outbox let go of says *No longer available*.
+- **Done, not seen on a device.** A photo that is gone can be asked for again; the sender sees who
+  asked and for which photo in the conversation's menu, and sends it again with one tap.
 - **Done.** Report a hold away; the report carries words and never media. The age rating is 13+.
 - **Done.** On an Outpost: its own ticket below.
 
@@ -129,10 +131,15 @@ block, a deny list in the binary, and the obligations written down in
 
 **Acceptance criteria**
 
-- **Done.** Up to a minute, with a longer clip sent to the system trimmer first; forty megabytes at the
-  sealing ceiling.
-- **Done.** Re-encoded at 960 × 540 through the system's `forSharing()` filter, so no location or device
-  tag survives.
+- **Done.** Any length, up to 287 MB once prepared, sealed and sent in 16 MB pieces (changed
+  2026-09-27; it was a minute, sealed whole).
+- **Done.** Sent as recorded: only the picture and sound tracks are copied, through the system's
+  `forSharing()` filter with no metadata written, so no location or device tag survives, and no timed
+  track of location rides along (changed 2026-09-27; it was re-encoded at 960 × 540. The tracks are
+  chosen by the app since 2026-11-05).
+- **Built, not yet on a phone.** A clip over 287 MB is flagged when it is picked, with its size and
+  *Make it fit*; tapping it re-encodes the clip to land just under the limit. Tested in the package
+  (`FittingAClipTests`, `VideoPreparerTests`); not yet run on a device or sent between two accounts.
 - **Done.** Drawn with its first frame, a play mark and its length in glass; played in the system player.
 - **Done.** Screened as a file before its poster is drawn.
 
@@ -171,28 +178,6 @@ block, a deny list in the binary, and the obligations written down in
 
 <!-- COPY END 797ebd73 -->
 
-<!-- COPY BEGIN ced5cedf [NEEDS HUMAN REVIEW] -->
-
-<details markdown="1" id="trimming-a-long-clip">
-<summary><b>Trimming a long clip</b> — Complete (hardware proof owed)</summary>
-
-**Story.** As a member with a clip over a minute, I want to trim it in place, so that the limit is a
-step rather than a wall.
-
-**Acceptance criteria**
-
-- **Done.** A red scissors-and-length badge on the tile; the tile opens the system's own trimmer with its
-  maximum set so its handles cannot open wider; send is refused with a sentence until it has been.
-- **Done.** Where the trimmer refuses the file, the fallback says to trim it in Photos and pick it again.
-
-**Testing**
-
-- Device: `canEditVideo(atPath:)` answers no on a simulator for every file, so only the fallback has
-  been seen. The trimmer itself is a device proof still owed.
-
-</details>
-
-<!-- COPY END ced5cedf -->
 
 <!-- COPY BEGIN 93c604e6 [NEEDS HUMAN REVIEW] -->
 
@@ -274,7 +259,7 @@ have to be a message.
 - **Not done.** A visible trigger rather than a hold. Reversed deliberately, below.
 - **Done.** The post row speaks one sentence, not a pill at a time. 2026-09-17: a post's reactions are one
   element saying the same sentence a message's stack says — *Reactions: 👍 from you and 1 other, 🔥
-  from 2 people* — including the reactions past the third that the row folds away, with double-tap
+  from 2 people* — including the reactions past the third that the row hides, with double-tap
   opening every reaction and *Remove my reaction* as a named action. And a message now carries a
   named *React* action, because holding it was the only way to react and nothing told VoiceOver so.
   `ReactionsSpeakTests` checks the exact sentence. **Unheard**: the VoiceOver walk waits for
@@ -367,7 +352,7 @@ does.
 - **Done.** 2026-09-15. The bar is unchanged — four favorites, ranked by use — and the plus opens the grid:
   a search field, the recents row, and Unicode's nine groups with pinned headers. The hand-maintained
   twenty are gone.
-- **Done.** Search by name, folding case and accents, ranking **whole-word matches above matches inside
+- **Done.** Search by name, ignoring case and accents, ranking **whole-word matches above matches inside
   another word** so "cat" puts 🐱 above 🎓 *graduation cap*. It says plainly when nothing matches
   rather than showing an empty grid.
 - **Done.** `Scripts/make-emoji-table.py` parses `unicode.org/Public/emoji/latest/emoji-test.txt` into
@@ -462,7 +447,7 @@ reporting a post and withdrawing one were all built afterwards.*
 A post's photo is a `media` entry on the wall — `room == nil`, sealed under the member's own wall
 chain — exactly as a message's is in a room, through the one `upload(_:to:through:)` both now share:
 upload first, entry second, the sender's own copy kept sealed, nothing written if the upload fails.
-The fold gives `OutpostPost` a `media` and makes the caption its words, as it does for `Message`.
+Rendering gives `OutpostPost` a `media` and makes the caption its words, as it does for `Message`.
 Collecting and sweeping attachments used to assume an entry had a room and silently skipped a wall
 entry; both now read the chain an entry is sealed under, wall included, or the sweep would have
 deleted a wall photo as an orphan on the next launch.
@@ -552,7 +537,7 @@ model that reported it: a post drew its new words with nothing beside them and r
 `isWithdrawn` as false while showing the placeholder, which is the same defect `Message` had once
 and for the same reason.
 
-The fold refuses an edit whose target is not text, because applying new words to a photo would
+Rendering refuses an edit whose target is not text, because applying new words to a photo would
 replace the picture with a sentence on every device. Asking that question in `timeLeft(toEdit:)` as
 well is what stopped a photo — a message's as much as a post's — offering an Edit that wrote an
 entry every device ignores.
@@ -837,7 +822,7 @@ the log still verifies end to end.
 
 **What would falsify the epic.** A formatting marker reaching a reader. A packet per message. A tag a
 photo carried in that reaches a reader. An edit that does not converge, two devices showing different
-text for the same entry, which is a fold bug and the one thing here that would undermine the log
+text for the same entry, which is a rendering bug and the one thing here that would undermine the log
 rather than a feature.
 
 <!-- COPY END 17841ab3 -->

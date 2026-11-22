@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("Removing somebody from a room")
+@Suite("Removing somebody from a room", .tags(.membership))
 struct RemovalTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -19,14 +19,13 @@ struct RemovalTests {
     }
 
     private func room(founder: Identity, joining: [Identity]) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
 
         for (index, joiner) in joining.enumerated() {
             let invite = try TestInvite.issue(
-                joining: self.room, joinerKeys: joiner.publicKeys, by: founder, at: start)
+                joining: roster.room, joinerKeys: joiner.publicKeys, by: founder, at: start)
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: UInt8(20 + index)),
                 body: try Payload.joinRequest(invite))
@@ -44,7 +43,7 @@ struct RemovalTests {
     ) throws {
         roster.apply(
             rendered(author.id, .removal, hash: hash, at: offset),
-            body: try Payload.removal(of: person.id))
+            body: try Payload.removal(of: person.id, heads: []))
     }
 
     // MARK: The act itself
@@ -159,8 +158,8 @@ struct RemovalTests {
         #expect(roster.members.contains(alice.id), "the loser of the race removed the winner")
     }
 
-    @Test("Every device folding the same order agrees who is out")
-    func theFoldIsDeterministic() throws {
+    @Test("Every device reading the same order agrees who is out")
+    func theMemberListIsDeterministic() throws {
         let alice = Identity.generate()
         let sam = Identity.generate()
 
@@ -173,7 +172,7 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &two, hash: 90, at: 10)
 
         #expect(one.members == two.members)
-        #expect(one.members.contains(sam.id), "the second fold gave a different answer")
+        #expect(one.members.contains(sam.id), "the second pass gave a different answer")
         #expect(!one.members.contains(alice.id))
     }
 
@@ -184,11 +183,12 @@ struct RemovalTests {
         let alice = Identity.generate()
         let sam = Identity.generate()
         var roster = try room(founder: alice, joining: [sam])
+        let invitation = try #require(roster.requests[sam.id]).signature
 
         try remove(sam, by: alice, from: &roster, hash: 90, at: 10)
         roster.apply(
             rendered(alice.id, .admission, hash: 92, at: 20),
-            body: try Payload.admission(of: sam.id, admitted: true))
+            body: try Payload.admission(of: sam.id, admitted: true, invitation: invitation))
 
         #expect(!roster.members.contains(sam.id), "an admission put a removed member back")
         #expect(roster.removal(of: sam.id) != nil)
@@ -202,7 +202,7 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &roster, hash: 90, at: 10)
 
         let again = try TestInvite.issue(
-            joining: room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
+            joining: roster.room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 93, at: 30),
             body: try Payload.joinRequest(again))
@@ -253,13 +253,13 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &roster, hash: 90, at: 10)
 
         let again = try TestInvite.issue(
-            joining: room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
+            joining: roster.room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 93, at: 30),
             body: try Payload.joinRequest(again))
         roster.apply(
             rendered(alice.id, .admission, hash: 94, at: 32),
-            body: try Payload.admission(of: sam.id, admitted: true))
+            body: try Payload.admission(of: sam.id, admitted: true, invitation: again.signature))
 
         #expect(
             !roster.members.contains(sam.id),
@@ -276,7 +276,7 @@ struct RemovalTests {
         try remove(sam, by: alice, from: &roster, hash: 94, at: 15)
 
         let again = try TestInvite.issue(
-            joining: room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
+            joining: roster.room, joinerKeys: sam.publicKeys, by: alice, at: start.addingTimeInterval(30))
         roster.apply(
             rendered(alice.id, .joinRequest, hash: 93, at: 30),
             body: try Payload.joinRequest(again))
@@ -330,7 +330,7 @@ struct RemovalTests {
 }
 
 @MainActor
-@Suite("Removing somebody, through the session", .serialized)
+@Suite("Removing somebody, through the session", .serialized, .tags(.membership))
 struct SessionRemovalTests {
     private func roomWithTwo() async throws -> (
         alice: AppSession, bob: AppSession, room: RoomID, bobID: ParticipantID
@@ -351,7 +351,7 @@ struct SessionRemovalTests {
         return (alice, bob, room, keys.participantID)
     }
 
-    @Test("Removing somebody turns the room's key")
+    @Test("Removing somebody rotates the room's key")
     func removalAdvancesTheEpoch() async throws {
         let (alice, _, room, bob) = try await roomWithTwo()
         let before = try #require(alice.epoch(of: room))
@@ -415,7 +415,7 @@ struct SessionRemovalTests {
 }
 
 @MainActor
-@Suite("Removal, enforced by the session", .serialized)
+@Suite("Removal, enforced by the session", .serialized, .tags(.membership))
 struct RemovalEnforcementTests {
     private func roomWithTwo() async throws -> (
         alice: AppSession, room: RoomID, bob: ParticipantID
@@ -446,8 +446,7 @@ struct RemovalEnforcementTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -469,7 +468,7 @@ struct RemovalEnforcementTests {
         }
     }
 
-    @Test("Once the removal has folded, that device's session declines the write")
+    @Test("Once the removal is in the log, that device's session declines the write")
     func theRemovedDeviceDeclines() async throws {
         let (alice, room, bob) = try await roomWithTwo()
         try await alice.remove(bob, from: room)

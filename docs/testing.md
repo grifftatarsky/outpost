@@ -39,17 +39,330 @@ Each epic has its own test plan: [Messaging](epics/messaging.md#test-plan),
 
 | Suite | Runs with | Covers |
 |---|---|---|
-| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 1,478 tests on 2026-09-17. |
+| Package suite, `Packages/Carpenter/Tests` | `swift test` | The log, cryptography, sync, session and view logic, against fakes. 2,272 tests in 413 suites on 2026-11-12, in about 305 seconds; nine known issues. `Scripts/test-package.sh` runs the same suite as six processes in about 250 seconds. |
 | App suite, `App/CarpenterTests` | `xcodebuild test … -only-testing:CarpenterTests` | What needs a real app bundle: the system keychain, and the live CloudKit tests, which are off unless asked for. |
 | UI tests, `App/CarpenterUITests` | `xcodebuild test … -only-testing:CarpenterUITests/<class>` | Apple's accessibility audit, a contrast audit per accent, a label check, and the rig steps. |
 
-CI runs the package suite, the lint and a build of the app.
+CI runs the package suite, the app suite, the lint and a build of the app for iOS and macOS.
 
 **What green is worth.** The package suite has been green while the app did not work, more than once.
 It proves the logic above the mailbox and cannot prove CloudKit. A run on two accounts is the only
 evidence for anything that crosses the network.
 
 <!-- COPY END 4227807f -->
+
+<!-- COPY BEGIN 7df7b9ba [NEEDS HUMAN REVIEW] -->
+
+## Many devices in one process
+
+A story with several people or devices is written on `Gathering`
+(`Tests/CarpenterKitTests/TestGathering.swift`) and runs under `swift test`, with no simulator and no
+account. [Why](decisions.md#a-story-with-many-devices-runs-in-one-process-and-the-simulators-are-a-short-last-check).
+
+```swift
+let g = try await Gathering.of("Alice", "Bob", "Carol")
+let room = try await g.room("Lanterns", host: "Alice", guests: ["Bob", "Carol"])
+try await g.secondDevice("Bob's tablet", of: "Bob")
+g.away("Carol")
+try await g["Alice"].remove(g.id("Bob"), from: room)
+try await g.settle()
+g.back("Carol")
+```
+
+- **A turn** is one device's round: `g.takeTurns("Alice", "Bob")`. **`settle()`** takes turns until
+  two passes in a row change nothing, and fails by naming what is still changing.
+- **A fault** is set on one device's door, `g.door("Carol")`, and fires where it was set:
+  `fail(call:)`, `stopAnswering(after:)`, `holdView()`, `skip(_:)`. `g.endProcess(of:atCall:)` ends an
+  app at a numbered call and `g.relaunch(_:)` reopens it from the folder and keychain of that instant.
+- **An order or a seed is a test argument**, so a failing case can be run again alone. Keys and
+  identifiers are random on every run, so a tie the app breaks by comparing two of them falls
+  differently each time; a test that depends on one runs it several times and says which way it fell.
+- **No sleeps.** Waiting is counted in yields, so a story takes the same steps when the machine is
+  busy.
+- **A second device is approved the way a real one is**: `g.secondDevice(_:of:)`.
+
+A test that fails on today's code is kept as a known issue, and each one is a question for Griff in
+[open questions](open-questions.md#twelve-faults-the-many-device-tests-found). Fixing the fault means
+deleting the mark.
+
+<!-- COPY END 7df7b9ba -->
+
+<!-- COPY BEGIN 6b435ffd [NEEDS HUMAN REVIEW] -->
+
+**The suite as six processes.** `Scripts/test-package.sh` builds once, deals the suites out to six
+processes and adds up the totals. Every suite that builds a session runs on the main actor, so one
+`swift test` process uses one core for nearly all of it. A suite that times itself against the clock
+fails on a machine that busy, so the script finds those by what they read (`started = Date()`,
+`ContinuousClock`) and runs them alone once the others are done. `swift test` is still what CI runs,
+and a failure in the script is run again there before it is believed.
+
+<!-- COPY END 6b435ffd -->
+
+<!-- COPY BEGIN d9819eff [NEEDS HUMAN REVIEW] -->
+
+**Everything at once.** `Scripts/check-all.sh` runs what CI runs, on this Mac: the package suite,
+the lint, the copy markers, a build for macOS and for the iOS Simulator, the app suite, and the check
+for words a Release build should not carry. Every step runs even when an earlier one fails, so one
+run finds every kind of fault. It ends with a digest of the errors, the failed tests and the warnings
+in files the branch changed, and copies that digest to the clipboard, which is what a session
+without a compiler needs pasted back. `Scripts/check-all.sh --digest` reads the last run's logs
+again without rebuilding anything, and `--only app-suite` (or any list of steps) reruns just those.
+A failing app-suite test is named from its result bundle, through `xcresulttool`.
+
+<!-- COPY END d9819eff -->
+
+<!-- COPY BEGIN 8a4d142d [NEEDS HUMAN REVIEW] -->
+
+## How the package suite holds up, measured 2026-11-04
+
+**Where the time goes.** The full run with coverage took 382 seconds of test time on 2026-11-04,
+with the load average between 400 and 1,000 because several other builds were running. Later the
+same night, at a load average under 30, it took 101 seconds and 163 seconds of processor time, so on
+average fewer than two of the eight cores were busy. Most of the time is spent on the main actor. 173
+suites are `@MainActor`, and every `AppSession` lives there, so those tests take turns on one thread
+however many cores the machine has. That is also why a test's reported duration says little about
+what it costs: its clock runs while it waits for the main actor. The longest reported 296 seconds,
+and the reported durations add up to 36,662 seconds inside a 382-second run. To find out what a
+suite costs, run it alone with `--filter`.
+
+**`.serialized` protects nothing here.** 149 suites in 113 files carry it. Each test gets a new suite
+value and makes its own sessions, mailbox, clock and scratch folder, and no test reads a static
+another test writes (`TestScratch.root` is made once per process and only read). So there is nothing
+for the trait to keep apart; all it does is stop the tests of one suite overlapping while they wait.
+Taken off all 149 on 2026-11-04, the full suite passed in 121 seconds against 101 with it,
+one run each at a similar load, so taking it off saves no time. Alone at a load average of 10, the
+formerly serialized suites passed; with a sanitizer build running beside them, two device-sync tests
+failed on their five-second deadline, which is the load problem below and not something the trait
+guarded. It was left in place.
+
+**What is flaky, and why.** Six tests failed in that loaded run, and each holds a bound in wall-clock
+time. Two in `ProjectionCostTests` (drawing the feed, and what a screen reads) and one in
+`WhatIsUnsentTests` hold an absolute time per call. `WhatALaunchWritesTests` allows the session three
+times what a plain log takes, plus 50 milliseconds. Two poll device sync until a five-second deadline
+runs out: "Opening the app on both devices is enough" in `EntrySyncTests`, and "A device away for
+longer than mail is kept" in `SiblingMailTests`. `DeletingARoomTests`, `NamingYourDevicesTests`,
+`WritesThatCannotLandTests` and the photo loader in `MediaTests` also poll against a deadline of two
+to five seconds, and passed. `DeletingARoomTests` also sleeps a fixed 200 milliseconds before it goes
+on, which [style](style.md#tests) rules out.
+
+The suites that a search for clocks, sleeps and concurrent code found, 34 suites and 180 tests
+including all six, then ran alone ten times at load averages from 230 down to 15, and passed every
+time. So none of them is flaky by interleaving that ten runs could find. They are flaky under load,
+and the cost tests measure the machine as much as the code. A cost test that counts something
+(`projectionBuilds`, decryptions) does not have this problem; one that times something does. The
+tests that time themselves carry the tag `timing`, and the device-sync deadlines are a minute now;
+see [waiting in a test](#waiting-in-a-test).
+
+<!-- COPY END 8a4d142d -->
+
+<!-- COPY BEGIN c835132c [NEEDS HUMAN REVIEW] -->
+
+**Fakes that are easier than the real thing.** The table under
+[the fakes](#the-fakes-are-held-to-the-real-seams) covers the mailbox, the log store, device sync and
+screening. Four seams arrived after it and are not in it.
+`InMemoryDeathmarkBoard` posts in one step, where `CloudKitDeathmarkBoard.post` deletes the zone,
+makes it again and then saves the mark, so a failure between those calls leaves no mark at all; the
+fake cannot fail, and no test covers a post that half happened. `FakeHardwareKeys` checks whether the
+Secure Enclave is available before looking for the key, and `SecureEnclaveKeys.agree` looks for the
+key first, so a missing key and an unavailable enclave come back as different errors in the two.
+`StubAccountRegistry` answers whatever it is built with, and the mapping from CloudKit errors to an
+answer is tested on its own in `AccountCheckErrorTests`, which is the right split. And
+`InMemoryEntrySync` used to live in `CarpenterKit`, so the fake was compiled into the app that ships
+though nothing in the app used it. It lives in `CarpenterKitTesting` with the other fakes now, and
+`Scripts/check-release-leaves.sh` looks for its name in a Release binary.
+
+**Coverage**, from `swift test --enable-code-coverage` and `llvm-cov`, by lines and by functions:
+
+| Code | Lines | Functions |
+|---|---|---|
+| `CarpenterKit/Crypto` | 97.9% | 95.4% |
+| `CarpenterKit/Membership` | 96.0% | 94.0% |
+| `CarpenterKit/Log` | 97.4% | 94.4% |
+| `CarpenterKit/Sync` | 92.7% | 84.3% |
+| `CarpenterKit/Storage` | 85.6% | 78.9% |
+| `CarpenterApp/Session` | 92.1% | 86.2% |
+| `CarpenterUI` | 2.4% | 4.6% |
+| `CarpenterCloudKit` | 6.7% | 7.1% |
+
+What no test runs, in the parts that matter most. `AppSession.deathmarkNamesThisDevice(on:)`, which
+the notification extension calls to decide whether this device was erased from another, has no test,
+and repeats the checks in `obeyDeathmark(on:)` rather than sharing them. `WriteBudget` and
+`BudgetedMailbox` are tested only in part and are used by nothing in the app: no transport is
+budgeted. The write paths of the read-only stores the extension uses (`ReadOnlyLogStore`,
+`ReadOnlyKeychainStore`, `ReadOnlyDocumentStore`) never run, so nothing shows they refuse.
+`FileAvatarStore` never runs at all, and `FileMediaStore`'s `sealed(for:)`, `remove` and `removeAll`
+never run. `DeviceOnlyKeychainStore`, which keeps a test profile's keys off iCloud Keychain, never has
+its reads or writes run. `PacketWire.outstanding(in:)` and `TapSwap.disconnected(_:)` never run
+either. Two overloads, `EpochGrant.issue(_:at:link:to:)` and
+`MembershipAttestation.issue(joining:code:by:at:lifetime:requiring:)`, are called by nothing in the
+app or the suite.
+
+**Assumptions that went stale.** The rig is gone from this Mac: `outpost-alpha` and the other four
+simulators on [the simulator rig](simulator-rig.md) do not exist here; the simulators are `bullet`,
+on iOS 27.2, and `iPhone 17`. `check-all.sh` defaulted to `outpost-alpha`, so it skipped the app
+suite and the release check on any machine without the rig. `scan-for-vulnerabilities.sh` named
+`outpost-alpha` with `name=`, which on Xcode 27 finds nothing even when the device exists, and
+`check-release-leaves.sh` looked it up by name. The screen catalogue command above named
+`outpost-27`. All of those were changed the same day: `check-all.sh` defaults to `bullet` and, when
+no simulator was named and `bullet` is not there, takes the newest iPhone simulator, which is also
+what the other two take when they are not given one. The build and test commands in `CLAUDE.md`
+still name `outpost-alpha`'s UDID. CI used to select the newest
+Xcode 26 on `macos-26`, which on 2026-11-04 was 26.6 with iOS 26.5 at most
+([runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md)),
+while every local build is Xcode 27.1 with Swift 6.4, so CI compiled with an older compiler than
+anybody here does and could not catch what only Xcode 27 reports. GitHub's `xcode-27` runner image
+has been generally available since 2026-10-15
+([announcement](https://github.blog/changelog/2026-10-15-xcode-27-runner-image-generally-available)),
+and its image readme on 2026-11-05 lists Xcode 27.2 (a release candidate), 27.1 (the default) and
+27.0 on macOS 27.0.1, with iOS 27 simulators
+([runner image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)).
+Every workflow job now runs on `xcode-27`, and `.github/actions/xcode-27` selects 27.1 by name and
+fails with the list of installed Xcodes if it is not there. None of this has run: CI cannot be run
+from here, so the first push is the test, and the image's iOS 27.0 and 27.1 simulator runtimes are
+older than the iOS 27.2 the local rig uses.
+
+<!-- COPY END c835132c -->
+
+<!-- COPY BEGIN 546f80b2 [NEEDS HUMAN REVIEW] -->
+
+## Before a commit
+
+`.pre-commit-config.yaml` holds six hooks, every one local, so `pre-commit` fetches nothing. They are
+not installed by default. `Scripts/install-hooks.sh` installs them for the clone, which means every
+worktree of it, and `Scripts/install-hooks.sh --remove` takes them out. `SKIP=<hook-id> git commit`
+skips one.
+
+| Hook | What it does |
+|---|---|
+| `branding-lint` | `Scripts/lint-branding.sh` without the symbol check, when a Swift, plist, xcconfig, entitlements, project or catalogue file is staged |
+| `copy-markers` | `copy-review.py check` |
+| `swift-format` | swift-format's rules over the staged Swift files, and nothing about layout |
+| `whitespace` | trailing whitespace and merge markers on the lines the commit adds |
+| `large-files` | a staged file over 512 KB |
+| `secrets` | something shaped like a credential, a signing or key file, the Team ID outside the project file, or an account email address, on the lines the commit adds |
+
+The last three read the staged diff, so they never fail over a line the commit did not touch, and
+`pre-commit run --all-files` with nothing staged checks nothing for them. The scan runs the credential
+shapes over the whole tree and the whole history instead.
+
+**swift-format checks its rules and not the layout.** The house layout is not swift-format's: run over
+the tree with its own printer, it reported 1,908 lines indented differently and 690 places where it
+would break a line. The codebase was not reformatted, so `Scripts/hooks/swift-format-rules.py` drops
+the printer's findings and fails only on the rules in `.swift-format`. Seven rules that the code already breaks are off:
+`OrderedImports` (292 places), `DoNotUseSemicolons` (136), `OnlyOneTrailingClosureArgument`,
+`OneVariableDeclarationPerLine`, `AlwaysUseLowerCamelCase`, `NoAccessLevelOnExtensionDeclaration` and
+`UseLetInEveryBoundCaseVariable`. With them off, the whole tree passes. Never run
+`swift format format` over the tree: it would rewrite thousands of lines.
+
+**Speed.** On 2026-11-04 all six hooks took 3.9 seconds over a one-line change to a Swift file, at a
+load average of 22. The branding lint took 19 seconds and 10.8 seconds of processor time at a load
+average near 1,000 until its three per-file loops became one `awk` each; each loop had started up to
+three processes for each of 414 files. Afterwards it took 5.8 seconds and 2.0 seconds of processor
+time, at a higher load.
+
+<!-- COPY END 546f80b2 -->
+
+<!-- COPY BEGIN a322ce24 [NEEDS HUMAN REVIEW] -->
+
+## The scan
+
+`Scripts/scan.sh` runs the package suite under Thread Sanitizer, then under Address Sanitizer and
+Undefined Behavior Sanitizer together, then `Scripts/scan-for-vulnerabilities.sh`: the dependency
+count, `xcodebuild analyze`, and the secret search over the tree and every commit on every branch. It
+is `check-all.sh` with those three steps named, so it ends in the same digest, kept apart in
+`$TMPDIR/carpenter-scan`. `--only thread-sanitizer` (or either of the others) runs one, and
+`--digest` reads the last run again. Each sanitizer builds into its own folder under `.build`, so
+switching between them and an ordinary `swift test` does not rebuild everything.
+
+A sanitizer step fails if `otool -L` does not show its runtime in the test binary, because a run
+without the runtime is clean and proves nothing. It skips the tests tagged `timing`, which hold a
+bound in wall-clock time; the instrumented code is several times slower, so they fail under a
+sanitizer for that reason alone. `Scripts/tests-tagged.py timing` prints which ones.
+
+Undefined Behavior Sanitizer is Clang's, made for C, and the package has no C. Swift already stops on
+an overflow or an out-of-range index. Whether `-sanitize=undefined` adds any check to Swift code was
+not established; it rides in the same build as Address Sanitizer.
+
+`xcodebuild analyze` runs Clang's static analyzer, which reads C, C++ and Objective-C. The repository
+has no file in any of them, so a clean analyze says nothing about this code. Run for `bullet` on
+2026-11-04, it succeeded, ran no analyzer step at all and reported nothing. The one warning in its
+log was the Swift compiler's: an isolated conformance in `CarpenterUI/Previews/Fixtures.swift:61`,
+which is preview code compiled only in a debug build. It was left alone. The scan used to count
+every warning in the log, so from an empty build folder it failed on that one; it now counts only
+warnings in C, C++ and Objective-C files, which are the only ones the analyzer writes.
+
+**Results on 2026-11-04.** Under Thread Sanitizer all 2,009 tests ran in 424 seconds of test time,
+with the runtime linked, and no race was reported. The only failures were three `timing` tests,
+which is why the step now skips them. Under Address Sanitizer and Undefined Behavior Sanitizer, the
+1,994 tests that are not `timing` ran in 200 seconds with the runtime linked, and nothing was
+reported. Keep in mind what is written under [practical traps](#practical-traps-on-the-rig): a clean
+Thread Sanitizer run once missed a race that was real.
+
+**In CI**, `.github/workflows/scan.yml` runs both sanitizer steps every Monday and on demand, not on
+every pull request. Locally the Thread Sanitizer build took 227 seconds and its run 424, against 101
+seconds for the plain suite, on eight cores; a standard hosted macOS runner has three
+([runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)). That is
+too slow to wait for on every push, and affordable once a week.
+
+<!-- COPY END a322ce24 -->
+
+<!-- COPY BEGIN 894dca3c [NEEDS HUMAN REVIEW] -->
+
+## Waiting in a test
+
+A test that waits for device sync or a background task waits for a condition, up to
+`TestDeadline.seconds`, which is a minute. It was five seconds in most places until 2026-11-04, and
+under load the five seconds ran out before the work did. A test that passes stops waiting the moment
+its condition holds, so the longer deadline costs nothing then: after the change no test in a full
+run took longer than it had in proportion to the others, so none sits out the minute. The 33 suites
+that wait carry `.timeLimit(.minutes(10))`, so a test that hangs fails instead of holding the run.
+Ten minutes is generous on purpose: at a load average near 1,000 the slowest test took five, almost
+all of it waiting for its turn on the main actor, and a time limit counts that too.
+
+<!-- COPY END 894dca3c -->
+
+<!-- COPY BEGIN 7e5a7491 [NEEDS HUMAN REVIEW] -->
+
+## Running one area
+
+Suites carry a tag for what they are about, defined in `Tags.swift`: `crypto` (375 tests),
+`membership` (498), `sync` (445), `storage` (107) and `ui` (353), counted on 2026-11-04. A suite can
+carry two, and one about the whole session carries none, so a tagged run is a quick check while
+working and never the gate. `Scripts/test-tag.sh crypto` runs the tests tagged `crypto`, and anything
+after the tag goes to `swift test`, for example `--skip-build`. The tag is given by the file a suite
+is in, read from its name and its suite titles, so check it before trusting a tagged run to cover a
+change.
+
+`swift test --filter tag:crypto` runs nothing on Swift 6.4 (measured 2026-11-04: "No matching test
+cases were run"); filtering by tag from the command line is proposal
+[ST-0025](https://forums.swift.org/t/review-st-0025-tag-based-test-execution-filtering/87320), in
+review in June 2026. So `Scripts/tests-tagged.py` reads the tags out of the source and prints a
+`--filter` pattern, and the sanitizer steps use the same script to skip `timing`. Xcode reads the tags
+as they are.
+
+<!-- COPY END 7e5a7491 -->
+
+<!-- COPY BEGIN 64f99f8f [NEEDS HUMAN REVIEW] -->
+
+**What only a phone can answer.** `FileProtectionTests` is skipped on a simulator, which does not keep
+a file's protection class (measured 2026-09-28). On an iPhone, unlocked:
+
+```bash
+xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS,id=<phone>' -derivedDataPath /tmp/carpenter-device -only-testing:CarpenterTests/FileProtectionTests
+```
+
+Two things each cost a round getting it to pass on 2026-09-28. Xcode's own build folder for the phone
+was left from an old checkout, and a package in it compiled against an older `CarpenterKit`:
+"cannot find type 'ProtectionDial' in scope", for a type that exists. The same code built and passed
+in a fresh `-derivedDataPath`. And a `URL` keeps the resource values it has read, so a test that
+reads a file's protection, changes it and reads again gets the first answer; the test reads through
+`FileManager.attributesOfItem`, which goes to the file every time.
+
+The report `sync` returns stops before the repairs a round runs. A test that counts what a repair wrote
+reads the mailbox as the other person would (`WhatARepairRequestCanCostTests`); one that reads the
+report sees zero and passes.
+
+<!-- COPY END 64f99f8f -->
 
 <!-- COPY BEGIN 43897dc9 [NEEDS HUMAN REVIEW] -->
 
@@ -58,6 +371,14 @@ evidence for anything that crosses the network.
 A fake that is easier than the real thing hides the bugs the real thing has. `TheFakeIsNoEasierTests`
 holds each in-memory stand-in to the rules its real counterpart enforces. Add to it when a seam gains
 a rule.
+
+**The mailbox's rules are one piece of code run against both.** `MailboxContract`
+(`Sources/CarpenterKitTesting/MailboxContract.swift`) holds eleven checks. A check throws an error
+that names the rule it broke. `TheFakeKeepsTheMailboxContractTests` runs all eleven against the
+in-memory mailbox under `swift test`. `CloudKitMailboxTests` runs the five about one's own space
+against iCloud on one account, and `LivePairContractTests` runs the six about a pair on two, a side
+on each simulator. All eleven passed against iCloud on 2026-11-12. A new rule for the mailbox goes
+here first, so the fake cannot be given a rule the real one was never asked.
 
 | Seam | Rule the real one enforces | How the fake used to be easier |
 |---|---|---|
@@ -127,7 +448,7 @@ fresh zone per test.
 | Suite | What it puts on the real wire |
 |---|---|
 | `LiveRoundTests` | a message between two identities; a 24-entry round arriving complete and in order; every packet acknowledged; a hole deleted off the server being named and refilled; a read report moving a mark; an edit and a withdrawal; a room deleted after a removal staying deleted after a relaunch |
-| `LiveSiblingFeedTests` | the raw record fetched back and searched for the epoch key it must not contain; the payload being exactly the ciphertext; a stranger's identity refused; a second device opening it |
+| `LiveSiblingFeedTests` | the raw record fetched back and searched for the epoch key it must not contain; the payload being exactly the ciphertext; a stranger's identity refused; a second device opening it; a new device's request and its approval crossing, with the new device deleting both from inside the handler that received them; a reinstalled device writing over the record its earlier install left |
 | `LiveOutpostTests` | a post with a photo arriving with identical bytes; an edit and a deletion; an Outpost's own photo; a post unseen by its reader and never by its author; a comment crossing back |
 
 What this cannot cover is on [Proofs a rig cannot run](proofs-a-rig-cannot-run.md): a second account
@@ -228,6 +549,91 @@ container, so it is reading a private copy that is always behind, and that looks
 process.
 
 <!-- COPY END f3785643 -->
+
+<!-- COPY BEGIN ef9139da [NEEDS HUMAN REVIEW] -->
+
+## Xcode's own tools, for an agent
+
+Xcode 27 exposes its tools to an outside agent through `xcrun mcpbridge`: building, running tests,
+rendering a SwiftUI preview to an image, tapping and typing in a simulator, reading the console, and
+lldb. The first call from a new agent has to open the workspace (`XcodeOpenWorkspace`), which asks
+you in Xcode to approve it. To give Claude Code the tools directly:
+
+```bash
+claude mcp add xcode -- xcrun mcpbridge
+```
+
+`RenderPreview` builds the app's scheme for Xcode's active run destination and returns a picture of
+one `#Preview`, and it can vary dark mode, contrast, Dynamic Type and orientation. That is how the
+search tab was checked on iOS 27 on 2026-09-26. The tools act on Xcode's active scheme and run
+destination, so switch them back when you are done. For the rig, `xcodebuild` and `simctl` are still
+the way to install one build on four simulators.
+
+<!-- COPY END ef9139da -->
+
+<!-- COPY BEGIN 84215733 [NEEDS HUMAN REVIEW] -->
+
+## Photographing every screen
+
+`ScreenCatalogueTests` is a UI test that opens the demo app (`--site-shot`), taps every tab, every
+row and every toolbar button it can reach, and saves a screenshot of each screen it lands on. It is
+what the copy review's pictures come from, and what finds a screen the review is missing. It never
+taps anything whose label says erase, delete, subscribe or buy, and it leaves an alert only by a
+button that cancels; when it cannot find one, it closes the app and starts again rather than guess.
+It is off unless asked:
+
+```bash
+TEST_RUNNER_CARPENTER_SCREEN_CATALOGUE=1 xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=<udid>' -only-testing:CarpenterUITests/ScreenCatalogueTests -resultBundlePath /tmp/catalogue.xcresult
+```
+
+```bash
+xcrun xcresulttool export attachments --path /tmp/catalogue.xcresult --output-path /tmp/catalogue
+```
+
+It reaches what a tap reaches in the demo. Alerts that follow a failure, notification banners and
+the system's permission prompts are not there, and neither is anything that needs a second device.
+
+<!-- COPY END 84215733 -->
+
+<!-- COPY BEGIN 684b47db [NEEDS HUMAN REVIEW] -->
+
+`UXFindingsTests` opens the copy shots (`--copy-shot <name>`) behind the UX fixes of 2026-11-05 and
+taps through them: admitting somebody is never in a long-press menu, removing somebody is on their
+page, the erase alert agrees with the page under it, and each person in message detail is one
+VoiceOver stop with their collected and shown times. It also photographs every screen those fixes
+touched, and four of them at the largest text size. It runs on any simulator, no account needed:
+
+```bash
+xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=<udid>' -only-testing:CarpenterUITests/UXFindingsTests -resultBundlePath /tmp/ux.xcresult
+```
+
+<!-- COPY END 684b47db -->
+
+<!-- COPY BEGIN 20da20a2 [NEEDS HUMAN REVIEW] -->
+
+## The copy slideshow
+
+Griff reviews every word a member reads in one page: a slide per screen, a picture beside the words,
+a box per string. The tools are in `Scripts/copy-slides`, and they work in a folder of your choosing
+(called `DIR` here), never in the repository.
+
+1. **Slides.** `python3 Scripts/copy-slides/slides.py DIR NEW.json` reads every copy chunk in the app
+   and writes `DIR/slides.json`. `NEW.json` is a list of chunk ids written or changed since his last
+   pass; the page lists them first, under "New or changed by Claude".
+2. **Pictures.** The site shots come from `--site-shot` on a simulator (`simctl launch`, then
+   `simctl io … screenshot` into `DIR/raw/site-<name>.png`). Previews come from
+   `render_previews.py DIR`, through Xcode's tools, which Xcode asks you to approve once. The catalogue
+   comes from `ScreenCatalogueTests` (above), exported into `DIR/catalogue`. `shots.py DIR` fits them
+   to the slides and writes `DIR/shots`.
+3. **Publish** `Scripts/copy-slides/page.html` with `DIR/slides.json` and `DIR/shots/` beside it, to
+   the same page as before, so his saved edits stay.
+4. **Apply a batch.** Export the page's `edits` and `screens` collections into a folder, then run
+   `apply.py EXPORT` to see what changes and `apply.py EXPORT --write` to make them. His words go in
+   and their chunks become `HUMAN REVIEWED, UNVERIFIED`, as do the chunks of every screen he marked
+   done. Removals and notes are listed for doing by hand. Then drop the finished screens, rebuild, and
+   sweep for any screen the slideshow is missing.
+
+<!-- COPY END 20da20a2 -->
 
 <!-- COPY BEGIN 44ff8f19 [NEEDS HUMAN REVIEW] -->
 
@@ -366,6 +772,12 @@ four things were wrong at once:
 - Nine screens had no way to dismiss the keyboard, which covered the control below the field.
 - A tap gesture over a focused field swallowed caret placement.
 - A sheet with a fixed height hid its own button under a growing field.
+
+**Tests write under one folder per run.** `TestScratch.root` is the temporary directory for every
+test file, one folder per test process, and each run deletes the folders of runs that have ended.
+Until 2026-09-27 each full run left about 200 MB that nothing removed; seventy runs in a night filled
+the disk with 15 GB and stopped the build mid-audit. A new test that needs a temporary file takes it
+from `TestScratch.root`, never `URL.temporaryDirectory`.
 
 **A switch that does not move may be the harness.** Injected taps moved SwiftUI switches on
 2026-09-07 and did not on 2026-09-15, when a short drag did. A switch that moves and saves nothing is

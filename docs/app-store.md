@@ -148,7 +148,9 @@ cryptographic functionality, including encryption algorithms or protocols that h
 or approved by a duly recognized international standards body (e.g. IEEE, IETF, ISO, ITU, ETSI,
 3GPP, TIA, and GSMA) and have not otherwise been published."
 
-Everything the app uses is an IETF standard, and none of it is implemented here — it is all CryptoKit:
+Everything the app uses is an IETF or NIST standard except X-Wing, which is published but not adopted
+([Open questions](open-questions.md#does-x-wing-change-the-export-self-classification)), and none of it
+is implemented here — it is all CryptoKit:
 
 | Primitive | Standard |
 |---|---|
@@ -156,6 +158,10 @@ Everything the app uses is an IETF standard, and none of it is implemented here 
 | Ed25519 | RFC 8032 |
 | X25519 | RFC 7748 |
 | HKDF-SHA256 | RFC 5869 |
+| HPKE | [RFC 9180](https://www.rfc-editor.org/rfc/rfc9180) |
+| ML-KEM-768 | [NIST FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) |
+| AES-256-GCM | [NIST SP 800-38D](https://csrc.nist.gov/pubs/sp/800/38/d/final) |
+| X-Wing (ML-KEM-768 with X25519) | [draft-connolly-cfrg-xwing-kem](https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/), an individual Internet-Draft |
 
 This keeps the project out of 740.17(b)(3)(ii), the non-standard lane, which requires a
 classification request to BIS before export. That is the expensive path and Outpost is not on it.
@@ -217,11 +223,15 @@ There is nothing to send to anyone.
 
 ### What to put in App Store Connect
 
-**`ITSAppUsesNonExemptEncryption` = `true`** — set in `App/Carpenter/Info.plist` on 2026-09-17 — and
-answer Apple's questionnaire honestly. Being
-outside the EAR is a US export question; Apple's questions are Apple's own. Do not answer `false` —
-that answer exists for apps whose encryption is incidental, like an HTTPS call, and this app's
-entire purpose is encryption.
+**`ITSAppUsesNonExemptEncryption` = `false`**, set in `App/Carpenter/Info.plist` on 2026-11-10. It
+was `true` from 2026-09-17, on the reading that an app whose purpose is encryption should not answer
+`false`. Apple's own page says otherwise: the value is `NO` when an app "only uses forms of
+encryption that are exempt from export compliance documentation requirements", and encryption built
+into the operating system is the example it gives
+([Apple](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations)).
+Every primitive the app calls is CryptoKit, CommonCrypto or Security, checked by grep the same day,
+and the package has no dependencies. Being outside the EAR is a separate US export question. This is
+a reading of Apple's pages, not legal advice.
 
 Apple's documentation table is about what you must *upload*, which is narrower:
 
@@ -303,7 +313,7 @@ set a higher minimum age than the questionnaire computes. Using it to paper over
 too conservative leaves the wrong answers on file with the right rating bolted on top. Fix the input.
 
 **Social media features: No.** Signal is the evidence — it has Stories, which is considerably more
-feed-shaped than an Outpost wall, and carries no social media descriptor. Outpost has no public
+like a feed than an Outpost wall, and carries no social media descriptor. Outpost has no public
 profile, no follower graph, no discovery, no feed of people you have not admitted, and no algorithmic
 distribution. These questions become mandatory in September 2026, and anything that trips the flag is
 locked to a 13+ floor, so being on the right side of it is worth the care.

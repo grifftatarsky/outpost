@@ -21,31 +21,47 @@ them without taking over the Mac.
 
 ## The devices
 
-Four simulators on iOS 26.5, run from Xcode 27, where `DeviceHub.app` replaces `Simulator.app`.
+Two simulators on iOS 27.2 (24B8117), run from Xcode 27.2. They were made on 2026-11-10, when every
+earlier simulator and the older iOS 27.2 runtime were deleted. Neither is signed in to an Apple
+Account yet, so nothing that crosses the network can run until Griff signs each into a different one.
 **Address them by `id=<UDID>`, never by `name=`**: a duplicate name once made `xcodebuild` boot a
-shut-down twin instead of the running device.
+shut-down twin instead of the running device, and on Xcode 27 a name also means the newest iOS
+(measured 2026-09-28). `Scripts/check-all.sh`, `Scripts/check-release-leaves.sh` and
+`Scripts/scan-for-vulnerabilities.sh` look `outpost-alpha` up by name through
+`.github/scripts/pick-simulator.py`.
 
-| Name | UDID | Apple Account | Member | Points |
-|---|---|---|---|---|
-| `outpost-alpha`, iPhone 17 Pro | `4CB401B7-ABC0-4C00-ABEC-5BDBB84767D1` | development account A | Griff | 402 × 874 |
-| `outpost-beta`, iPhone 17 Pro Max | `DADA1E7E-6CB3-44F9-B59A-5A8D4C9B7BAF` | development account B | Outie | 440 × 956 |
-| `outpost-gamma`, iPhone 17 | `F7F2F5D2-5F36-4312-8A36-D5834C29CE70` | none | Trig | 402 × 874 |
-| `outpost-delta`, iPhone 17 | `98E5967E-9EC6-4873-B44B-7A1E57258030` | none | Quad | 402 × 874 |
+| Name | UDID | Apple Account | Points |
+|---|---|---|---|
+| `outpost-alpha`, iPhone 17 | `5A43F953-128D-4FE6-9135-0D26520E02B6` | not signed in yet | 402 wide |
+| `outpost-beta`, iPhone 17 Pro Max | `DF6EB0C7-9FCF-45C8-A120-6349FBFA288F` | not signed in yet | 440 wide |
 
-Alpha and beta are on two different Apple Accounts, and only they prove anything about CloudKit.
-Gamma and delta have no account and reach each other through a directory instead; see
-[members without an Apple Account](#members-without-an-apple-account). Which account's password
-belongs to which device is kept outside this repository.
+The two are on different Apple Accounts, so they prove what two people over CloudKit can. Which
+account belongs to which device is kept outside this repository, and so is whose they are:
+**do not run `--reset-account` on either, or anything else that erases the account's data**, without
+asking Griff first.
+
+**What the live suite does to an account.** `CloudKitMailboxTests` and `LivePairTests` call
+`eraseEverySpace()`, which deletes every `Pair-` zone in the account; `LiveDeathmarkTests` clears the
+account's deathmark; `LiveSiblingFeedTests` writes records from made-up devices into the member's own
+`SiblingFeeds` zone. So a member made on the device beforehand loses its spaces. Run the suite on an
+account that holds nothing you want, or run it after the round. Both accounts held a member from
+before when the rig started; Griff had them reset on 2026-11-04.
+
+`--mailbox` does not keep a device off the account. It swaps the mailbox and the account check, but
+`startDeviceSync()` still publishes a sibling feed to CloudKit. Read in the code, not measured.
+
+There is no device without an account any more, so nothing here runs the three-device walks under
+`--mailbox` ([members without an Apple Account](#members-without-an-apple-account),
+`Scripts/rig-walk-removals.sh`, which still names the old devices).
 
 **Build once, install everywhere, and never leave an old build on a device.** A device running last
 week's code looks exactly like a defect, and Griff has caught one twice.
 
 ```bash
 xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter \
-  -destination 'platform=iOS Simulator,id=4CB401B7-ABC0-4C00-ABEC-5BDBB84767D1' \
+  -destination 'platform=iOS Simulator,id=5A43F953-128D-4FE6-9135-0D26520E02B6' \
   -derivedDataPath /tmp/carpenter-dd build
-for u in 4CB401B7-ABC0-4C00-ABEC-5BDBB84767D1 DADA1E7E-6CB3-44F9-B59A-5A8D4C9B7BAF \
-         F7F2F5D2-5F36-4312-8A36-D5834C29CE70 98E5967E-9EC6-4873-B44B-7A1E57258030; do
+for u in 5A43F953-128D-4FE6-9135-0D26520E02B6 DF6EB0C7-9FCF-45C8-A120-6349FBFA288F; do
   xcrun simctl terminate "$u" com.microgpt.carpenter 2>/dev/null
   xcrun simctl install "$u" /tmp/carpenter-dd/Build/Products/Debug-iphonesimulator/Outpost.app
 done
@@ -82,6 +98,16 @@ TEST_RUNNER_OUTPOST_RIG=1 xcodebuild test -workspace Carpenter.xcworkspace -sche
   -destination 'platform=iOS Simulator,id=<udid>' -derivedDataPath /tmp/carpenter-dd \
   -only-testing:CarpenterUITests/RigChecks/testSupporter -parallel-testing-enabled NO
 ```
+
+`testFifthOnboards` takes a name in `RIG_NAME`, `testQuadSays` says what is in `RIG_SAY`, and
+`testSees` opens Checks and waits for the words in `RIG_EXPECT`, so any three members can talk in one
+run. `RIG_ROOM` names another room than Checks, and `RIG_OFFLINE=1` launches with every write refused,
+so a member can act without anybody hearing until the next step.
+
+**The removal walk** runs as one script, `Scripts/rig-walk-removals.sh`, on Trig, Quad and Fifth: two
+people removing each other with neither sending, what is said after the removal, and two members
+turning the key at once. It makes two new rooms each run, stops at the first failing step, and leaves
+every step's log in `/tmp/outpost-rig-exchange`. Written 2026-09-29, not yet run.
 
 Each step attaches screenshots to the result bundle and writes the screen's element tree to
 `/tmp/outpost-rig-exchange/<step>.txt`. Export the screenshots with
@@ -231,22 +257,18 @@ until the password is entered again in Settings. Only the account owner can do t
 
 <!-- COPY BEGIN 29af1dda [NEEDS HUMAN REVIEW] -->
 
-## A quiet peer is usually a dead share
+## A quiet peer
 
-On 2026-09-04 beta read only its own zone all day, and a message from alpha was never found, because
-the share link in alpha's standing offer had gone stale. It healed without re-pairing once alpha
-rewrote its offer.
+Two members who talk each keep a space for the other, and each has joined the other's. Under
+`--mailbox` every space is in `<directory>/pairs.json`: the account it lives in, the account it names,
+and the accounts that have joined it. A space that names nobody and has no hint is one made for a
+code. Two members whose spaces do not name each other have not swapped links yet; their room passes
+the links on while a member who talks to both is running.
 
-The fetch line names reachable zones by owner: `3 zone(s) reachable [own 945e3b fdd60b]`. Two
-accounts that should be paired and each show only `[own]` are not paired. The offer line says what the
-rendezvous did: `offers — 0 written, 1 standing, 0 unplaced, 0 failed` is healthy; `unplaced` means
-no packet from that peer has been seen in the current window; `failed` carries the CloudKit error.
-Rounds run while a room is open or on a push, so keep a conversation open on both devices.
-
-To cause it on purpose: You › Debug › **Rotate mailbox share** on one device, then terminate that app
-within the minute so the other reads the dead offer. The other logs `1 failed` with *Zone does not
-exist*, retracts the offer, and shows `[own]`. Relaunch the first, and within about 90 seconds the
-other reads `found 1 offer(s)` and `2 zone(s) reachable`.
+Over iCloud, a test that stops at its first CloudKit call, with `AuthTokenError` in cloudd's log, is
+the Apple Account asking for its password. On 2026-09-28 alpha and beta both showed *Apple Account
+Verification*, and after *Not Now* every request failed with *User rejected a prompt to enter their
+iCloud account password*. Only Griff can enter it, in Settings on each simulator.
 
 <!-- COPY END 29af1dda -->
 
@@ -282,11 +304,37 @@ Under `--mailbox`:
 Other debug launch arguments are listed on [Testing](testing.md#launch-arguments-for-the-rig).
 
 **What this proves, and what it must never be said to prove.** Everything above the mailbox: rosters,
-the fold, keys, invitations, confirmations, and what a third or fourth member changes. Nothing below
+rendering the log, keys, invitations, confirmations, and what a third or fourth member changes. Nothing below
 it: zones, shares, the change feed, CloudKit's eventual consistency or push. A result from these
 devices is **proved above the mailbox** and has to be written down in those words.
 
 <!-- COPY END fb141a22 -->
+
+<!-- COPY BEGIN b30668e4 [NEEDS HUMAN REVIEW] -->
+
+### The removal walk, 2026-09-30
+
+`Scripts/rig-walk-removals.sh` was run for the first time. It has **not finished**, and what it found
+so far is about the walk, not the product:
+
+- A joiner cannot reach the invite screen unless its room list is empty. "I have an invite" is only in
+  the empty state; on a phone that already has rooms the way in is *Rooms list options → Join with an
+  invite*. The step now tries both.
+- The walk went straight from the two joins to the first message, with no round in which the inviter
+  relays the confirmations and the joiners collect what they were admitted to. It now runs one round
+  on each phone in between (`testRunsARound`).
+- The joiner step ignored what came back from reading the invite, so a refused invite passed the step
+  and the walk failed three steps later on a room that was never joined. It now says so where it
+  happens, and a tap that lands on a screen already changing no longer fails the run outright.
+
+On devices carrying state from earlier runs the walk stopped with *"That invite is not usable. It may
+have expired."* on the second joiner, and one waiting invitation showed no characters to compare. That
+was not chased to the bottom. The three devices were erased and onboarded again, and the walk was
+stopped part-way through its first fresh run: **erasing three simulators at once leaves the Mac's load
+average in the hundreds for a long while**, and every `xcodebuild` step then takes twenty minutes
+instead of one. Erase them one at a time, or well before a walk.
+
+<!-- COPY END b30668e4 -->
 
 <!-- COPY BEGIN 9596e0ef [NEEDS HUMAN REVIEW] -->
 
@@ -303,8 +351,190 @@ devices is **proved above the mailbox** and has to be written down in those word
   per recipient per packet, so Quad, let into a room and an Outpost the same afternoon, got only one
   key. And a round acknowledged packets before writing them to disk, so terminating a device mid-round
   lost a comment on both ends; that comment is still gone.
+- **The room introduces two people, 2026-09-28.** Trig (gamma) invited Quad (delta) and Fifth
+  (outpost-27) into one room. Quad and Fifth never swapped codes; the room passed their links on, each
+  joined the other's space, and with Trig's app closed a message from Quad reached Fifth. Nothing in
+  Trig's spaces changed. It also found that every launch before a round finished made one more empty
+  space for a code, fixed the same night.
 
 <!-- COPY END 9596e0ef -->
+
+<!-- COPY BEGIN c16c17ef [NEEDS HUMAN REVIEW] -->
+
+### What bullet and iPhone 17 have shown, 2026-11-04
+
+On the build of `overnight-2026-10-31` at 1483934, two accounts, both reset first.
+
+- **The live suite passed on iPhone 17**: 38 tests in 79 seconds, none failed. `LivePairTests`
+  skipped, because it needs both devices and bullet's account had stopped answering (below).
+- **A round between two people worked.** Ada (bullet) and Bea (iPhone 17) onboarded with the
+  software keyboard. Codes went through a file saved to Files, not the pasteboard. Ada invited Bea to
+  a room, both screens read `AQRENT6D5A`, and Bea confirmed. A message crossed each way. A photo
+  went Ada to Bea at the same size on both ends (`media: uploaded 942bcf28 bytes=770768`, `fetched
+  942bcf28 bytes=770768`). With Bea's read receipts on, Ada's photo showed a filled plane and eye and
+  "10:42 AM".
+- **Starting a Solo with somebody you already share a room with does not work.** On iPhone 17 the
+  app said *The solo was started, but the invitation was not sent*, and logged `invite failed while
+  making a room: DecodingError.keyNotFound … "keys"`. `AppRootView.invite(_:to:kind:)` passes
+  `IdentityPublicKeys.encoded()` to `session.invite(joinerCode:)`, which decodes a `JoinerCode` (keys,
+  commitment, requires). On bullet, *Send a Solo* opened nothing. Neither was chased further, and the
+  block test below ran in the room instead.
+- **After a block and an unblock, messages crossed only one way.** Bea blocked Ada at 10:43:59. Her
+  rounds then showed `peers=0`, and Ada's message sent during the block appeared on Bea's screen once
+  she unblocked. Bea's rounds wrote packets at 10:45:22, 10:45:29, 10:45:52 and 10:45:56, including
+  *Bea after unblock*. Ada ran rounds throughout and logged `entriesReceived=0` from the block until
+  10:47:08, and her message stayed not collected. Bea's round at 10:45:22 logged `met 1 new peer(s)`.
+  Repeated on 2026-11-05 and the cause found; see below.
+- **Running the suite on bullet stopped its account.** As the test host launched at 10:47:57, cloudd
+  began failing every request with `AuthTokenError` (2011), and the device showed *Apple Account
+  Verification*. The prompt was left for Griff. Whether the run caused it is not known.
+
+<!-- COPY END c16c17ef -->
+
+<!-- COPY BEGIN ba46c2cf [NEEDS HUMAN REVIEW] -->
+
+### Blocking and unblocking, 2026-11-05
+
+**On the build of `overnight-2026-10-31` at fc09845, before the fix.** Both accounts reset first. Ada
+(bullet) invited Bea (iPhone 17) to a room of two, and a message crossed each way. Bea blocked Ada at
+01:44:39. Ada wrote twice during the block, and Bea's rounds showed `peers=0`. Bea unblocked at about
+01:47:15, and both of Ada's messages appeared on Bea's screen. Bea wrote *Bea after unblock* and her
+rounds wrote packets at 01:47:26, 01:47:33 and 01:47:41. Ada logged `entriesReceived=0` from the
+block until 01:49:06, when the run was stopped, while Ada's *Ada after unblock* reached Bea. So the
+person who blocked stops reaching the person they blocked, the same as 2026-11-04.
+
+The cause is in the code, not CloudKit: blocking deleted Bea's space for Ada and unblocking made a
+new one, and the link to the new one can only reach Ada through a space of Bea's that Ada reads. In
+a room of two there is none. The fix is in [Decisions](decisions.md#blocking-takes-a-person-off-your-space-and-you-off-theirs).
+Screenshots are in the session's `rig-shots/blocking/base-*`.
+
+**On the build of `overnight-2026-10-31` with the fix and post-quantum phase 1, at 19:03.** Both
+accounts reset at 18:44 and the app installed fresh. Ada (bullet) and Bea (iPhone 17) onboarded,
+Ada invited Bea to a room of two, both screens read `ABVQ46VT39`, and a message crossed each way.
+Bea blocked Ada from Ada's page at 19:17:21; within four seconds her log read `took 1 reader(s) off
+a space` and `left 1 space(s) of somebody blocked`, and her rounds showed `peers=0`. Ada wrote
+*Ada during block* at 19:17:42. Bea unblocked at about 19:18:53, her log read `named the reader of
+a space` at 19:19:07, and *Ada during block* arrived on her screen. Bea wrote *Bea after unblock*
+at 19:19:33 and Ada's round at 19:19:38 collected it. Message detail on Ada's phone showed Bea with
+a filled plane and *Collected 7:19 PM*. One run, not repeated. Screenshots are in the session's
+`rig-shots/merged/`.
+
+The same run found Block on a person's page did nothing: its confirmation was attached to the
+members list underneath, which cannot present while the page is pushed over it. Fixed in the same
+build before the block above.
+
+Ringing could not be measured either way here: a push from the other account has never reached a
+simulator on this rig (see [What a simulator can actually do](#what-a-simulator-can-actually-do)), so "no banner" on a
+simulator proves nothing.
+
+<!-- COPY END ba46c2cf -->
+
+<!-- COPY BEGIN 0a839973 [NEEDS HUMAN REVIEW] -->
+
+### What outpost-alpha and outpost-beta have shown, 2026-11-10
+
+On the working tree of `overnight-2026-10-31` that afternoon, uncommitted, on iOS 27.2 (24B8117).
+Each is one run.
+
+- **Two accounts, in the app's test host, over CloudKit** (`LivePairSendTests`, Ann on alpha and Ben
+  on beta, 85 and 84 seconds). Ann invited Ben to a room by his code and he joined. Ann started a
+  Solo with Ben from the people she knows; Ben was let in and both ends read the same phrase. Ann
+  replaced the room's key while Ben ran no rounds; Ben's next message collected first and was sealed
+  under Ann's new key, and collecting and writing took 0.9 seconds. Ann removed Ben; Ben's next send
+  collected the removal and wrote nothing. The key was replaced by calling the session directly,
+  because a removal needs a third person and the rig has two accounts.
+- **The lock, in the app, on alpha** (`RigChecks.testANewMemberSavesTheKeyAndLocksTheApp`, under
+  `--mailbox`, so no iCloud). See [the lock's open question](open-questions.md#outposts-own-lock-seals-what-the-phone-keeps-and-what-that-costs).
+  The walk first failed on this iOS because the share sheet's Copy is a cell, not a button; the test
+  looks for both now.
+
+**A side that only waits for a file is not running rounds.** The first live run stalled for six
+minutes because Ann waited on a file while Ben still needed her next round to hand him the Solo's
+key. A side waits with `LivePair.until`, which runs rounds, unless the other side needs nothing more
+from it.
+
+Not run: the app's own screens for any of this on two accounts, a ring after a block, and the older
+live suite.
+
+<!-- COPY END 0a839973 -->
+
+<!-- COPY BEGIN a1f7ccec [NEEDS HUMAN REVIEW] -->
+
+### What outpost-alpha and outpost-beta showed on the night of 2026-11-10
+
+On the build at `fe9ec3e`, each simulator signed in to its own Apple Account.
+
+- **The app suite against live iCloud passed on `outpost-alpha`:** 63 tests in 13 suites in 98
+  seconds, with parallel testing off. Run with parallel testing on, Xcode ran it on a clone of the
+  simulator and it passed there too; that run is not counted.
+- **`LivePairTests` passed once on the two accounts,** 65 seconds a side: a space shared each way,
+  24 entries in the order written, receipts emptying the sender's space, a photo and its copy
+  cleared, a write into the other person's space refused, and a closed space gone.
+- **`LivePairSendTests` passed a second time,** 71 seconds a side. Collecting and then writing took
+  0.7 seconds for a room of two.
+
+`LivePairTests` had not run since 2026-09-28 and stalled three ways before it passed. All three
+were the test, not the app:
+
+- One side waited on a file and ran no rounds while the other still needed its receipts.
+- The sender waited on a file straight after sending a photo, so the photo's entry was never sent.
+  In the app a round follows every send.
+- The last check counts every shared space the account can see, and the runs that had failed left
+  theirs behind.
+
+Each side now clears its own spaces before it starts and keeps running rounds while it waits.
+**A run that fails still leaves its spaces in the account** until the next run clears them.
+
+One thing is not explained: in the first run Alice's test process ended after three and a half
+minutes with no crash report. It has not happened again in four runs.
+
+<!-- COPY END a1f7ccec -->
+
+<!-- COPY BEGIN 0bf4dd34 [NEEDS HUMAN REVIEW] -->
+
+### What outpost-alpha and outpost-beta showed on 2026-11-11
+
+On the build at `07901f3`, which holds the fixes for all twelve faults, each simulator on its own
+Apple Account, from derived data deleted first. Each is one run.
+
+- **The app suite against live iCloud passed on `outpost-alpha`:** 63 tests in 13 suites in 88
+  seconds.
+- **`LivePairTests` passed on the two accounts,** 49 and 48 seconds a side.
+- **`LivePairSendTests` passed on the two accounts,** 71 and 70 seconds a side. Collecting and then
+  writing took 0.7 seconds. This is the run that reaches two of the fixes over real iCloud: the read
+  before a send now drops what the mailbox last read, and a round collects again from a peer whose
+  address moved.
+
+- **Reading all device mail on launch works over real iCloud** (`LiveSiblingFeedTests`, one
+  account, added the same night). A second device was handed its sibling's mail once. A new sync
+  engine for that device, started from the same saved state as after a restart, fetched and was not
+  handed it again, which is the fault. `readEverything` then handed it over.
+- **`Scripts/smoke-two-accounts.sh` ran all three sets from one clean build** and all passed: 61
+  tests in 12 suites on one account, then both pair suites at about 70 seconds a side. Five other
+  builds were running on the Mac at the time.
+
+- **The mailbox's eleven rules hold on iCloud** (2026-11-12, the build at `b4a6f54` with the
+  checks added). The five about one's own space ran in the one-account suite, 66 tests in 13
+  suites; the six about a pair ran as `LivePairContractTests`, a side on each account. They are the
+  same checks the in-memory mailbox passes under `swift test`.
+
+- **After a review changed the round and the mailbox's reading, everything ran again**
+  (2026-11-12, the build at `828153e`, from `Scripts/smoke-two-accounts.sh`): 66 tests in 13 suites
+  on one account in 143 seconds; `LivePairTests` at 49 and 48 seconds a side; the mailbox's pair
+  rules at 264 and 267; `LivePairSendTests` at 74 and 73, with collecting and then writing at 0.8
+  seconds. All passed.
+
+**What that does and does not show about the twelve fixes.** The two accounts are two people with
+one device each. Nine of the twelve faults need a third person or a second device on one account, so
+on the rig their fixes were only shown not to break two people talking. Their evidence is the
+package suite.
+
+**The first run of the night passed and counted for nothing.** The build failed on a stale module
+left in the derived data, `xcodebuild test-without-building` ran the build from that afternoon, and
+both sides passed. `Scripts/smoke-two-accounts.sh` now deletes the derived data, stops if the build
+fails, and prints the commit it ran.
+
+<!-- COPY END 0bf4dd34 -->
 
 <!-- COPY BEGIN b526cfb5 [NEEDS HUMAN REVIEW] -->
 

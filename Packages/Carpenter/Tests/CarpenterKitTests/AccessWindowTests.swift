@@ -6,7 +6,7 @@ import Testing
 @testable import CarpenterKit
 
 @MainActor
-@Suite("What a reader may read, stretch by stretch", .serialized)
+@Suite("What a reader may read, stretch by stretch", .serialized, .tags(.membership))
 struct AccessWindowSessionTests {
     private func settle(
         _ everyone: [AppSession], through mailbox: InMemoryMailbox, rounds: Int = 6
@@ -24,7 +24,7 @@ struct AccessWindowSessionTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -43,7 +43,7 @@ struct AccessWindowSessionTests {
         try await alice.createIdentity(displayName: "Alice")
         try await bob.createIdentity(displayName: "Bob")
         let room = try await alice.createRoom(named: "Lanterns")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await alice.sync(through: mailbox)
         try await bob.accept(
@@ -76,7 +76,7 @@ struct AccessWindowSessionTests {
         #expect(!read.contains("three, in the gap"), "he read the gap")
 
         let windows = try #require(alice.outpostAccess.grant(for: bobID)?.windows)
-        #expect(windows.count == 2, "two stretches were folded as one")
+        #expect(windows.count == 2, "two stretches were counted as one")
         #expect(windows[0].until != nil, "the first stretch never closed")
         #expect(windows[1].isOpen, "the second stretch is not open")
     }
@@ -113,7 +113,7 @@ struct AccessWindowSessionTests {
     }
 }
 
-@Suite("Which changes are on offer")
+@Suite("Which changes are on offer", .tags(.membership))
 struct AccessStandingTests {
     private let when = Date(timeIntervalSince1970: 1_775_260_800)
 
@@ -162,7 +162,7 @@ struct AccessStandingTests {
     }
 }
 
-@Suite("Stretches, said as dates")
+@Suite("Stretches, said as dates", .tags(.membership))
 struct AccessWindowsCopyTests {
     private let march = Date(timeIntervalSince1970: 1_772_000_000)
     private let july = Date(timeIntervalSince1970: 1_784_000_000)

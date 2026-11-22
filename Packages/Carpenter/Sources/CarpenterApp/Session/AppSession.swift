@@ -1,27 +1,44 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 public struct SessionStorage: Sendable {
     public let keychain: any KeychainStore
     public let log: any LogStore
     public let documents: any DocumentStore
     public let media: any MediaStore
+    public let protection: ProtectionDial
+    public let vault: OpenVault
+    public let locations: [URL]
+    public let settings: [KeptSetting]
 
     public init(
         keychain: any KeychainStore, log: any LogStore, documents: any DocumentStore,
-        media: any MediaStore = MemoryMediaStore()
+        media: any MediaStore = MemoryMediaStore(), protection: ProtectionDial = ProtectionDial(),
+        vault: OpenVault = OpenVault(), locations: [URL] = [], settings: [KeptSetting] = []
     ) {
         self.keychain = keychain
         self.log = log
         self.documents = documents
         self.media = media
+        self.protection = protection
+        self.vault = vault
+        self.locations = locations
+        self.settings = settings
+    }
+
+    public func sealed(by vault: OpenVault) -> SessionStorage {
+        SessionStorage(
+            keychain: SealedKeychainStore(around: keychain, vault: vault),
+            log: log, documents: SealedDocumentStore(around: documents, vault: vault), media: media,
+            protection: protection, vault: vault, locations: locations, settings: settings)
     }
 
     public var readOnly: SessionStorage {
         SessionStorage(
             keychain: ReadOnlyKeychainStore(keychain), log: ReadOnlyLogStore(log),
-            documents: ReadOnlyDocumentStore(documents), media: media)
+            documents: ReadOnlyDocumentStore(documents), media: media, protection: protection, vault: vault)
     }
 }
 
@@ -36,6 +53,8 @@ public final class AppSession {
         case ready
         case failed(String)
         case registrationStalled(RegistrationStall)
+        case awaitingApproval
+        case removed
     }
 
     public internal(set) var state: State = .loading
@@ -45,6 +64,24 @@ public final class AppSession {
     public internal(set) var organisation = RoomsListOrganisation()
 
     public internal(set) var enrolment: Enrolment?
+
+    public internal(set) var isHeldByICloud = false
+
+    public internal(set) var phoneIsLocked = false
+    public internal(set) var waitsForUnlock = false
+    public internal(set) var protectionChoice: ProtectionChoice?
+
+    public internal(set) var pendingDevice: DeviceKeys?
+    var pendingIdentity: Identity?
+    var unsavedRecoveryKey: RecoverySecret?
+    public internal(set) var deviceRequests: [DeviceRequest] = []
+    var declinedDeviceRequests: [DeviceID: Date] = [:]
+    var deviceRequestsStoredAt: [DeviceID: Date] = [:]
+    public internal(set) var askedForApproval: Bool?
+
+    public var thisDeviceID: DeviceID? { enrolment?.device.id ?? pendingDevice?.id }
+
+    public var approvalCode: String? { pendingDevice.map { DeviceRequest(for: $0).code } }
 
     public internal(set) var forks: [Fork] = []
 
@@ -60,44 +97,105 @@ public final class AppSession {
     let clock: any Clock
 
     var persisted = PersistedState()
-    var replica = Replica() { didSet { foldChanged() } }
-    var chains: [RoomID: EpochChain] = [:] { didSet { foldChanged() } }
+    var replica = Replica() {
+        didSet {
+            guard replica.revision != projectedRevision else { return }
+            projectedRevision = replica.revision
+            logChanged()
+        }
+    }
+    @ObservationIgnored private var projectedRevision: UUID?
+    var chains: [RoomID: EpochChain] = [:] {
+        didSet {
+            if OpenedPayloads.keysWereForgotten(from: oldValue, to: chains) { openedPayloads.forget() }
+            logChanged()
+        }
+    }
+    @ObservationIgnored let openedPayloads = OpenedPayloads()
 
-    var cachedProjection: Projection?
-    var cachedEntries: [EntryHash: Entry]?
-    var cachedRosters: [RoomID: RoomRoster] = [:]
+    private(set) var projectionGeneration = 0
 
-    var cachedOutOfRoom: [RoomID: Set<EntryHash>] = [:]
-    var cachedReadEvidence: [RoomID: ReadEvidence] = [:]
-    var cachedReporting: [RoomID: Set<ParticipantID>] = [:]
-    var cachedOutpostAccess: OutpostAccess?
-    var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
-    var cachedComparisonHalves: [ParticipantID: String] = [:]
-
-    var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
+    @ObservationIgnored var cachedProjection: Projection?
+    @ObservationIgnored var cachedEntries: [EntryHash: Entry]?
+    @ObservationIgnored var cachedRosters: [RoomID: RoomRoster] = [:]
+    @ObservationIgnored var cachedOutOfRoom: [RoomID: Set<EntryHash>] = [:]
+    @ObservationIgnored var cachedReadEvidence: [RoomID: ReadEvidence] = [:]
+    @ObservationIgnored var cachedPositions: [RoomID: [MessageID: Int]] = [:]
+    @ObservationIgnored var cachedReporting: [RoomID: Set<ParticipantID>] = [:]
+    @ObservationIgnored var cachedTrustedKeys: [RoomID: [TrustedKey]] = [:]
+    @ObservationIgnored var cachedKeysToPassOn: [RoomID: [TrustedKey]] = [:]
+    @ObservationIgnored var keyChangesRefused: [RoomID: [EpochChangeBody]] = [:]
+    @ObservationIgnored var cachedOutpostAccess: OutpostAccess?
+    @ObservationIgnored var cachedDevicesAdded: [RoomID: [AddedDevice]] = [:]
+    @ObservationIgnored var cachedComparisonHalves: [ParticipantID: String] = [:]
+    @ObservationIgnored var cachedPairwise: [ParticipantID: PairwiseSecret] = [:]
+    @ObservationIgnored var cachedBaseSecrets: [[ParticipantID]: PairwiseSecret] = [:]
+    @ObservationIgnored var repairsAnswered: Set<RepairID> = []
+    @ObservationIgnored var cachedLinksHeard: [ParticipantID: [PairLink]]?
+    @ObservationIgnored var pairingUp: Task<Void, Never>?
+    @ObservationIgnored var addressBook = AddressBook()
+    @ObservationIgnored var addressBookLoaded = false
+    @ObservationIgnored var addressBookWriting: Task<Bool, Never>?
 
     public internal(set) var codeForSharing = ""
 
-    private(set) var foldCount = 0
+    @ObservationIgnored private(set) var projectionBuilds = 0
 
-    func foldChanged() {
+    func cached<Key: Hashable, Value>(
+        _ store: ReferenceWritableKeyPath<AppSession, [Key: Value]>, _ key: Key, _ build: () -> Value
+    ) -> Value {
+        _ = projectionGeneration
+        if let known = self[keyPath: store][key] { return known }
+        let built = build()
+        self[keyPath: store][key] = built
+        return built
+    }
+
+    func update<Value: Equatable>(_ state: ReferenceWritableKeyPath<AppSession, Value>, to value: Value) {
+        if self[keyPath: state] != value { self[keyPath: state] = value }
+    }
+
+    func projectionInputsChanged() {
+        cachedProjection = nil
+        projectionGeneration &+= 1
+    }
+
+    func logChanged() {
+        projectionGeneration &+= 1
         cachedProjection = nil
         cachedEntries = nil
         cachedRosters = [:]
         cachedOutOfRoom = [:]
         cachedReadEvidence = [:]
+        cachedPositions = [:]
         cachedReporting = [:]
+        cachedTrustedKeys = [:]
+        cachedKeysToPassOn = [:]
         cachedOutpostAccess = nil
         cachedDevicesAdded = [:]
+        cachedLinksHeard = nil
     }
     var viewMayBeStale = false
+    @ObservationIgnored var refusalWatch = RefusalWatch()
 
     var entriesNotWrittenDown: [Entry] = []
 
+    struct UnsavedEpoch: Hashable {
+        let room: RoomID
+        let epoch: EpochNumber
+    }
+
+    var epochsNotSaved: Set<UnsavedEpoch> = []
+
+    var lastWriteToTheLog: Task<Void, Never>?
+
     var head: EntryLink?
+    var roomHeads: [RoomID: EntryLink] = [:]
     var accountRegistry: (any AccountRegistry)?
 
     var issuedGrants: Set<String> = []
+    var grantsCarried: [PacketID: Set<String>] = [:]
+    var writesInDoubt: [PacketID: SyncReport.WrittenPacket] = [:]
 
     var roomsWithUnsentMessages: Set<RoomID> = []
 
@@ -109,12 +207,12 @@ public final class AppSession {
 
     var attachmentTasks: [AttachmentID: Task<Data?, any Error>] = [:]
     var hasAskedForWall: Set<ParticipantID> = []
-    var peersLastRound: Set<ParticipantID> = []
+    public internal(set) var peersLastRound: Set<ParticipantID> = []
     var pendingRecipients: [PacketID: Set<RecipientTag>]?
 
     public internal(set) var metSomebodyNew = false
     var attachmentRetryAfter: [AttachmentID: Date] = [:]
-    var attachmentAcknowledgementsOwed: [AttachmentID: Set<RecipientTag>] = [:]
+    var attachmentAcknowledgementsOwed: [AttachmentID: OwedPhotoReceipt] = [:]
     var uploading: Set<AttachmentID> = []
     var sweptAttachments = false
 
@@ -127,16 +225,22 @@ public final class AppSession {
 
     var arrivalDelays: [EntryHash: TimeInterval] = [:]
 
-    var publishing = false
+    var passingOn: Task<Bool, Never>?
+    var publishing: Bool { passingOn != nil }
     var publishAgain = false
 
     var stateWrites: Task<Void, any Error>?
+    var stateOnDisk: PersistedState?
 
     func saveState() async throws {
+        keepAuthorityTimes()
         let previous = stateWrites
         let write = Task { @MainActor [self] in
             _ = try? await previous?.value
-            try await storage.documents.save(persisted)
+            let state = persisted
+            guard state != stateOnDisk else { return }
+            try await storage.documents.save(state)
+            stateOnDisk = state
         }
         stateWrites = write
         try await write.value
@@ -146,6 +250,7 @@ public final class AppSession {
     public internal(set) var isSilenced = false
     var deviceSync: (any EntrySync)?
     var incomingTask: Task<Void, Never>?
+    var protectionWork: Task<Void, Error>?
 
     public func arrivalDelay(of message: MessageID) -> TimeInterval? {
         arrivalDelays[message.entry]
@@ -199,26 +304,35 @@ public final class AppSession {
     // MARK: Internals
 
     var projection: Projection {
+        _ = projectionGeneration
         if let cachedProjection { return cachedProjection }
         var built = Projection(
             viewer: enrolment?.identity.id ?? ParticipantID(rawValue: Data()),
-            rendered: Fold.render(replica.ordered(), opening: entryOpener()),
+            rendered: LogRenderer.render(replica.allEntries, reading: renderStepReader()),
+            chains: RoomChains(replica.allEntries),
+            claimTimes: persisted.claimTimes,
             revealsNames: persisted.preferences.isShowingOthersNames,
             viewerName: persisted.preferences.displayName?.value,
             nicknames: persisted.preferences.currentNicknames,
             anonPersona: persisted.preferences.anonPersona
         )
-        built.onlyName(peopleMet(in: built))
+        let opener = payloadOpener()
+        let rosters = built.rosters(opening: opener)
+        let access = enrolment.map { built.outpostAccess(of: $0.identity.id, opening: opener) }
+        built.onlyName(peopleMet(in: built, rosters: rosters, access: access))
         cachedProjection = built
-        foldCount += 1
+        cachedRosters = rosters
+        cachedOutpostAccess = access
+        projectionBuilds += 1
         return built
     }
 
-    func peopleMet(in projected: Projection) -> Set<ParticipantID> {
-        guard let me = enrolment?.identity.id else { return [] }
-        let opener = payloadOpener()
-        var met = projected.peopleInRooms(opening: opener)
-        met.formUnion(projected.outpostAccess(of: me, opening: opener).audience(at: clock.now))
+    func peopleMet(
+        in projected: Projection, rosters: [RoomID: RoomRoster], access: OutpostAccess?
+    ) -> Set<ParticipantID> {
+        guard let me = enrolment?.identity.id, let access else { return [] }
+        var met = Projection.people(in: rosters)
+        met.formUnion(access.audience(at: clock.now))
         met.formUnion(projected.outpostAuthors().map(\.id))
         met.formUnion(persisted.acceptedInvitations.map(\.attestation.inviter))
         met.insert(me)
@@ -230,6 +344,7 @@ public final class AppSession {
     }
 
     var entriesByHash: [EntryHash: Entry] {
+        _ = projectionGeneration
         if let cachedEntries { return cachedEntries }
         let built = Dictionary(
             replica.allEntries.map { ($0.hash, $0) }, uniquingKeysWith: { first, _ in first })
@@ -242,7 +357,7 @@ public final class AppSession {
         guard owner != enrolment.identity.id else { return try await append(payload, to: nil) }
 
         if !(persisted.preferences.outpostStanding ?? .open).reachesThePostsReaders {
-            guard let theirs = pairwiseSecret(with: owner) else {
+            guard let theirs = baseSecret(with: owner) else {
                 throw AppSessionError.cannotWriteThere
             }
             return try await append(payload, to: nil, alsoFor: theirs)
@@ -255,7 +370,8 @@ public final class AppSession {
 
     func append(
         _ payload: Payload, to room: RoomID?, isWall: Bool = false,
-        alsoFor extra: PairwiseSecret? = nil
+        alsoFor extra: PairwiseSecret? = nil, readableAt readable: EpochNumber? = nil,
+        sealedUnder chosen: (secret: EpochSecret, epoch: EpochNumber)? = nil
     ) async throws {
         guard let enrolment else { throw AppSessionError.noIdentity }
 
@@ -280,57 +396,89 @@ public final class AppSession {
             chains[chainRoom] = chain
             try await persistEpoch(secret, at: .initial, for: chainRoom)
         }
-        guard let chain = chains[chainRoom] else { throw AppSessionError.noIdentity }
+        if persisted.rekeyBeforeWriting.contains(chainRoom) { try await rekeyBeforeWriting(chainRoom) }
+        if !PayloadType.plumbing.contains(payload.type), writesBelowAKeyARemovedMemberMade(in: chainRoom) {
+            try await oweKeyRotation(in: chainRoom)
+            try await rotateOwedKey(in: chainRoom)
+        }
 
-        let entry = try Entry.append(
-            after: head,
-            author: enrolment.identity.id,
-            device: enrolment.device,
-            clock: replica.frontier,
-            wallTime: clock.now,
-            room: room,
-            payload: payload,
-            at: chain.highestKnownEpoch ?? .initial,
-            sealedWith: chain,
-            alsoFor: extra
-        )
+        try await oneWriteAtATime { [self] in
+            guard let enrolment = self.enrolment, let chain = chains[chainRoom] else {
+                throw AppSessionError.noIdentity
+            }
+            let writing = chosen ?? writingKey(of: chainRoom).map { ($0.secret, $0.epoch) }
 
-        if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
-        head = entry.link
-        try await storage.log.append([entry])
+            let entry = try Entry.append(
+                after: head,
+                author: enrolment.identity.id,
+                device: enrolment.device,
+                clock: replica.frontier,
+                wallTime: clock.now,
+                room: room,
+                payload: payload,
+                at: readable ?? writing?.epoch ?? chain.highestKnownEpoch ?? .initial,
+                sealedWith: readable == nil ? (writing.map { chain.choosing($0.secret, at: $0.epoch) } ?? chain) : chain,
+                alsoFor: extra,
+                roomLink: room.map { RoomLink(previous: roomHeads[$0]?.hash) }
+            )
+            guard SyncSession.fitsAPacket(entry) else { throw AppSessionError.tooBigToSend }
+
+            try await storage.log.append([entry])
+            head = entry.link
+            if let room { roomHeads[room] = entry.link }
+            if case .forked(let fork) = try replica.integrate(entry) { forks.append(fork) }
+        }
         refresh()
+    }
+
+    func oneWriteAtATime(_ work: @escaping @MainActor () async throws -> Void) async throws {
+        let previous = lastWriteToTheLog
+        let write = Task { @MainActor in
+            await previous?.value
+            try await work()
+        }
+        lastWriteToTheLog = Task { _ = await write.result }
+        try await write.value
     }
 
     func restoreLog(identity: Identity) async throws {
         replica = Replica()
         replica.introduce(identity.publicKeys)
+        roomHeads = [:]
 
         for keys in persisted.knownKeys { replica.introduce(keys) }
-        for certificate in persisted.certificates { try? replica.admit(certificate) }
-
-        if let enrolment,
-            replica.registry(for: identity.id)?.standing(of: enrolment.device.id) == nil
-        {
-            try replica.admit(
-                DeviceCertificate.issue(
-                    for: enrolment.device.publicKey, by: identity, at: clock.now))
-            persisted.certificates = knownCertificates()
+        for certificate in persisted.certificates.approversFirst {
+            guard let at = storedTime(for: certificate.digest) else {
+                Diagnostics.identity.error("authority: a saved certificate had no stored time and was left out")
+                continue
+            }
+            try? replica.admit(certificate, storedAt: at)
         }
-        for revocation in persisted.revocations { try? replica.revoke(revocation) }
+
+        for revocation in persisted.revocations + persisted.otherRevocations {
+            guard let at = storedTime(for: revocation.digest) else {
+                Diagnostics.identity.error("authority: a saved removal had no stored time and was left out")
+                continue
+            }
+            try? replica.revoke(revocation, storedAt: at)
+        }
+        replica.restore(supersededLines: persisted.supersededLines)
+        if enrolment != nil { recordAuthority() }
         replica.restore(spent: persisted.spentEntries, closing: persisted.preferences.roomsDeleted)
 
         let loaded = try await storage.log.loadAll()
         lastLoad = loaded.termination
         integrity = IntegrityReport()
         integrity.lastLoad = loaded.termination
-        integrity.discardedBytes = loaded.discardedTrailingBytes
+        integrity.discardedBytes = loaded.discardedBytes
 
+        let checked = await replica.signatureChecks(for: loaded.entries)
         let ownFeed = enrolment.map { FeedKey(author: $0.identity.id, device: $0.device.id) }
         var stillOnDisk: [Entry] = []
-        for entry in loaded.entries {
+        for (entry, result) in replica.integrate(loaded.entries, checked: checked) {
             let outcome: IntegrationResult
             do {
-                outcome = try replica.integrate(entry)
+                outcome = try result.get()
             } catch {
                 integrity.unverifiableOnDisk += 1
                 continue
@@ -338,8 +486,13 @@ public final class AppSession {
             if case .forked(let fork) = outcome {
                 forks.append(fork)
             }
+            if outcome == .tooLarge {
+                integrity.rejectedFromPeers += 1
+                continue
+            }
             if entry.feedKey == ownFeed {
                 head = entry.link
+                if let room = entry.room { noteOwn(entry.link, in: room) }
             }
             if let room = entry.room, replica.closedRooms.contains(room) {
                 stillOnDisk.append(entry)
@@ -350,7 +503,11 @@ public final class AppSession {
         {
             head = spentTop
         }
+        for spent in replica.spentEntries where spent.feed == ownFeed {
+            if let room = spent.room { noteOwn(spent.link, in: room) }
+        }
         persisted.spentEntries = replica.spentEntries
+        replica.fixSupersededLines(sparing: identity.id)
 
         try await restoreEpochs()
 
@@ -367,39 +524,42 @@ public final class AppSession {
         refresh()
     }
 
+    private func noteOwn(_ link: EntryLink, in room: RoomID) {
+        if (roomHeads[room]?.seq ?? 0) < link.seq { roomHeads[room] = link }
+    }
+
     func refresh() {
         prepareCodeForSharing()
         var projected = projection
-        var opener = payloadOpener()
-
-        if introduceEstablishedMembers(in: projected, opening: opener) {
+        if introduceEstablishedMembers(in: projected, opening: payloadOpener()) {
             projected = projection
-            opener = payloadOpener()
         }
 
         let hidden = persisted.preferences.hiddenEntries
         let shutOut = shutOutAuthors()
         let me = enrolment?.identity.id
         var joined: Set<RoomID> = []
-        rooms = projected.summaries().map { summary in
-            let roster = projected.roster(of: summary.id, opening: opener)
-            if let me, roster.members.contains(me) { joined.insert(summary.id) }
+        let summaries: [RoomSummary] = projected.roomIDs().compactMap { room in
+            let roster = roster(of: room)
+            if let me, roster.members.contains(me) { joined.insert(room) }
+            let blocked = projected.entries(by: shutOut, in: room)
             return projected.summary(
-                of: summary.id,
+                of: room,
+                named: roster.name,
                 memberCount: roster.members.count,
                 others: roster.members.union(roster.requests.keys)
                     .filter { $0 != me }
                     .sorted { $0.rawValue.lexicographicallyPrecedes($1.rawValue) },
                 unreadFor: me,
-                readThrough: persisted.readThrough[summary.id],
-                undrawn: hidden
-                    .union(projected.outOfRoom(in: summary.id, opening: opener))
-                    .union(projected.entries(by: shutOut, in: summary.id))
-            ) ?? summary
+                readThrough: persisted.readThrough[room],
+                undrawn: hidden.union(blocked),
+                outOfRoom: outOfRoom(in: room, of: projected))
         }
-        roomsThisMemberIsIn = joined
-        organisation.forgetRoomsMissing(
-            from: Set(rooms.map(\.id)).union(awaitingAdmission.map(\.room)))
+        update(\.rooms, to: summaries)
+        update(\.roomsThisMemberIsIn, to: joined)
+        var organised = organisation
+        organised.forgetRoomsMissing(from: Set(rooms.map(\.id)).union(awaitingAdmission.map(\.room)))
+        update(\.organisation, to: organised)
     }
 
     @discardableResult
@@ -407,8 +567,8 @@ public final class AppSession {
         in projected: Projection, opening: (RenderedEntry) -> Payload?
     ) -> Bool {
         var introduced = false
-        for summary in projected.summaries() {
-            let roster = projected.roster(of: summary.id, opening: opening)
+        for room in projected.namedRoomIDs() {
+            let roster = introduced ? projected.roster(of: room, opening: opening) : roster(of: room)
             for attestation in roster.requests.values {
                 guard !replica.knownParticipants.contains(attestation.joinerKeys.participantID)
                 else { continue }
@@ -427,8 +587,12 @@ public final class AppSession {
     func persistEpoch(
         _ secret: EpochSecret, at epoch: EpochNumber, for room: RoomID
     ) async throws {
-        try await storage.keychain.set(
-            secret.material, for: Self.epochKey(room, epoch), scope: .device)
+        let unsaved = UnsavedEpoch(room: room, epoch: epoch)
+        epochsNotSaved.insert(unsaved)
+        var keys = chains[room]?.heldSecrets(at: epoch) ?? []
+        if !keys.contains(secret) { keys.insert(secret, at: 0) }
+        try await storage.keychain.set(Self.keychainForm(of: keys), for: Self.epochKey(room, epoch), scope: .device)
+        epochsNotSaved.remove(unsaved)
 
         if !persisted.knownRooms.contains(room) { persisted.knownRooms.append(room) }
         var held = persisted.epochs[room] ?? []
@@ -445,9 +609,9 @@ public final class AppSession {
 
             for raw in persisted.epochs[room] ?? [] {
                 let epoch = EpochNumber(rawValue: raw)
-                guard let material = try await storage.keychain.data(for: Self.epochKey(room, epoch))
+                guard let stored = try await storage.keychain.data(for: Self.epochKey(room, epoch))
                 else { continue }
-                chain.adopt(EpochSecret(material: material), at: epoch)
+                chain.restore(Self.keys(inKeychainForm: stored), at: epoch)
                 found = true
             }
 
@@ -457,6 +621,19 @@ public final class AppSession {
 
     static func epochKey(_ room: RoomID, _ epoch: EpochNumber) -> KeychainKey {
         KeychainKey("epoch.\(room.rawValue.uuidString).\(epoch.rawValue)")
+    }
+
+    static func keychainForm(of keys: [EpochSecret]) -> Data {
+        guard keys.count > 1, let list = try? JSONEncoder().encode(keys.map(\.material)) else {
+            return keys.first?.material ?? Data()
+        }
+        return list
+    }
+
+    static func keys(inKeychainForm stored: Data) -> [EpochSecret] {
+        guard stored.count != 32, let list = try? JSONDecoder().decode([Data].self, from: stored), !list.isEmpty
+        else { return [EpochSecret(material: stored)] }
+        return list.map(EpochSecret.init(material:))
     }
 
     func outpostRoom(for participant: ParticipantID) -> RoomID {
@@ -473,7 +650,7 @@ public final class AppSession {
     }
 
     func chain(sealing entry: Entry) -> EpochChain? {
-        chains[entry.room ?? outpostRoom(for: entry.author)]
+        chains[entry.sealingRoom]
     }
 
 }

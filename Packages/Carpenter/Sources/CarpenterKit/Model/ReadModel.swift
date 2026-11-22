@@ -136,8 +136,10 @@ public struct RoomSummary: Identifiable, Hashable, Sendable {
         hasUnread: Bool,
         isDirect: Bool = false,
         initials: String? = nil,
-        partner: ParticipantID? = nil
+        partner: ParticipantID? = nil,
+        recentSpeakers: [Member] = []
     ) {
+        self.recentSpeakers = recentSpeakers
         self.id = id
         self.name = name
         self.memberCount = memberCount
@@ -151,6 +153,8 @@ public struct RoomSummary: Identifiable, Hashable, Sendable {
     }
 
     public let partner: ParticipantID?
+
+    public let recentSpeakers: [Member]
 
     public var initials: String { personInitials ?? AvatarInitials.of(name) }
 

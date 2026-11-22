@@ -6,12 +6,16 @@ public struct NotGone: Hashable, Sendable {
         case waited(days: Int)
     }
 
+    public static let takenBackAfterDays = Int(SyncSession.packetWaitsFor / SyncSession.tagWindow)
+
     public let signal: Signal
     public let hasLeftThisDevice: Bool
+    public let wasTakenBack: Bool
 
-    public init(signal: Signal, hasLeftThisDevice: Bool) {
+    public init(signal: Signal, hasLeftThisDevice: Bool, wasTakenBack: Bool = false) {
         self.signal = signal
         self.hasLeftThisDevice = hasLeftThisDevice
+        self.wasTakenBack = wasTakenBack
     }
 
     public static func notices(
@@ -25,16 +29,19 @@ public struct NotGone: Hashable, Sendable {
                 newerCollected += 1
                 continue
             }
-            guard message.delivery == .pending || message.delivery == .sent else { continue }
-            let hasLeft = message.delivery == .sent
+            let state = message.delivery
+            guard state == .pending || state == .sent || state == .notCollected else { continue }
+            let (hasLeft, takenBack) = (state != .pending, state == .notCollected)
 
             if newerCollected > 1 {
                 notices[message.id] = NotGone(
-                    signal: .newerMessagesCollected(newerCollected), hasLeftThisDevice: hasLeft)
+                    signal: .newerMessagesCollected(newerCollected), hasLeftThisDevice: hasLeft,
+                    wasTakenBack: takenBack)
             } else if let days = wait.days,
                 now.timeIntervalSince(message.sentAt) >= Double(days) * 86_400
             {
-                notices[message.id] = NotGone(signal: .waited(days: days), hasLeftThisDevice: hasLeft)
+                notices[message.id] = NotGone(
+                    signal: .waited(days: days), hasLeftThisDevice: hasLeft, wasTakenBack: takenBack)
             }
         }
         return notices
@@ -62,13 +69,15 @@ public struct WaitingOnPerson: Identifiable, Hashable, Sendable {
 
     public let member: Member
     public let holding: Holding
+    public let takenBack: Int
     public let lastHeard: Date?
 
     public var id: ParticipantID { member.id }
 
-    public init(member: Member, holding: Holding, lastHeard: Date?) {
+    public init(member: Member, holding: Holding, takenBack: Int = 0, lastHeard: Date?) {
         self.member = member
         self.holding = holding
+        self.takenBack = takenBack
         self.lastHeard = lastHeard
     }
 }

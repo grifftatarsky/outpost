@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Unread", .serialized)
+@Suite("Unread", .serialized, .tags(.ui))
 struct UnreadTests {
     private func joined(
         bobAt directory: URL? = nil, bobKeychain: any KeychainStore = InMemoryKeychainStore()
@@ -19,8 +19,7 @@ struct UnreadTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)
@@ -158,7 +157,7 @@ struct UnreadTests {
 
     @Test("A room read on this device is still read after a relaunch")
     func theMarkSurvivesARelaunch() async throws {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-unread-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-unread-\(UUID().uuidString)")
         let keychain = InMemoryKeychainStore()
         let (alice, bob, room, mailbox) = try await joined(bobAt: directory, bobKeychain: keychain)
 
@@ -176,31 +175,30 @@ struct UnreadTests {
 
     // MARK: The rule itself
 
+    private func kitchen() throws -> (projected: Projection, room: RoomID) {
+        var (alice, room, profile) = try Author.founding("Kitchen")
+        let named = try alice.append(profile, at: TestSession.now, room: room)
+        let said = try alice.append(try Payload.post("hello"), at: TestSession.now, room: room)
+        let projected = Projection(
+            viewer: alice.identity.id, rendered: LogRenderer.render([named, said], using: alice.chain))
+        return (projected, room)
+    }
+
     @Test("A read mark this device cannot find reads as nothing read")
     func anUnknownMarkShowsUnread() throws {
-        let chain = EpochChain.create(room: RoomID())
-        var alice = Author(chain: chain.chain)
-        let room = chain.chain.room
-        let said = try alice.append(
-            try Payload.post("hello"), at: TestSession.now, room: room)
-        let rendered = Fold.render([said], using: chain.chain)
+        let (projected, room) = try kitchen()
 
         #expect(
-            Projection.hasUnread(
-                in: rendered, for: Identity.generate().id,
-                readThrough: EntryHash(rawValue: Data([0xDE, 0xAD])), undrawn: []),
+            projected.summary(
+                of: room, named: "Kitchen", unreadFor: Identity.generate().id,
+                readThrough: EntryHash(rawValue: Data([0xDE, 0xAD])))?.hasUnread == true,
             "an unfindable mark hid a message that had never been read")
     }
 
     @Test("With nobody reading, nothing is unread")
     func noViewerMeansNoUnread() throws {
-        let chain = EpochChain.create(room: RoomID())
-        var alice = Author(chain: chain.chain)
-        let said = try alice.append(
-            try Payload.post("hello"), at: TestSession.now, room: chain.chain.room)
+        let (projected, room) = try kitchen()
 
-        #expect(
-            !Projection.hasUnread(
-                in: Fold.render([said], using: chain.chain), for: nil, readThrough: nil, undrawn: []))
+        #expect(projected.summary(of: room, named: "Kitchen", unreadFor: nil)?.hasUnread == false)
     }
 }

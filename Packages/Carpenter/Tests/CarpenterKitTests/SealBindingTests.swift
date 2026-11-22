@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("What a seal is bound to")
+@Suite("What a seal is bound to", .tags(.crypto))
 struct SealBindingTests {
     private func feed(_ byte: UInt8) -> FeedKey {
         FeedKey(

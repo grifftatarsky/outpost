@@ -108,7 +108,7 @@ public struct NotificationLevelView: View {
                         title: Text("Say a message has not gone", bundle: .module),
                         detail: notGone.wait.days.map {
                             Text("After ^[\($0) day](inflect: true)", bundle: .module)
-                        } ?? Text("Only when newer ones arrive", bundle: .module))
+                        } ?? Text("Only when newer ones arrive first", bundle: .module))
                 }
             } header: {
                 Text("Messages that have not gone", bundle: .module).sectionHeading()

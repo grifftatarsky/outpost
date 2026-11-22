@@ -72,7 +72,7 @@ public struct DeviceListView: View {
                 }
             } footer: {
                 Text(
-                    "Anything on this list can send messages as you. Removing one stops it from reading what is said afterwards — but not from having sent what it already sent, because it really was you. Other people stop accepting it as you as their devices collect the removal, which is the next time each of them syncs.",
+                    "Every device on this list can send messages as you. Removing one stops it reading anything said afterwards. What it already sent stays, because it really was you. Other people's devices stop accepting it the next time they sync.",
                     bundle: .module
                 )
                 .fixedSize(horizontal: false, vertical: true)
@@ -182,7 +182,7 @@ public struct DeviceListView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(confirming) { device in
                             HStack(spacing: 10) {
-                                Image(systemName: "desktopcomputer")
+                                Image(systemName: "iphone")
                                     .foregroundStyle(palette.tertiaryText)
                                     .accessibilityHidden(true)
                                 Text(verbatim: name(of: device))
@@ -197,11 +197,11 @@ public struct DeviceListView: View {
                     Group {
                         if confirming.count == 1 {
                             Text(
-                                "It will not be able to read anything sent from now on. What it already sent stays.",
+                                "It will not be able to read anything sent from now on. What it already sent stays. If it was lost or stolen, erase it in Find My too.",
                                 bundle: .module)
                         } else {
                             Text(
-                                "They will not be able to read anything sent from now on. What they already sent stays. Every room turns its key once, however many you remove.",
+                                "They will not be able to read anything sent from now on. What they already sent stays. Every room's key is rotated once, however many you remove. If any were lost or stolen, erase them in Find My too.",
                                 bundle: .module)
                         }
                     }
@@ -251,7 +251,7 @@ public struct DeviceListView: View {
 
     private func row(_ device: DeviceSummary) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: device.isCurrent ? "iphone" : "desktopcomputer")
+            Image(systemName: "iphone")
                 .font(.title3)
                 .foregroundStyle(device.isActive ? palette.accentColor : palette.quaternaryText)
                 .frame(width: 28)
@@ -326,6 +326,7 @@ public struct DeviceListView: View {
         }
         .padding(.vertical, 4)
         .opacity(device.isActive ? 1 : 0.6)
+        .accessibilityElement(children: .combine)
     }
 }
 

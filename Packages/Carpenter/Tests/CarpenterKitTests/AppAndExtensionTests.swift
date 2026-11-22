@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("The app and the notification extension share one container without undoing each other", .serialized)
+@Suite("The app and the notification extension share one container without undoing each other", .serialized, .tags(.storage))
 struct AppAndExtensionTests {
     private struct Rig {
         let alice: AppSession
@@ -21,7 +21,7 @@ struct AppAndExtensionTests {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox(clock: clock)
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-two-processes-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-two-processes-\(UUID().uuidString)")
         let alice = TestSession.make(clock: clock)
         let app = TestSession.make(keychain: keychain, at: directory, clock: clock)
         await alice.load()
@@ -122,13 +122,21 @@ struct AppAndExtensionTests {
         let nse = await extensionProcess(rig)
 
         try await rig.alice.send("first", to: rig.room)
-        try await rig.alice.sync(through: rig.mailbox)
+        let sent = try await rig.alice.sync(through: rig.mailbox)
+        let packets = Set(sent.written.map(\.packet))
+        try #require(!packets.isEmpty, "precondition: Alice sent the message")
         try await nse.sync(through: rig.mailbox, mode: .readOnly)
+        #expect(
+            await rig.mailbox.everySentPacket.filter { packets.contains($0.key) }.allSatisfy { $0.value.receipts.isEmpty },
+            "the extension, which only reads, signed for a packet")
         try await rig.app.sync(through: rig.mailbox)
 
         let later = await relaunch(rig)
         #expect(later.messages(in: rig.room).contains { $0.body == "first" })
         #expect(later.integrity.unverifiableOnDisk == 0, "the extension left entries on disk the app could not verify")
-        #expect(try await rig.mailbox.pendingDeliveries().isEmpty, "a packet was left offered for ever")
+        try await rig.alice.sync(through: rig.mailbox)
+        #expect(
+            Set(await rig.mailbox.everySentPacket.keys).isDisjoint(with: packets),
+            "a packet was left offered for ever")
     }
 }

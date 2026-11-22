@@ -103,9 +103,11 @@ inside the app, so that leaving is mine to do.
 
 - **Done.** The last section of You in every build, red, with the nuke mark. Guideline 5.1.1(v).
 - **Done.** A sheet stating what is erased and what is not, then one red button. The facts match the wipe:
-  identity and every room key from this device and iCloud Keychain; every feed, packet and photo in
-  flight this account holds in iCloud; history on this device, photos and clips included; other
-  devices lose the identity too. Nothing from anybody else's device; rooms are not told; no undo.
+  identity and every room key from this device; every feed, packet and photo in flight this account
+  holds in iCloud; history on this device, photos and clips included. Nothing from anybody else's
+  device; rooms are not told; no undo. Since 2026-09-27 the member's other devices erase themselves
+  the next time they reach iCloud, through a deathmark; see
+  [the decision](../decisions.md#erasing-everything-leaves-a-deathmark-every-other-device-obeys-first).
 - **Done.** The cloud half gates the local half: if iCloud cannot be reached, nothing local is touched,
   because a device that erases itself and leaves the account standing is the dirty account the
   whole ladder exists to survive.
@@ -149,6 +151,65 @@ the rig doc tells you to use accounts with it **off**.
 room epoch key. What is not:
 
 <!-- COPY END 15ae772a -->
+
+<!-- COPY BEGIN 7a739e20 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="a-new-device-waits-until-one-of-yours-approves-it">
+<summary><b>A new device waits until one of yours approves it</b> — Complete (hardware proof owed)</summary>
+
+**Story.** As a member, I want a new device to need my approval from a device I already have, so that
+somebody signed in to my Apple Account can't read my messages.
+
+**Built 2026-09-26.** The new device shows a six-character code and waits. My other devices ask
+"Approve a new device?" with the same code. Approving hands the new device my identity and its
+certificate, sealed to it. The recovery key is the only other way in, and a device let in that way
+is marked on my other devices. Removals are signed by the device that made them.
+
+**Changed 2026-09-27.** A removed device could date an approval or a removal before its removal and
+have it count. Approvals and removals now count in the order iCloud first stored them, so nothing a
+removed device signs after its removal reached iCloud counts, whatever date it writes. It can still
+add a device as if restored with the recovery key, because it holds the identity key; that is an
+[open question](../decisions.md).
+[Decisions](../decisions.md#a-new-device-needs-approval-from-one-of-your-devices).
+
+**Changed 2026-10-31.** A removal names the devices that stay, and a contact cuts off any device the
+removed one approved that the list leaves out. A removal cannot drop what the member's devices had
+shown they had seen, whatever cutoff or date it names. A device a restore left behind stops at what
+each contact held when it heard of the restore. Removing a device no longer writes into friends'
+Outposts; each owner rotates their Outpost's key instead. In the package suite only, not over iCloud
+([Decisions](../decisions.md#a-device-removal-cannot-claim-to-have-seen-less-than-the-members-devices-showed)).
+
+**Testing.** `DeviceApprovalTests` (which certificates count), `ApprovingADeviceTests` and
+`DeviceEnrolmentTests` (two devices through the relay), and a live CloudKit test for the request and
+approval records. Not yet on two real devices on one account; a simulator can now do this part,
+because the identity is handed over by the approval rather than by iCloud Keychain.
+
+</details>
+
+<!-- COPY END 7a739e20 -->
+
+<!-- COPY BEGIN 0b547f7e [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="your-devices-send-each-other-only-what-is-new">
+<summary><b>Your devices send each other only what is new</b> — Complete (tested)</summary>
+
+**Story.** As a member, I want the app to keep in my iCloud only what my other devices still need,
+not a copy of everything I have written and every key I hold.
+
+**Built 2026-09-26.** Each message used to re-upload everything the device had ever written, every
+room key and the settings, as one record that stayed in iCloud for good. Now a device sends only what
+is new as mail, deletes it once its other devices have read it, and hands a new device everything
+once. [Architecture](../architecture.md#device-sync) describes the records.
+
+**Testing.** `SiblingMailTests`: a send uploads the same amount however long the history (it failed
+before the change, 7KB growing to 71KB), read mail is deleted, a lone device writes only its state
+record, a new device gets everything once, and a device away for over a month is caught up.
+`LiveSiblingFeedTests` writes, reads and deletes a mail record on a real account. Not yet run on two
+real devices on one account, which a simulator cannot be.
+
+</details>
+
+<!-- COPY END 0b547f7e -->
 
 <!-- COPY BEGIN 9c880262 [NEEDS HUMAN REVIEW] -->
 
@@ -274,11 +335,9 @@ the same as losing everybody I have talked to.
   way back, with *I have a recovery key* beneath.
 - **Done.** The keychain-reset case — a member who wiped their own Keychain — explained on its own. The same
   sentence, 2026-09-17.
-- **Done.** **What a restore does about the member's other devices** — decided, Griff, 2026-09-13: the restore
-  screen asks whether a device was lost or stolen, and a yes turns every room's key; nothing is
-  revoked automatically, and an old device is revoked from the device list
-  ([Decisions](../decisions.md#turning-every-rooms-key-on-a-restore-is-a-question-not-a-default)). This
-  line read *undecided* until 2026-09-17.
+- **Done.** **What a restore does about the member's other devices** — decided by Griff on 2026-09-26: after
+  a restore the app offers to remove all or some of the other devices. The lost-or-stolen question
+  that stood here from 2026-09-13 is removed.
 - **Changed.** *Require verification after recovery* — replaced by Griff's ruling of 2026-09-13 that the
   **person asked** decides: *hold until I check* keeps history back until the solo check passes with
   the restored device ([Decisions](../decisions.md#recovery-is-announced-and-both-sides-of-it-have-settings)).
@@ -336,7 +395,7 @@ silent is not great."
 **Acceptance criteria**
 
 - **Done.** **The recoverer** can choose not to ask peers for history at all. On by default; off restores the
-  identity and leaves the rooms empty. `RestoreFromKeyView` asks, `restore(_:askingPeers:afterALoss:)`
+  identity and leaves the rooms empty. `RestoreFromKeyView` asks, `restore(fromRecoveryKey:askingPeers:)`
   records it, and `askEverybodyForWhatWasSaid()` is gated on `wantsWhatWasSaid`.
 - **Done.** **The person asked** is told: a notification naming who restored and which conversation was asked
   for. Not a setting — everybody gets it. `RestoreNotification.ofAsk`, raised from the notification
@@ -352,9 +411,10 @@ silent is not great."
   check-up's `restoreAsks` / `restoreHold` pages.
 - **Done.** History goes by default and waits **only** for somebody who has said to wait. The round stamps
   `RestoreAskRecord(hold: .held)` only when this member holds; everybody else gets `.allowed`.
-- **Done.** The restore screen asks once whether a device was lost or stolen, and a yes turns every room's
-  key. See
-  [the decision](../decisions.md#turning-every-rooms-key-on-a-restore-is-a-question-not-a-default).
+- **Done.** A restore removes every other device, so there is nothing left to offer to remove. The
+  screen that offered it (`OtherDevicesAfterRestoreView`) was taken out on 2026-11-05: it could only
+  appear for a device approved after the restore, and then it took over the app and called that new
+  device one "still signed in as you". The lost-or-stolen question is gone (Griff, 2026-09-26).
 
 <!-- COPY END 6fa3803a -->
 
@@ -382,27 +442,81 @@ the backfill and the recoverer's choice, and the restore that asks nobody proved
 <!-- COPY BEGIN 99e8afe2 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="an-in-app-lock">
-<summary><b>An in-app lock</b> — Canceled</summary>
+<summary><b>An in-app lock</b> — Built, not yet on a phone</summary>
 
 **Story.** As a member, I want the app itself to lock, so that an unlocked phone is not an open
 conversation. A stolen unlocked phone currently gives up every room in full.
 
+Canceled 2026-09-14 in favour of iOS's own app lock, and reopened by Griff on 2026-09-27: iOS's lock
+falls back to the phone's passcode, which is the one thing a partner or a thief who watched it typed
+already has. See [the decision](../decisions.md#the-app-lock-is-a-code-the-phone-counts-not-a-key-that-encrypts).
+
 **Acceptance criteria**
 
-- **Canceled.** Canceled 2026-09-14 — iOS locks apps behind Face ID already, and does it better than this
-  could: Settings › Face ID & Passcode › Require Face ID for individual apps. See
-  [After TestFlight](../after-testflight.md#an-in-app-lock). The honesty half of the third criterion
-  survives as a copy change on the Safety pages.
-- **Canceled.** Locks behind the device's own biometric or passcode, on a timeout the member chooses.
-- **Canceled.** Notification content respects the lock and interacts correctly with notification previews.
-- **Canceled.** The lock is a lock, not a curtain: the limit stated rather than implying protection at rest
-  beyond the platform's.
+- **Built.** Locks behind the app's own 4 to 6 digit code or a passphrase, with Face ID on top if
+  wanted, on a timeout the member chooses (right away, 1, 5 or 15 minutes). Offered at setup, after
+  the recovery key, and in Settings.
+- **Built.** Notifications follow the member's setting; setting the lock offers to make them private,
+  and says what a banner shows otherwise. In the welcome, notifications come before the lock. Seen in
+  the simulator walk-through (`RigChecks.testANewMemberSavesTheKeyAndLocksTheApp`).
+- **Built.** A glass key button on the lock screen opens the app with the recovery key and turns the
+  lock off (`AppLockControllerTests`).
+- **Built.** Erasing everything after 1, 5 or 10 wrong codes, off unless chosen, with the recovery key
+  offered first (`AppLockControllerTests`). What it erases is the deathmark; see *Erasing everything*.
+- **Built.** The lock is a lock, not a curtain, and says so: the crypto brief and the setup screen say
+  it guards the screens and does not encrypt what is stored.
+- **Built.** Wrong codes are counted before they are checked and make you wait; changing the clock or
+  restarting the phone doesn't end a wait; a face added since the lock was set needs the code; every
+  change that weakens the lock needs the code; a forgotten code can erase this phone's copy
+  (`AppLockTests`, `AppLockControllerTests`, `RigChecks.testANewMemberSavesTheKeyAndLocksTheApp`).
 
-**Design.** Board 30, not built.
+**Design.** Board 30 was drawn and not seen while building this; the screens follow the app's own
+settings patterns instead, and have not been compared with the board.
 
 </details>
 
 <!-- COPY END 99e8afe2 -->
+
+<!-- COPY BEGIN cbb86a09 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="advanced-on-device-security">
+<summary><b>Advanced On Device Security</b> — Incomplete</summary>
+
+**Story.** As a member, I want what the app keeps on my phone sealed whenever the phone is locked, so
+that somebody who takes it and copies its storage reads nothing, even though the app then fetches
+nothing until I unlock it.
+
+Ruled by Griff on 2026-09-28, with three promises confirmed; see
+[the decision](../decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)
+and the [crypto brief](../crypto-brief.md#advanced-on-device-security). Built the same day: the
+package suite passes on Griff's Mac, the keychain half passes on the simulator, and files are written
+sealed on an iPhone. **Not yet tried with the phone locked.**
+
+**Acceptance criteria**
+
+- **Built.** With it on, every file the app keeps is written `.complete` and every key
+  `WhenUnlockedThisDeviceOnly`, and turning it on or off changes what is already kept
+  (`SealedWhileLockedTests`, `SystemKeychainTests`, `FileProtectionTests`).
+- **Built.** While the phone is locked nothing is fetched, loaded or signed for, and a message sent
+  then arrives when it is unlocked (`SealedWhileLockedTests`).
+- **Built.** A phone that starts while locked waits, and never offers to start over.
+- **Built.** The notification extension, which can open nothing then, shows only "New message" and
+  leaves the number on the icon alone.
+- **Built.** Reading a key never changes how it is protected, so the extension cannot undo the choice.
+- **Built.** A switch on its own page under This device, which cannot be turned on without a
+  passcode.
+- **Not built, ruled.** Outpost's own lock as the seal (the lock is built and seals nothing; the vault
+  that would seal with its code is written and tested in the package, and nothing calls it), a note on
+  each option and a link to an article; collecting what arrives while locked, so nothing is lost; and sealing the app's
+  preferences ([Decisions](../decisions.md#advanced-on-device-security-seals-what-this-phone-keeps-while-it-is-locked)).
+- **Owed, on a real iPhone.** With it on: lock the phone, send it a message from the other account, see
+  a banner that says only "New message", unlock it and see the message arrive. `FileProtectionTests`
+  passed on an iPhone on 2026-09-28; a simulator does not keep a file's protection class, so the suite
+  skips it there.
+
+</details>
+
+<!-- COPY END cbb86a09 -->
 
 <!-- COPY BEGIN 74cc379c [NEEDS HUMAN REVIEW] -->
 
@@ -633,6 +747,43 @@ support it, so that the people I talk to can see it if I want them to.
 </details>
 
 <!-- COPY END 68559ce0 -->
+
+<!-- COPY BEGIN 8db04389 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="keys-handed-to-a-device-sealed-with-x-wing">
+<summary><b>Keys handed to a device sealed with X-Wing</b> — Built, not yet on a phone</summary>
+
+**Story.** As a member, I want what sits in my iCloud today to stay unreadable when quantum computers
+can break X25519, so that a copy taken now cannot be read later.
+
+**What it must guarantee.** A recording of every record in iCloud cannot later yield a room key, an
+address salt or a member's identity unless ML-KEM-768 is broken as well as X25519, so it yields no
+message, photo or comment in a room. A seal opens only on the device it names, under the room, epoch
+and purpose it was made for. A seal in the old X25519 form is never opened. What the recording still
+yields is in [The crypto, written down](../crypto-brief.md#what-a-recording-of-icloud-can-open-later).
+
+**Acceptance criteria**
+
+- **Done.** `DeviceSeal` is HPKE with X-Wing; each device's X-Wing key comes from its signing seed and is
+  in its certificate, appended only when present, with both older layouts pinned by hand.
+- **Done.** Grants, grants passed on, mail, catch-ups, a restore's hand-off, approvals and address
+  announcements all go through it; a new device's request carries its X-Wing key and the code covers it.
+- **Done.** An old-form seal decodes and does not open; a certificate is never replaced; an oversized seal
+  or a malformed key is refused.
+- **Open.** Two accounts on the rig exchanging room keys with this build, after both accounts are reset.
+- **Open.** Packets and everything else under the pair's secret
+  ([Open questions](../open-questions.md#a-recording-of-icloud-still-opens-everything-under-the-pairs-secret)).
+
+**Testing**
+
+- Suite: `AKeyHandedToADeviceIsSealedWithXWingTests` (round trip, wrong device, wrong binding,
+  tampering, the old form, sizes, grants, requests, approvals) and `PerDeviceKeysTests`. Each guard
+  was taken out once and its test failed.
+- Not run over iCloud.
+
+</details>
+
+<!-- COPY END 8db04389 -->
 
 <!-- COPY BEGIN ebcdaefd [NEEDS HUMAN REVIEW] -->
 

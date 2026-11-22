@@ -31,7 +31,7 @@ The Mac and iPad as first-class, rather than a stretched phone.
 > **Sequenced after TestFlight** since 2026-09-14, and lifted out of the iPhone roadmap into
 > [the desktop roadmap](../desktop-roadmap.md), which is the status of record for this epic.
 
-The Mac runs, in a window, with three columns and a sidebar that folds, and its keychain behaves like
+The Mac runs, in a window, with three columns and a sidebar that collapses, and its keychain behaves like
 iOS's rather than the legacy file-based one; without that, a Mac and an iPhone carried two different
 identities while claiming to be one member. What is left is polish, and one structural gap blocked
 on another epic.
@@ -53,7 +53,7 @@ it does not read as an iPad app in a window.
 
 **Acceptance criteria**
 
-- **Done.** A window with three columns and a sidebar that folds; collapsing it leaves a way to change
+- **Done.** A window with three columns and a sidebar that collapses; collapsing it leaves a way to change
   destination, built as a setting.
 - **Done.** The split-view detail pane carries the room actions. It was building its room screen without any
   of them, so the Mac and iPad had no invite control at all; fixed 2026-09-01.

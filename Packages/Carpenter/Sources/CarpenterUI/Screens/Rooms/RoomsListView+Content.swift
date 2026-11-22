@@ -22,6 +22,8 @@ extension RoomsListView {
                                 .foregroundStyle(palette.destructive)
                         }
                         .padding(.vertical, 2)
+                        OpenSettingsButton()
+                            .foregroundStyle(palette.accentColor)
                     } header: {
                         Text("Nothing is going out", bundle: .module).sectionHeading()
                     }
@@ -38,6 +40,12 @@ extension RoomsListView {
                                 diameter: preferences.density == .compact
                                     ? CarpenterMetrics.compactRoomAvatar
                                     : CarpenterMetrics.roomAvatar)
+                                .listRowInsets(
+                                    EdgeInsets(
+                                        top: CarpenterMetrics.conversationRowPadding,
+                                        leading: CarpenterMetrics.screenMargin,
+                                        bottom: CarpenterMetrics.conversationRowPadding,
+                                        trailing: CarpenterMetrics.screenMargin))
                                 .listRowBackground(Color.clear)
                         }
                     } header: {
@@ -68,10 +76,6 @@ extension RoomsListView {
                         .contextMenu {
                             roomActions(for: room)
                         } preview: {
-                            // A context menu's preview is hosted outside this hierarchy, so custom
-                            // environment values do not reach it and `\.palette` falls back to its
-                            // default — which is dark. The theme is re-applied here from
-                            // `\.colorScheme`, which is trait-backed and does propagate.
                             ConversationPreview(room: room, messages: preview(room.id))
                                 .themed(palette.accent)
                         }
@@ -191,7 +195,6 @@ extension RoomsListView {
     func stamp() -> OrganisationStamp {
         OrganisationStamp(at: clock.now, device: stampDevice)
     }
-
 
     private var emptyState: some View {
         ContentUnavailableView {

@@ -69,7 +69,6 @@ public struct MessageRunView: View {
 
     @State fileprivate var editing: Message?
     @State fileprivate var withdrawing: Message?
-    @State fileprivate var hiding: Message?
     @State private var problem: String?
     @State fileprivate var reacting: Message?
     @State fileprivate var viewing: ViewedMedia?
@@ -78,7 +77,7 @@ public struct MessageRunView: View {
     @State fileprivate var listingReactionsOf: Message?
     @State private var pickingFor: Message?
     @State private var editDetent: PresentationDetent = .large
-    @State private var favourites = FavouriteEmoji()
+    private var favourites: FavouriteEmoji { .shared }
     private let onSeen: ((MessageID) async -> Void)?
     private let delay: (MessageID) -> TimeInterval?
 
@@ -133,28 +132,6 @@ public struct MessageRunView: View {
                 .presentationDetents([.medium, .large], selection: $editDetent)
                 .presentationDragIndicator(.visible)
             }
-            .confirmationDialog(
-                hiding.map { quoted($0) } ?? Text("Hide this?", bundle: .module),
-                isPresented: Binding(
-                    get: { hiding != nil },
-                    set: { if !$0 { hiding = nil } }),
-                titleVisibility: .visible,
-                presenting: hiding
-            ) { message in
-                Button(role: .destructive) {
-                    hiding = nil
-                    Task { await onHide?(message.id) }
-                } label: {
-                    Text("Hide for me", bundle: .module)
-                }
-                Button(role: .cancel) { hiding = nil } label: {
-                    Text("Cancel", bundle: .module)
-                }
-            } message: { _ in
-                Text(
-                    "Only you stop seeing it, on all of your devices. Nobody else is affected and nobody is told. You can show it again.",
-                    bundle: .module)
-            }
             .alert(
                 Text("Withdraw this message?", bundle: .module),
                 isPresented: Binding(
@@ -173,7 +150,7 @@ public struct MessageRunView: View {
                 }
             } message: { _ in
                 Text(
-                    "Everybody stops seeing the words. Nothing is erased from anybody's device — each copy shows that a message was withdrawn.",
+                    "Everybody stops seeing the words. Nothing is erased from anybody's device — each copy shows that it was withdrawn.",
                     bundle: .module)
             }
             .alert(
@@ -384,9 +361,9 @@ extension MessageRunView {
         }
 
         // COPY BEGIN 2883aa24 [NEEDS HUMAN REVIEW]
-        if onHide != nil {
-            Button(role: .destructive) {
-                hiding = message
+        if let onHide {
+            Button {
+                Task { await onHide(message.id) }
             } label: {
                 Label {
                     Text("Hide for me", bundle: .module)
@@ -394,24 +371,10 @@ extension MessageRunView {
                     Image(systemName: "eye.slash")
                 }
             }
-            .tint(palette.destructive)
         }
         // COPY END 2883aa24
     }
 }
-
-// COPY BEGIN 95bf0122 [NEEDS HUMAN REVIEW]
-extension MessageRunView {
-    /// The message being hidden, short enough for a dialog title. Apple asks that a title fit one
-    /// line; a long message is cut rather than wrapped, and a message with no words says so.
-    fileprivate func quoted(_ message: Message) -> Text {
-        let words = message.body.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !words.isEmpty else { return Text("Hide this?", bundle: .module) }
-        let short = words.count > 60 ? String(words.prefix(60)) + "…" : words
-        return Text("Hide \u{201C}\(short)\u{201D}?", bundle: .module)
-    }
-}
-// COPY END 95bf0122
 
 extension View {
     fileprivate func presentingViewer(

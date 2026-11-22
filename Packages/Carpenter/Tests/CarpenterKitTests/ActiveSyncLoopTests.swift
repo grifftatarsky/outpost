@@ -3,7 +3,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("The active-usage sync loop")
+@Suite("The active-usage sync loop", .tags(.sync))
 struct ActiveSyncLoopTests {
     @Test("Ticks on a cadence and stops cleanly when cancelled")
     func ticksThenStops() async {

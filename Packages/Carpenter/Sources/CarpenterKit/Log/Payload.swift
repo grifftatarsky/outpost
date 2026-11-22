@@ -49,19 +49,28 @@ public struct PayloadType: Hashable, Sendable, Codable, RawRepresentable {
     public static let invitationRescinded = PayloadType(rawValue: 22)
     public static let soloCheck = PayloadType(rawValue: 23)
     public static let supporterBadge = PayloadType(rawValue: 24)
+    public static let pairLink = PayloadType(rawValue: 25)
+    public static let removalNoted = PayloadType(rawValue: 26)
 
     public static let allKnown: [PayloadType] = [
         .post, .edit, .tombstone, .reaction, .roomProfile, .memberProfile, .comment,
         .joinRequest, .admission, .epochChange, .roomAccess, .readReceipt, .readPolicy, .removal,
         .departure, .media, .memberPhoto, .focusStatus, .outpostAccess, .commentTally,
-        .joinConfirmed, .invitationRescinded, .soloCheck, .supporterBadge,
+        .joinConfirmed, .invitationRescinded, .soloCheck, .supporterBadge, .pairLink, .removalNoted,
     ]
 
     public static let plumbing: Set<PayloadType> = [
         .memberProfile, .roomProfile, .comment, .joinRequest, .admission, .epochChange,
         .roomAccess, .readReceipt, .readPolicy, .removal, .departure, .memberPhoto, .focusStatus,
         .outpostAccess, .commentTally, .joinConfirmed, .invitationRescinded, .soloCheck,
-        .supporterBadge,
+        .supporterBadge, .pairLink, .removalNoted,
+    ]
+
+    public static let forTheWallsOwner: Set<PayloadType> = [.comment, .reaction]
+
+    public static let decidesWhoIsIn: Set<PayloadType> = [
+        .joinRequest, .admission, .joinConfirmed, .invitationRescinded, .roomAccess, .removal, .removalNoted,
+        .departure, .epochChange,
     ]
 
     var canonicalBytes: Data {

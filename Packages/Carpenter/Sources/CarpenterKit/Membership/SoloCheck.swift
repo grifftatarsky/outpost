@@ -80,7 +80,7 @@ public struct SoloCheck: Hashable, Sendable {
         return nil
     }
 
-    public static let shaping: Set<PayloadType> = [.soloCheck]
+    public static let entryTypes: Set<PayloadType> = [.soloCheck]
 
     public mutating func apply(_ entry: RenderedEntry, body: Payload) {
         guard body.type == .soloCheck,

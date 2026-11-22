@@ -9,8 +9,15 @@ import Testing
     .enabled(if: LiveCloudKit.isAsked),
     .serialized)
 struct CloudKitSubscriptionTests {
-    private static func subscriptions(_ database: CKDatabase) async throws -> [CKSubscription] {
-        try await database.allSubscriptions()
+    private static func subscriptions(_ database: CKDatabase, including wanted: [PushChannel] = []) async throws
+        -> [CKSubscription]
+    {
+        var found = try await database.allSubscriptions()
+        for _ in 0..<10 where !wanted.allSatisfy({ channel in found.contains { $0.subscriptionID == channel.subscriptionID } }) {
+            try await Task.sleep(for: .seconds(1))
+            found = try await database.allSubscriptions()
+        }
+        return found
     }
 
     @Test("Both subscriptions exist after asking for them")
@@ -26,15 +33,18 @@ struct CloudKitSubscriptionTests {
             somebody sends it a message and nothing arrives.
             """)
 
-        let shared = try await Self.subscriptions(CKContainer.default().sharedCloudDatabase)
+        let shared = try await Self.subscriptions(CKContainer.default().sharedCloudDatabase, including: [.inbox, .ring])
         let priv = try await Self.subscriptions(CKContainer.default().privateCloudDatabase)
 
         #expect(
             shared.contains { $0.subscriptionID == PushChannel.inbox.subscriptionID },
-            "the packet subscription is not on the shared database, which is where peers write")
+            "the packet subscription is not on the shared database, which is where contacts' spaces are")
         #expect(
-            priv.contains { $0.subscriptionID == PushChannel.bell.subscriptionID },
-            "the bell subscription is not on our own database, which is where a peer rings it")
+            shared.contains { $0.subscriptionID == PushChannel.ring.subscriptionID },
+            "the ring subscription is not on the shared database, which is where a contact rings")
+        #expect(
+            !priv.contains { $0.subscriptionID == "outpost.bell.v1" },
+            "the old bell on this member's own database was left behind; nobody can write there any more")
     }
 
     @Test("The packet subscription is silent and names one record type")
@@ -65,27 +75,23 @@ struct CloudKitSubscriptionTests {
             """)
     }
 
-    @Test("The bell is visible, and scoped to this member's own zone")
-    func theBellIsVisibleAndScoped() async throws {
+    @Test("The ring is visible and names only the ring's record type, so a receipt or a deletion wakes nobody")
+    func theRingIsVisibleAndNarrow() async throws {
         let mailbox = try await LiveCloudKit.mailbox()
         await mailbox.subscribeForInbox()
 
-        let priv = try await Self.subscriptions(CKContainer.default().privateCloudDatabase)
-        let bell = try #require(
-            priv.first { $0.subscriptionID == PushChannel.bell.subscriptionID })
-        let zoned = try #require(
-            bell as? CKRecordZoneSubscription,
-            "the bell is no longer scoped to a zone, so it fires for the whole private database")
-
-        #expect(zoned.recordType == PushChannel.bell.recordType)
-        #expect(zoned.zoneID.zoneName == CloudKitMailbox.outboxZoneName)
+        let shared = try await Self.subscriptions(CKContainer.default().sharedCloudDatabase)
+        let ring = try #require(shared.first { $0.subscriptionID == PushChannel.ring.subscriptionID })
         #expect(
-            bell.notificationInfo?.alertBody != nil,
+            (ring as? CKDatabaseSubscription)?.recordType == PairWire.ringType,
             """
-            The bell stopped being visible. It is the only push a member is meant to see; silent, \
-            a message arrives with no banner and the app looks broken to everybody who is not \
-            watching it.
+            The ring came back without its record type. Measured on Griff's phone 2026-09-27: a watch \
+            limited to one record type rang for that type alone, and a watch on everything rang for \
+            receipts and deletions too. Without the type, every receipt a contact writes is a banner.
             """)
+        #expect(
+            ring.notificationInfo?.alertBody != nil,
+            "the ring stopped being visible, so a message arrives with no banner")
     }
 
     @Test("Asking twice leaves one of each, not two")
@@ -95,14 +101,13 @@ struct CloudKitSubscriptionTests {
         await mailbox.subscribeForInbox()
 
         let shared = try await Self.subscriptions(CKContainer.default().sharedCloudDatabase)
-        let priv = try await Self.subscriptions(CKContainer.default().privateCloudDatabase)
 
         #expect(
             shared.count { $0.subscriptionID == PushChannel.inbox.subscriptionID } == 1,
             "a second bring-up left a duplicate packet subscription, so every packet pushes twice")
         #expect(
-            priv.count { $0.subscriptionID == PushChannel.bell.subscriptionID } == 1,
-            "a second bring-up left a duplicate bell, so every message rings twice")
+            shared.count { $0.subscriptionID == PushChannel.ring.subscriptionID } == 1,
+            "a second bring-up left a duplicate ring, so every message rings twice")
     }
 
     @Test("Anything else on the shared database is swept, and that is the rule")

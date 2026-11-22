@@ -61,7 +61,7 @@ sent to the wrong room is not permanent.
 
 - **Done.** Editing within fifteen minutes and withdrawing within two, matching iMessage, both measured
   from when the message was written and not from delivery.
-- **Done.** The window is enforced in the fold on every device, not only the sender's, so a modified client
+- **Done.** The window is enforced when the log is rendered on every device, not only the sender's, so a modified client
   cannot rewrite an old message on somebody else's screen.
 - **Done.** Only the author. A withdrawn message cannot then be edited; the tombstone wins in either order.
   Withdrawing clears the revision history.
@@ -71,7 +71,7 @@ sent to the wrong room is not permanent.
 
 **Testing**
 
-- Suite: nineteen tests over the fold and the session.
+- Suite: nineteen tests over rendering and the session.
 - Two accounts, 2026-09-02: Alpha edited a message Beta had already drawn and Beta's copy changed
   with the mark; Alpha withdrew one and Beta's became the placeholder; Beta's menu on Alpha's
   message offered neither; a three-minute-old message offered Edit and not Withdraw, a two-hour-old
@@ -219,7 +219,7 @@ said by mistake can be unsaid with their agreement rather than over their heads.
   hangs until the member who started it closes it. Ruled 2026-09-13 — both timed answers put a
   decision in somebody's mouth.
 - **Deferred.** **Tapping the push opens the room** and shows, **where the message was, permanently**, a line
-  saying it was deleted by consensus. The push still carries no identifier; the device folding the
+  saying it was deleted by consensus. The push still carries no identifier; the device reading the
   tombstone knows the room, so this is not a guess.
   **The form is settled — Griff, 2026-09-15**, after the HIG was read as he asked. It is not a
   transient notice: Apple says to prefer "an alternative way to communicate it **within the relevant

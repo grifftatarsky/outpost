@@ -35,6 +35,8 @@ struct RoomQuery: EntityQuery {
 }
 
 struct RoomsFocusFilter: SetFocusFilterIntent {
+    static let isDiscoverable = false
+
     // COPY BEGIN cd4a9e32 [NEEDS HUMAN REVIEW]
     static let title: LocalizedStringResource = "Rooms that may notify"
     static let description: IntentDescription? = IntentDescription(

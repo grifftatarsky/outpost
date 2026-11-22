@@ -123,6 +123,20 @@ struct PeopleView: View {
     }
 }
 
+public struct PersonActions {
+    public let roomName: String
+    public let remove: ((ParticipantID) async -> Void)?
+    public let block: ((ParticipantID) async -> Void)?
+
+    public init(
+        roomName: String, remove: ((ParticipantID) async -> Void)?, block: ((ParticipantID) async -> Void)?
+    ) {
+        self.roomName = roomName
+        self.remove = remove
+        self.block = block
+    }
+}
+
 public struct PersonDetailView: View {
     @Environment(\.palette) private var palette
     @Environment(\.personAvatars) private var personAvatars
@@ -132,17 +146,22 @@ public struct PersonDetailView: View {
     let sharedName: String?
     let onNicknameChange: ((ParticipantID, String?) async -> Void)?
     let onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)?
+    let actions: PersonActions?
 
     @State private var name: String
     @State private var picked: PhotosPickerItem?
     @State private var choosing = false
     @State private var pendingSave: Task<Void, Never>?
+    @State private var removing: Member?
+    @State private var blocking: Member?
 
     public init(
         connection: Connection, nickname: String?, sharedName: String?,
         onNicknameChange: ((ParticipantID, String?) async -> Void)?,
-        onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)?
+        onPersonAvatarChange: ((ParticipantID, PickedAvatar?) async -> Void)?,
+        actions: PersonActions? = nil
     ) {
+        self.actions = actions
         self.connection = connection
         self.sharedName = sharedName
         self.onNicknameChange = onNicknameChange
@@ -209,7 +228,7 @@ public struct PersonDetailView: View {
                     Text("On your phone", bundle: .module).sectionHeading()
                 } footer: {
                     Text(
-                        "A name or photo you set here is yours alone: drawn wherever this person appears, and never sent to anybody — not to them, not to a room. Clear the name to go back to what they shared.",
+                        "A name or photo you set here stays on your devices. It's shown wherever this person appears and is never sent to anybody. Clear the name to go back to what they shared.",
                         bundle: .module)
                     // COPY END fd396c1a
                 }
@@ -242,6 +261,30 @@ public struct PersonDetailView: View {
                 // COPY END 68c955a2
             }
             .groupedRowSurface()
+
+            if let actions {
+                Section {
+                    // COPY BEGIN 47d51f57 [NEEDS HUMAN REVIEW]
+                    if actions.remove != nil {
+                        Button(role: .destructive) { removing = person } label: {
+                            SettingsRow(
+                                icon: "person.slash", tone: .destructive,
+                                title: Text("Remove from \(actions.roomName)", bundle: .module))
+                        }
+                        .tint(palette.destructive)
+                    }
+                    if actions.block != nil {
+                        Button(role: .destructive) { blocking = person } label: {
+                            SettingsRow(
+                                icon: "hand.raised", tone: .destructive,
+                                title: Text("Block everywhere", bundle: .module))
+                        }
+                        .tint(palette.destructive)
+                    }
+                    // COPY END 47d51f57
+                }
+                .groupedRowSurface()
+            }
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -249,6 +292,8 @@ public struct PersonDetailView: View {
         .navigationTitle(Text(verbatim: person.displayName))
         .toolbarTitleDisplayMode(.inline)
         .croppingPickedPhoto($picked) { await onPersonAvatarChange?(person.id, $0) }
+        .confirmingRemoval($removing, from: actions?.roomName ?? "") { await actions?.remove?($0) }
+        .confirmingBlock($blocking) { await actions?.block?($0) }
         .onDisappear { save(now: true) }
     }
 

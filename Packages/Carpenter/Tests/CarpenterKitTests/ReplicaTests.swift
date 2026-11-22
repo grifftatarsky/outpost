@@ -8,27 +8,49 @@ struct Author {
     let device: DeviceKeys
     let certificate: DeviceCertificate
     let chain: EpochChain
+    let writesIn: RoomID?
     private(set) var head: Entry?
+    private(set) var roomHeads: [RoomID: EntryHash] = [:]
 
-    init(at issuedAt: Date = Date(timeIntervalSince1970: 0), chain: EpochChain? = nil) {
-        identity = Identity.generate()
+    static func founding(
+        _ name: String = "Hangar 7", as kind: RoomKind = .room
+    ) throws -> (founder: Author, room: RoomID, profile: Payload) {
+        let identity = Identity.generate()
+        let (room, founding) = RoomID.founding(by: identity.id, as: kind)
+        let profile = try Payload.roomProfile(name: name, kind: kind, founding: founding)
+        return (Author(identity: identity, chain: EpochChain.create(room: room).chain), room, profile)
+    }
+
+    init(
+        at issuedAt: Date = Date(timeIntervalSince1970: 0), identity: Identity = .generate(),
+        chain: EpochChain? = nil, writingIn room: RoomID? = nil
+    ) {
+        self.identity = identity
         device = DeviceKeys.generate()
-        certificate = try! DeviceCertificate.issue(
+        certificate = try! DeviceCertificate.recovered(
             for: device.publicKey, by: identity, at: issuedAt)
-        self.chain = chain ?? EpochChain.create(room: RoomID()).chain
+        self.chain = chain ?? EpochChain.create(room: RoomID.outpost(of: identity.id)).chain
+        writesIn = room
+    }
+
+    init(onTheWallOf owner: Author) {
+        self.init(chain: owner.chain, writingIn: owner.chain.room)
     }
 
     var feedKey: FeedKey { FeedKey(author: identity.id, device: device.id) }
 
     mutating func append(
         _ payload: Payload, clock: VectorClock = VectorClock(), at wallTime: Date,
-        room: RoomID? = nil
+        room given: RoomID? = nil
     ) throws -> Entry {
+        let room = given ?? writesIn
         let entry = try Entry.append(
             to: head, author: identity.id, device: device,
             clock: clock.merging(head?.clock ?? VectorClock()),
-            wallTime: wallTime, room: room, payload: payload, at: .initial, sealedWith: chain)
+            wallTime: wallTime, room: room, payload: payload, at: .initial, sealedWith: chain,
+            roomLink: room.map { RoomLink(previous: roomHeads[$0]) })
         head = entry
+        if let room { roomHeads[room] = entry.hash }
         return entry
     }
 
@@ -46,7 +68,7 @@ extension Replica {
     }
 }
 
-@Suite("Replica")
+@Suite("Replica", .tags(.sync))
 struct ReplicaTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
 
@@ -226,7 +248,9 @@ struct ReplicaTests {
 
         let revokedAt = start.addingTimeInterval(3_600)
         try replica.revoke(
-            DeviceRevocation.issue(for: alice.device.id, by: alice.identity, at: revokedAt))
+            DeviceRevocation.issue(
+                for: alice.device.id, by: alice.identity, at: revokedAt, from: alice.device,
+                cutoff: before.seq, head: before.hash, remaining: [alice.device.id]))
 
         let after = try alice.post("after", at: revokedAt.addingTimeInterval(60))
 
@@ -276,5 +300,83 @@ struct ReplicaTests {
         #expect(try replica.integrate(entry) == .accepted)
         #expect(
             replica.allEntries.first?.opened(using: alice.chain)?.body == Data([1, 2, 3]))
+    }
+}
+
+@Suite("What the replica holds", .tags(.sync))
+struct ReplicaHoldsTests {
+    private let start = Date(timeIntervalSince1970: 1_786_635_000)
+
+    @Test("Every entry integrated is listed once, and a closed room's entries leave the list")
+    func theListFollowsTheFeeds() throws {
+        var replica = Replica()
+        var alice = Author()
+        try replica.meet(alice)
+        let kitchen = RoomID()
+        let hangar = RoomID()
+
+        var made: [Entry] = []
+        for step in 0..<6 {
+            let entry = try alice.append(
+                Payload.post("\(step)"), at: start.addingTimeInterval(Double(step)),
+                room: step.isMultiple(of: 2) ? kitchen : hangar)
+            _ = try replica.integrate(entry)
+            _ = try replica.integrate(entry)
+            made.append(entry)
+        }
+
+        #expect(replica.allEntries.count == replica.entryCount)
+        #expect(Set(replica.allEntries.map(\.hash)) == Set(made.map(\.hash)))
+
+        let taken = replica.close(kitchen)
+
+        #expect(taken.count == 3)
+        #expect(replica.allEntries.count == replica.entryCount)
+        #expect(Set(replica.allEntries.map(\.hash)) == Set(made.filter { $0.room == hangar }.map(\.hash)))
+    }
+}
+
+@Suite("What a replica does with what it already holds", .tags(.sync))
+struct ReplicaAlreadyHoldsTests {
+    private let start = Date(timeIntervalSince1970: 1_786_635_000)
+
+    @Test("Offering held entries again changes nothing and verifies nothing", .tags(.timing))
+    func heldEntriesAreNotVerifiedAgain() throws {
+        var replica = Replica()
+        var alice = Author()
+        try replica.meet(alice)
+        var entries: [Entry] = []
+        for step in 0..<1_000 {
+            let entry = try alice.post("\(step)", at: start.addingTimeInterval(Double(step)))
+            try replica.integrate(entry)
+            entries.append(entry)
+        }
+        let revision = replica.revision
+
+        let started = Date()
+        for entry in entries { #expect(try replica.integrate(entry) == .alreadyPresent) }
+        let took = Date().timeIntervalSince(started)
+
+        #expect(replica.revision == revision, "offering held entries counted as a change, so every screen redraws")
+        #expect(
+            took < 0.02,
+            """
+            Offering 1,000 held entries again took \(Int(took * 1_000))ms. A feed from another of \
+            the member's devices carries every entry it wrote, every time, so a signature check \
+            per held entry is paid on every arrival.
+            """)
+    }
+
+    @Test("Meeting a known person or admitting a known certificate changes nothing")
+    func knownFactsAreNotChanges() throws {
+        var replica = Replica()
+        let alice = Author()
+        try replica.meet(alice)
+        let revision = replica.revision
+
+        replica.introduce(alice.identity.publicKeys)
+        try replica.admit(alice.certificate)
+
+        #expect(replica.revision == revision)
     }
 }

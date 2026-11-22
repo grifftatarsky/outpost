@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("What a join does, pinned", .serialized)
+@Suite("What a join does, pinned", .serialized, .tags(.membership))
 struct InvitationInvariantTests {
     private func paired() async throws -> (a: AppSession, b: AppSession, mailbox: InMemoryMailbox, room: RoomID) {
         let mailbox = InMemoryMailbox()
@@ -25,12 +25,12 @@ struct InvitationInvariantTests {
         }
     }
 
-    @Test("A join turns the key once")
-    func oneEpochTurnPerJoin() async throws {
+    @Test("A join rotates the key once")
+    func oneKeyRotationPerJoin() async throws {
         let (a, b, mailbox, room) = try await paired()
         let before = a.epochsHeld(in: room)
 
-        let invite = try await a.invite(joinerCode: b.identityCode(), joining: room, mailbox: nil)
+        let invite = try await a.invite(joinerCode: await b.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await b.redeem(inviteCode: try invite.encoded())
         try await a.sync(through: mailbox)
         try await b.accept(invite.attestation, from: try #require(a.enrolment?.identity.publicKeys))
@@ -44,7 +44,7 @@ struct InvitationInvariantTests {
         let (a, b, mailbox, room) = try await paired()
         let bID = try #require(b.enrolment?.identity.id)
 
-        let invite = try await a.invite(joinerCode: b.identityCode(), joining: room, mailbox: nil)
+        let invite = try await a.invite(joinerCode: await b.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await b.redeem(inviteCode: try invite.encoded())
         try await a.sync(through: mailbox)
         try await b.accept(invite.attestation, from: try #require(a.enrolment?.identity.publicKeys))
@@ -68,7 +68,7 @@ struct InvitationInvariantTests {
         let (a, b, mailbox, room) = try await paired()
         let bID = try #require(b.enrolment?.identity.id)
 
-        let invite = try await a.invite(joinerCode: b.identityCode(), joining: room, mailbox: nil)
+        let invite = try await a.invite(joinerCode: await b.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await b.redeem(inviteCode: try invite.encoded())
         try await a.sync(through: mailbox)
         try await b.accept(invite.attestation, from: try #require(a.enrolment?.identity.publicKeys))

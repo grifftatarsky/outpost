@@ -15,7 +15,7 @@ func resolved(_ text: Text) -> String? {
 }
 
 @MainActor
-@Suite("Reactions are spoken as one sentence, on a message and on a post")
+@Suite("Reactions are spoken as one sentence, on a message and on a post", .tags(.ui))
 struct ReactionsSpeakTests {
     private let me = ParticipantID(rawValue: Data(repeating: 1, count: 32))
     private let other = ParticipantID(rawValue: Data(repeating: 2, count: 32))

@@ -5,11 +5,11 @@ import Testing
 @testable import CarpenterKit
 @testable import CarpenterKitTesting
 
-@Suite("Delivered and read", .serialized)
+@Suite("Delivered and read", .serialized, .tags(.sync))
 @MainActor
 struct ReadReceiptTests {
     private func scratch() -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-read-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-read-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }
@@ -37,7 +37,7 @@ struct ReadReceiptTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await alice.sync(through: mailbox)

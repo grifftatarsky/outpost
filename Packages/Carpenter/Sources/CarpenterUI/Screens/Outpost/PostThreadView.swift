@@ -8,11 +8,12 @@ public struct PostThreadView: View {
 
     @State private var draft = ""
     @State private var explaining = false
+    @State private var problem: String?
 
     private let post: OutpostPost
     private let comments: [OutpostComment]
     private let viewer: ParticipantID
-    private let onComment: (String) async -> Void
+    private let onComment: (String) async -> String?
     private let onReactToPost: (String?) async -> Void
     private let onReactToComment: (OutpostComment, String?) async -> Void
     private let canJoinIn: Bool
@@ -24,7 +25,7 @@ public struct PostThreadView: View {
         post: OutpostPost,
         comments: [OutpostComment],
         viewer: ParticipantID,
-        onComment: @escaping (String) async -> Void = { _ in },
+        onComment: @escaping (String) async -> String? = { _ in nil },
         onReactToPost: @escaping (String?) async -> Void = { _ in },
         onReactToComment: @escaping (OutpostComment, String?) async -> Void = { _, _ in },
         canJoinIn: Bool = true,
@@ -42,6 +43,17 @@ public struct PostThreadView: View {
         self.hidden = hidden
         self.settings = settings
         self.postActions = postActions
+    }
+
+    private func sendComment() {
+        let outgoing = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !outgoing.isEmpty else { return }
+        draft = ""
+        Task {
+            guard let reason = await onComment(outgoing) else { return }
+            if draft.isEmpty { draft = outgoing }
+            problem = reason
+        }
     }
 
     public var body: some View {
@@ -92,6 +104,16 @@ public struct PostThreadView: View {
             HiddenCommentsSheet(hidden: hidden, settings: settings)
                 .themed(.default)
         }
+        // COPY BEGIN de96aee0 [NEEDS HUMAN REVIEW]
+        .alert(
+            Text("That comment did not go through", bundle: .module),
+            isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })
+        ) {
+            Button { problem = nil } label: { Text("OK", bundle: .module) }
+        } message: {
+            Text(verbatim: problem ?? "")
+        }
+        // COPY END de96aee0
     }
 
     private var missing: some View {
@@ -167,24 +189,16 @@ public struct PostThreadView: View {
             .padding(.leading, 14)
             .padding(.vertical, 8)
             .lineLimit(1...6)
-            .onSubmit {
-                let outgoing = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !outgoing.isEmpty else { return }
-                draft = ""
-                Task { await onComment(outgoing) }
-            }
+            .onSubmit(sendComment)
 
             if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button {
-                    let outgoing = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                    draft = ""
-                    Task { await onComment(outgoing) }
-                } label: {
+                Button(action: sendComment) {
                     Image(systemName: "arrow.up")
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
                         .frame(width: 30, height: 30)
                         .background(palette.accentFill, in: .circle)
+                        .reachable(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 4)

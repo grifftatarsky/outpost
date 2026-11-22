@@ -3,7 +3,7 @@ import Foundation
 import Testing
 import CarpenterKitTesting
 
-@Suite("A room that asks for more approvals than it has members")
+@Suite("A room that asks for more approvals than it has members", .tags(.membership))
 struct ApprovalThresholdTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let room = RoomID()
@@ -29,18 +29,17 @@ struct ApprovalThresholdTests {
         threshold: Int, founder: Identity, others: [Identity], joiner: Identity,
         admittedBy admitters: [Identity], refusedBy refusers: [Identity] = []
     ) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
         var hash: UInt8 = 1
         func next() -> UInt8 { defer { hash += 1 }; return hash }
 
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: next()),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: next()), body: profile)
         roster.set(access: .atLeast(threshold), by: founder.id)
 
         for other in others {
             let invite = try TestInvite.issue(
-                joining: self.room, joinerKeys: other.publicKeys, by: founder, at: start)
+                joining: room, joinerKeys: other.publicKeys, by: founder, at: start)
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: next()),
                 body: try Payload.joinRequest(invite))
@@ -51,12 +50,12 @@ struct ApprovalThresholdTests {
             for member in [founder] + others.prefix(while: { $0.id != other.id }) {
                 roster.apply(
                     rendered(member.id, .admission, hash: next()),
-                    body: try Payload.admission(of: other.id, admitted: true))
+                    body: try Payload.admission(of: other.id, admitted: true, invitation: invite.signature))
             }
         }
 
         let invite = try TestInvite.issue(
-            joining: self.room, joinerKeys: joiner.publicKeys, by: founder, at: start)
+            joining: room, joinerKeys: joiner.publicKeys, by: founder, at: start)
         roster.apply(
             rendered(founder.id, .joinRequest, hash: next()),
             body: try Payload.joinRequest(invite))
@@ -67,12 +66,12 @@ struct ApprovalThresholdTests {
         for refuser in refusers {
             roster.apply(
                 rendered(refuser.id, .admission, hash: next()),
-                body: try Payload.admission(of: joiner.id, admitted: false))
+                body: try Payload.admission(of: joiner.id, admitted: false, invitation: invite.signature))
         }
         for admitter in admitters {
             roster.apply(
                 rendered(admitter.id, .admission, hash: next()),
-                body: try Payload.admission(of: joiner.id, admitted: true))
+                body: try Payload.admission(of: joiner.id, admitted: true, invitation: invite.signature))
         }
         return roster
     }

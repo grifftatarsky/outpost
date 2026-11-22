@@ -1,0 +1,122 @@
+import CryptoKit
+import Foundation
+
+public struct DeviceRequest: Hashable, Sendable, Codable {
+    public let devicePublicKey: Data
+    public let sealingKey: Data
+
+    public init(devicePublicKey: Data, sealingKey: Data) {
+        self.devicePublicKey = devicePublicKey
+        self.sealingKey = sealingKey
+    }
+
+    public init(for device: DeviceKeys) {
+        self.init(devicePublicKey: device.publicKey, sealingKey: device.sealingPublicKey)
+    }
+
+    public var device: DeviceID { DeviceID(publicKey: devicePublicKey) }
+
+    public var code: String {
+        let transcript = CanonicalBytes.payload(
+            domain: Domain.deviceApprovalCode, fields: [devicePublicKey, sealingKey])
+        var code = ""
+        var block = UInt64(0)
+        while code.count < Self.codeLength {
+            let digest = SHA256.hash(data: transcript + CanonicalBytes.sequence(block))
+            for byte in digest where Int(byte) < ShortAuthenticationString.ceiling {
+                code.append(
+                    ShortAuthenticationString.alphabet[
+                        Int(byte) % ShortAuthenticationString.alphabet.count])
+                if code.count == Self.codeLength { break }
+            }
+            block += 1
+        }
+        return code
+    }
+
+    public static let codeLength = 6
+
+    public func record() throws -> SiblingRecord {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return SiblingRecord(
+            name: SiblingRecord.Name(writer: device, kind: .request),
+            sealed: SealedSiblingFeed(ciphertext: try encoder.encode(self)))
+    }
+
+    public init?(record: SiblingRecord) {
+        guard case .request = record.name.kind,
+            let decoded = try? JSONDecoder().decode(DeviceRequest.self, from: record.sealed.ciphertext),
+            decoded.device == record.name.writer,
+            (try? XWingMLKEM768X25519.PublicKey(rawRepresentation: decoded.sealingKey)) != nil
+        else { return nil }
+        self = decoded
+    }
+}
+
+public struct DeviceApproval: Hashable, Sendable, Codable {
+    public let signingSeed: Data
+    public let agreementSeed: Data
+    public let recoveryKey: Data
+    public let certificates: [DeviceCertificate]
+    public let revocations: [DeviceRevocation]
+    public let stored: [Data: Date]
+
+    private enum CodingKeys: String, CodingKey {
+        case signingSeed, agreementSeed, recoveryKey, certificates, revocations, stored
+    }
+
+    public init(
+        identity: Identity, certificates: [DeviceCertificate], revocations: [DeviceRevocation],
+        stored: [Data: Date] = [:]
+    ) {
+        signingSeed = identity.signingSeed
+        agreementSeed = identity.agreementSeed
+        recoveryKey = identity.publicKeys.recovery
+        self.certificates = certificates
+        self.revocations = revocations
+        self.stored = stored
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        signingSeed = try container.decode(Data.self, forKey: .signingSeed)
+        agreementSeed = try container.decode(Data.self, forKey: .agreementSeed)
+        recoveryKey = try container.decode(Data.self, forKey: .recoveryKey)
+        certificates = try container.decode([DeviceCertificate].self, forKey: .certificates)
+        revocations = try container.decode([DeviceRevocation].self, forKey: .revocations)
+        stored = try container.decode([Data: Date].self, forKey: .stored)
+    }
+
+    public func identity() throws -> Identity {
+        try Identity(signingSeed: signingSeed, agreementSeed: agreementSeed, recoveryKey: recoveryKey)
+    }
+
+    private static func context(approver: DeviceID, request: DeviceRequest) -> Data {
+        CanonicalBytes.payload(
+            domain: Domain.deviceApproval,
+            fields: [approver.rawValue, request.devicePublicKey, request.sealingKey])
+    }
+
+    public func record(from approver: DeviceID, to request: DeviceRequest) throws -> SiblingRecord {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let seal = try DeviceSeal.seal(
+            try encoder.encode(self),
+            to: DeviceRecipient(device: request.device, sealingKey: request.sealingKey),
+            context: Self.context(approver: approver, request: request))
+        return SiblingRecord(
+            name: SiblingRecord.Name(writer: approver, kind: .approval(for: request.device)),
+            sealed: SealedSiblingFeed(ciphertext: try encoder.encode(seal)))
+    }
+
+    public init(record: SiblingRecord, opening device: DeviceKeys) throws {
+        guard case .approval(let target) = record.name.kind, target == device.id,
+            let seal = try? JSONDecoder().decode(DeviceSeal.self, from: record.sealed.ciphertext)
+        else { throw CryptoError.openFailed }
+        let plaintext = try seal.open(
+            with: device,
+            context: Self.context(approver: record.name.writer, request: DeviceRequest(for: device)))
+        self = try JSONDecoder().decode(DeviceApproval.self, from: plaintext)
+    }
+}

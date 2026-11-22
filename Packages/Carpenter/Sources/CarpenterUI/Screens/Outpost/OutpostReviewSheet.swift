@@ -100,10 +100,10 @@ public struct OutpostReviewSheet: View {
             } label: {
                 Text("Allow nobody", bundle: .module)
                     .frame(maxWidth: .infinity)
+                    .enabledLabelColor(palette.destructiveActionLabel)
             }
             .buttonStyle(.bordered)
             .tint(palette.destructive)
-            .foregroundStyle(palette.destructiveActionLabel)
         }
         .disabled(waiting.isEmpty)
         .alert(Text("This cannot be undone", bundle: .module), isPresented: $allowingEveryone) {

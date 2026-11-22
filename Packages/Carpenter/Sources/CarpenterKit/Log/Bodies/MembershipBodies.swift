@@ -14,29 +14,15 @@ public struct JoinConfirmedBody: Hashable, Sendable, Codable {
     public let invitation: Data
     public let joiner: ParticipantID
 
-    /// The joiner opening the commitment they published in their code, **after** the inviter signed.
-    /// Until this arrives the inviter cannot compute the verification phrase, which is the whole
-    /// point: it leaves them nothing to grind with. Carried here rather than in a body of its own
-    /// because this is already the one thing the joiner sends back.
     public let nonce: Data
 
     public let signature: Data
 
-    public init(invitation: Data, joiner: ParticipantID, nonce: Data = Data(), signature: Data) {
+    public init(invitation: Data, joiner: ParticipantID, nonce: Data, signature: Data) {
         self.invitation = invitation
         self.joiner = joiner
         self.nonce = nonce
         self.signature = signature
-    }
-
-    private enum CodingKeys: String, CodingKey { case invitation, joiner, nonce, signature }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        invitation = try container.decode(Data.self, forKey: .invitation)
-        joiner = try container.decode(ParticipantID.self, forKey: .joiner)
-        nonce = try container.decodeIfPresent(Data.self, forKey: .nonce) ?? Data()
-        signature = try container.decode(Data.self, forKey: .signature)
     }
 
     public static func signedBytes(invitation: Data, joiner: ParticipantID, nonce: Data) -> Data {
@@ -96,44 +82,49 @@ public struct SoloCheckBody: Hashable, Sendable, Codable {
 
 public struct RemovalBody: Hashable, Sendable, Codable {
     public let removed: ParticipantID
+    public let heads: [EntryHash]
 
-    public init(removed: ParticipantID) {
+    public init(removed: ParticipantID, heads: [EntryHash]) {
         self.removed = removed
+        self.heads = heads
+    }
+}
+
+public struct RemovalNotedBody: Hashable, Sendable, Codable {
+    public let removal: EntryHash
+    public let storedAt: Date
+
+    public init(removal: EntryHash, storedAt: Date) {
+        self.removal = removal
+        self.storedAt = storedAt
     }
 }
 
 public struct DepartureBody: Hashable, Sendable, Codable {
-    public init() {}
+    public let heads: [EntryHash]
+
+    public init(heads: [EntryHash]) {
+        self.heads = heads
+    }
 }
 
 public struct AdmissionBody: Hashable, Sendable, Codable {
     public let joiner: ParticipantID
     public let admitted: Bool
 
-    public let invitation: Data?
+    public let invitation: Data
 
-    public init(joiner: ParticipantID, admitted: Bool, invitation: Data? = nil) {
+    public init(joiner: ParticipantID, admitted: Bool, invitation: Data) {
         self.joiner = joiner
         self.admitted = admitted
         self.invitation = invitation
-    }
-
-    private enum CodingKeys: String, CodingKey { case joiner, admitted, invitation }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        joiner = try container.decode(ParticipantID.self, forKey: .joiner)
-        admitted = try container.decode(Bool.self, forKey: .admitted)
-        invitation = try container.decodeIfPresent(Data.self, forKey: .invitation)
     }
 }
 
 public struct EpochChangeBody: Hashable, Sendable, Codable {
     public let link: EpochLink
-
-    public init(link: EpochLink) {
-        self.link = link
-    }
+    public let heads: [EntryHash]
+    public let proof: Data
 }
 
 public struct RoomAccessBody: Hashable, Sendable, Codable {
@@ -154,8 +145,11 @@ public struct RoomProfileBody: Hashable, Sendable, Codable {
 
     public let kind: RoomKind?
 
-    public init(name: String, kind: RoomKind? = nil) {
+    public let founding: Data?
+
+    public init(name: String, kind: RoomKind? = nil, founding: Data? = nil) {
         self.name = name
         self.kind = kind
+        self.founding = founding
     }
 }

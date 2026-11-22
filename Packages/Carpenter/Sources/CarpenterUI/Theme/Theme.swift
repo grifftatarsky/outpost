@@ -113,6 +113,7 @@ private struct ThemedModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.palette, palette)
+            .writingToolsBehavior(.disabled)
             .tint(palette.accentColor)
             .background(palette.background)
     }

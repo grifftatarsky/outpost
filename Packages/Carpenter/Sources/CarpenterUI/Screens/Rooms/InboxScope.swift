@@ -26,16 +26,6 @@ public enum InboxScope: Sendable {
 
     var marksGroups: Bool { self == .everything }
 
-    // COPY BEGIN cba8260c [NEEDS HUMAN REVIEW]
-    var searchPrompt: LocalizedStringResource {
-        switch self {
-        case .everything: .module("Search conversations")
-        case .direct: .module("Search solos")
-        case .groups: .module("Search rooms")
-        }
-    }
-    // COPY END cba8260c
-
     // COPY BEGIN f14426f1 [NEEDS HUMAN REVIEW]
     var emptyTitle: LocalizedStringResource {
         switch self {

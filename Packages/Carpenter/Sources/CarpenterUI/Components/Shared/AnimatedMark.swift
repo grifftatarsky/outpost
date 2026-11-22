@@ -4,9 +4,11 @@ import SwiftUI
 public struct AnimatedMark: View {
     @Environment(\.palette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.hapticsEnabled) private var hapticsEnabled
 
     private let size: CGFloat
     private let tint: Color?
+    private let onTap: (() -> Void)?
 
     @State private var frame = 0
     @State private var direction = 1
@@ -16,9 +18,10 @@ public struct AnimatedMark: View {
 
     public static let touchInset: CGFloat = 8
 
-    public init(size: CGFloat = 32, tint: Color? = nil) {
+    public init(size: CGFloat = 32, tint: Color? = nil, onTap: (() -> Void)? = nil) {
         self.size = size
         self.tint = tint
+        self.onTap = onTap
     }
 
     private static let frameDuration = Duration.milliseconds(200)
@@ -30,6 +33,7 @@ public struct AnimatedMark: View {
 
     public var body: some View {
         Button {
+            onTap?()
             wantsShut.toggle()
             Task { await settle() }
         } label: {
@@ -56,9 +60,46 @@ public struct AnimatedMark: View {
                 }
         }
         .buttonStyle(.plain)
+        .sensoryFeedback(trigger: frame) { old, new in
+            hapticsEnabled ? Self.feedback(from: old, to: new) : nil
+        }
         .accessibilityLabel(Text(verbatim: Branding.displayName))
         .accessibilityAddTraits(.isImage)
         .accessibilityRemoveTraits(.isButton)
+    }
+
+    enum Tap: Equatable {
+        case building(Double)
+        case thud
+        case squint
+        case open
+    }
+
+    static func tap(from old: Int, to new: Int) -> Tap? {
+        switch (new - old, new) {
+        case (1, 1): .building(0.35)
+        case (1, 2): .building(0.45)
+        case (1, 3): .building(0.6)
+        case (1, 4): .thud
+        case (1, 5), (1, 12): .squint
+        case (1, 8), (1, 13): .open
+        case (-1, 12), (-1, 7): .squint
+        case (-1, 11): .open
+        case (-1, 3): .thud
+        case (-1, 2): .building(0.45)
+        case (-1, 1): .thud
+        default: nil
+        }
+    }
+
+    private static func feedback(from old: Int, to new: Int) -> SensoryFeedback? {
+        switch tap(from: old, to: new) {
+        case .building(let intensity): .impact(weight: .light, intensity: intensity)
+        case .thud: .impact(weight: .heavy, intensity: 1)
+        case .squint: .impact(flexibility: .soft, intensity: 0.5)
+        case .open: .impact(flexibility: .soft, intensity: 0.35)
+        case nil: nil
+        }
     }
 
     @MainActor

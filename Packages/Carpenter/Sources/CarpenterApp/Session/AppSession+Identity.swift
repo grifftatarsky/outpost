@@ -1,6 +1,7 @@
 import CarpenterKit
 import CryptoKit
 import Foundation
+import os
 
 // MARK: Who this member is, on this device and the next
 
@@ -8,13 +9,34 @@ extension AppSession {
     // MARK: Lifecycle
 
     public func load() async {
+        guard !storageIsSealed else {
+            waitsForUnlock = true
+            Diagnostics.identity.notice("load: this phone is locked and what it keeps is sealed; waiting for it to unlock")
+            return
+        }
+        waitsForUnlock = false
         do {
             let store = IdentityStore(keychain: storage.keychain)
-            guard try await store.loadIdentity() != nil else {
+            if try await store.wasRemoved() {
+                state = .removed
+                Diagnostics.identity.notice("load: this device was removed; waiting for a recovery key")
+                return
+            }
+            let identity: Identity
+            do {
+                guard let found = try await store.loadIdentity() else {
+                    state = .checkingForRegistration
+                    return
+                }
+                identity = found
+            } catch CryptoError.retiredIdentity {
+                Diagnostics.identity.notice(
+                    "load: this device holds an identity from before the recovery key changed; starting over")
+                await eraseWhatThisPhoneKeeps()
                 state = .checkingForRegistration
                 return
             }
-            let identity = try await store.loadIdentity()!
+            unsavedRecoveryKey = try await store.unsavedRecoveryKey()
 
             let existingDevice = try await store.loadDeviceKeys()
             let device = existingDevice ?? DeviceKeys.generate()
@@ -24,8 +46,38 @@ extension AppSession {
                 identity: identity, device: device, deviceIsNew: existingDevice == nil)
             persisted = try await storage.documents.load(PersistedState.self) ?? PersistedState()
             organisation = persisted.organisation
+            await loadAddressBook()
 
             try await restoreLog(identity: identity)
+            let kept = try await store.keptCertificate()
+            let registered = replica.registry(for: identity.id)?.standing(of: device.id) != nil
+            let keptAt = kept.flatMap { persisted.authorityStored[$0.digest] ?? $0.issuedAt }
+            if !registered, let kept, let keptAt, kept.device == device.id,
+                kept.devicePublicKey == device.publicKey,
+                (try? replica.admit(kept, storedAt: keptAt)) != nil
+            {
+                persisted.certificates = Array(Set(persisted.certificates + [kept]))
+                persisted.authorityStored[kept.digest] = min(persisted.authorityStored[kept.digest] ?? keptAt, keptAt)
+            }
+            let known = replica.registry(for: identity.id).map {
+                $0.standing(of: device.id) != nil || $0.isPending(device.id)
+            } ?? false
+            if known, kept == nil,
+                let own = knownCertificates().first(where: { $0.device == device.id })
+                    ?? persisted.certificates.first(where: { $0.device == device.id })
+            {
+                try? await store.keepCertificate(own)
+            }
+
+            guard known else {
+                enrolment = nil
+                pendingDevice = device
+                pendingIdentity = identity
+                state = .awaitingApproval
+                Diagnostics.identity.notice("load: this device has not been approved by another of your devices yet")
+                if let deviceSync { await requestApproval(through: deviceSync) }
+                return
+            }
 
             if existingDevice == nil {
                 Diagnostics.identity.notice("load: new device on a known account, enrolled itself")
@@ -37,15 +89,17 @@ extension AppSession {
             await adoptNewOutpostAuthors()
 
             countWhatIsHeldForOthers()
+            await finishSealingIfItStoppedHalfWay()
 
             state = hasOwnName ? .ready : .needsProfile
             Diagnostics.identity.notice("load: \(String(describing: self.state), privacy: .public)")
+        } catch where storageIsSealed {
+            waitsForUnlock = true
+            Diagnostics.identity.notice("load: this phone locked while loading; waiting for it to unlock")
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(SessionProblem.sentence(for: error))
         }
     }
-
-    private static let extendedKeyWaitAttempts = 24
 
     public func settleRegistration(attempts: Int = 20) async {
         switch state {
@@ -67,7 +121,7 @@ extension AppSession {
                 await load()
                 return
             }
-            if presence != .unreadable, occupancy == .empty || occupancy == .offline { break }
+            if presence != .unreadable, occupancy != .undetermined { break }
             try? await Task.sleep(for: .milliseconds(300))
             if occupancy == .undetermined {
                 occupancy = await accountRegistry?.occupancy() ?? .offline
@@ -89,13 +143,23 @@ extension AppSession {
 
         guard occupancy == .empty else {
             if occupancy == .occupied {
+                await awaitApprovalWithoutAnIdentity(store)
+            } else if occupancy == .held {
                 Diagnostics.identity.notice(
-                    "load: this account has a member and its key has not arrived; stopping here")
-                state = .registrationStalled(.accountHasAMember)
+                    "load: iCloud is holding this device (not trusted yet); waiting rather than making a member")
+                state = .registrationStalled(.heldBySecurity)
             } else if occupancy == .offline {
                 Diagnostics.identity.notice(
                     "load: iCloud could not be reached; stopping rather than offering a member")
                 state = .registrationStalled(.accountOffline)
+            } else if occupancy == .signedOut {
+                Diagnostics.identity.notice(
+                    "load: this device is signed out of iCloud; stopping rather than offering a member")
+                state = .registrationStalled(.signedOut)
+            } else if occupancy == .restricted {
+                Diagnostics.identity.notice(
+                    "load: a restriction keeps this account out of iCloud; stopping rather than offering a member")
+                state = .registrationStalled(.restricted)
             } else {
                 Diagnostics.identity.notice(
                     "load: the account could not be read; stopping rather than offering a member")
@@ -109,9 +173,31 @@ extension AppSession {
             "load: nothing registered on this account; offering a new member")
     }
 
+    private func awaitApprovalWithoutAnIdentity(_ store: IdentityStore) async {
+        let device: DeviceKeys
+        do {
+            if let existing = try await store.loadDeviceKeys() {
+                device = existing
+            } else {
+                device = DeviceKeys.generate()
+                try await store.save(device)
+            }
+        } catch {
+            state = .registrationStalled(.keychainUnreadable)
+            return
+        }
+        pendingDevice = device
+        pendingIdentity = nil
+        state = .awaitingApproval
+        Diagnostics.identity.notice(
+            "load: this account already has a member; asking one of its devices to approve this one")
+        if let deviceSync { await requestApproval(through: deviceSync) }
+    }
+
     public var isWaitingForAnIdentity: Bool {
         switch state {
         case .needsIdentity, .checkingForRegistration, .registrationStalled: true
+        case .awaitingApproval: pendingIdentity == nil
         default: false
         }
     }
@@ -155,15 +241,20 @@ extension AppSession {
             return
         }
 
-        let enrolled = try await store.enrol()
+        let recovery = RecoverySecret.generate()
+        let identity = recovery.identity
+        try await store.keepUnsaved(recovery)
+        try await store.save(identity)
+        let enrolled = try await store.enrol(founding: true)
         enrolment = enrolled
+        unsavedRecoveryKey = recovery
 
         replica = Replica()
         replica.introduce(enrolled.identity.publicKeys)
-        let founding = try DeviceCertificate.issue(
-            for: enrolled.device.publicKey, by: enrolled.identity, at: clock.now)
-        try replica.admit(founding)
-        persisted.certificates = knownCertificates()
+        let founding = try DeviceCertificate.recovered(for: enrolled.device, by: identity, at: clock.now)
+        try replica.admit(founding, storedAt: authorityNow())
+        recordAuthority()
+        try await store.keepCertificate(founding)
 
         try await setDisplayName(displayName)
     }
@@ -174,44 +265,52 @@ extension AppSession {
     }
 
     public func restore(
-        fromRecoveryKey text: String, askingPeers: Bool = true, afterALoss: Bool = false
+        fromRecoveryKey text: String, askingPeers: Bool = true
     ) async throws {
         let store = IdentityStore(keychain: storage.keychain)
 
-        if try await store.loadIdentity() != nil {
-            throw RestoreFailure.thisDeviceAlreadyHasAMember
-        }
-
-        let identity: Identity
+        let recovery: RecoverySecret
         do {
-            identity = try RecoveryKey.identity(from: text)
+            recovery = try RecoveryKey.secret(from: text)
         } catch let failure as RecoveryKey.Failure {
             throw RestoreFailure.keyRefused(failure)
         }
+        let identity = recovery.identity
 
+        let existing = try? await store.loadIdentity()
+        if let existing {
+            guard state == .awaitingApproval, existing.id == identity.id else {
+                throw RestoreFailure.thisDeviceAlreadyHasAMember
+            }
+        }
+
+        try await store.clearRemoved()
+        try await store.forgetDevice()
+        try await store.forgetCertificate()
         try await store.save(identity)
         let enrolled = try await store.enrol()
         enrolment = enrolled
+        pendingDevice = nil
+        pendingIdentity = nil
 
         replica = Replica()
         replica.introduce(enrolled.identity.publicKeys)
-        try replica.admit(
-            DeviceCertificate.issue(
-                for: enrolled.device.publicKey, by: enrolled.identity, at: clock.now))
-        persisted.certificates = knownCertificates()
+        let restored = try DeviceCertificate.recovered(for: enrolled.device, by: identity, at: clock.now)
+        try replica.admit(restored, storedAt: authorityNow())
+        recordAuthority()
+        try await store.keepCertificate(restored)
 
         Diagnostics.sync.notice(
             "recovery: restored \(Diagnostics.fingerprint(enrolled.identity.id.rawValue), privacy: .public) onto a new device")
 
         cameBackFromARecoveryKey = true
+        persisted.restoredWithTheRecoveryKey = true
+        await loadAddressBook()
+        await rotateAddress(because: "this member came back with the recovery key")
+        persisted.preferences.setSavedRecoveryKey(clock.now, stamp: stamp())
         persisted.preferences.setAsksPeersForHistory(askingPeers, stamp: stamp())
         persisted.wantsWhatWasSaid = askingPeers
-        persisted.turnsEveryKeyAfterALoss = afterALoss
-        cachedProjection = nil
-        if afterALoss {
-            Diagnostics.sync.notice(
-                "recovery: a device was lost or stolen; every room's key turns")
-        }
+        projectionInputsChanged()
         if !askingPeers {
             Diagnostics.sync.notice(
                 "recovery: restored without asking anybody for what was said")
@@ -227,7 +326,7 @@ extension AppSession {
 
         if persisted.preferences.displayName?.value != trimmed {
             persisted.preferences.setDisplayName(trimmed, stamp: stamp())
-            cachedProjection = nil
+            projectionInputsChanged()
             await savePreferences()
         }
 
@@ -275,7 +374,7 @@ extension AppSession {
         guard persisted.preferences.hasAnswered(\.showsOthersNames) == false
             || persisted.preferences.isShowingOthersNames != shows else { return }
         persisted.preferences.setShowsOthersNames(shows, stamp: stamp())
-        cachedProjection = nil
+        projectionInputsChanged()
         await savePreferences()
     }
 
@@ -324,7 +423,7 @@ extension AppSession {
         let trimmed = (name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard (persisted.preferences.nickname(for: person) ?? "") != trimmed else { return }
         persisted.preferences.setNickname(trimmed, for: person, stamp: stamp())
-        cachedProjection = nil
+        projectionInputsChanged()
         await savePreferences()
     }
 
@@ -341,19 +440,18 @@ extension AppSession {
         let previous = projection.photoReference(of: me)
 
         let (reference, ciphertext) = try SealedAttachment.seal(jpeg, kind: .image)
-        let window = SyncSession.window(at: clock.now)
-        let recipients = Set(peers().map { $0.outgoingTag(window: window) })
+        let recipients = addressed(to: peers())
         uploading.insert(reference.id)
         defer { uploading.remove(reference.id) }
-        try await mailbox.upload(
-            OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients))
+        try await uploadCopies(
+            of: OutgoingAttachment(id: reference.id, ciphertext: ciphertext, recipients: recipients), through: mailbox)
         Diagnostics.sync.notice(
             "avatar: uploaded \(ciphertext.count, privacy: .public) bytes for \(recipients.count, privacy: .public) peer(s)")
 
         try await announcePhotoEverywhere(reference)
 
         if let previous, previous.id != reference.id {
-            do { try await mailbox.delete(attachment: previous.id) } catch {
+            do { try await deleteEveryCopy(of: [previous.id], through: mailbox) } catch {
                 Diagnostics.sync.error(
                     "avatar: could not delete the previous photo (\(String(describing: error), privacy: .public))")
             }
@@ -368,7 +466,7 @@ extension AppSession {
         }
         await announceOrReport("taking your photo down") { try await announcePhotoEverywhere(nil) }
         do {
-            try await mailbox.delete(attachment: current.id)
+            try await deleteEveryCopy(of: [current.id], through: mailbox)
             Diagnostics.sync.notice("avatar: taken down")
         } catch {
             Diagnostics.sync.error(
@@ -379,8 +477,15 @@ extension AppSession {
     // MARK: The recovery key
 
     public func recoveryKeyText() -> String? {
-        guard let enrolment else { return nil }
-        return RecoveryKey.text(for: enrolment.identity, createdAt: clock.now)
+        guard let unsavedRecoveryKey else { return nil }
+        return RecoveryKey.text(for: unsavedRecoveryKey, createdAt: clock.now)
+    }
+
+    public var hasUnsavedRecoveryKey: Bool { unsavedRecoveryKey != nil }
+
+    public func recoveryKeyOpens(_ text: String) -> Bool {
+        guard let id = enrolment?.identity.id, let secret = try? RecoveryKey.secret(from: text) else { return false }
+        return secret.identity.id == id
     }
 
     public var recoveryKeyFingerprint: String? {
@@ -389,7 +494,16 @@ extension AppSession {
 
     public var recoveryKeySavedAt: Date? { persisted.preferences.recoveryKeySavedAt }
 
-    public func noteRecoveryKeyOffered() async {
+    public func noteRecoveryKeySaved() async {
+        let store = IdentityStore(keychain: storage.keychain)
+        do {
+            try await store.forgetUnsavedRecoveryKey()
+        } catch {
+            Diagnostics.identity.error(
+                "recovery: could not forget the recovery key after it was saved (\(String(describing: error), privacy: .public))")
+            return
+        }
+        unsavedRecoveryKey = nil
         persisted.preferences.setSavedRecoveryKey(clock.now, stamp: stamp())
         await savePreferences()
     }
@@ -455,32 +569,39 @@ extension AppSession {
         }
         guard !wanted.isEmpty else { return }
 
+        let remaining = (replica.registry(for: enrolment.identity.id)?.activeDevices ?? [])
+            .subtracting(wanted).union([enrolment.device.id])
         for device in wanted {
+            let top = replica.link(atTopOf: FeedKey(author: enrolment.identity.id, device: device))
             let revocation = try DeviceRevocation.issue(
-                for: device, by: enrolment.identity, at: clock.now)
-            try replica.revoke(revocation)
-            persisted.revocations.append(revocation)
+                for: device, by: enrolment.identity, at: clock.now, from: enrolment.device,
+                cutoff: top?.seq ?? 0, head: top?.hash, remaining: remaining)
+            try replica.revoke(revocation, storedAt: authorityNow())
         }
+        recordAuthority()
         try await saveState()
+        await rotateAddress(because: "a device was removed")
+        sendOwnEntries()
 
         Diagnostics.identity.notice(
             """
             revoke: cutting off \(wanted.count, privacy: .public) device(s); each room's key \
-            turns once
+            is rotated once
             """)
 
-        var notTurned: [RoomID] = []
-        for room in persisted.knownRooms where chains[room] != nil {
+        var notRotated: [RoomID] = []
+        let me = enrolment.identity.id
+        for room in persisted.knownRooms where chains[room] != nil && outpostOwner(of: room).map({ $0 == me }) ?? true {
             do {
                 try await advanceEpoch(of: room)
             } catch {
-                notTurned.append(room)
+                notRotated.append(room)
                 Diagnostics.identity.error(
-                    "revoke: could not turn the key of a room — the revoked device can still read what is said in it (\(String(describing: error), privacy: .public))")
+                    "revoke: could not rotate the key of a room — the revoked device can still read what is said in it (\(String(describing: error), privacy: .public))")
             }
         }
         refresh()
 
-        guard notTurned.isEmpty else { throw AppSessionError.keyNotTurned(rooms: notTurned.count) }
+        guard notRotated.isEmpty else { throw AppSessionError.keyNotRotated(rooms: notRotated.count) }
     }
 }

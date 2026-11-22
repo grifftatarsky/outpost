@@ -30,6 +30,18 @@ public struct RoomNotGoneChoice: Sendable {
     }
 }
 
+// COPY BEGIN cf606016 [NEEDS HUMAN REVIEW]
+extension NotGone {
+    var takenBackTitle: Text { Text("Not received", bundle: .module) }
+
+    var takenBackExplanation: Text {
+        Text(
+            "Somebody in this room didn't receive it within ^[\(Self.takenBackAfterDays) day](inflect: true), so the copy waiting for them was removed from your iCloud. Their phone requests it again once something newer from you reaches them and shows this one is missing.",
+            bundle: .module)
+    }
+}
+// COPY END cf606016
+
 struct NotGoneMark: View {
     @Environment(\.palette) private var palette
     @Environment(\.notGoneHelp) private var help
@@ -53,7 +65,7 @@ struct NotGoneMark: View {
         .tappable()
         .padding(-max(0, CarpenterMetrics.hitTarget - box - 2) / 2)
         // COPY BEGIN 019f5faa [NEEDS HUMAN REVIEW]
-        .accessibilityLabel(Text("Not sent yet", bundle: .module))
+        .accessibilityLabel(notGone.wasTakenBack ? notGone.takenBackTitle : Text("Not sent yet", bundle: .module))
         .accessibilityHint(Text("Says why.", bundle: .module))
         // COPY END 019f5faa
         .sheet(
@@ -106,7 +118,7 @@ struct NotGoneExplanation: View {
                             .foregroundStyle(palette.primaryText)
                     }
 
-                    whatHappened
+                    (notGone.wasTakenBack ? notGone.takenBackExplanation : whatHappened)
                         .font(CarpenterFont.bubble)
                         .foregroundStyle(palette.primaryText)
 
@@ -115,12 +127,14 @@ struct NotGoneExplanation: View {
                         .font(CarpenterFont.footnote)
                         .foregroundStyle(palette.secondaryText)
 
-                    Text(
-                        "It keeps trying on its own, every time this app syncs. Nothing you wrote is lost.",
-                        bundle: .module
-                    )
-                    .font(CarpenterFont.footnote)
-                    .foregroundStyle(palette.secondaryText)
+                    if !notGone.wasTakenBack {
+                        Text(
+                            "It keeps trying on its own, every time this app syncs. Nothing you wrote is lost.",
+                            bundle: .module
+                        )
+                        .font(CarpenterFont.footnote)
+                        .foregroundStyle(palette.secondaryText)
+                    }
                     // COPY END cff45cfb
 
                     // COPY BEGIN 938a66e7 [NEEDS HUMAN REVIEW]
@@ -152,7 +166,7 @@ struct NotGoneExplanation: View {
             }
             .background(palette.background)
             // COPY BEGIN a0d648bf [NEEDS HUMAN REVIEW]
-            .navigationTitle(Text("Not sent yet", bundle: .module))
+            .navigationTitle(notGone.wasTakenBack ? notGone.takenBackTitle : Text("Not sent yet", bundle: .module))
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -170,15 +184,15 @@ struct NotGoneExplanation: View {
         switch (notGone.signal, notGone.hasLeftThisDevice) {
         case (.newerMessagesCollected(let count), true):
             Text(
-                "It is waiting in your iCloud. ^[\(count) newer message](inflect: true) you sent here have been collected since, and this one has not — which is more than somebody being away.",
+                "It's waiting in your iCloud. ^[\(count) newer message](inflect: true) you sent here have been received since, and this one hasn't. That's more than somebody being away.",
                 bundle: .module)
         case (.newerMessagesCollected(let count), false):
             Text(
-                "It has not left this phone. ^[\(count) newer message](inflect: true) you sent here have been collected since, and this one has not — which is more than somebody being away.",
+                "It hasn't left this phone. ^[\(count) newer message](inflect: true) you sent here have been received since, and this one hasn't. That's more than somebody being away.",
                 bundle: .module)
         case (.waited(let days), true):
             Text(
-                "It is waiting in your iCloud, and in more than ^[\(days) day](inflect: true) nobody in this room has collected it. People collect messages when they open the app.",
+                "It's waiting in your iCloud, and nobody in this room has received it in more than ^[\(days) day](inflect: true). People receive messages when they open the app.",
                 bundle: .module)
         case (.waited(let days), false):
             Text(
@@ -214,7 +228,7 @@ struct NotGoneWaitView: View {
                 }
             } footer: {
                 Text(
-                    "A message waiting for somebody to open the app is ordinary, so nothing is said at first. It is marked with an orange circle when more than one newer message you sent here has been collected and it has not, or when it has waited this long. Choosing the first option leaves only the newer-messages sign, so somebody who has stopped opening the app is never pointed out.",
+                    "A message often waits until somebody opens the app, so nothing is marked at first. An orange circle appears when more than one newer message you sent here has been received and this one hasn't, or when it has waited this long. The first option keeps only the newer-messages check, so nobody is singled out for not opening the app.",
                     bundle: .module)
             }
             .groupedRowSurface()
@@ -231,3 +245,13 @@ struct NotGoneWaitView: View {
         Task { await choice.onChange(wait) }
     }
 }
+
+#if DEBUG
+    #Preview("Not gone yet") {
+        NotGoneExplanation(
+            notGone: NotGone(signal: .newerMessagesCollected(3), hasLeftThisDevice: true),
+            sentAt: Fixtures.now.addingTimeInterval(-3_600), reason: nil, onChangeWait: {}, onShowWaiting: {}
+        )
+        .themed(.default)
+    }
+#endif

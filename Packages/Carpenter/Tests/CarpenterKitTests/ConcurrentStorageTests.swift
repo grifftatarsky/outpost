@@ -3,10 +3,10 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite("Concurrent storage", .serialized)
+@Suite("Concurrent storage", .serialized, .tags(.storage))
 struct ConcurrentStorageTests {
     private func scratch() -> URL {
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-concurrent-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-concurrent-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }
@@ -40,7 +40,7 @@ struct ConcurrentStorageTests {
 
         #expect(
             loaded.termination == .complete,
-            "the log tore: \(loaded.termination), \(loaded.discardedTrailingBytes) bytes discarded")
+            "the log tore: \(loaded.termination), \(loaded.discardedBytes) bytes discarded")
         #expect(
             loaded.entries.count == writers * perWriter,
             "\(writers * perWriter - loaded.entries.count) entries were lost to interleaved appends")

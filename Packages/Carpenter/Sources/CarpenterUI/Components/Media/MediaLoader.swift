@@ -5,6 +5,7 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import Observation
+import os
 import SwiftUI
 
 public struct DecodedImage: @unchecked Sendable, Equatable {
@@ -37,6 +38,28 @@ public struct LoadedMedia: Equatable, Sendable {
     }
 }
 
+public struct MediaAsking {
+    public let canAsk: @MainActor (AttachmentID, ParticipantID) -> Bool
+    public let isAsked: @MainActor (AttachmentID) -> Bool
+    public let ask: @MainActor (AttachmentID, ParticipantID) async -> Bool
+
+    public init(
+        canAsk: @escaping @MainActor (AttachmentID, ParticipantID) -> Bool,
+        isAsked: @escaping @MainActor (AttachmentID) -> Bool,
+        ask: @escaping @MainActor (AttachmentID, ParticipantID) async -> Bool
+    ) {
+        self.canAsk = canAsk
+        self.isAsked = isAsked
+        self.ask = ask
+    }
+}
+
+public enum MediaAskState: Equatable, Sendable {
+    case unavailable
+    case askable
+    case asked
+}
+
 public enum MediaLoadState: Equatable, Sendable {
     case idle
     case loading
@@ -49,16 +72,23 @@ public enum MediaLoadState: Equatable, Sendable {
 @Observable
 public final class MediaLoader {
     public typealias Source = @MainActor (MediaAttachment, ParticipantID) async throws -> Data?
+    public typealias ClipSource = @MainActor (MediaAttachment, ParticipantID, URL) async throws -> Bool
 
     private let source: Source
+    private let clipSource: ClipSource?
     private let screen: (any MediaScreen)?
     private let defaults: UserDefaults
-    private static let revealedKey = "media.revealed"
+    nonisolated public static let revealedKey = "media.revealed"
 
     private var states: [AttachmentID: MediaLoadState] = [:]
     private var tasks: [AttachmentID: Task<Void, Never>] = [:]
     private var previews: [AttachmentID: DecodedImage] = [:]
     private var revealed: Set<String>
+    private var askedHere: Set<AttachmentID> = []
+    @ObservationIgnored private var askable: [AttachmentID: Bool] = [:]
+    @ObservationIgnored private var seenAsked: Set<AttachmentID> = []
+
+    public var asking: MediaAsking?
 
     public var treatsEveryPhotoAsSensitive = false {
         didSet {
@@ -69,11 +99,15 @@ public final class MediaLoader {
         }
     }
 
-    nonisolated public static let playingDirectory = FileManager.default.temporaryDirectory
+    nonisolated public static let playingDirectory = ScratchSpace.shared.directory
         .appending(path: "playing", directoryHint: .isDirectory)
 
-    public init(source: @escaping Source, screen: (any MediaScreen)?, defaults: UserDefaults = .standard) {
+    public init(
+        source: @escaping Source, clipSource: ClipSource? = nil, screen: (any MediaScreen)?,
+        defaults: UserDefaults = .standard
+    ) {
         self.source = source
+        self.clipSource = clipSource
         self.screen = screen
         self.defaults = defaults
         revealed = Set(defaults.stringArray(forKey: Self.revealedKey) ?? [])
@@ -91,6 +125,36 @@ public final class MediaLoader {
         load(attachment, from: author)
     }
 
+    public func askState(of attachment: MediaAttachment, sentBy author: ParticipantID) -> MediaAskState {
+        guard let asking else { return .unavailable }
+        if askedHere.contains(attachment.id) || asking.isAsked(attachment.id) {
+            seenAsked.insert(attachment.id)
+            return .asked
+        }
+        if let known = askable[attachment.id] { return known ? .askable : .unavailable }
+        let can = asking.canAsk(attachment.id, author)
+        askable[attachment.id] = can
+        return can ? .askable : .unavailable
+    }
+
+    public func ask(for attachment: MediaAttachment, sentBy author: ParticipantID) {
+        guard let asking, !askedHere.contains(attachment.id) else { return }
+        askedHere.insert(attachment.id)
+        Task {
+            if !(await asking.ask(attachment.id, author)) { askedHere.remove(attachment.id) }
+        }
+    }
+
+    public func reconsiderAsked() {
+        guard let asking else { return }
+        askable.removeAll()
+        for id in seenAsked.union(askedHere) where !asking.isAsked(id) {
+            seenAsked.remove(id)
+            askedHere.remove(id)
+            if states[id] == .gone { states[id] = nil }
+        }
+    }
+
     private func load(_ attachment: MediaAttachment, from author: ParticipantID) {
         states[attachment.id] = .loading
         tasks[attachment.id] = Task { [weak self] in
@@ -103,6 +167,12 @@ public final class MediaLoader {
 
     private func fetch(_ attachment: MediaAttachment, from author: ParticipantID) async -> MediaLoadState {
         do {
+            if attachment.kind == .video, let clipSource {
+                let url = try Self.playingFile(for: attachment.id)
+                guard try await clipSource(attachment, author, url) else { return .gone }
+                guard let poster = await Self.poster(of: url) else { return .failed(Self.undecodable) }
+                return .loaded(LoadedMedia(image: poster, verdict: await verdict(videoAt: url), video: url))
+            }
             guard let data = try await source(attachment, author) else { return .gone }
             switch attachment.kind {
             case .image:
@@ -114,6 +184,8 @@ public final class MediaLoader {
                 return .loaded(
                     LoadedMedia(image: poster, verdict: await verdict(videoAt: url), video: url))
             }
+        } catch AttachmentError.digestMismatch {
+            return .gone
         } catch {
             return .failed(error.localizedDescription)
         }
@@ -157,6 +229,10 @@ public final class MediaLoader {
             else { return nil }
             return DecodedImage(cgImage: image)
         }.value
+    }
+
+    nonisolated static func playingFile(for id: AttachmentID) throws -> URL {
+        try writeForPlaying(Data(), id: id)
     }
 
     nonisolated static func writeForPlaying(_ data: Data, id: AttachmentID) throws -> URL {

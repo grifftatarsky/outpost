@@ -21,6 +21,7 @@ never be written down in Swift.
 | looking for what is unfinished | [docs/open-questions.md](docs/open-questions.md) |
 | about to touch a key, a seal or a signature | [docs/crypto-brief.md](docs/crypto-brief.md) — what each key is derived from and bound to, and the three failures that were all in the composition |
 | about to test | [docs/testing.md](docs/testing.md), [docs/simulator-rig.md](docs/simulator-rig.md) |
+| about to write code | [docs/style.md](docs/style.md) — the everyday patterns, what a render may cost, and how caches stay fresh |
 | wondering why something is odd | [docs/inbox.md](docs/inbox.md) — noticed and parked |
 
 **Decisions are attributed.** Every entry is marked `RULED` (Griff decided it), `PROPOSED` (Claude
@@ -44,7 +45,7 @@ copy (the docs, the site config, every string a member reads in the app) sits be
 `COPY BEGIN <id> [<status>]` and `COPY END <id>`, in whatever comment the file takes, so his team can
 review it piece by piece. The status is `NEEDS HUMAN REVIEW`, `HUMAN REVIEWED, UNVERIFIED` or
 `HUMAN REVIEWED & VERIFIED`, and **only a person moves it forward**. Never mark copy reviewed
-yourself, and never delete, reword or re-id a marker. If you change the words inside a chunk, set it
+yourself, and never reword or re-id a marker. When copy is deleted, its markers go with it. If you change the words inside a chunk, set it
 back to `NEEDS HUMAN REVIEW`. If you add copy, wrap it in a new pair using an id from
 `python3 Scripts/copy-review.py new-id`. The lint fails on a broken pair, and `copy-review.py report`
 counts what is left. See [the decision](docs/decisions.md#copy-carries-a-review-marker-and-only-a-person-moves-it).
@@ -58,6 +59,74 @@ touched. Five days later that comment was restated, more confidently, in `archit
 type was written the same evening and never called. Nobody re-derived any of it from the code for
 four weeks, and every room key the member held went to CloudKit in the clear the whole time.
 
+## Before building, and before saying it works
+
+Griff asked for these on 2026-09-26, after a session in which features were built to the letter of
+the request and then broke in the cases they existed for: device keys that a removed device could
+get around, an approval that passed its test and crashed the app, and a hole that sat in the crypto
+brief labelled a limit.
+
+1. **Write down what it must guarantee before writing code.** Two or three plain sentences: what the
+   feature promises, and who it must stop — a removed device, a thief who knows the passcode and runs
+   a modified app, a second Apple Account, a device that was offline. Griff confirms them. The first
+   tests try to break exactly those sentences.
+2. **No "known limit" without Griff's yes.** A gap found while working is fixed, or it goes to him as
+   a question with a recommendation. A limit written into a doc that he never agreed to is a dropped
+   ball with paperwork.
+3. **"Fixed" and "passing" mean the code was reread and a test did what the app does.** Anything that
+   crosses the network runs on the rig. A claim from an earlier commit or doc is checked against the
+   code before it is repeated. Otherwise the word is "not verified".
+4. **One thing at a time, finished.** A feature is done when the sentences in rule 1 hold on the rig,
+   not when it builds.
+
+## The craft
+
+Griff, 2026-09-28: "this is art. You are an artist. You're writing something that's important, will
+help people communicate privately, which you should know is more and more important — and more and
+more vulnerable — every day. So do your best." The standard he named is *Clean Code* (Robert C.
+Martin, chapter 1) and *The Algorithm Design Manual* (Steven Skiena). The passages he chose:
+
+> I like my code to be elegant and efficient. The logic should be straightforward to make it hard for
+> bugs to hide, the dependencies minimal to ease maintenance, error handling complete according to an
+> articulated strategy, and performance close to optimal so as not to tempt people to make the code
+> messy with unprincipled optimizations. Clean code does one thing well. — Bjarne Stroustrup
+
+> You know you are working on clean code when each routine you read turns out to be pretty much what
+> you expected. You can call it beautiful code when the code also makes it look like the language was
+> made for the problem. — Ward Cunningham
+
+> Clean code always looks like it was written by someone who cares. There is nothing obvious that you
+> can do to make it better. — Michael Feathers
+
+And Beck's rules of simple code, in the priority Ron Jeffries gives them: it runs all the tests; it
+contains no duplication; it expresses all the design ideas that are in the system; it has as few
+types, methods and functions as that allows. Here, that means:
+
+- **Model the problem before writing it.** Say what the thing is (a set, a map keyed by the right
+  thing, a chain, an interval, a graph) and pick the structure for the questions it has to answer.
+  Half the traps below are a wrong model: a map keyed on the person instead of the thing, a
+  dictionary taken for an order, a number somebody else chose used as a loop bound.
+- **Correctness is shown, not assumed.** Before building, look for the counterexample: the input, the
+  interleaving, the removed device that breaks the promise. Those are the first tests. A
+  reasonable-looking algorithm is not a correct one until that search comes up empty.
+- **Know the worst case of anything a peer controls.** Every size, count and number that arrives
+  from another device has a bound in code, and a walk over it is linear in what this device holds,
+  never in what somebody claims.
+- **One thing well.** A routine does what its name says and nothing else. With no comments to lean
+  on, a routine that needs explaining has the wrong name or the wrong shape; fix the shape.
+- **No duplication.** Before writing a helper, grep for the one that exists. Two copies of a rule
+  drift apart silently. Knowledge lives in one place.
+- **Error handling follows the strategy that exists.** `try?` for what costs a banner,
+  `persistOrReport` for what costs history, and a failure the member could act on is reported to the
+  member. A new path picks one of those on purpose.
+- **Performance is earned by the model, not by clever code.** A cost is held by a test the way
+  `ProjectionCostTests` holds one; an optimization with no measurement behind it is the unprincipled
+  kind.
+- **Leave it better, in its own commit.** A cleanup is never mixed into a feature. Where nothing can
+  be compiled (a cloud session), a cleanup is only what reading and `grep` can prove: every use of a
+  renamed symbol found, no new name that Darwin, Foundation or SwiftUI already has, and a commit
+  message that says it was not built.
+
 ## Spend tokens like they are Griff's, because they are
 
 - **Read narrowly.** `grep -n` for the symbol, then read the twenty lines around it. Do not read a
@@ -67,6 +136,9 @@ four weeks, and every room key the member held went to CloudKit in the clear the
   one before committing.
 - **Verify before reporting.** A claim you did not measure is a claim that will be wrong in front of
   him.
+- **On "pause", or any usage warning, stop every agent and background job**, check that nothing is
+  left running, and start nothing again until Griff says so. On 2026-11-11 two runs kept going after
+  he said pause and used a week of his allowance. Size a run before starting it, and say the size.
 
 ## Commands
 
@@ -79,14 +151,19 @@ cd Packages/Carpenter && swift test
 ```
 
 ```bash
-xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,name=outpost-alpha' build
+xcodebuild -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=5A43F953-128D-4FE6-9135-0D26520E02B6' build
 ```
 
 ```bash
-xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,name=outpost-alpha' -only-testing:CarpenterTests
+xcodebuild test -workspace Carpenter.xcworkspace -scheme Carpenter -destination 'platform=iOS Simulator,id=5A43F953-128D-4FE6-9135-0D26520E02B6' -only-testing:CarpenterTests
 ```
 
 `SKIP_SYMBOL_CHECK=1` skips the lint's slowest rule while iterating. CI runs all of it.
+`Scripts/test-package.sh` runs the package suite as six processes, in about two thirds of the time.
+
+The simulator is `outpost-alpha`, named by its UDID: on Xcode 27 `name=` means the newest iOS and the
+rig runs 27.2. `Scripts/check-all.sh` runs every check above and the Release leak check, and ends in a
+digest of what failed, which is what a session without a compiler asks Griff to paste back.
 
 ## The rig, which is not optional
 
@@ -171,10 +248,14 @@ Read these before touching sync. Every one cost real time.
   actor is *free* while a network call is suspended — and what runs on it is the member pressing
   send. Copy-modify-write silently ate their message. Fetch in an `async` call, apply in a
   **synchronous** one. See `SyncSession.integrate` and `ReplicaRaceTests`.
-- **The fold is cached, and the cache is invalidated by `didSet` on `replica` and `chains`.** If you
-  add a third piece of state the projection reads, it needs the same treatment — and no test will
-  tell you, because a stale fold looks like a message that did not arrive. `ProjectionCostTests`
-  guards the cost *and* the freshness.
+- **The projection is cached, and the cache is invalidated when the log really changes.** `replica`'s
+  `didSet` rebuilds when `Replica.revision` moves, `chains`' on any change, and
+  `projectionInputsChanged()` covers what the projection reads outside the log (names, nicknames,
+  who you have met). If you add another piece of state the projection reads, it needs the same
+  treatment, because a stale projection looks like a message that did not arrive. Derived caches are
+  `@ObservationIgnored` behind `projectionGeneration`; a new one goes through `cached(_:_:_:)`.
+  `ProjectionCostTests` guards the cost and `WhatAScreenIsToldTests` what a screen hears. See
+  [docs/style.md](docs/style.md).
 - **A nil check does not survive an `await`.** Actors are reentrant, so `guard x == nil` followed
   by an `await` and then `x = …` lets two callers do the same bring-up. Hold the in-flight work as a
   `Task` and make the second caller await it. `Scripts/lint/reentrancy.py` enforces it.
@@ -235,6 +316,63 @@ Read these before touching sync. Every one cost real time.
   same way on 2026-09-14: an `AdmissionBody` now names the invitation it answers, and the maps key on
   that. The leak was an invitation *replaced* rather than removed — removal cleared the old maps, a
   superseding `joinRequest` did not, so a vote for a dead offer admitted somebody to the live one.
+- **A removed member still holds the old key.** Whatever they write under it opens for everyone, so
+  the member list `RoomRoster` builds from the log is the only thing that stops them getting back in. It checked that a
+  removal came from a member and nothing on the entries that let people in: a removed member could
+  invite a second identity of their own into an open room, and a vote from outside the room counted.
+  A request counts only when its inviter writes it as a member, a vote only from a current member
+  (2026-09-26, `WhoCanAddPeopleToARoomTests`). Any new entry type that changes who is in a room needs the
+  same check on its author. Keys too: a member writes under the newest key their device holds and
+  passes it on, and a device took a key from anybody with a pairwise secret, so a removed member could
+  send one they made up and read what the room said next. A key from somebody the room shows as absent is
+  refused, an Outpost's key is taken only from its owner, and a key never replaces one already held
+  (`WhoCanSendYouAKeyTests`); what a device that cannot read the room yet should trust is an open
+  question.
+- **Anything addressed to a person reaches every device that holds their identity key.** Every approved
+  device holds the identity key, and a device the member removed keeps it. Room keys are sealed to
+  each device that is not removed (`DeviceSeal`), and a removed device erases itself when it hears.
+  Anything new that goes to a member has to be sealed the same way, or removing a device stops
+  meaning anything (`PerDeviceKeysTests`, `WhatRemovingADeviceCutsOffTests`).
+- **A date a device writes is not an order.** Approvals and removals were replayed by the dates
+  their authors signed, so a removed device that kept the identity key could date an approval of a
+  device of its own, or removals of the member's other devices, before its own removal, and all of
+  it counted (measured 2026-09-26). They now count in the order iCloud first stored them: each is its
+  own record named after a hash of its contents, because CloudKit keeps a record's `creationDate`
+  through a rewrite but not its contents' hash. Anything new that decides who may act for a member
+  needs the same: a stored time from iCloud, never a date the author chose
+  (`WritingOldDatesIntoICloudTests`). And never mix a device's clock with iCloud's unguarded: a
+  device times its own new event after everything it has seen, then takes iCloud's time.
+- **The identity proves the person, never the device.** Every device a member approved holds the
+  identity, and a device they removed keeps it. So anything wrapped or sealed only with a key that
+  comes from the identity (the pairwise secret, the sibling feed key) can be written by a removed
+  device. Until 2026-09-27 that included room-key hand-offs and the records a member's devices write
+  for each other, so a removed device could hand a friend a room key it made up and read everything
+  said after. Anything that hands over a key, or changes what a device holds or does, must be signed
+  by a device and checked against that person's registry at the time iCloud stored it
+  (`EpochGrant.isSigned`, `siblingTrust`, `ForgingAKeyTests`).
+- **A second device in a test has to be approved, the way a real one does.** `InMemoryKeychainStore`
+  keeps device-only items per device and shares only synchronized ones, through `sibling()`, like
+  iCloud Keychain. A test that hands two sessions one keychain, or removes the device key to fake a
+  new device, is testing something no phone does. Use `keychain.sibling()` and
+  `approveNewDevice(_:)`. The fake relay treated deletions as its own writes until 2026-09-26, which
+  silently stopped an approved device hearing from the device that approved it.
+- **A member's devices share one inbox.** A delivery is acknowledged by whichever of the member's
+  devices collects it first, so the others see it only because that device passes it on in its
+  mail to them. Anything a device receives for the member has to go through that mail, or the
+  member's other devices never get it (`OneMemberTwoDevicesTests`, measured 2026-09-26).
+- **A removal and the key that answers it can arrive a round apart.** Removing a device changes the
+  member's address, and the packet with the new key waits at the new address, which a friend learns
+  only from the packet that carries the removal. Anything that acts on hearing a removal must not
+  assume the key is there yet, or every friend acts at once: a first cut of a 2026-11-11 fix had
+  every friend mint a rival key on every device removal. A round now collects again from a peer
+  whose address moved (`ARemovedDeviceGetsNoKeyThroughAFriendTests`).
+- **A key somebody passed on is not a key they made.** A key with no key-change entry was trusted on
+  the word of the person who gave it, so an honest friend who had not heard of a removal laundered a
+  removed phone's key. It counts on the word of the device that signed the grant, and not at all once
+  a key change that made it was refused or thrown out (`trustedKey`).
+- **A packet has one stored time.** Two things in one packet tie, and a tie falls back to what the
+  devices wrote. Two device removals sent together were ordered by a clock the losing device had set
+  back. Send only what counts, or give each its own record.
 - **A dictionary keyed by recipient holds one value.** `SyncEngine.pack` addressed epoch grants into
   `[RecipientTag: Data]` with a plain subscript, so a round owing one person keys to two rooms
   delivered the last and dropped the rest — and the sender then marked every owed grant issued,
@@ -250,6 +388,19 @@ Read these before touching sync. Every one cost real time.
   held, no test in 118 suites could see it. Both are fixed: the relay holds encoded `Data` now, and
   every seam's fake was audited against the rule on 2026-09-14. If a fake does not produce the bytes
   the real one produces, it cannot fail the way the real one fails — hold any new one to that.
+- **Code that runs inside a `CKSyncEngine` callback must not call the engine.** `handleEvent` is
+  awaited by the engine, and anything reached from it through an `await` — including the app's
+  handler for an arrived record — runs in the callback's task. If that code calls `sendChanges` or
+  `fetchChanges`, CloudKit stops the app with "BUG IN CLIENT OF CLOUDKIT". A plain `Task { }` does
+  not escape it (it inherits the callback's context, and the first case below was one);
+  `Task.detached` does, which is also what CloudKit's own message says.
+  Two cases were in the build on 2026-09-26. The live suite found the first: a write that clashed
+  with a record already on the server (a relaunched device's approval request, or any reinstall)
+  was retried in a plain `Task`, and the app stopped. The second was found by reading the same day
+  and not measured: a new device deleted its approval records from inside the handler that
+  received them, which would have stopped it at the moment it was approved. Arrived records are
+  now handed to the app from a detached task, and `send` retries a conflicted write itself. The
+  fake cannot fail this way, so the live suite is the only guard.
 - **Nothing is written to CloudKit unsealed, and the app seals it rather than CloudKit.**
   `record[key]` is not encrypted, and `record.encryptedValues[key]` is end-to-end **only when the
   member has Advanced Data Protection on** — otherwise Apple holds the key. Its service key also
@@ -291,7 +442,8 @@ Read these before touching sync. Every one cost real time.
   landed. The only signal was `warning: no 'async' operations occur within 'await' expression`, and
   an incremental build does not reprint it — `rm -rf` the derived data after splitting a type across
   files, and read the warnings. The method is `syncNow()` now, because a name libc does not have
-  cannot be shadowed by one it does.
+  cannot be shadowed by one it does. That warning's group, `UnnecessaryEffectMarker`, is an error in
+  every target now, so the same mistake fails the build, incremental or not.
 - **Iterating a dictionary is not an order, and the fake had one.** `recordZoneChanges` hands its
   results back in `modificationResultsByID`, a `Dictionary`, and the mailbox built its array by
   iterating it — so a zone's packets came back in a different order on different runs. Measured
@@ -300,7 +452,23 @@ Read these before touching sync. Every one cost real time.
   saw an order the server never promised. `SyncSession.integrate` accumulates nearly everything a
   delivery carries, but takes `notifyWalls` whole from each packet — last one wins — and a peer only
   re-sends that list when it changes, so the wrong order leaves a stale wish standing for good.
-  `everything(in:)` sorts by `modificationDate` now, with the record name as a tiebreak.
+  `everything(in:)` sorts by `creationDate` now, with the record name as a tiebreak — not
+  `modificationDate`, because an acknowledgement re-saves the record and moves an old packet last.
+- **A number somebody else chose is not a loop bound.** A sequence number is whatever the signer
+  wrote, a vector clock claims whatever positions it likes, and a repair request names whatever spans
+  a peer sends. History repair walked all of them one number at a time: `Replica.gaps()` built an
+  array from the contiguous run to the highest position anybody claimed, `fill` enumerated every
+  number in a peer's spans, and `heads[feed] + 1` trapped on `UInt64.max`. One entry signed at 2^50,
+  or one request for `1...UInt64.max`, and the device ran out of memory — on every launch, because
+  the entry is on disk. Found by reading, 2026-09-26. Spans are arithmetic now (`normalized`,
+  `intersecting`, `subtracting`), a walk only visits positions this device actually holds, counts
+  saturate, and a span that arrives backwards is empty. `ClaimedHistoryTests` holds it. A date is a
+  number somebody chose too: `CanonicalBytes.timestamp` converted it to `Int64` with a trapping
+  initialiser, and it runs while an entry decodes, so one entry dated `1e300` crashed every recipient
+  on every fetch until somebody deleted the packet by hand. It clamps now, and every date a clock can
+  produce keeps its bytes; `DatesPastTheEndOfTimeTests` holds it. An epoch number is one too: passing
+  on keys counted down from the newest number, so a key at 2^62 froze the app on every launch. Walks
+  use `EpochChain.heldNumbers`, and a jump costs a link per number (`AKeysNumberIsNotALoopBoundTests`).
 - **CloudKit's query index is eventually consistent.** "Write it, then read it" is not a guarantee
   it makes. Read a zone's change feed, or fetch a record by ID. A query cost a week once.
 - **Rotating tags rotate.** Anything keyed by a `RecipientTag` is keyed by *today's* address. A

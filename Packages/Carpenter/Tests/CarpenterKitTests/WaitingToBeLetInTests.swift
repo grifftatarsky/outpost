@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 @MainActor
-@Suite("Waiting to be let in", .serialized)
+@Suite("Waiting to be let in", .serialized, .tags(.membership))
 struct WaitingToBeLetInTests {
     private func pair() async throws -> (
         alice: AppSession, bob: AppSession, mailbox: InMemoryMailbox
@@ -33,8 +33,7 @@ struct WaitingToBeLetInTests {
         let (alice, bob, mailbox) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7", access: .founder)
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         try await bob.redeem(inviteCode: try invite.encoded())
         try await settle([alice, bob], mailbox)
 
@@ -42,8 +41,6 @@ struct WaitingToBeLetInTests {
         let waiting = try #require(bob.awaitingAdmission.first)
         #expect(waiting.room == room)
         #expect(waiting.invitedBy.id == alice.enrolment?.identity.id)
-        // Both sides derive it from the joiner's nonce, so the joiner has it as soon as they
-        // redeem and the inviter has it once the confirmation reaches them.
         #expect(waiting.phrase == bob.phrase(for: invite.attestation))
         #expect(waiting.phrase?.count == invite.attestation.phraseLength.rawValue)
         #expect(bob.awaitingAdmission.count == 1)
@@ -65,8 +62,7 @@ struct WaitingToBeLetInTests {
         let (alice, bob, mailbox) = try await pair()
         let room = try await alice.createRoom(named: "Hangar 7")
 
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox)
         #expect(bob.inspect(inviteCode: try invite.encoded()) != nil)
         try await settle([alice, bob], mailbox)
 
@@ -96,7 +92,7 @@ struct WaitingToBeLetInTests {
     func thePhraseSurvivesARelaunch() async throws {
         let mailbox = InMemoryMailbox()
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "waiting-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "waiting-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let alice = TestSession.make()
@@ -117,7 +113,7 @@ struct WaitingToBeLetInTests {
 }
 
 @MainActor
-@Suite("The phrase outlives everything", .serialized)
+@Suite("The phrase outlives everything", .serialized, .tags(.membership))
 struct PhraseSurvivesEverythingTests {
     @Test("The phrase survives the invitation lapsing")
     func survivesTheLapse() async throws {

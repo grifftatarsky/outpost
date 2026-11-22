@@ -163,7 +163,6 @@ extension RoomsListView {
 
     private var composeGlyph: some View {
         Image(systemName: "square.and.pencil")
-            .font(.system(size: 21, weight: .regular))
             .foregroundStyle(palette.primaryText)
     }
 
@@ -225,8 +224,7 @@ extension RoomsListView {
             }
             // COPY END 6252a9c0
         } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.system(size: 21, weight: .regular))
+            Image(systemName: "ellipsis")
                 .foregroundStyle(palette.primaryText)
         }
         // COPY BEGIN 8bc21884 [NEEDS HUMAN REVIEW]

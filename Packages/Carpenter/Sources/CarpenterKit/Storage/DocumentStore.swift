@@ -8,10 +8,12 @@ public protocol DocumentStore: Sendable {
 
 public actor FileDocumentStore: DocumentStore {
     private let url: URL
+    private let dial: ProtectionDial
     private let fileManager: FileManager
 
-    public init(url: URL, fileManager: FileManager = .default) {
+    public init(url: URL, protection dial: ProtectionDial = ProtectionDial(), fileManager: FileManager = .default) {
         self.url = url
+        self.dial = dial
         self.fileManager = fileManager
     }
 
@@ -27,10 +29,7 @@ public actor FileDocumentStore: DocumentStore {
         let scratch = url.deletingLastPathComponent()
             .appending(path: ".\(url.lastPathComponent).\(UUID().uuidString)")
 
-        try JSONEncoder().encode(value).write(to: scratch, options: .atomic)
-        try fileManager.setAttributes(
-            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-            ofItemAtPath: scratch.path)
+        try ProtectedFiles.write(JSONEncoder().encode(value), to: scratch, as: dial.current, using: fileManager)
 
         try CrossProcessLock(forDirectory: url.deletingLastPathComponent()).whileLocked {
             _ = try fileManager.replaceItemAt(url, withItemAt: scratch)

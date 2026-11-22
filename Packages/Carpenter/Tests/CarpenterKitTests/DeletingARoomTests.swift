@@ -20,7 +20,7 @@ private actor LogThatWillNotRewrite: LogStore {
 }
 
 @MainActor
-@Suite("Deleting a conversation you are no longer in", .serialized)
+@Suite("Deleting a conversation you are no longer in", .serialized, .timeLimit(.minutes(10)))
 struct DeletingARoomTests {
     private struct Rig {
         let alice: AppSession
@@ -39,7 +39,7 @@ struct DeletingARoomTests {
         let clock = TestClock(now: TestSession.now)
         let mailbox = InMemoryMailbox(clock: clock)
         let keychain = InMemoryKeychainStore()
-        let directory = URL.temporaryDirectory.appending(path: "carpenter-delete-\(UUID().uuidString)")
+        let directory = TestScratch.root.appending(path: "carpenter-delete-\(UUID().uuidString)")
         let media = MemoryMediaStore()
         let alice = TestSession.make(clock: clock)
         let bob = TestSession.make(keychain: keychain, at: directory, media: media, clock: clock)
@@ -197,8 +197,19 @@ struct DeletingARoomTests {
         try await rig.bob.deleteRoom(rig.hangar)
 
         try await rig.alice.advanceEpoch(of: rig.hangar)
-        let sent = try await rig.alice.sync(through: rig.mailbox)
-        try #require(sent.packetsWritten > 0, "Alice sent nothing, so this proves nothing")
+        let aliceID = try #require(rig.alice.enrolment?.identity.id)
+        let chain = try #require(rig.alice.chains[rig.hangar])
+        let epoch = try #require(chain.highestKnownEpoch)
+        let pairwise = try #require(rig.alice.pairwiseSecret(with: rig.bobID))
+        let late = try EpochGrant.issue(
+            try chain.secret(for: epoch), at: epoch, in: rig.hangar, link: chain.link(at: epoch), to: pairwise,
+            devices: rig.alice.deviceRecipients(of: rig.bobID)
+        ).signed(by: try #require(rig.alice.enrolment?.device), from: aliceID, to: rig.bobID)
+        let toBob = Peer(secret: pairwise, them: rig.bobID, me: aliceID)
+        try await rig.mailbox.put(
+            try SyncEngine.pack([], for: [toBob], granting: [(to: toBob, grant: late)],
+                window: SyncSession.window(at: TestSession.now)),
+            to: rig.bobID, in: try rig.alice.currentPairs())
         let arrived = try await rig.bob.sync(through: rig.mailbox)
         try #require(!arrived.grantsReceived.isEmpty, "no key reached Bob, so this proves nothing")
 
@@ -222,7 +233,7 @@ struct DeletingARoomTests {
         try await rig.alice.sync(through: rig.mailbox)
         try await rig.bob.sync(through: rig.mailbox)
         try #require(rig.bob.standing(in: rig.hangar) != .present)
-        try #require(try await rig.mailbox.pendingAttachments()[his] != nil, "Alice collected it, so this proves nothing")
+        try #require(await rig.mailbox.everyPendingAttachment[his] != nil, "Alice collected it, so this proves nothing")
         try await rig.bob.deleteRoom(rig.hangar)
 
         #expect(await rig.media.sealed(for: hers) == nil, "a photo from the deleted room is still on this device")
@@ -233,7 +244,7 @@ struct DeletingARoomTests {
         await relaunched.load()
         try await relaunched.sync(through: rig.mailbox, media: rig.mailbox)
         #expect(
-            try await rig.mailbox.pendingAttachments()[his] != nil,
+            await rig.mailbox.everyPendingAttachment[his] != nil,
             "deleting took back a photo other people had not collected yet")
     }
 
@@ -306,10 +317,10 @@ struct DeletingARoomTests {
         try await join(first, into: hangar, of: alice, through: mailbox)
         try await first.send("hello from the first phone", to: hangar)
 
-        try await keychain.remove(IdentityStore.deviceKey)
-        let second = TestSession.make(keychain: keychain, clock: clock)
+        let second = TestSession.make(keychain: await keychain.sibling(), clock: clock)
         second.syncDevices(through: InMemoryEntrySync(relay: relay))
         await second.load()
+        try await first.approveNewDevice(second)
 
         try await settle(first, second) { second.chains[hangar] != nil }
         try #require(second.chains[hangar] != nil, "the second device never received the room's key")
@@ -334,7 +345,7 @@ struct DeletingARoomTests {
     }
 
     private func settle(_ first: AppSession, _ second: AppSession, until done: () -> Bool) async throws {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = TestDeadline.fromNow
         while !done(), Date() < deadline {
             await first.refreshDeviceSync()
             await second.refreshDeviceSync()

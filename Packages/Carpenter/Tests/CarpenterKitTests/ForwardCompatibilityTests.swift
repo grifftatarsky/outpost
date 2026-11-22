@@ -5,7 +5,7 @@ import CarpenterKitTesting
 @testable import CarpenterApp
 @testable import CarpenterKit
 
-@Suite struct ForwardCompatibilityTests {
+@Suite(.tags(.storage)) struct ForwardCompatibilityTests {
     @Test func preferencesDecodeFromBeforeNotificationLevelsExisted() throws {
         let old = Data(#"{"hidden":[]}"#.utf8)
         let decoded = try JSONDecoder().decode(MemberPreferences.self, from: old)
@@ -72,6 +72,9 @@ extension ForwardCompatibilityTests {
         state.publishedEntryCount = 3
         state.knownSiblings = [DeviceID(rawValue: WideID.of([7]))]
         state.outstandingPackets = [PacketID(): [entry]]
+        state.packetsWritten = [
+            PacketID(): WrittenPacketRecord(recipients: [RecipientTag(rawValue: Data([4]))], digest: Data([5]))
+        ]
         let feed = FeedKey(author: ParticipantID(rawValue: WideID.of([9])), device: DeviceID(rawValue: WideID.of([7])))
         var heads = VectorClock()
         heads[feed] = 4
@@ -91,15 +94,46 @@ extension ForwardCompatibilityTests {
         state.repairs = [repair]
         state.repairDuties = [RepairDuty(request: request, from: ParticipantID(rawValue: WideID.of([9])))]
         state.unverifiable = [FeedGap(feed: feed, spans: [SequenceSpan(7, 7)])]
+        state.saidElsewhere = [ParticipantID(rawValue: WideID.of([9])): [FeedGap(feed: feed, spans: [SequenceSpan(8, 8)])]]
+        state.repairSpend = [ParticipantID(rawValue: WideID.of([9])): RepairSpend(day: 3, bytes: 4)]
+        state.newcomersFrom = [ParticipantID(rawValue: WideID.of([9])): DailyCount(day: 3, count: 2)]
         state.spentEntries = [SpentEntry(feed: feed, seq: 3, hash: entry, room: room)]
         state.uploadsLeftForOthers = [AttachmentID()]
+        state.attachmentsSent = [
+            AttachmentID(): SentAttachmentRecord(
+                people: [ParticipantID(rawValue: WideID.of([9]))], collectedBy: [DeviceID(rawValue: WideID.of([7]))],
+                sentAt: stamp.at)
+        ]
+        state.photosAsked = [
+            AttachmentID(): AskedPhoto(
+                author: ParticipantID(rawValue: WideID.of([9])), entry: entry, askedAt: stamp.at, sent: true)
+        ]
+        state.addressAnnounced = [
+            ParticipantID(rawValue: WideID.of([9])): AnnouncedAddress(
+                salt: Data(repeating: 3, count: 32), packet: PacketID(), confirmed: true)
+        ]
+        state.photoAsks = [
+            PhotoAskRecord(
+                from: ParticipantID(rawValue: WideID.of([9])), entry: entry, attachment: AttachmentID(), at: stamp.at)
+        ]
+        let link = PairLink(account: "_them", url: URL(string: "https://icloud.invalid/share/a")!)
+        var paired = PairBookEntry(theirs: link)
+        paired.joinedSpace = link.url
+        paired.announced = link.url
+        paired.gone = [URL(string: "https://icloud.invalid/share/gone")!]
+        paired.shut = true
+        paired.sharedNothingSince = stamp.at
+        state.pairBook = [ParticipantID(rawValue: WideID.of([9])): paired]
+        state.codeLink = try SignedPairLink.sign(link, by: Identity.generate())
+        state.codeClaims = [CodeClaim(url: link.url, peer: ParticipantID(rawValue: WideID.of([9])))]
         state.holesNoticed = [room: stamp.at]
         state.askedAutomatically = [room: stamp.at]
-        state.epochTurnsOwed = [room]
+        state.keyRotationsOwed = [room]
         state.outpostMediaOwed = [ParticipantID(rawValue: WideID.of([9]))]
         state.reviewsPostponed = [room: [ParticipantID(rawValue: WideID.of([9]))]]
         state.outpostSeenThrough = [ParticipantID(rawValue: WideID.of([9])): stamp.at]
         state.wantsOutpostBell = [ParticipantID(rawValue: WideID.of([9]))]
+        state.wishesHeardAsOf = [ParticipantID(rawValue: WideID.of([9])): stamp.at]
         let inviter = Identity.generate()
         state.acceptedInvitations = [
             AcceptedInvitation(
@@ -110,7 +144,50 @@ extension ForwardCompatibilityTests {
         ]
         state.phraseNonces = ["Y29tbWl0bWVudA==": Data(repeating: 9, count: 32)]
         state.wantsWhatWasSaid = true
-        state.turnsEveryKeyAfterALoss = true
+        var mail = SiblingMail()
+        let sibling = DeviceID(rawValue: Data(repeating: 0x5B, count: 32))
+        mail.noteState(from: sibling, cursors: [], at: Date(timeIntervalSince1970: 1_786_635_000), me: DeviceID(rawValue: Data(repeating: 0x5A, count: 32)))
+        mail.took(mail: 2, from: sibling)
+        state.siblingMail = mail
+        let other = Identity.generate()
+        state.otherRevocations = [
+            try DeviceRevocation.issue(
+                for: DeviceKeys.generate().id, by: other, at: stamp.at, from: DeviceKeys.generate(),
+                cutoff: 0, head: nil, remaining: [DeviceKeys.generate().id])
+        ]
+        state.siblingMail.shared(state.otherRevocations)
+        state.supersededLines = [
+            FeedKey(author: other.id, device: DeviceID(rawValue: WideID.of([8]))):
+                DeviceRegistry.Line(seq: 12, head: EntryHash(rawValue: Data(repeating: 0x5C, count: 32)))
+        ]
+        state.authorityStored = [Data(repeating: 0x5D, count: 32): stamp.at]
+        state.authorityPublished = [Data(repeating: 0x5E, count: 32)]
+        state.authorityAnnounced = Data(repeating: 0x5F, count: 32)
+        state.restoredWithTheRecoveryKey = true
+        state.rekeyBeforeWriting = [RoomID()]
+        state.keysSealed = [
+            KeySealed(
+                room: room, key: Data(repeating: 0x68, count: 32), person: ParticipantID(rawValue: WideID.of([14])),
+                device: DeviceID(rawValue: WideID.of([15])))
+        ]
+        state.resend = [EntryHash(rawValue: Data(repeating: 0x61, count: 32))]
+        state.entriesOwed = [ParticipantID(rawValue: WideID.of([11])): [EntryHash(rawValue: Data(repeating: 0x65, count: 32))]]
+        state.authorityOwed = [ParticipantID(rawValue: WideID.of([10]))]
+        state.notCollected = [ParticipantID(rawValue: WideID.of([12])): [EntryHash(rawValue: Data(repeating: 0x66, count: 32))]]
+        state.collectedAt = [ParticipantID(rawValue: WideID.of([13])): [EntryHash(rawValue: Data(repeating: 0x67, count: 32)): stamp.at]]
+        state.claimTimes = [EntryHash(rawValue: Data(repeating: 0x62, count: 32)): stamp.at]
+        state.keptIsSealed = true
+        state.removalsTold = [EntryHash(rawValue: Data(repeating: 0x63, count: 32))]
+        state.photosOwed = [EntryHash(rawValue: Data(repeating: 0x64, count: 32))]
+        state.ownPhotosHeld = [AttachmentID()]
+        state.grantsWaiting = [
+            ForwardedGrant(
+                from: ParticipantID(rawValue: WideID.of([9])),
+                grant: try EpochGrant.issue(
+                    EpochSecret.random(), at: .initial, in: room, link: nil,
+                    to: PairwiseSecret.derive(mine: Identity.generate(), theirs: Identity.generate().publicKeys)),
+                storedAt: stamp.at)
+        ]
         state.restoreAsks = [
             RestoreAskRecord(request: RepairID(), from: ParticipantID(rawValue: WideID.of([7])),
                 room: room, at: stamp.at, hold: .held)
@@ -157,26 +234,14 @@ extension ForwardCompatibilityTests {
         }
     }
 
-    @Test func aStateFileFromTheBuildBeforeTheRenameStillOpens() throws {
-        let inviter = Identity.generate()
-        let attestation = try TestInvite.issue(
-            joining: RoomID(), joinerKeys: Identity.generate().publicKeys, by: inviter,
-            at: Date(timeIntervalSince1970: 1_786_635_000))
-
-        var old = try #require(
-            try JSONSerialization.jsonObject(with: JSONEncoder().encode(PersistedState()))
-                as? [String: Any])
-        old.removeValue(forKey: "acceptedInvitations")
-        old["awaitingJoin"] = try JSONSerialization.jsonObject(
-            with: JSONEncoder().encode([attestation]))
-
-        let decoded = try JSONDecoder().decode(
-            PersistedState.self,
-            from: try JSONSerialization.data(withJSONObject: old))
-
-        #expect(
-            decoded.acceptedInvitations.map(\.attestation) == [attestation],
-            "an invitation confirmed on the build before the rename was dropped on upgrade")
+    @Test("A contact's link written by the build before links were weighed still opens, and is joined again")
+    func aPairBookEntryFromTheBuildBeforeStillOpens() throws {
+        let json = Data(#"{"theirs":{"account":"_them","url":"https://icloud.invalid/share/a"},"joined":true,"announced":"https://icloud.invalid/share/b"}"#.utf8)
+        let entry = try JSONDecoder().decode(PairBookEntry.self, from: json)
+        #expect(entry.theirs?.account == "_them")
+        #expect(entry.announced?.absoluteString == "https://icloud.invalid/share/b")
+        #expect(entry.joinedSpace == nil)
+        #expect(entry.gone.isEmpty)
     }
 
     @Test func decodingPersistedStateKeepsEveryFieldItWasGiven() throws {

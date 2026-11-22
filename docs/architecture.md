@@ -26,8 +26,8 @@ was written from the code in `CarpenterKit/Crypto`; where the two disagree, trus
 
 Everything a member does is an **entry**: a message, a reaction, a room rename, an admission, a read
 receipt. Each entry is signed by the device that wrote it, linked by hash to the one before it in
-that device's feed, and stamped with a vector clock. Any two devices holding the same entries fold
-them into the same result without talking to each other.
+that device's feed, and stamped with a vector clock. Any two devices holding the same entries build
+the same result from them without talking to each other.
 
 An entry's payload is sealed under the room's **epoch key**. The payload's type, version and text are
 inside the ciphertext; only the epoch number sits beside it. The entry's author, device, position,
@@ -42,18 +42,32 @@ No member can remove another member's entry from the log. A deletion is an entry
 
 ## The mailbox
 
-Each member owns an `Outbox` zone in their **own** iCloud private database, shared with their peers.
-To send, a device writes one **packet** into its own outbox: the entries sealed under a fresh content
-key, that key wrapped separately for each recipient, addressed to tags derived from a secret the two
-members share. One round writes one packet, however many entries it carries.
+Each member keeps one **space** for each person they talk to, in their **own** iCloud private
+database: a zone named `Pair-` and a random number, shared read-only with that person's account
+alone. Nobody writes anywhere but their own iCloud. A space holds:
 
-Recipients read the zone's change feed, not a query. CloudKit's query index is eventually consistent,
-so a record just written may not come back from a query. The change feed is consistent and needs no
+- **Packets** for that person: the entries sealed under a fresh content key, the key wrapped for
+  that person under the secret the two share, addressed to a tag derived from it. A round writes one
+  packet per person, or more when the round is bigger than a packet.
+- One **ring** record, rewritten with random bytes when the round left something that should ring.
+- **Receipts** for what was collected from that person's space. A reader never touches the sender's
+  space; it writes a sealed receipt into its own space for the sender, and the sender takes a packet
+  back once a device of the reader that still counts has signed for it.
+- A **copy of each photo** sent to that person, cleared the same way.
+- A `PairInfo` record whose `hint`, a keyed hash of the pair's secret, lets every device of the
+  member tell which space is whose.
+
+A space's link is exchanged in a code, in an invite, or, between room members who never swapped
+codes, in a room entry sealed to the one person it is for. A contact is read only from the accounts
+that a device of theirs that still counts has named. See
+[Decisions](decisions.md#each-pair-of-people-gets-its-own-mailbox).
+
+Readers read a zone's change feed, not a query. CloudKit's query index is eventually consistent, so
+a record just written may not come back from a query. The change feed is consistent and needs no
 schema.
 
-Each recipient acknowledges a packet by removing its own tag from the packet's list of who still has
-to collect it. When the list is empty the packet is deleted, so an outbox holds what is in flight,
-not a history.
+A member's contacts' old `Outbox` zones, from before 2026-09-27, are still read until every contact
+reads a space, and then the member's own old outbox is erased.
 
 **Storage bills the sender**, in their own iCloud. The public database is never used, so the
 developer's costs do not grow with the number of people using the app.
@@ -108,13 +122,31 @@ new invitation to a closed room reopens it, so its history can be asked for agai
 ## Device sync
 
 A member's own devices converge separately, through `CKSyncEngine` over a `SiblingFeeds` zone in the
-member's private database. There is one record per device, holding that device's entries, the device
-certificates, the epoch keys it holds and the member's preferences.
+member's private database. Each device writes three kinds of record (`SiblingRecord.Kind`):
 
-The record is sealed on the device before it is written: ChaChaPoly under a key derived from the
-identity with HKDF-SHA256, with the member and the writing device as associated data, so a record
-cannot be replayed into another device's slot. `EntrySync` carries `SealedSiblingFeed` and nothing
-else, so the unsealed type cannot reach a transport.
+- **A state record**, one per device: the device certificates, the member's preferences, and how far
+  this device has read each of its siblings' mail. It is rewritten when one of those changes.
+- **Mail**: what this device wrote since its last mail, and any room keys it got since then. It is
+  deleted once every other active device of the member has read it, or after 30 days.
+- **A catch-up** for one device: everything this device has written and every room key it holds. It
+  is written for a device that is new, or that was away long enough to miss deleted mail, and it is
+  deleted once that device has read it.
+
+Two more kinds carry approval: a new device writes a **request** (its public keys, not sealed), and
+an approving device answers with an **approval** sealed to the new device, which deletes both once
+it has read them. The state record holds certificates, removals and read cursors; the member's
+settings travel in mail and catch-ups instead, so a device that isn't approved can't read them.
+
+A device with no other devices writes only its state record. `SiblingMail` decides what to write and
+delete, and `SiblingMailTests` holds it: one message uploads about 1.7KB however long the history
+is, where it used to upload the whole history (71KB after 65 messages in the test). A new device is
+caught up by another of your devices, so it waits until one of them is open.
+
+Every record is sealed on the device before it is written: ChaChaPoly under a key derived from the
+identity with HKDF-SHA256, with the member, the writing device and the record's kind as associated
+data, so a record cannot be replayed into another device's slot or passed off as another kind.
+`EntrySync` carries `SealedSiblingFeed` and nothing else, so the unsealed type cannot reach a
+transport.
 
 **The app seals it rather than using `CKRecord.encryptedValues`.** Apple's encrypted fields are
 end-to-end only when the member has Advanced Data Protection on; otherwise Apple holds the keys. And
@@ -142,11 +174,13 @@ There are three subscriptions, each scoped to a record type. One of them is visi
 |---|---|---|---|---|
 | `deviceFeed` | private | `CKDatabaseSubscription` | `SiblingFeed` | silent |
 | `inbox` | shared | `CKDatabaseSubscription` | `SyncPacket` | silent |
-| `bell` | private, own zone | `CKRecordZoneSubscription` | `MessageBell` | alert, mutable content |
+| `ring` | shared | `CKDatabaseSubscription` | `PairRing` | alert, mutable content |
 
-The transport cannot see inside a packet, so the packet channel wakes the app and shows nothing. A
-**bell** is a separate record a sender writes into the recipient's zone only when it has left a real
-message there for them. Nothing else writes that record type, so nothing else can produce a banner.
+The transport cannot see inside a packet, so the packet channel wakes the app and shows nothing. The
+**ring** is one record in the sender's space for each person, rewritten only when the round left a
+message for them, or when the sender's devices changed. A watch limited to one record type rings for
+nothing else: measured on Griff's phone 2026-09-27, where changes to other record types in the same
+space woke nobody.
 
 The notification service extension opens the message on the device and replaces the generic line with
 the room and the sender. It writes nothing to the server.
@@ -162,7 +196,7 @@ The app never treats that as an error.
 
 ## The seams
 
-`CarpenterKit` depends on nothing but Foundation. Everything platform-shaped sits behind a protocol,
+`CarpenterKit` depends on nothing but Foundation. Everything that needs a platform framework sits behind a protocol,
 such as `Mailbox`, `KeychainStore`, `LogStore`, `DocumentStore`, `MediaStore`, `EntrySync`,
 `MediaScreen`, `AccountRegistry` and `Clock`, so the
 logic above it runs in tests without an account, a container or an entitlement.
@@ -186,7 +220,7 @@ review can be scoped to one:
 
 | File | Holds |
 |---|---|
-| `AppSession.swift` | the type, its state, the fold cache, `append`, `refresh`, epoch persistence |
+| `AppSession.swift` | the type, its state, the projection cache, `append`, `refresh`, epoch persistence |
 | `+Identity` | bring-up, restore, names, avatars, nicknames, the recovery key, devices |
 | `+Membership` | invitations, admissions, the solo check, room access, removal, leaving |
 | `+Verifying` | comparing codes with somebody after the introduction |
@@ -234,9 +268,9 @@ app.
 - **`roster(of:)` opened every membership entry in the room**, a ChaChaPoly open and a JSON decode
   each, and `AppRootView.body` reached it. The main thread measured 100% inside it. It is cached now
   beside the other opened reads (`cachedRosters`, `cachedOutOfRoom`, `cachedReadEvidence`,
-  `cachedReporting`, `cachedOutpostAccess`), and `foldChanged()` clears them all. **Nothing that
+  `cachedReporting`, `cachedOutpostAccess`), and `logChanged()` clears them all. **Nothing that
   depends on a preference belongs in those caches**: hiding, blocking and delivery marks change
-  without a fold, so they are applied to the cached result on every read.
+  without the log changing, so they are applied to the cached result on every read.
 - **`identityCode()` wrote to observed state.** Each call minted a nonce into
   `persisted.phraseNonces`, the write triggered a render, and the render called it again: 1,716
   main-thread samples against five idle, a disk write per pass, and a list growing without bound. A
@@ -247,12 +281,18 @@ app.
   reaches. Keeping them is safe because a `ParticipantID` is the SHA-256 of the keys the secret comes
   from, so an ID cannot come to mean different keys. Only a restore changes this member's own
   identity, and a restore rebuilds the session.
+- **What an entry says is remembered by its hash, and rebuilding the projection does not forget it.** `OpenedPayloads`
+  keeps each entry's plaintext and what it draws, so a rebuild reads nothing twice. An entry's hash
+  fixes its bytes, so the only thing that can make a remembered answer wrong is losing the key that
+  opened it: the memory is forgotten whenever any room's known epochs shrink or its chain goes. A
+  placeholder for an entry that would not open is never remembered, so it cannot outlive the key that
+  opens it (`OpenedPayloadsTests`).
 
 `ProjectionCostTests` holds every screen read to a per-call limit, because a body may make several
 calls and a 60fps frame is 16,700µs. The conversation screen's two reads are still over the limit
 and are recorded as exceptions with their numbers; see
 [the inbox](inbox.md#the-conversation-screen-still-costs-3500µs-a-read). **Any new state those caches
-read needs `foldChanged()` too.** Nothing fails if it is missed; the cache goes quietly stale.
+read needs `logChanged()` too.** Nothing fails if it is missed; the cache goes quietly stale.
 
 <!-- COPY END 166592a6 -->
 
@@ -266,13 +306,16 @@ line by line on 2026-09-14. This is what each ordering assumes and what checks i
 
 | The step | What it assumes already ran | Checked by |
 |---|---|---|
-| `issuedGrants.insert` when `packetsWritten > 0` | the grants rode the first packet, and a failure there threw before this line | `grantsAreOnlyMarkedIssuedIfTheyWent` |
+| `issuedGrants.insert` for the grants in `report.written` | a grant counts as sent only if the packet carrying it landed | `grantsAreOnlyMarkedIssuedIfTheyWent`, `aKeyThatFailedIsNotMarkedSent` |
 | `roomsWithUnsentMessages.subtract` only when `sendFailure == nil` | a batch that failed still owes its bell | `partialFailureIsNotLoss` |
-| `storage.log.append(owed)` before `session.acknowledge` | a failed write throws, so nothing is acknowledged | `aRefusedWriteLeavesThePacketOutstanding` |
-| `entriesNotWrittenDown` carried into the next round | `integrate` already put them in the replica, so the next round has nothing to write and would acknowledge an entry no disk holds | the same test |
-| `syncedFrontier.observe` only for `report.written` | an entry counts as sent only if its packet landed | `partialFailureIsNotLoss` |
+| `writeDownWhatIsOwed` before `session.acknowledge` | a failed write throws, so nothing is acknowledged | `aRefusedWriteLeavesThePacketOutstanding` |
+| `notePhotosOwed` inside `writeDownWhatIsOwed`, and final refusals noted the moment `integrate` returns | the next round sees those entries as already held, so anything noted later than this is lost if the round stops short | `aPhotoIsCollectedThoughTheSendFailed` |
+| a failure fetching from one peer, or sending, is held until after `saveState()` and thrown then | one peer or one refused write does not stop the other peers being read, photos collected, repairs answered or the state saved | `ARoundThatFailsPartwayTests` |
+| `entriesNotWrittenDown` filled the moment `integrate` returns | `integrate` already put them in the replica, so a round that stops short for any reason, and the next round, would otherwise acknowledge an entry no disk holds | `aKeyThatWillNotSaveLeavesTheMessagesOwed` |
+| `epochsNotSaved` set before the keychain write | a replay finds the key already in the chain and does not save it | `aKeyThatWillNotSaveLeavesTheMessagesOwed` |
+| `noteWhatIsStillOwed` right after `session.send`, before anything else awaits | an entry stays in `entriesOwed` for each person whose packet did not land, including a person skipped while their removal waits, and `syncedFrontier` only moves past an entry once it is either landed or owed for everybody it is for | `partialFailureIsNotLoss`, `AMessageReachesEveryoneItIsForTests` |
 | `outstandingPackets` filtered by `pendingDeliveries`, then this round's added | a collected packet stops counting as undelivered before new ones go in | `collectionIsReportedWhenItHappens` |
-| `viewMayBeStale` set after the peer loop | the next round's `withholdsKeys` reads what this round refused | `RemovalTests` |
+| `viewMayBeStale` set after the peer loop, before anything is sent, and only in a full round | this round's `withholdsKeys` reads what this round refused, and a read-only round uses up no wait | `ARefusedPacketHoldsKeysOnceTests` |
 | `persisted.certificates = knownCertificates()` after the peer loop | a certificate that arrived this round is saved | nothing |
 | `peersLastRound` assigned after `metSomebodyNew` is computed | "new" means new since the previous round | nothing |
 | `saveState()` last | every change above it is in the file | nothing |
@@ -298,5 +341,12 @@ anything the app had saved in the meantime.
 If the App Group is unavailable, the extension falls back to a directory inside its **own**
 container, not the app's. That is a second private copy that is always behind, and it looks exactly
 like a slow process. Both processes log which container they resolved.
+
+The log and the state file started out in the app's own Application Support folder. The first launch
+with the App Group copies them across, through a hidden name that is renamed only once the copy reads
+back byte for byte, and then deletes the old ones, so a member's history is never in two places. If
+either copy cannot be made, nothing is deleted, what was copied is taken back, and the app goes on
+reading its own folder (`StorageLocation.resolved`, `StorageLocationTests`). Before 2026-11-05 the old
+copies stayed for good, and a failed copy left the app reading an empty shared folder.
 
 <!-- COPY END 8aa03a7e -->

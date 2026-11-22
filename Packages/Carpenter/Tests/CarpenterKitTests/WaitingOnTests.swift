@@ -29,7 +29,9 @@ struct WaitingOnTests {
         let waiting = try #require(alice.waitingOn(in: room).first)
         #expect(waiting.member.id == bobID)
         #expect(waiting.holding == .missing(1), "Bob has not collected, and nothing said so")
-        #expect(waiting.lastHeard == nil, "Bob has written nothing, so nothing has been heard")
+        #expect(
+            waiting.lastHeard != nil,
+            "Bob's phone handed over its link when he joined, so it has been heard from though he has said nothing")
         #expect(
             alice.messages(in: room).last?.delivery == .sent,
             "the mark and the list must agree: nobody has it")

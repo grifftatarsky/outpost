@@ -20,7 +20,7 @@
 		</dict>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
+	<false/>
 	<!-- COPY BEGIN dc8580d4 [NEEDS HUMAN REVIEW] -->
 	<key>NSCameraUsageDescription</key>
 	<string>The camera reads the QR code on an invite somebody shows you, and the app keeps nothing else it sees.</string>
@@ -29,9 +29,21 @@
 	<key>NSFocusStatusUsageDescription</key>
 	<string>Tells the people you write to that you have notifications silenced, only if you turn that on under Privacy &amp; Safety.</string>
 	<!-- COPY END 9662b091 -->
-	<key>NSUserActivityTypes</key>
+	<!-- COPY BEGIN b6501cb1 [NEEDS HUMAN REVIEW] -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>The app's lock asks for Face ID before your code, or instead of it if you choose that.</string>
+	<!-- COPY END b6501cb1 -->
+	<!-- COPY BEGIN 18088558 [NEEDS HUMAN REVIEW] -->
+	<key>NSNearbyInteractionUsageDescription</key>
+	<string>Measures how close the other phone is, so codes are swapped only with the phone you hold yours against.</string>
+	<!-- COPY END 18088558 -->
+	<!-- COPY BEGIN 40e4a902 [NEEDS HUMAN REVIEW] -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Finds the phone you hold yours against, so the two can swap codes directly without going through iCloud.</string>
+	<!-- COPY END 40e4a902 -->
+	<key>NSBonjourServices</key>
 	<array>
-		<string>INSendMessageIntent</string>
+		<string>_tapswap._tcp</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

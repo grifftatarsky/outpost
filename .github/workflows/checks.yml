@@ -27,7 +27,7 @@ concurrency:
   group: checks-${{ github.ref }}
   cancel-in-progress: true
 
-# **Every job runs on macOS 26, and the suite is the reason.** The package declares
+# **Every job runs on the `xcode-27` image (macOS 27), and the suite is the reason.** The package declares
 # `platforms: [.iOS(.v26), .macOS(.v26)]` and uses APIs that arrived in 26, so `swift test` builds a
 # macOS 26 binary and then has to *load* it on the runner. On a `macos-15` host that link fails at
 # launch — "Symbol not found ... built for macOS 26.0 which is newer than running OS" — which reads
@@ -37,15 +37,15 @@ concurrency:
 jobs:
   suite:
     name: Package suite
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
 
-      # Named rather than left to the image's default: the package needs the iOS 26 / macOS 26
-      # SDKs, and a runner rolling its default forward under us is a failure nobody caused. If the
-      # image stops carrying a 26.x, this says so in one line instead of failing later as a
-      # thousand missing symbols.
-      - uses: ./.github/actions/xcode-26
+      # Named rather than left to the image's default: local builds use Xcode 27.1, and a runner
+      # rolling its default forward under us is a failure nobody caused. If the image stops
+      # carrying 27.1, this says so in one line instead of failing later as a thousand missing
+      # symbols.
+      - uses: ./.github/actions/xcode-27
 
       - name: Cache the build
         uses: actions/cache@v4
@@ -75,10 +75,10 @@ jobs:
   # Ad-hoc simulator signing is the default and needs no team.
   app-suite:
     name: App suite
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/xcode-26
+      - uses: ./.github/actions/xcode-27
 
       # The device is chosen from what the runner actually has rather than named. A hard-coded
       # "iPhone 17 Pro" fails on an image that ships a different set, with an error about
@@ -106,10 +106,10 @@ jobs:
 
   lint:
     name: House style
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/xcode-26
+      - uses: ./.github/actions/xcode-27
 
       # Every rule in here is a defect that shipped once. The symbol check needs a real symbol
       # catalogue, which is why this runs on macOS rather than on the cheaper Linux image.
@@ -118,7 +118,7 @@ jobs:
 
   build:
     name: Build (${{ matrix.platform }})
-    runs-on: macos-26
+    runs-on: xcode-27
     strategy:
       # Both, always. A change that compiles for one and not the other is the failure this catches,
       # and stopping at the first one hides which.
@@ -131,7 +131,7 @@ jobs:
             destination: platform=macOS
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/xcode-26
+      - uses: ./.github/actions/xcode-27
 
       # No signing: a runner has no team and needs none to prove the code compiles. The parts that
       # genuinely need an entitlement — CloudKit, the App Group, the keychain group — are exactly

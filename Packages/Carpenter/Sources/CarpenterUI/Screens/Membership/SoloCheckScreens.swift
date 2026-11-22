@@ -74,14 +74,9 @@ struct SoloCheckNotice: View {
                 Task { working = true; await onAnswer(false); working = false }
             } label: {
                 Text("They do not match", bundle: .module)
-                    .font(CarpenterFont.button)
-                    .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                    .background(
-                        palette.elevatedSurface,
-                        in: .rect(
-                            cornerRadius: CarpenterMetrics.buttonRadius, style: .continuous))
+                    .primaryAction()
             }
-            .foregroundStyle(palette.primaryText)
+            .quietActionButton()
             .disabled(working)
             // COPY END 72934cc1
 
@@ -368,15 +363,9 @@ struct AnswerWhoYouAreTalkingToSheet: View {
                         Task { working = true; await onAnswer(false); working = false; dismiss() }
                     } label: {
                         Text("They do not match", bundle: .module)
-                            .font(CarpenterFont.button)
-                            .frame(maxWidth: .infinity, minHeight: CarpenterMetrics.buttonHeight)
-                            .background(
-                                palette.elevatedSurface,
-                                in: .rect(
-                                    cornerRadius: CarpenterMetrics.buttonRadius,
-                                    style: .continuous))
+                            .primaryAction()
                     }
-                    .foregroundStyle(palette.primaryText)
+                    .quietActionButton()
                     .disabled(working)
                     // COPY END fd066c84
 

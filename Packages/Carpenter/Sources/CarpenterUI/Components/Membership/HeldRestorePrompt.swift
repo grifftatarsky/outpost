@@ -15,14 +15,14 @@ struct HeldRestorePrompt: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Image(systemName: "hand.raised.fingers.spread.fill")
                     .foregroundStyle(palette.secondaryText)
-                // COPY BEGIN 6cfdefff [NEEDS HUMAN REVIEW]
+                // COPY BEGIN 6cfdefff [HUMAN REVIEWED, UNVERIFIED]
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(held.personName) set up a new device", bundle: .module)
                         .font(CarpenterFont.rowTitle)
                         .foregroundStyle(palette.primaryText)
 
                     Text(
-                        "It asked you for what was said here before. You chose to hold that until you have checked, so none of it has gone. Read the characters below to each other on a line you trust. Anything said from now on still reaches them — they are still in this conversation.",
+                        "History backfill has been requested. Read the characters below to each other securely.",
                         bundle: .module)
                         .font(CarpenterFont.footnote)
                         .foregroundStyle(palette.secondaryText)
@@ -37,7 +37,7 @@ struct HeldRestorePrompt: View {
 
             HStack(spacing: 10) {
                 Spacer(minLength: 0)
-                // COPY BEGIN bab7e8ab [NEEDS HUMAN REVIEW]
+                // COPY BEGIN bab7e8ab [HUMAN REVIEWED, UNVERIFIED]
                 Button {
                     deciding = true
                     Task {

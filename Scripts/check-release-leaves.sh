@@ -13,9 +13,8 @@
 # Usage: Scripts/check-release-leaves.sh [simulator-udid]
 set -uo pipefail
 
-UDID="${1:-}"
-DEST="platform=iOS Simulator,name=outpost-alpha"
-if [ -n "$UDID" ]; then DEST="platform=iOS Simulator,id=$UDID"; fi
+UDID="${1:-$(xcrun simctl list devices available --json | python3 .github/scripts/pick-simulator.py)}"
+DEST="platform=iOS Simulator,id=$UDID"
 
 DERIVED="${DERIVED_DATA:-/tmp/carpenter-release-check}"
 
@@ -40,13 +39,12 @@ if [ ! -f "$BINARY" ]; then
     exit 1
 fi
 
-# Each of these is a control, a launch argument or a screen that exists only for development.
+# Each of these is a control, a launch argument, a screen or a test fake that exists only for development.
 LEAVES=(
     "site-shot"
     "forget-supporter"
     "Blur every photo"
     "Check mailbox"
-    "Rotate mailbox share"
     "Show message delay"
     "Demo conversation"
     "Demo Outpost"
@@ -59,6 +57,12 @@ LEAVES=(
     "Haptics probe"
     "Style test"
     "Start over"
+    "Test Make it fit"
+    "Make it fit failed"
+    "Test a contact's space"
+    "pair-notify-anything"
+    "ask-outpost-notifications"
+    "InMemoryEntrySync"
 )
 
 status=0

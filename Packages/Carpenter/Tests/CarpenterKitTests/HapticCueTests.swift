@@ -4,7 +4,7 @@ import Testing
 
 @testable import CarpenterUI
 
-@Suite("Haptic cues")
+@Suite("Haptic cues", .tags(.ui))
 @MainActor
 struct HapticCueTests {
     @Test("There are exactly three cues")

@@ -127,24 +127,29 @@ fi
 #    Matching the use rather than a bare name is deliberate: an unrelated local called
 #    `reduceMotion` would not excuse a file.
 motion_hits=""
-for file in $sources; do
-    grep -qE 'accessibilityReduceMotion|reduceMotion \?' "$file" && continue
+# shellcheck disable=SC2086
+unanswered=$(grep -LE 'accessibilityReduceMotion|reduceMotion \?' $sources 2>/dev/null)
+if [ -n "$unanswered" ]; then
     # The marker may sit on the animating line or in a comment just above it, which is where
     # anyone explaining themselves would actually write it.
-    hits=$(
+    # shellcheck disable=SC2086
+    motion_hits=$(
         awk '
-            { line[NR] = $0 }
+            FNR == 1 { delete line; named = 0 }
+            { line[FNR] = $0 }
             /withAnimation|\.animation\(|\.transition\(|matchedGeometryEffect|repeatForever/ {
                 excused = 0
-                for (i = NR - 3; i <= NR; i++) {
+                for (i = FNR - 3; i <= FNR; i++) {
                     if (i > 0 && line[i] ~ /cross-fade only/) excused = 1
                 }
-                if (!excused) printf "%d:%s\n", NR, $0
+                if (!excused) {
+                    if (!named) { print FILENAME; named = 1 }
+                    printf "%d:%s\n", FNR, $0
+                }
             }
-        ' "$file" 2>/dev/null
+        ' $unanswered 2>/dev/null
     )
-    [ -n "$hits" ] && motion_hits+="$file"$'\n'"$hits"$'\n'
-done
+fi
 if [ -n "$motion_hits" ]; then
     report "error: animation that neither honours Reduce Motion nor declares itself a cross-fade:" "$motion_hits"
 fi
@@ -184,24 +189,25 @@ fi
 #
 #    A hairline that genuinely divides two *regions* rather than two rows is legitimate; say so on
 #    the line and this leaves it alone.
-separator_hits=""
-for file in $sources; do
-    hits=$(
-        awk '
-            { line[NR] = $0 }
-            /\.fill\(palette\.separator\)/ {
-                # A comment describing the pattern is not the pattern.
-                if ($0 ~ /^[[:space:]]*\/\//) next
-                excused = 0
-                for (i = NR - 4; i <= NR; i++) {
-                    if (i > 0 && line[i] ~ /divides regions/) excused = 1
-                }
-                if (!excused) printf "%d:%s\n", NR, $0
+# shellcheck disable=SC2086
+separator_hits=$(
+    awk '
+        FNR == 1 { delete line; named = 0 }
+        { line[FNR] = $0 }
+        /\.fill\(palette\.separator\)/ {
+            # A comment describing the pattern is not the pattern.
+            if ($0 ~ /^[[:space:]]*\/\//) next
+            excused = 0
+            for (i = FNR - 4; i <= FNR; i++) {
+                if (i > 0 && line[i] ~ /divides regions/) excused = 1
             }
-        ' "$file" 2>/dev/null
-    )
-    [ -n "$hits" ] && separator_hits+="$file"$'\n'"$hits"$'\n'
-done
+            if (!excused) {
+                if (!named) { print FILENAME; named = 1 }
+                printf "%d:%s\n", FNR, $0
+            }
+        }
+    ' $sources 2>/dev/null
+)
 if [ -n "$separator_hits" ]; then
     report "error: hand-drawn row separator; use a List section (or say 'divides regions'):" "$separator_hits"
 fi
@@ -211,9 +217,11 @@ fi
 #     solo member's message must not look like a failed send rendered a blank instead — for as long
 #     as it had existed, with its own doc comment describing the fix. `SymbolNameTests` checks every
 #     name in the suite; this is the same check at lint time, so a bad name fails before the build.
+#     An `icon:` handed to a settings row or tile becomes an `Image(systemName:)` one call later, so
+#     it is read too: until 2026-09-28 every settings icon went through unchecked.
 if command -v swift >/dev/null 2>&1 && [ "${SKIP_SYMBOL_CHECK:-}" != "1" ]; then
     # shellcheck disable=SC2086
-    symbol_names=$(grep -rhoE 'systemName: "[^"]+"' $sources 2>/dev/null | sed 's/systemName: "//; s/"$//' | sort -u)
+    symbol_names=$(grep -rhoE '(systemName|icon): "[^"]+"' $sources 2>/dev/null | sed -E 's/^(systemName|icon): "//; s/"$//' | sort -u)
     if [ -n "$symbol_names" ]; then
         missing=$(
             printf '%s\n' "$symbol_names" | while IFS= read -r name; do
@@ -237,13 +245,13 @@ fi
 #     two effects on unrelated screens in one file are fine — so a file that has thought about it can
 #     say `one glass shape per screen` and be left alone.
 glass_hits=""
-for file in $sources; do
-    effects=$(grep -c '\.glassEffect(' "$file" 2>/dev/null)
+# shellcheck disable=SC2086
+while IFS=: read -r file effects; do
     [ "$effects" -gt 1 ] || continue
     grep -q 'GlassEffectContainer' "$file" && continue
     grep -q 'one glass shape per screen' "$file" && continue
     glass_hits+="$file ($effects effects, no GlassEffectContainer)"$'\n'
-done
+done < <(grep -c '\.glassEffect(' $sources 2>/dev/null)
 if [ -n "$glass_hits" ]; then
     report "error: sibling Liquid Glass effects outside a GlassEffectContainer:" "$glass_hits"
 fi
@@ -376,6 +384,56 @@ if command -v python3 >/dev/null 2>&1; then
     fi
 else
     printf '\nwarning: python3 not found; the copy-marker rule did not run.\n'
+fi
+
+# Every scratch file goes through ScratchSpace (2026-11-05). Picked originals, prepared clips and
+#     sealed upload copies were written straight into the temporary directory, which took the
+#     ordinary protection whatever Advanced On Device Security said, and erasing the phone never
+#     emptied it. ScratchSpace makes one folder with the protection the setting names, protects
+#     each file after it is written, and is emptied at launch and by every erase.
+scratch=$(
+    # shellcheck disable=SC2086
+    grep -nE 'temporaryDirectory|NSTemporaryDirectory' $sources 2>/dev/null \
+        | grep -v '/ScratchSpace\.swift:' | grep -vE '^App/Carpenter(UI)?Tests/'
+)
+if [ -n "$scratch" ]; then
+    report "error: a file is written to the temporary directory outside ScratchSpace:" "$scratch"
+fi
+
+# No field asks to be treated as an account password (2026-11-05). The app lock's fields said
+#     .password and .newPassword, which invites password AutoFill to offer saving the app's code to
+#     the Passwords app and iCloud Keychain, where the phone's passcode opens it. The app has no
+#     account passwords, so neither type has a use anywhere.
+password_fields=$(
+    # shellcheck disable=SC2086
+    grep -nE 'textContentType\(\.(password|newPassword)\)' $sources 2>/dev/null
+)
+if [ -n "$password_fields" ]; then
+    report "error: a field asks password AutoFill to keep what is typed in it:" "$password_fields"
+fi
+
+# No Siri and no Apple Intelligence (Griff, 2026-09-27). The notification extension donated every
+#     banner to Siri as an INSendMessageIntent, which put the sender and conversation into the
+#     system's interaction store, outside anything the app seals; erasing never removed it. Nothing
+#     may donate, declare an intent type, index for Spotlight or ask for the communication
+#     capability, and Writing Tools stay off through the theme every screen wears.
+siri=$(
+    # shellcheck disable=SC2086
+    grep -nE 'INInteraction\(|INSendMessageIntent|INPerson\(|\.donate\(\)|CSSearchableItem|AppShortcutsProvider|NSUserActivity\(|\.userActivity\(' $sources 2>/dev/null
+    grep -nE 'NSUserActivityTypes|INSendMessageIntent|usernotifications\.communication|com\.apple\.developer\.siri' \
+        App/Carpenter/Info.plist App/CarpenterNotificationService/Info.plist \
+        App/Carpenter/Carpenter.entitlements App/CarpenterNotificationService/CarpenterNotificationService.entitlements 2>/dev/null
+)
+if [ -n "$siri" ]; then
+    report "error: a Siri or intent surface is back — the app donates nothing to Siri:" "$siri"
+fi
+for intent in $(grep -lE ':[[:space:]]*(AppIntent|SetFocusFilterIntent)[[:space:]]*\{' $sources 2>/dev/null); do
+    if ! grep -q 'static let isDiscoverable = false' "$intent"; then
+        report "error: an App Intent Siri, Spotlight and Shortcuts can discover (2026-11-05):" "$intent"
+    fi
+done
+if ! grep -q 'writingToolsBehavior(.disabled)' Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift; then
+    report "error: Writing Tools are no longer turned off in the theme:" "Packages/Carpenter/Sources/CarpenterUI/Theme/Theme.swift"
 fi
 
 if [ "$status" -eq 0 ]; then

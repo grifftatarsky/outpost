@@ -45,7 +45,7 @@ messenger and not a notebook.
 
 - **Done.** A message is sealed under the room's epoch key on the sending device and left in the sender's
   own iCloud, addressed to a rotating tag per recipient.
-- **Done.** The recipient collects it, verifies the chain, folds it, and acknowledges so the sender can
+- **Done.** The recipient collects it, verifies the chain, adds it to the log, and acknowledges so the sender can
   delete it.
 - **Done.** It arrives with the recipient's app closed, in order, once.
 - **Done.** Two sends in immediate succession both arrive, in order.
@@ -53,7 +53,7 @@ messenger and not a notebook.
 
 **Testing**
 
-- Suite: the sync, fold, replica-race and stranded-packet suites. The in-memory mailbox stores wire
+- Suite: the sync, rendering, replica-race and stranded-packet suites. The in-memory mailbox stores wire
   fields and counts every server operation, so a test that says "writes nothing" counts everything.
 - Two accounts, 2026-09-01: introduce and join, send each way, send with the app closed, two in
   succession. All passed; see [what has actually been observed](#what-has-actually-been-observed).
@@ -169,7 +169,8 @@ refuse does not lose everything in it.
 - **Done.** A round is batched under seven hundred kilobytes per packet.
 - **Done.** The frontier advances only over entries in packets that landed.
 - **Done.** A packet failing after another succeeded keeps what was written, rings nobody, and sends the
-  rest next round. The first packet failing fails the round, because nothing was written.
+  rest next round. Nothing landing for anybody fails the round, because nothing was written, unless a
+  record was too large, which fails only that packet.
 
 **Testing**
 
@@ -199,7 +200,7 @@ the defect the tests found.
 <!-- COPY BEGIN 2c974681 [NEEDS HUMAN REVIEW] -->
 
 <details markdown="1" id="the-rendezvous-heals-a-dead-share">
-<summary><b>The rendezvous heals a dead share</b> — Complete (tested)</summary>
+<summary><b>The rendezvous heals a dead share</b> — Superseded 2026-09-27 by <a href="#each-pair-of-people-gets-its-own-mailbox">each pair of people gets its own mailbox</a></summary>
 
 **Story.** As a member whose peer's mailbox share stopped working, I want the two of us to find each
 other again without either of us doing anything, so that a quiet peer is a quiet peer and not a
@@ -221,7 +222,7 @@ dead channel.
   a minute, re-offered on relaunch, accepted, a message each way delivered and read.
 
 **Detail.** [The rendezvous heals itself](../decisions.md#the-rendezvous-heals-itself) ·
-[the rig procedure](../simulator-rig.md#a-quiet-peer-is-usually-a-dead-share).
+[the rig procedure](../simulator-rig.md#a-quiet-peer).
 
 </details>
 
@@ -248,6 +249,48 @@ hold the rest, so that a sender's outbox drains and marks do not lag a round for
 </details>
 
 <!-- COPY END e8faae74 -->
+
+<!-- COPY BEGIN 977c6174 [NEEDS HUMAN REVIEW] -->
+
+<details markdown="1" id="each-pair-of-people-gets-its-own-mailbox">
+<summary><b>Each pair of people gets its own mailbox</b> — Complete (proved above the mailbox)</summary>
+
+**Story.** As a member, I want what I send to one person to sit where only that person can read it,
+and nobody else to be able to change or remove it, so that removing or blocking somebody means what
+it says. Ruled by Griff 2026-09-27; see [Decisions](../decisions.md#each-pair-of-people-gets-its-own-mailbox).
+
+**Promises**, confirmed by Griff 2026-09-27: only the two people can read the space they share;
+nothing anyone writes can change or delete mail to anyone else; closing a person's space ends their
+access to all of yours and touches nobody else's; only the sender decides what was collected.
+
+**Acceptance criteria**
+
+- **Done.** One space per contact in your own iCloud, read-only to that contact's account alone.
+- **Done.** Links swapped in a code, an invite, and, between room members who never swapped codes, a
+  sealed room entry passed on by whoever talks to both, who cannot open it.
+- **Done.** A link counts only from a device that still counts, and a contact is read only from
+  accounts such links name (added 2026-09-28 after a review of the build).
+- **Done.** Blocking somebody takes them off the space kept for them and you off theirs; unblocking
+  opens both again (changed 2026-11-05, `BlockingInARoomOfTwoTests`).
+- **Built, proof on two accounts owed** (2026-09-28; the package suite passes). Each person's copy of a photo is
+  sealed apart for their pair and named from its secret, and nothing in iCloud names the photo
+  (`PhotoCopiesAreSealedApartTests`; ruled by Griff the same day).
+- **Built, rig proof owed** (2026-09-28; the package suite passes). The space kept for somebody closes nine days after you last
+  share anything with them, and sharing again opens a new one (`ASpaceClosesWhenNothingIsSharedTests`;
+  ruled by Griff the same day, always on).
+- **Owed.** The same over iCloud, on two accounts (`LivePairTests`).
+
+**Testing**
+
+- Suite: `EachPairHasASpaceOfItsOwnTests`, `WhoCanTellYouWhereToReadSomebodyTests`,
+  `TheFakeIsNoEasierTests`; every guard fails its test when taken out.
+- Three simulators over the directory mailbox, 2026-09-28: Quad and Fifth, introduced only by the
+  room, joined each other's spaces, and Quad's message reached Fifth with Trig's app closed.
+- Not run over iCloud: both rig accounts wanted their passwords on 2026-09-28.
+
+</details>
+
+<!-- COPY END 977c6174 -->
 
 <!-- COPY BEGIN c2dd58d5 [NEEDS HUMAN REVIEW] -->
 
@@ -291,8 +334,10 @@ board 53: no sender in the preview, and the metrics are Messages' own — see th
 <summary>Record — what was built, and a control that did nothing</summary>
 
 **Solos, 2026-09-05.** A two-person conversation is called a *solo* (Griff's word) and is founded as
-one: `RoomKind.solo` rides the first profile entry, `Projection.kind(of:)` reads it from that entry
-alone so a later profile cannot change it, and `RoomSummary.isDirect` is set from it rather than
+one: `RoomKind.solo` rides the profile that founds the room and is hashed into the room's ID (since
+2026-10-31, [A room's ID names its founder](../decisions.md#a-rooms-id-names-its-founder)),
+`Projection.kind(of:)` reads it from that profile alone so no other profile can change it, and
+`RoomSummary.isDirect` is set from it rather than
 guessed from a headcount. Each device titles a solo by the person it is with, per its own name
 setting; the founder's stored name is only a fallback for the moment before the invitation is in the
 roster. The first *Send a Solo* on the rig, an hour before this landed, made an ordinary room named
@@ -409,6 +454,13 @@ feels like a messaging app rather than a form.
   room's.
 - **Done.** The reason a send is refused reaches the conversation: the `cannotSend` sentence is shown above
   the composer, with an iCloud symbol, and leads the explanation sheet too.
+- **Built 2026-10-31, not run on the rig.** **A message nobody collected in nine days says so.** When a
+  member of the room did not sign for their copy before it was taken back, the message is
+  `DeliveryState.notCollected`: the plane stays unfilled, the orange circle is raised by the same two
+  signals, and its sheet says the copy was taken back and that their phone asks for it once something
+  newer from this member shows it is missing, in place of "it keeps trying". The message detail lists
+  that person as not collected, and the waiting-on list counts it. A later copy signed for moves it on
+  to collected (`AMessageNobodyCollectedTests`).
 
 <!-- COPY END e9a5dd66 -->
 
@@ -491,10 +543,15 @@ two marks have a place to be explained.
 
 - **Done.** Reached from the message's own actions, never from the marks, which are not controls: it is a
   section on the detail screen the bubble's menu already opens.
-- **Done.** Lists each recipient's state in the words the marks use, and in only three states, because per
-  person that is the whole of what the log knows: **shown** with a time, **nothing yet**, and **does
-  not report**. There is no per-person *delivered* — collection is acknowledged per packet, not per
-  reader, and claiming otherwise would be the app inferring delivery.
+- **Done.** Lists whether each recipient's display was reported in the words the marks use: **shown** with a
+  time, **not shown yet**, and nothing at all for somebody who does not report.
+- **Built 2026-11-05, not verified on the rig.** Lists each recipient's collection with the bubble's
+  plane: **collected** with the time iCloud stored their receipt, **no receipt yet**, or **not
+  collected in 9 days**. Since each pair of people got its own mailbox (2026-09-27) a packet goes to
+  one person and their receipt signs for it, so this is observed per person, not inferred. A message
+  this device did not send, or sent before 2026-11-05, has no receipt here and says so
+  (`WhenEachPersonCollectedItTests`, and [the decision](../decisions.md#each-persons-collected-time-is-when-icloud-stored-their-receipt)).
+- **Built 2026-11-05.** The time it was sent, and edited, sits under the message in one line.
 - **Done.** Shown first, then waiting, then the people who will never report — so the answer a member is
   looking for is at the top and the ones that will never change are at the bottom.
 - **Done.** A room lists everybody else; a solo lists the one person. Griff, 2026-09-12.

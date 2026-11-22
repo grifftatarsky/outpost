@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public struct FocusFilter: Hashable, Sendable, Codable {
     public var rooms: Set<RoomID>
@@ -18,9 +19,6 @@ public struct FocusFilter: Hashable, Sendable, Codable {
         return withoutPreviews(level)
     }
 
-    /// A post belongs to no room, so the room list cannot speak to it and does not try. The
-    /// preview switch can: the Focus filter offers *Show what was said* over banners, not over
-    /// banners about rooms, and a post's words are what was said.
     public func levelForAPost(own level: NotificationLevel) -> NotificationLevel {
         withoutPreviews(level)
     }
@@ -31,7 +29,7 @@ public struct FocusFilter: Hashable, Sendable, Codable {
     }
 }
 
-public struct FocusFilterStore: @unchecked Sendable {  // UserDefaults is thread-safe by contract
+public struct FocusFilterStore: @unchecked Sendable {
     public struct RoomEntry: Hashable, Sendable, Codable {
         public let id: RoomID
         public let name: String
@@ -42,18 +40,27 @@ public struct FocusFilterStore: @unchecked Sendable {  // UserDefaults is thread
         }
     }
 
-    private static let filterKey = "focusFilter.current"
+    public static let filterKey = "focusFilter.current"
     private static let roomsKey = "focusFilter.rooms"
 
     private let defaults: UserDefaults
+    private let directory: URL?
 
-    public init(defaults: UserDefaults) {
+    public init(defaults: UserDefaults, directory: URL?) {
         self.defaults = defaults
+        self.directory = directory
     }
 
     public static var shared: FocusFilterStore {
-        FocusFilterStore(defaults: UserDefaults(suiteName: AppGroup.identifier) ?? .standard)
+        FocusFilterStore(defaults: UserDefaults(suiteName: AppGroup.identifier) ?? .standard, directory: directory)
     }
+
+    public static var directory: URL? {
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier)?
+            .appending(path: "Focus", directoryHint: .isDirectory)
+    }
+
+    private var roomsFile: URL? { directory?.appending(path: "rooms.json") }
 
     public func read() -> FocusFilter {
         guard let data = defaults.data(forKey: Self.filterKey),
@@ -71,14 +78,21 @@ public struct FocusFilterStore: @unchecked Sendable {  // UserDefaults is thread
     }
 
     public func rooms() -> [RoomEntry] {
-        guard let data = defaults.data(forKey: Self.roomsKey),
+        guard let roomsFile, let data = try? Data(contentsOf: roomsFile),
             let rooms = try? JSONDecoder().decode([RoomEntry].self, from: data)
         else { return [] }
         return rooms
     }
 
-    public func writeRooms(_ rooms: [RoomEntry]) {
-        guard let data = try? JSONEncoder().encode(rooms) else { return }
-        defaults.set(data, forKey: Self.roomsKey)
+    public func writeRooms(_ rooms: [RoomEntry], as protection: StorageProtection) {
+        defaults.removeObject(forKey: Self.roomsKey)
+        guard let directory, let roomsFile, let data = try? JSONEncoder().encode(rooms) else { return }
+        StorageLocation.leaveOutOfBackups(directory)
+        do {
+            try ProtectedFiles.write(data, to: roomsFile, as: protection)
+        } catch {
+            Diagnostics.sync.error(
+                "focus: could not keep the room list (\(String(describing: error), privacy: .public))")
+        }
     }
 }

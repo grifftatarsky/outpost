@@ -4,10 +4,6 @@ import CloudKit
 import Foundation
 import Testing
 
-/// The sibling feed carried every epoch secret its member held to CloudKit **in the clear** from
-/// 2026-08-16 to 2026-09-13, and no test in the suite could see it, because the in-memory relay
-/// stored the struct rather than the bytes. The suite holds the seal itself in eight tests now.
-/// These hold the part the suite still cannot reach: what the record on the real server contains.
 @Suite(
     "The sibling feed on a real CloudKit account",
     .enabled(if: LiveCloudKit.isAsked),
@@ -15,6 +11,8 @@ import Testing
 struct LiveSiblingFeedTests {
 
     private static let zoneName = "SiblingFeeds"
+
+    private let mailReader = DeviceKeys.generate()
 
     private func device() -> DeviceID {
         DeviceID(rawValue: Data((0..<16).map { _ in UInt8.random(in: .min ... .max) }))
@@ -27,7 +25,6 @@ struct LiveSiblingFeedTests {
                 .appending(path: "engine.json"))
     }
 
-    /// A feed holding a secret we can search the wire for.
     private func feed(carrying material: Data) -> SiblingFeed {
         SiblingFeed(
             entries: [],
@@ -40,11 +37,20 @@ struct LiveSiblingFeedTests {
             member: nil, writtenAt: Date())
     }
 
-    private func record(for device: DeviceID) async throws -> CKRecord? {
-        let name = "feed-" + device.rawValue.map { String(format: "%02x", $0) }.joined()
+    private func record(_ name: SiblingRecord.Name) async throws -> CKRecord? {
         let id = CKRecord.ID(
-            recordName: name, zoneID: CKRecordZone.ID(zoneName: Self.zoneName))
+            recordName: name.recordName, zoneID: CKRecordZone.ID(zoneName: Self.zoneName))
         return try? await CKContainer.default().privateCloudDatabase.record(for: id)
+    }
+
+    private func mail(_ number: Int, from device: DeviceID, carrying material: Data, for identity: Identity)
+        throws -> SiblingRecord
+    {
+        SiblingRecord(
+            name: SiblingRecord.Name(writer: device, kind: .mail(number)),
+            sealed: try SealedSiblingFeed.seal(
+                feed(carrying: material), for: identity, on: device, as: .mail(number),
+                to: [DeviceRecipient(device: mailReader.id, sealingKey: mailReader.sealingPublicKey)]))
     }
 
     @Test("What reaches the server is ciphertext, and the epoch secret is not in it")
@@ -54,17 +60,17 @@ struct LiveSiblingFeedTests {
         let mine = device()
         let material = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
 
-        let sealed = try SealedSiblingFeed.seal(
-            feed(carrying: material), for: identity, on: mine)
+        let sent = try mail(1, from: mine, carrying: material, for: identity)
+        let sealed = sent.sealed
 
         let sync = CloudKitEntrySync(
             container: .default(), device: mine, stateStore: store())
         try await sync.start()
-        try await sync.send(sealed, from: mine)
+        try await sync.send([sent], deleting: [])
 
         var found: CKRecord?
         for _ in 0..<30 {
-            if let record = try await record(for: mine) {
+            if let record = try await record(sent.name) {
                 found = record
                 break
             }
@@ -94,21 +100,21 @@ struct LiveSiblingFeedTests {
             payload == sealed.ciphertext,
             "the bytes on the server are not the ciphertext the app sealed")
 
-        // And the seal is real rather than an encoding: the same identity opens it, nobody else does.
-        let reopened = try SealedSiblingFeed(ciphertext: payload).open(with: identity, from: mine)
+        let reopened = try SealedSiblingFeed(ciphertext: payload).open(
+            with: identity, from: mine, as: .mail(1), reading: mailReader)
         #expect(reopened.epochs.first?.material == material, "the round trip lost the secret")
         #expect(
             throws: (any Error).self,
             "a stranger's identity opened a feed read back off the real server"
         ) {
             try SealedSiblingFeed(ciphertext: payload).open(
-                with: Identity.generate(), from: mine)
+                with: Identity.generate(), from: mine, as: .mail(1), reading: mailReader)
         }
 
         try? await sync.forgetOwnContribution()
     }
 
-    @Test("A second device on the same account is handed the feed, still sealed")
+    @Test("A second device on the same account is handed the mail, still sealed, and it is then deleted")
     func aSiblingReceivesIt() async throws {
         guard LiveCloudKit.isAsked else { return }
         let identity = Identity.generate()
@@ -119,15 +125,12 @@ struct LiveSiblingFeedTests {
         let writer = CloudKitEntrySync(
             container: .default(), device: first, stateStore: store())
         try await writer.start()
-        try await writer.send(
-            try SealedSiblingFeed.seal(feed(carrying: material), for: identity, on: first),
-            from: first)
+        let sent = try mail(1, from: first, carrying: material, for: identity)
+        try await writer.send([sent], deleting: [])
 
-        // Wait for the write to land before the reader starts, so the reader's first fetch has
-        // something to find rather than racing the upload.
         var landed = false
         for _ in 0..<30 {
-            if try await record(for: first) != nil {
+            if try await record(sent.name) != nil {
                 landed = true
                 break
             }
@@ -141,8 +144,8 @@ struct LiveSiblingFeedTests {
         let inbox = Inbox()
         let reader = CloudKitEntrySync(
             container: .default(), device: second, stateStore: store())
-        await reader.onIncoming { sealed, from in
-            await inbox.record(sealed, from)
+        await reader.onIncoming { record in
+            await inbox.record(record.sealed, record.name.writer)
         }
         try await reader.start()
 
@@ -164,13 +167,239 @@ struct LiveSiblingFeedTests {
             """)
         #expect(from == first, "the feed was attributed to the wrong device")
 
-        let opened = try sealed.open(with: identity, from: first)
+        let opened = try sealed.open(with: identity, from: first, as: .mail(1), reading: mailReader)
         #expect(
             opened.epochs.first?.material == material,
             "the sibling received the record but could not read the epoch out of it")
 
+        try await writer.send([], deleting: [sent.name])
+        var gone = false
+        for _ in 0..<30 {
+            if try await record(sent.name) == nil {
+                gone = true
+                break
+            }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        #expect(gone, "mail its writer deleted was still on the server a minute later")
+
         try? await writer.forgetOwnContribution()
         try? await reader.forgetOwnContribution()
+    }
+
+    @Test("Mail a device was handed once is handed over again when it reads everything, as it does on launch")
+    func readingEverythingHandsMailOverAgain() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let first = device()
+        let second = device()
+        let material = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
+
+        let writer = CloudKitEntrySync(container: .default(), device: first, stateStore: store())
+        try await writer.start()
+        let sent = try mail(1, from: first, carrying: material, for: identity)
+        try await writer.send([sent], deleting: [])
+
+        let kept = store()
+        let inbox = Inbox()
+        let reader = CloudKitEntrySync(container: .default(), device: second, stateStore: kept)
+        await reader.onIncoming { record in await inbox.record(record.sealed, record.name.writer) }
+        try await reader.start()
+        var handedOnce = false
+        for _ in 0..<30 where !handedOnce {
+            try? await reader.refresh()
+            handedOnce = await inbox.first(from: first) != nil
+            if !handedOnce { try? await Task.sleep(for: .seconds(2)) }
+        }
+        try #require(handedOnce, "precondition: the second device was handed the mail once")
+
+        let again = Inbox()
+        let reopened = CloudKitEntrySync(container: .default(), device: second, stateStore: kept)
+        await reopened.onIncoming { record in await again.record(record.sealed, record.name.writer) }
+        try await reopened.start()
+        try await reopened.refresh()
+        let handedAgainByAFetch = await again.first(from: first) != nil
+        print("LIVE SIBLING: a fetch after a restart handed the old mail over again: \(handedAgainByAFetch)")
+
+        try await reopened.readEverything()
+        let (sealed, from) = try #require(
+            await again.first(from: first),
+            "reading everything did not hand over mail the engine had already handed over once")
+        #expect(from == first, "the mail was attributed to the wrong device")
+        let opened = try sealed.open(with: identity, from: first, as: .mail(1), reading: mailReader)
+        #expect(opened.epochs.first?.material == material, "the mail read back was not the mail written")
+
+        try? await writer.send([], deleting: [sent.name])
+        try? await writer.forgetOwnContribution()
+        try? await reopened.forgetOwnContribution()
+    }
+
+    @Test("A new device asks to join, an existing one approves it, and both records cross the real server")
+    func approvalCrossesTheServer() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let existing = DeviceKeys.generate()
+        let newcomer = DeviceKeys.generate()
+        let request = DeviceRequest(for: newcomer)
+
+        let asking = CloudKitEntrySync(container: .default(), device: newcomer.id, stateStore: store())
+        let approving = CloudKitEntrySync(container: .default(), device: existing.id, stateStore: store())
+        let seenByApprover = Records()
+        let seenByNewcomer = Records()
+        await approving.onIncoming { record in await seenByApprover.add(record) }
+        await asking.onIncoming { record in
+            await seenByNewcomer.add(record)
+            guard case .approval(let target) = record.name.kind, target == newcomer.id else { return }
+            _ = try? await asking.send(
+                [], deleting: [record.name, SiblingRecord.Name(writer: newcomer.id, kind: .request)])
+        }
+        try await asking.start()
+        try await approving.start()
+
+        try await asking.send([try request.record()], deleting: [])
+        var arrived: DeviceRequest?
+        for _ in 0..<30 {
+            try? await approving.refresh()
+            arrived = await seenByApprover.all().compactMap(DeviceRequest.init(record:)).first {
+                $0.device == newcomer.id
+            }
+            if arrived != nil { break }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        let taken = try #require(arrived, "the request never reached the existing device over real CloudKit")
+        #expect(taken.code == request.code, "the two devices would show different codes")
+
+        let certificate = try DeviceCertificate.issue(
+            for: newcomer, by: identity, at: Date(), approvedBy: existing)
+        let approval = DeviceApproval(identity: identity, certificates: [certificate], revocations: [])
+        try await approving.send(
+            [try approval.record(from: existing.id, to: taken)],
+            deleting: [SiblingRecord.Name(writer: newcomer.id, kind: .request)])
+
+        var opened: DeviceApproval?
+        for _ in 0..<30 {
+            try? await asking.refresh()
+            for record in await seenByNewcomer.all() {
+                if case .approval(let target) = record.name.kind, target == newcomer.id {
+                    opened = try? DeviceApproval(record: record, opening: newcomer)
+                }
+            }
+            if opened != nil { break }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        let handed = try #require(opened, "the approval never reached the new device, or would not open")
+        #expect(try handed.identity().id == identity.id, "the new device was handed the wrong identity")
+        #expect(
+            (try? DeviceApproval(
+                record: SiblingRecord(
+                    name: SiblingRecord.Name(writer: existing.id, kind: .approval(for: newcomer.id)),
+                    sealed: try approval.record(from: existing.id, to: taken).sealed),
+                opening: DeviceKeys.generate())) == nil,
+            "another device opened an approval sealed to the new one")
+
+        try? await asking.forgetOwnContribution()
+        try? await approving.forgetOwnContribution()
+    }
+
+    @Test("A reinstalled device writes over the record an earlier install left, rather than stopping the app")
+    func aRecordTheServerAlreadyHoldsIsWrittenOver() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let mine = device()
+        let first = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
+        let second = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
+
+        let earlier = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        let written = try mail(1, from: mine, carrying: first, for: identity)
+        try await earlier.send([written], deleting: [])
+
+        let reinstalled = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        try await reinstalled.send([try mail(1, from: mine, carrying: second, for: identity)], deleting: [])
+
+        var material: Data?
+        for _ in 0..<30 {
+            if let data = try await record(written.name)?["feed"] as? Data,
+                let opened = try? SealedSiblingFeed(ciphertext: data).open(
+                    with: identity, from: mine, as: .mail(1), reading: mailReader),
+                opened.epochs.first?.material == second
+            {
+                material = second
+                break
+            }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        #expect(
+            material == second,
+            "a second install's write of a record the first install left never replaced it")
+
+        try? await reinstalled.forgetOwnContribution()
+    }
+
+    @Test("iCloud stamps when a record was first stored, keeps it through a rewrite, and a recreated record gets a later one")
+    func iCloudKeepsTheFirstStoredTime() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let mine = device()
+        let first = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        let written = try mail(1, from: mine, carrying: Data([1]), for: identity)
+        try await first.send([written], deleting: [])
+        let stored = try #require(try await record(written.name))
+        let created = try #require(stored.creationDate)
+        let modified = try #require(stored.modificationDate)
+
+        try? await Task.sleep(for: .seconds(2))
+        let rewriter = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        try await rewriter.send([try mail(1, from: mine, carrying: Data([2]), for: identity)], deleting: [])
+        let rewritten = try #require(try await record(written.name))
+        #expect(rewritten.creationDate == created, "a rewrite changed when iCloud says the record was first stored")
+        #expect(
+            (rewritten.modificationDate ?? .distantPast) > modified,
+            "a rewrite did not move the record's last-stored time")
+
+        try await rewriter.send([], deleting: [written.name])
+        try? await Task.sleep(for: .seconds(2))
+        let recreator = CloudKitEntrySync(container: .default(), device: mine, stateStore: store())
+        try await recreator.send([try mail(1, from: mine, carrying: Data([3]), for: identity)], deleting: [])
+        let recreated = try #require(try await record(written.name))
+        #expect(
+            (recreated.creationDate ?? .distantPast) > created,
+            "a record deleted and made again kept its old first-stored time")
+
+        try? await recreator.forgetOwnContribution()
+    }
+
+    @Test("An approval already in iCloud is not overwritten, and a second writer is told when it was first stored")
+    func anApprovalIsStoredOnce() async throws {
+        guard LiveCloudKit.isAsked else { return }
+        let identity = Identity.generate()
+        let (phone, tablet) = (DeviceKeys.generate(), DeviceKeys.generate())
+        let approval = AuthorityEvent.added(
+            try DeviceCertificate.issue(for: tablet, by: identity, at: Date(), approvedBy: phone))
+        let record = try approval.record(sealedFor: identity, by: phone.id)
+
+        let first = CloudKitEntrySync(container: .default(), device: phone.id, stateStore: store())
+        let firstStored = try #require(try await first.send([record], deleting: [])[record.name])
+        try? await Task.sleep(for: .seconds(2))
+        let second = CloudKitEntrySync(container: .default(), device: phone.id, stateStore: store())
+        let secondStored = try #require(try await second.send([record], deleting: [])[record.name])
+        #expect(secondStored == firstStored, "a second write of the same approval reported a different first-stored time")
+
+        let server = try #require(try await self.record(record.name))
+        #expect(server.creationDate == firstStored)
+        #expect(
+            try AuthorityEvent(
+                record: SiblingRecord(
+                    name: record.name,
+                    sealed: SealedSiblingFeed(ciphertext: try #require(server["feed"] as? Data))),
+                openedWith: identity) == approval)
+
+        try? await second.forgetOwnContribution()
+    }
+
+    private actor Records {
+        private var seen: [SiblingRecord] = []
+        func add(_ record: SiblingRecord) { seen.append(record) }
+        func all() -> [SiblingRecord] { seen }
     }
 
     private actor Inbox {

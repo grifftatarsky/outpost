@@ -4,7 +4,7 @@ import CarpenterKitTesting
 import Foundation
 import Testing
 
-@Suite("An invitation that ran out")
+@Suite("An invitation that ran out", .tags(.membership))
 struct AnOfferThatRanOutTests {
     private let start = Date(timeIntervalSince1970: 1_786_635_000)
     private let day: TimeInterval = 24 * 60 * 60
@@ -20,24 +20,23 @@ struct AnOfferThatRanOutTests {
     }
 
     private func founded(by founder: Identity, access: RoomAccess = .open) throws -> RoomRoster {
+        let (room, profile) = try TestFounding.room(by: founder.id)
         var roster = RoomRoster(room: room)
-        roster.apply(
-            rendered(founder.id, .roomProfile, hash: 1),
-            body: try Payload.roomProfile(name: "Hangar 7"))
+        roster.apply(rendered(founder.id, .roomProfile, hash: 1), body: profile)
         if access != .open { roster.set(access: access, by: founder.id) }
         return roster
     }
 
-    // MARK: What the fold answers, and must go on answering
+    // MARK: What the member list answers, and must go on answering
 
-    @Test("The fold admits on a confirmation whenever one lands, and never asks the date")
-    func theFoldNeverAsksTheDate() throws {
+    @Test("The member list admits on a confirmation whenever one lands, and never asks the date")
+    func theMemberListNeverAsksTheDate() throws {
         let founder = Identity.generate()
         let joiner = Identity.generate()
         var roster = try founded(by: founder)
 
         let attestation = try TestInvite.issue(
-            joining: room, joinerKeys: joiner.publicKeys, by: founder, at: start, lasting: .aDay)
+            joining: roster.room, joinerKeys: joiner.publicKeys, by: founder, at: start, lasting: .aDay)
         roster.apply(
             rendered(founder.id, .joinRequest, hash: 2),
             body: try Payload.joinRequest(attestation))
@@ -48,7 +47,7 @@ struct AnOfferThatRanOutTests {
 
         #expect(
             roster.members.contains(joiner.id),
-            "the fold started asking whether the invitation had run out")
+            "building the member list started asking whether the invitation had run out")
     }
 
     @Test("A member is still a member a thousand days after the invitation ran out")
@@ -64,8 +63,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await alice.sync(through: mailbox)
@@ -105,8 +103,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<3 { try await bob.sync(through: mailbox) }
 
@@ -137,8 +134,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<3 { try await bob.sync(through: mailbox) }
 
@@ -170,8 +166,7 @@ struct AnOfferThatRanOutTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.setAccess(.founder, in: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await bob.sync(through: mailbox)
@@ -189,8 +184,7 @@ struct AnOfferThatRanOutTests {
         let carol = TestSession.make(clock: clock)
         await carol.load()
         try await carol.createIdentity(displayName: "Carol")
-        let ignored = try await alice.invite(
-            joinerCode: carol.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let ignored = try await alice.invite(joinerCode: await carol.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         clock.advance(by: 2 * day)
 
         let carolID = try #require(carol.enrolment?.identity.id)
@@ -210,9 +204,9 @@ struct AnOfferThatRanOutTests {
         var roster = try founded(by: founder, access: .founder)
 
         let taken = try TestInvite.issue(
-            joining: room, joinerKeys: answered.publicKeys, by: founder, at: start, lasting: .aDay)
+            joining: roster.room, joinerKeys: answered.publicKeys, by: founder, at: start, lasting: .aDay)
         let untaken = try TestInvite.issue(
-            joining: room, joinerKeys: ignored.publicKeys, by: founder, at: start, lasting: .aDay)
+            joining: roster.room, joinerKeys: ignored.publicKeys, by: founder, at: start, lasting: .aDay)
         for (hash, attestation) in [(UInt8(2), taken), (UInt8(3), untaken)] {
             roster.apply(
                 rendered(founder.id, .joinRequest, hash: hash),
@@ -246,8 +240,7 @@ struct AnOfferThatRanOutTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.setAccess(.founder, in: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await bob.sync(through: mailbox)
@@ -288,8 +281,7 @@ struct AnOfferThatRanOutTests {
 
         let room = try await alice.createRoom(named: "Hangar 7")
         try await alice.setAccess(.founder, in: room)
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<4 {
             try await bob.sync(through: mailbox)
@@ -323,8 +315,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: await bob.joinerCode(through: mailbox), joining: room, through: mailbox, lasting: .aDay)
         try await bob.redeem(inviteCode: try invite.encoded())
         for _ in 0..<6 {
             try await alice.sync(through: mailbox)
@@ -355,8 +346,7 @@ struct AnOfferThatRanOutTests {
         try await bob.createIdentity(displayName: "Bob")
 
         let room = try await alice.createRoom(named: "Hangar 7")
-        let invite = try await alice.invite(
-            joinerCode: bob.identityCode(), joining: room, mailbox: nil, lasting: .aDay)
+        let invite = try await alice.invite(joinerCode: bob.identityCode(), joining: room, through: nil, lasting: .aDay)
         clock.advance(by: 2 * day)
 
         #expect(bob.inspect(inviteCode: try invite.encoded()) == nil)

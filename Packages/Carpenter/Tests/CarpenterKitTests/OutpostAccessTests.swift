@@ -3,7 +3,7 @@ import Testing
 
 @testable import CarpenterKit
 
-@Suite struct OutpostAccessTests {
+@Suite(.tags(.membership)) struct OutpostAccessTests {
     private func person(_ seed: UInt8) -> ParticipantID {
         ParticipantID(rawValue: Data(repeating: seed, count: 32))
     }

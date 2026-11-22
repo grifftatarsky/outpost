@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class AccentContrastAuditTests: XCTestCase {
 
     private func audit(accent: String) {

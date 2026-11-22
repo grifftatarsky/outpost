@@ -69,15 +69,18 @@ enum IdentityWidth {
 public struct IdentityPublicKeys: Hashable, Sendable, Codable {
     public let signing: Data
     public let agreement: Data
+    public let recovery: Data
 
-    public init(signing: Data, agreement: Data) {
+    public init(signing: Data, agreement: Data, recovery: Data) {
         self.signing = signing
         self.agreement = agreement
+        self.recovery = recovery
     }
 
     public var participantID: ParticipantID {
         let digest = SHA256.hash(
-            data: CanonicalBytes.payload(domain: Domain.participantID, fields: [signing, agreement]))
+            data: CanonicalBytes.payload(
+                domain: Domain.participantID, fields: [signing, agreement, recovery]))
         return ParticipantID(rawValue: Data(digest))
     }
 
@@ -87,45 +90,86 @@ public struct IdentityPublicKeys: Hashable, Sendable, Codable {
         }
         return key.isValidSignature(signature, for: message)
     }
+
+    public func isValidRecoverySignature(_ signature: Data, for message: Data) -> Bool {
+        guard let key = try? Curve25519.Signing.PublicKey(rawRepresentation: recovery) else {
+            return false
+        }
+        return key.isValidSignature(signature, for: message)
+    }
 }
 
 public struct Identity: Hashable, Sendable {
     public let signingSeed: Data
     public let agreementSeed: Data
+    public let publicKeys: IdentityPublicKeys
+    public let id: ParticipantID
+    public let recovery: RecoverySecret?
 
-    public init(signingSeed: Data, agreementSeed: Data) throws {
-        guard (try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed)) != nil,
-            (try? Curve25519.KeyAgreement.PrivateKey(rawRepresentation: agreementSeed)) != nil
+    public init(signingSeed: Data, agreementSeed: Data, recoveryKey: Data) throws {
+        guard let signing = try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed),
+            let agreement = try? Curve25519.KeyAgreement.PrivateKey(rawRepresentation: agreementSeed),
+            (try? Curve25519.Signing.PublicKey(rawRepresentation: recoveryKey)) != nil
         else {
             throw CryptoError.malformedKey
         }
-        self.signingSeed = signingSeed
-        self.agreementSeed = agreementSeed
+        self.init(signing: signing, agreement: agreement, recoveryKey: recoveryKey, recovery: nil)
+    }
+
+    init(signingSeed: Data, agreementSeed: Data, recovery: RecoverySecret) throws {
+        guard let signing = try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed),
+            let agreement = try? Curve25519.KeyAgreement.PrivateKey(rawRepresentation: agreementSeed)
+        else {
+            throw CryptoError.malformedKey
+        }
+        self.init(signing: signing, agreement: agreement, recoveryKey: recovery.publicKey, recovery: recovery)
     }
 
     public static func generate() -> Identity {
+        RecoverySecret.generate().identity
+    }
+
+    public var withoutRecovery: Identity {
         Identity(
-            unchecked: Curve25519.Signing.PrivateKey().rawRepresentation,
-            agreementSeed: Curve25519.KeyAgreement.PrivateKey().rawRepresentation
-        )
+            signing: signingKey, agreement: agreementKey, recoveryKey: publicKeys.recovery, recovery: nil)
     }
 
-    private init(unchecked signingSeed: Data, agreementSeed: Data) {
-        self.signingSeed = signingSeed
-        self.agreementSeed = agreementSeed
+    private init(
+        signing: Curve25519.Signing.PrivateKey, agreement: Curve25519.KeyAgreement.PrivateKey,
+        recoveryKey: Data, recovery: RecoverySecret?
+    ) {
+        signingSeed = signing.rawRepresentation
+        agreementSeed = agreement.rawRepresentation
+        publicKeys = IdentityPublicKeys(
+            signing: signing.publicKey.rawRepresentation,
+            agreement: agreement.publicKey.rawRepresentation,
+            recovery: recoveryKey)
+        id = publicKeys.participantID
+        self.recovery = recovery
     }
 
-    public var publicKeys: IdentityPublicKeys {
-        IdentityPublicKeys(
-            signing: signingKey.publicKey.rawRepresentation,
-            agreement: agreementKey.publicKey.rawRepresentation
-        )
+    public static func == (lhs: Identity, rhs: Identity) -> Bool {
+        lhs.signingSeed == rhs.signingSeed && lhs.agreementSeed == rhs.agreementSeed
+            && lhs.publicKeys == rhs.publicKeys
     }
 
-    public var id: ParticipantID { publicKeys.participantID }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(signingSeed)
+        hasher.combine(agreementSeed)
+        hasher.combine(publicKeys)
+    }
 
     public func sign(_ message: Data) throws -> Data {
         try signingKey.signature(for: message)
+    }
+
+    public var vaultRecoverySecret: Data {
+        HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: SymmetricKey(data: signingSeed + agreementSeed),
+            salt: Data(Domain.vaultRecovery.utf8),
+            info: Data(Domain.vaultRecovery.utf8),
+            outputByteCount: 32
+        ).withUnsafeBytes { Data($0) }
     }
 
     public func sharedSecret(with peer: IdentityPublicKeys) throws -> SharedSecret {
@@ -147,25 +191,47 @@ public struct Identity: Hashable, Sendable {
 
 public struct DeviceKeys: Hashable, Sendable {
     public let signingSeed: Data
+    public let publicKey: Data
+    public let id: DeviceID
+    public let sealingPublicKey: Data
+    let sealingKey: XWingMLKEM768X25519.PrivateKey
 
     public init(signingSeed: Data) throws {
-        guard (try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed)) != nil else {
+        guard let signing = try? Curve25519.Signing.PrivateKey(rawRepresentation: signingSeed) else {
             throw CryptoError.malformedKey
         }
-        self.signingSeed = signingSeed
+        self.init(signing: signing)
     }
 
     public static func generate() -> DeviceKeys {
-        DeviceKeys(unchecked: Curve25519.Signing.PrivateKey().rawRepresentation)
+        DeviceKeys(signing: Curve25519.Signing.PrivateKey())
     }
 
-    private init(unchecked signingSeed: Data) {
-        self.signingSeed = signingSeed
+    private init(signing: Curve25519.Signing.PrivateKey) {
+        signingSeed = signing.rawRepresentation
+        publicKey = signing.publicKey.rawRepresentation
+        id = DeviceID(publicKey: publicKey)
+        sealingKey = Self.sealingKey(from: signingSeed)
+        sealingPublicKey = sealingKey.publicKey.rawRepresentation
     }
 
-    public var publicKey: Data { signingKey.publicKey.rawRepresentation }
+    public static func == (lhs: DeviceKeys, rhs: DeviceKeys) -> Bool {
+        lhs.signingSeed == rhs.signingSeed
+    }
 
-    public var id: DeviceID { DeviceID(publicKey: publicKey) }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    private static func sealingKey(from signingSeed: Data) -> XWingMLKEM768X25519.PrivateKey {
+        let seed = HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: SymmetricKey(data: signingSeed),
+            salt: Data(Domain.deviceSealing.utf8),
+            info: Data(Domain.deviceSealing.utf8),
+            outputByteCount: 32)
+        return try! XWingMLKEM768X25519.PrivateKey(
+            seedRepresentation: seed.withUnsafeBytes { Data($0) }, publicKey: nil)
+    }
 
     public func sign(_ message: Data) throws -> Data {
         try signingKey.signature(for: message)
@@ -186,10 +252,20 @@ public struct DeviceKeys: Hashable, Sendable {
 }
 
 enum Domain {
-    static let participantID = "carpenter.participant-id.v1"
+    static let packetContent = "carpenter.packet-content.v1"
+    static let deathmark = "carpenter.deathmark.v1"
+    static let participantID = "carpenter.participant-id.v2"
+    static let recoverySecret = "carpenter.recovery-secret.v2"
+    static let recoveryCheck = "carpenter.recovery-check.v2"
+    static let recoveryReset = "carpenter.recovery-reset.v2"
     static let deviceID = "carpenter.device-id.v1"
     static let deviceCertificate = "carpenter.device-certificate.v1"
+    static let deviceSealing = "carpenter.device-sealing-key.v1"
+    static let deviceSeal = "carpenter.device-seal.v2"
+    static let deviceApproval = "carpenter.device-approval.v1"
+    static let deviceApprovalCode = "carpenter.device-approval-code.v1"
     static let deviceRevocation = "carpenter.device-revocation.v1"
+    static let authorityRecord = "carpenter.authority-record.v1"
     static let verificationPhrase = "carpenter.verification-phrase.v1"
     static let comparisonCode = "carpenter.comparison-code.v1"
 
@@ -204,15 +280,36 @@ enum Domain {
     static let entryHash = "carpenter.entry-hash.v1"
     static let pairwiseSecret = "carpenter.pairwise-secret.v1"
     static let recipientTag = "carpenter.recipient-tag.v1"
-    static let messageBell = "carpenter.message-bell.v1"
-    static let shareOffer = "carpenter.share-offer.v1"
-    static let shareOfferDigest = "carpenter.share-offer-digest.v1"
+    static let pairSpace = "carpenter.pair-space.v1"
+    static let pairLink = "carpenter.pair-link.v1"
+    static let pairLinkSignature = "carpenter.pair-link-signature.v1"
     static let epochLink = "carpenter.epoch-link.v1"
     static let epochWrapping = "carpenter.epoch-wrapping.v1"
     static let epochSealing = "carpenter.epoch-sealing.v1"
+    static let epochChange = "carpenter.epoch-change.v1"
+    static let epochFingerprint = "carpenter.epoch-fingerprint.v1"
     static let epochGrant = "carpenter.epoch-grant.v1"
+    static let epochGrantSignature = "carpenter.epoch-grant-signature.v1"
+    static let grantEnvelope = "carpenter.grant-envelope.v1"
+    static let packetReceipt = "carpenter.packet-receipt.v1"
+    static let attachmentReceipt = "carpenter.attachment-receipt.v1"
+    static let photoCopy = "carpenter.photo-copy.v1"
+    static let photoCopyName = "carpenter.photo-copy-name.v1"
+    static let photoCopyLabel = "carpenter.photo-copy-label.v1"
+    static let tapSwap = "carpenter.tap-swap.v1"
+    static let vaultKey = "carpenter.vault-key.v1"
+    static let vaultDocument = "carpenter.vault-document.v1"
+    static let vaultSecret = "carpenter.vault-secret.v1"
+    static let vaultRecovery = "carpenter.vault-recovery.v1"
+    static let tapCommitment = "carpenter.tap-commitment.v1"
+    static let tapNumber = "carpenter.tap-number.v1"
+    static let pairwiseAddress = "carpenter.pairwise-address.v1"
+    static let addressAnnouncement = "carpenter.address-announcement.v1"
+    static let addressAnnouncementSignature = "carpenter.address-announcement-signature.v1"
+    static let siblingSignature = "carpenter.sibling-signature.v1"
     static let sealedPayload = "carpenter.sealed-payload.v1"
     static let syncPacket = "carpenter.sync-packet.v1"
     static let attachment = "carpenter.attachment.v1"
     static let membershipAttestation = "carpenter.membership-attestation.v1"
+    static let roomFounding = "carpenter.room-founding.v1"
 }

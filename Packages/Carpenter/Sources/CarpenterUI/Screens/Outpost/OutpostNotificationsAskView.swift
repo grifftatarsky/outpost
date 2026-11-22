@@ -82,7 +82,7 @@ public struct OutpostNotificationsAskView: View {
                         dismiss()
                     }
                 } label: {
-                    Text("Not for now", bundle: .module)
+                    Text("Not for now", bundle: .module).primaryAction()
                 }
                 .quietActionButton()
                 .disabled(answering)

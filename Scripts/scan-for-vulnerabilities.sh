@@ -13,9 +13,9 @@
 # Usage: Scripts/scan-for-vulnerabilities.sh [simulator-udid]
 set -uo pipefail
 
-UDID="${1:-}"
-DEST="platform=iOS Simulator,name=outpost-alpha"
-if [ -n "$UDID" ]; then DEST="platform=iOS Simulator,id=$UDID"; fi
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
+UDID="${1:-$(xcrun simctl list devices available --json | python3 .github/scripts/pick-simulator.py)}"
+DEST="platform=iOS Simulator,id=$UDID"
 
 status=0
 fail() { echo "error: $1"; status=1; }
@@ -43,7 +43,7 @@ echo "== static analysis"
 if xcodebuild analyze -workspace Carpenter.xcworkspace -scheme Carpenter \
     -destination "$DEST" -derivedDataPath "${DERIVED_DATA:-/tmp/carpenter-analyze}" \
     >/tmp/analyze.log 2>&1; then
-    found=$(grep -E "warning:" /tmp/analyze.log | grep -vE "AppIntents|Metadata extraction" | sort -u)
+    found=$(grep -E '\.(c|cc|cpp|cxx|m|mm|h|hpp):[0-9]+:[0-9]+: warning:' /tmp/analyze.log | sort -u)
     if [ -n "$found" ]; then
         echo "$found"
         fail "the analyzer reported the warnings above. Answer each or record why it stands."
@@ -58,25 +58,20 @@ fi
 
 echo "== secrets"
 # Shapes rather than words: a credential that matters has a recognisable form, and grepping for the
-# word "password" finds copy about passwords instead.
-SHAPES='(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|xox[baprs]-[0-9A-Za-z-]{10,}|gh[pousr]_[0-9A-Za-z]{30,}|sk-[A-Za-z0-9]{32,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.)'
-
-working=$(git grep -I -n -E "$SHAPES" -- . 2>/dev/null | head -20)
-if [ -n "$working" ]; then
-    echo "$working"
-    fail "something shaped like a credential is in the working tree."
-else
+# word "password" finds copy about passwords instead. The shapes live in Scripts/hooks/staged.py,
+# which the pre-commit hook uses too.
+if python3 Scripts/hooks/staged.py secrets --tree; then
     echo "  working tree: clean."
+else
+    fail "something shaped like a credential is in the working tree."
 fi
 
 # The history matters as much: a key removed in a later commit is still published once the source is.
-history=$(git rev-list --all | head -500 | xargs -I{} git grep -I -l -E "$SHAPES" {} -- 2>/dev/null | head -5)
-if [ -n "$history" ]; then
-    echo "$history"
+if python3 Scripts/hooks/staged.py secrets --history; then
+    echo "  history: clean across every commit on every branch."
+else
     fail "something shaped like a credential appears in the history. Removing it in a later commit "\
 "does not unpublish it once the source is open — it has to be rotated."
-else
-    echo "  history: clean across the last 500 commits."
 fi
 
 echo

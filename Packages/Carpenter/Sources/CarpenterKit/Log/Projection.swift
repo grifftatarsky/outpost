@@ -3,14 +3,46 @@ import Foundation
 public struct Projection: Sendable {
     let viewer: ParticipantID
     let rendered: [RenderedEntry]
+    let roomPositions: [RoomID: [Int]]
+    let positionByID: [EntryHash: Int]
+    let foundings: [RoomID: RenderedEntry]
+    let outpostAuthorOrder: [ParticipantID]
+    let chains: RoomChains
+    let claimTimes: [EntryHash: Date]
+    public let removalNoteIDs: Set<EntryHash>
+    public let members: [ParticipantID: Member]
+    public let supporterBadges: Set<ParticipantID>
 
     public init(
-        viewer: ParticipantID, rendered: [RenderedEntry], revealsNames: Bool = true,
-        viewerName: String? = nil, nicknames: [ParticipantID: String] = [:],
-        met: Set<ParticipantID>? = nil, anonPersona: AnonPersona = .default
+        viewer: ParticipantID, rendered: [RenderedEntry], chains: RoomChains = RoomChains(),
+        claimTimes: [EntryHash: Date] = [:], revealsNames: Bool = true, viewerName: String? = nil,
+        nicknames: [ParticipantID: String] = [:], met: Set<ParticipantID>? = nil, anonPersona: AnonPersona = .default
     ) {
         self.viewer = viewer
         self.rendered = rendered
+        self.chains = chains
+        self.claimTimes = claimTimes
+        var roomPositions: [RoomID: [Int]] = [:]
+        var positionByID: [EntryHash: Int] = [:]
+        var foundings: [RoomID: RenderedEntry] = [:]
+        var lastPosted: [ParticipantID: Int] = [:]
+        var notes: Set<EntryHash> = []
+        for (position, entry) in rendered.enumerated() {
+            positionByID[entry.id] = position
+            if entry.type == .removalNoted { notes.insert(entry.id) }
+            if let room = entry.room {
+                roomPositions[room, default: []].append(position)
+                if entry.founds != nil, foundings[room] == nil { foundings[room] = entry }
+            } else if entry.isConversation && entry.isReadable {
+                lastPosted[entry.author] = position
+            }
+        }
+        self.roomPositions = roomPositions
+        self.positionByID = positionByID
+        removalNoteIDs = notes
+        self.foundings = foundings
+        outpostAuthorOrder = lastPosted.sorted { $0.value > $1.value }.map(\.key)
+        (members, supporterBadges) = Self.namesAndBadges(in: rendered)
         self.revealsNames = revealsNames
         self.viewerName = viewerName
         self.nicknames = nicknames
@@ -31,6 +63,18 @@ public struct Projection: Sendable {
     public var revealsNames: Bool
 
     public var nicknames: [ParticipantID: String]
+
+    public func type(of entry: EntryHash) -> PayloadType? {
+        positionByID[entry].map { rendered[$0].type }
+    }
+
+    func entries(in room: RoomID) -> LazyMapSequence<[Int], RenderedEntry> {
+        (roomPositions[room] ?? []).lazy.map { rendered[$0] }
+    }
+
+    func positioned(in room: RoomID) -> LazyMapSequence<[Int], (position: Int, entry: RenderedEntry)> {
+        (roomPositions[room] ?? []).lazy.map { (position: $0, entry: rendered[$0]) }
+    }
 
     static func isWithdrawn(_ entry: RenderedEntry) -> Bool {
         if case .withdrawn = entry.content { return true }
